@@ -292,7 +292,7 @@ packages:
     source: hosted
     version: "2.3.7"
   flutter_native_timezone:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: flutter_native_timezone
       sha256: ed7bfb982f036243de1c068e269182a877100c994f05143c8b26a325e28c1b02
