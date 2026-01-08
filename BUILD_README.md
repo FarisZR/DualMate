@@ -2,6 +2,30 @@
 
 This APK was compiled for arm64/armv8 architecture.
 
+## v2 Changes (Free App without Google Play Services dependency)
+
+### Removed In-App Purchases
+- Removed `flutter_inapp_purchase` dependency
+- Removed all IAP-related code from:
+  - `lib/common/iap/` (files kept but not used)
+  - `lib/ui/settings/donate_list_tile.dart` (kept but not used)
+  - `lib/ui/settings/purchase_widget_list_tile.dart` (kept but not used)
+  - `lib/ui/settings/settings_page.dart` (removed IAP UI elements)
+  - `lib/ui/settings/viewmodels/settings_view_model.dart` (removed IAP logic)
+  - `lib/common/appstart/app_initializer.dart` (removed IAP initialization)
+  - `lib/common/ui/app_launch_dialogs.dart` (removed donate dialog)
+
+### Widgets Enabled by Default
+- Modified `android/app/src/main/kotlin/de/bennik2000/dhbwstudentapp/widget/WidgetHelper.kt`
+  - `isWidgetEnabled()` now always returns `true`
+- Widgets no longer require purchase to function
+
+### Made Firebase Optional (for Huawei/non-GMS devices)
+- Modified `lib/main.dart` to wrap Firebase initialization in try-catch
+- Modified `lib/common/logging/analytics.dart` with `SafeFirebaseAnalytics` wrapper
+- Modified `lib/common/logging/crash_reporting.dart` to handle Firebase errors
+- App will work on devices without Google Play Services
+
 ## Placeholder Files Created
 
 The following placeholder files were created to enable the build:
@@ -13,6 +37,8 @@ This is a placeholder Firebase configuration file. For production use, you need 
 1. Create a Firebase project at https://console.firebase.google.com
 2. Add an Android app with package name `de.bennik2000.dhbwstudentapp`
 3. Download the real `google-services.json` and replace this placeholder
+
+**Note:** The app will work without Firebase on devices without Google Play Services.
 
 ### 2. Android Signing
 The APK is signed with the **debug key** (as configured in `android/app/build.gradle` line 66).
@@ -43,8 +69,12 @@ The following dependencies were updated to resolve compatibility issues:
 | device_calendar | ^4.2.0 | ^4.3.1 | Kotlin when-expression fix |
 | timezone | ^0.8.0 | ^0.9.0 | device_calendar requirement |
 | flutter_local_notifications | ^9.4.1 | ^13.0.0 | timezone ^0.9.0 compatibility |
-| flutter_inapp_purchase | ^5.6.1 | ^5.4.2 | meta package compatibility |
 | workmanager | ^0.4.1 | ^0.5.0 | Kotlin 1.8.0 compatibility |
+
+**Removed:**
+| Dependency | Reason |
+|------------|--------|
+| flutter_inapp_purchase | App is now completely free |
 
 ## Code Changes
 
@@ -71,4 +101,4 @@ flutter build apk --release --target-platform android-arm64
 
 ## APK Output
 
-The compiled APK is located at: `dhbw-student-app-arm64.apk`
+The compiled APK is located at: `dhbw-student-app-arm64-v2.apk`

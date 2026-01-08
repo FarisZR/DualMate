@@ -17,8 +17,15 @@ import 'common/util/platform_util.dart';
 void main() async {
   // Setup the flutter bindings and the error reporting as early as possible
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
+  
+  // Try to initialize Firebase, but don't fail if it's not available
+  // (e.g., on devices without Google Play Services)
+  try {
+    await Firebase.initializeApp();
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
+  } catch (e) {
+    print("Firebase initialization failed (Google Play Services may not be available): $e");
+  }
 
   await initializeApp(false);
 

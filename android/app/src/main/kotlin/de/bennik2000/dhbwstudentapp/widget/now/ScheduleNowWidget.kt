@@ -44,17 +44,11 @@ class ScheduleNowWidget : AppWidgetProvider() {
 
         val views = RemoteViews(context.packageName, R.layout.widget_schedule_now)
 
-        if(WidgetHelper(context).isWidgetEnabled()) {
-            views.setViewVisibility(R.id.layout_purchase, View.INVISIBLE)
-            views.setViewVisibility(R.id.schedule_entries_list_view, View.VISIBLE)
-            updateScheduleEntryList(context, views, appWidgetManager, appWidgetId)
-            updateScheduleListEmptyState(views, pendingEntries.isNotEmpty())
-        }
-        else {
-            views.setViewVisibility(R.id.layout_empty_state, View.INVISIBLE)
-            views.setViewVisibility(R.id.schedule_entries_list_view, View.INVISIBLE)
-            views.setViewVisibility(R.id.layout_purchase, View.VISIBLE)
-        }
+        // Widgets are always enabled
+        views.setViewVisibility(R.id.layout_purchase, View.INVISIBLE)
+        views.setViewVisibility(R.id.schedule_entries_list_view, View.VISIBLE)
+        updateScheduleEntryList(context, views, appWidgetManager, appWidgetId)
+        updateScheduleListEmptyState(views, pendingEntries.isNotEmpty())
 
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }

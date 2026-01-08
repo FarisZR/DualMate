@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
@@ -36,27 +37,26 @@ class ScheduleTodayWidget : AppWidgetProvider() {
 
         val views = RemoteViews(context.packageName, R.layout.widget_schedule_today)
 
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+
         val pendingIntent = PendingIntent.getActivity(context,
                 0,
                 Intent(context, MainActivity::class.java),
-                0)
+                flags)
         views.setOnClickPendingIntent(R.id.widget_title, pendingIntent)
 
-        if(WidgetHelper(context).isWidgetEnabled()) {
-            views.setViewVisibility(R.id.layout_purchase, View.INVISIBLE)
-            views.setViewVisibility(R.id.schedule_entries_list_view, View.VISIBLE)
+        // Widgets are always enabled
+        views.setViewVisibility(R.id.layout_purchase, View.INVISIBLE)
+        views.setViewVisibility(R.id.schedule_entries_list_view, View.VISIBLE)
 
-            val hasEntries = ScheduleProvider(context).hasScheduleEntriesForDay(LocalDate.now())
+        val hasEntries = ScheduleProvider(context).hasScheduleEntriesForDay(LocalDate.now())
 
-            updateScheduleEntryList(context, views, appWidgetManager, appWidgetId)
-            updateScheduleListEmptyState(views, hasEntries)
-        }
-        else {
-            views.setViewVisibility(R.id.layout_empty_state, View.INVISIBLE)
-            views.setViewVisibility(R.id.schedule_entries_list_view, View.INVISIBLE)
-            views.setViewVisibility(R.id.layout_purchase, View.VISIBLE)
-        }
-
+        updateScheduleEntryList(context, views, appWidgetManager, appWidgetId)
+        updateScheduleListEmptyState(views, hasEntries)
 
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }

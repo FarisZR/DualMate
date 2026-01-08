@@ -1,6 +1,4 @@
 import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/iap/in_app_purchase_helper.dart';
-import 'package:dhbwstudentapp/common/iap/in_app_purchase_manager.dart';
 import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
 import 'package:dhbwstudentapp/native/widget/widget_helper.dart';
 import 'package:dhbwstudentapp/schedule/ui/notification/next_day_information_notification.dart';
@@ -16,7 +14,6 @@ class SettingsViewModel extends BaseViewModel {
   final PreferencesProvider _preferencesProvider;
   final WidgetHelper _widgetHelper;
   final NextDayInformationNotification _nextDayInformationNotification;
-  final InAppPurchaseManager _inAppPurchaseManager;
 
   bool _notifyAboutNextDay = false;
 
@@ -34,10 +31,6 @@ class SettingsViewModel extends BaseViewModel {
 
   bool get isCalendarSyncEnabled => _isCalendarSyncEnabled;
 
-  PurchaseStateEnum _widgetPurchaseState;
-
-  PurchaseStateEnum get widgetPurchaseState => _widgetPurchaseState;
-
   bool _areWidgetsSupported = false;
 
   bool get areWidgetsSupported => _areWidgetsSupported;
@@ -46,14 +39,8 @@ class SettingsViewModel extends BaseViewModel {
     this._preferencesProvider,
     this._nextDayInformationNotification,
     this._widgetHelper,
-    this._inAppPurchaseManager
   ) {
     _loadPreferences();
-
-    _inAppPurchaseManager.addPurchaseCallback(
-      InAppPurchaseHelper.WidgetProductId,
-      _widgetPurchaseCallback,
-    );
   }
 
   Future<void> setIsCalendarSyncEnabled(bool value) async {
@@ -69,13 +56,6 @@ class SettingsViewModel extends BaseViewModel {
       DateTime.now().add(Duration(days: 30)),
       CancellationToken(),
     );
-  }
-
-  void _widgetPurchaseCallback(String id, PurchaseResultEnum result) {
-    if (result == PurchaseResultEnum.Success) {
-      _widgetPurchaseState = PurchaseStateEnum.Purchased;
-    }
-    notifyListeners("didPurchaseWidget");
   }
 
   Future<void> setNotifyAboutScheduleChanges(bool value) async {
@@ -119,29 +99,9 @@ class SettingsViewModel extends BaseViewModel {
     notifyListeners("notifyAboutScheduleChanges");
     notifyListeners("prettifySchedule");
     notifyListeners("areWidgetsSupported");
-
-    // This call may take some time. Do it at the end when the rest is already
-    // loaded
-    _widgetPurchaseState = await _inAppPurchaseManager.didBuyWidget();
-    notifyListeners("didPurchaseWidget");
-  }
-
-  Future<void> purchaseWidgets() async {
-    if (_widgetPurchaseState != PurchaseStateEnum.Purchased) {
-      await _inAppPurchaseManager.buyWidget();
-    }
-  }
-
-  Future<void> donate() async {
-    await _inAppPurchaseManager.donate();
   }
 
   void dispose() {
     super.dispose();
-
-    _inAppPurchaseManager.removePurchaseCallback(
-      InAppPurchaseHelper.WidgetProductId,
-      _widgetPurchaseCallback,
-    );
   }
 }
