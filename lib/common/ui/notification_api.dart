@@ -19,18 +19,18 @@ class NotificationApi {
       'outline_event_note_24',
     );
 
-    var initializationSettingsIOS = IOSInitializationSettings(
+    var initializationSettingsDarwin = DarwinInitializationSettings(
       onDidReceiveLocalNotification: onDidReceiveLocalNotification,
     );
 
     var initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
+      iOS: initializationSettingsDarwin,
     );
 
     await _localNotificationsPlugin.initialize(
       initializationSettings,
-      onSelectNotification: selectNotification,
+      onDidReceiveNotificationResponse: selectNotification,
     );
   }
 
@@ -54,11 +54,11 @@ class NotificationApi {
       ticker: 'ticker',
     );
 
-    var iOSPlatformChannelSpecifics = const IOSNotificationDetails();
+    var darwinPlatformChannelSpecifics = const DarwinNotificationDetails();
 
     var platformChannelSpecifics = NotificationDetails(
       android: androidPlatformChannelSpecifics,
-      iOS: iOSPlatformChannelSpecifics,
+      iOS: darwinPlatformChannelSpecifics,
     );
 
     await _localNotificationsPlugin.show(
@@ -75,7 +75,7 @@ class NotificationApi {
           int id, String title, String body, String payload) =>
       Future.value();
 
-  Future selectNotification(String payload) => Future.value();
+  Future selectNotification(NotificationResponse response) => Future.value();
 }
 
 ///
@@ -97,7 +97,7 @@ class VoidNotificationApi implements NotificationApi {
   }
 
   @override
-  Future selectNotification(String payload) {
+  Future selectNotification(NotificationResponse response) {
     return Future.value();
   }
 

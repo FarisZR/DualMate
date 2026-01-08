@@ -20,7 +20,6 @@ apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
 apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'
-apply plugin: 'kotlin-android-extensions'
 
 
 def keystoreProperties = new Properties()
@@ -30,7 +29,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdkVersion 31
+    compileSdkVersion 34
 
     android.ndkVersion "23.1.7779620"
 
@@ -63,8 +62,8 @@ android {
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
-            //signingConfig signingConfigs.debug
+            //signingConfig signingConfigs.release
+            signingConfig signingConfigs.debug
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
