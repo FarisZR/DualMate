@@ -1,6 +1,6 @@
 import 'package:dhbwstudentapp/native/widget/widget_helper.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_widgetkit/flutter_widgetkit.dart';
+// flutter_widgetkit removed - iOS only package not compatible with Dart 3
 
 ///
 /// WidgetHelper which calls native code to control the widget on iOS
@@ -26,8 +26,8 @@ class IOSWidgetHelper implements WidgetHelper {
   @override
   Future<void> requestWidgetRefresh() async {
     try {
-      // TODO: Use own implementation to get rid of the WidgetKit package
-      WidgetKit.reloadAllTimelines();
+      // WidgetKit.reloadAllTimelines() - iOS-only, not available for Android build
+      await platform.invokeMethod('reloadAllTimelines');
     } on PlatformException catch (_) {}
   }
 
