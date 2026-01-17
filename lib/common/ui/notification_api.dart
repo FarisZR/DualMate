@@ -19,7 +19,7 @@ class NotificationApi {
       'outline_event_note_24',
     );
 
-    var initializationSettingsIOS = IOSInitializationSettings(
+    var initializationSettingsIOS = DarwinInitializationSettings(
       onDidReceiveLocalNotification: onDidReceiveLocalNotification,
     );
 
@@ -30,7 +30,7 @@ class NotificationApi {
 
     await _localNotificationsPlugin.initialize(
       initializationSettings,
-      onSelectNotification: selectNotification,
+      onDidReceiveNotificationResponse: selectNotification,
     );
   }
 
@@ -54,7 +54,7 @@ class NotificationApi {
       ticker: 'ticker',
     );
 
-    var iOSPlatformChannelSpecifics = const IOSNotificationDetails();
+    var iOSPlatformChannelSpecifics = const DarwinNotificationDetails();
 
     var platformChannelSpecifics = NotificationDetails(
       android: androidPlatformChannelSpecifics,
@@ -71,11 +71,10 @@ class NotificationApi {
     );
   }
 
-  Future onDidReceiveLocalNotification(
-          int id, String title, String body, String payload) =>
-      Future.value();
+  void onDidReceiveLocalNotification(
+      int id, String title, String body, String payload) {}
 
-  Future selectNotification(String payload) => Future.value();
+  void selectNotification(NotificationResponse notificationResponse) {}
 }
 
 ///
@@ -91,15 +90,11 @@ class VoidNotificationApi implements NotificationApi {
   }
 
   @override
-  Future onDidReceiveLocalNotification(
-      int id, String title, String body, String payload) {
-    return Future.value();
-  }
+  void onDidReceiveLocalNotification(
+      int id, String title, String body, String payload) {}
 
   @override
-  Future selectNotification(String payload) {
-    return Future.value();
-  }
+  void selectNotification(NotificationResponse notificationResponse) {}
 
   @override
   Future showNotification(String title, String message, [int id]) {
