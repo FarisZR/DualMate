@@ -3,11 +3,9 @@ import 'package:test/test.dart';
 
 void main() {
   test('debugging', () async {
-    var source = RaplaScheduleSource();
-    source.setEndpointUrl(
-        "https://rapla.dhbw-stuttgart.de/rapla?key=txB1FOi5xd1wUJBWuX8lJhGDUgtMSFmnKLgAG_NVMhCn4AzVqTBQM-yMcTKkIDCa");
-    //var schedule = await source.querySchedule(
-    //    DateTime(2020, 01, 20), DateTime(2020, 01, 25));
-    //print(schedule);
+    const raplaUrl =
+        "https://rapla.dhbw-karlsruhe.de/rapla?page=calendar&user=eisenbiegler&file=TINF24B4";
+
+    expect(RaplaScheduleSource.isValidUrl(raplaUrl), isTrue);
   });
 }

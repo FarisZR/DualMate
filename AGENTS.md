@@ -150,7 +150,6 @@ var htmlContent = await File(
 | `flutter_secure_storage` | Secure credential storage |
 | `http` | HTTP requests |
 | `html` | HTML parsing |
-| `firebase_crashlytics` | Crash reporting |
 | `workmanager` | Background tasks |
 
 ## Localization
@@ -169,5 +168,4 @@ var htmlContent = await File(
 
 - No `analysis_options.yaml` - no custom lint rules enforced
 - Native code: Android (Kotlin), iOS (Swift) with widget extensions
-- Firebase configured for analytics and crash reporting
 - Background tasks use `workmanager` package

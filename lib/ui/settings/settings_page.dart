@@ -14,16 +14,12 @@ import 'package:dhbwstudentapp/schedule/ui/notification/next_day_information_not
 import 'package:dhbwstudentapp/schedule/ui/widgets/select_source_dialog.dart';
 import 'package:dhbwstudentapp/ui/navigation/navigator_key.dart';
 import 'package:dhbwstudentapp/ui/settings/select_theme_dialog.dart';
-import 'package:dhbwstudentapp/ui/settings/donate_list_tile.dart';
-import 'package:dhbwstudentapp/ui/settings/purchase_widget_list_tile.dart';
 import 'package:dhbwstudentapp/ui/settings/viewmodels/settings_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// TODO: Cleanup ui generation code for the in app purchases
-// TODO: Show a loading indicator and error messages right when the purchase button was pressed
 
 ///
 /// Widget for the application settings route. Provides access to many settings
@@ -38,9 +34,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final SettingsViewModel settingsViewModel = SettingsViewModel(
       KiwiContainer().resolve(),
       KiwiContainer().resolve<TaskCallback>(NextDayInformationNotification.name)
-          as NextDayInformationNotification,
-      KiwiContainer().resolve(),
-      KiwiContainer().resolve());
+          as NextDayInformationNotification);
 
   @override
   Widget build(BuildContext context) {
@@ -84,8 +78,6 @@ class _SettingsPageState extends State<SettingsPage> {
   List<Widget> buildAboutSettings(BuildContext context) {
     return [
       TitleListTile(title: L.of(context).settingsAboutTitle),
-      PurchaseWidgetListTile(),
-      DonateListTile(),
       ListTile(
         title: Text(L.of(context).settingsAbout),
         onTap: () {

@@ -1,11 +1,11 @@
 import 'dart:io';
 
 import 'package:dhbwstudentapp/ui/root_page.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:dhbwstudentapp/common/appstart/app_initializer.dart';
 import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
+import 'package:dhbwstudentapp/common/logging/crash_reporting.dart';
 import 'package:dhbwstudentapp/common/ui/viewmodels/root_view_model.dart';
+import 'package:dhbwstudentapp/common/util/rapla_tls_override.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:flutter/material.dart';
 
@@ -17,8 +17,11 @@ import 'common/util/platform_util.dart';
 void main() async {
   // Setup the flutter bindings and the error reporting as early as possible
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
+  HttpOverrides.global = RaplaHttpOverrides();
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.dumpErrorToConsole(details);
+    reportException(details.exception, details.stack);
+  };
 
   await initializeApp(false);
 

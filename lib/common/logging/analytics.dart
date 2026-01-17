@@ -1,13 +1,17 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/widgets.dart';
 
-final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
+class Analytics {
+  Future<void> logEvent({String name, Map<String, Object> parameters}) async {}
 
-final FirebaseAnalyticsObserver rootNavigationObserver =
-    FirebaseAnalyticsObserver(
-  analytics: analytics,
-);
+  Future<void> logTutorialBegin() async {}
 
-final FirebaseAnalyticsObserver mainNavigationObserver =
-    FirebaseAnalyticsObserver(
-  analytics: analytics,
-);
+  Future<void> logTutorialComplete() async {}
+
+  Future<void> setUserProperty({String name, String value}) async {}
+}
+
+final Analytics analytics = Analytics();
+
+final NavigatorObserver rootNavigationObserver = NavigatorObserver();
+
+final NavigatorObserver mainNavigationObserver = NavigatorObserver();

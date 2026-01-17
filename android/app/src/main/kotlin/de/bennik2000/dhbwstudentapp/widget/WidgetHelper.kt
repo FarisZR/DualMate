@@ -4,11 +4,7 @@ import android.content.Context
 
 class WidgetHelper(private val context: Context) {
     fun isWidgetEnabled(): Boolean {
-        val preferences = context.getSharedPreferences(
-                "${context.packageName}.widget_preferences",
-                Context.MODE_PRIVATE)
-
-        return preferences.getBoolean("isWidgetEnabled", false)
+        return true
     }
 
     fun enableWidget() {

@@ -5,7 +5,7 @@ import 'package:dhbwstudentapp/common/appstart/localization_initialize.dart';
 import 'package:dhbwstudentapp/common/appstart/notification_schedule_changed_initialize.dart';
 import 'package:dhbwstudentapp/common/appstart/notifications_initialize.dart';
 import 'package:dhbwstudentapp/common/appstart/service_injector.dart';
-import 'package:dhbwstudentapp/common/iap/in_app_purchase_manager.dart';
+import 'package:dhbwstudentapp/common/util/rapla_tls_override.dart';
 import 'package:dhbwstudentapp/native/widget/widget_update_callback.dart';
 import 'package:dhbwstudentapp/schedule/background/calendar_synchronizer.dart';
 import 'package:dhbwstudentapp/schedule/business/schedule_source_provider.dart';
@@ -23,6 +23,8 @@ bool isInitialized = false;
 Future<void> initializeApp(bool isBackground) async {
   print("Initialize requested. Is background: $isBackground");
 
+  HttpOverrides.global = RaplaHttpOverrides();
+
   if (isInitialized) {
     print("Already initialized. Abort.");
     return;
@@ -38,15 +40,6 @@ Future<void> initializeApp(bool isBackground) async {
   } else {
     await LocalizationInitialize.fromLanguageCode(Platform.localeName)
         .setupLocalizations();
-  }
-
-  if (!isBackground) {
-    KiwiContainer().registerInstance(
-      InAppPurchaseManager(
-        KiwiContainer().resolve(),
-        KiwiContainer().resolve(),
-      ),
-    );
   }
 
   WidgetUpdateCallback(KiwiContainer().resolve())

@@ -13,13 +13,7 @@ public class WidgetUserDefaults {
     private let defaultsKey: String = "isWidgetEnabled"
     
     func isWidgetEnabled() -> Bool {
-        if let userDefaults = UserDefaults(suiteName: groupName) {
-            let value = userDefaults.bool(forKey: defaultsKey)
-            
-            return value
-        }
-        
-        return false
+        return true
     }
     
     func enableWidget() {
