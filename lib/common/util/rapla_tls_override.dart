@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+/// Adds the HARICA TLS RSA Root CA 2021 for Rapla hosts on devices missing it.
 class RaplaHttpOverrides extends HttpOverrides {
   static const String _haricaTlsRootCaPem = '''
 -----BEGIN CERTIFICATE-----
@@ -46,7 +48,9 @@ xw/ogM4cKGR0GQjTQuPOAF1/sdwTsOEFy9EgqoZ0njnnkf3/W9b3raYvAwtt41dU
       securityContext.setTrustedCertificatesBytes(
         utf8.encode(_haricaTlsRootCaPem),
       );
-    } catch (_) {}
+    } catch (exception) {
+      debugPrint("Failed to load HARICA root certificate: $exception");
+    }
     return super.createHttpClient(securityContext);
   }
 }
