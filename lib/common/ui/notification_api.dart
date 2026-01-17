@@ -81,9 +81,12 @@ class NotificationApi {
 /// This class implements the methods of the NotificationApi with empty stubs
 ///
 class VoidNotificationApi implements NotificationApi {
+  final FlutterLocalNotificationsPlugin _voidLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
   @override
   FlutterLocalNotificationsPlugin get _localNotificationsPlugin =>
-      FlutterLocalNotificationsPlugin();
+      _voidLocalNotificationsPlugin;
 
   @override
   Future<void> initialize() {
