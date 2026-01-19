@@ -5,6 +5,6 @@ class Credentials {
   Credentials(this.username, this.password);
 
   bool allFieldsFilled() {
-    return password != null && username != null;
+    return username.isNotEmpty && password.isNotEmpty;
   }
 }

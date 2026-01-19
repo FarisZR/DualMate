@@ -9,8 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 
-class DualisNavigationEntry extends NavigationEntry {
-  StudyGradesViewModel _viewModel;
+class DualisNavigationEntry extends NavigationEntry<StudyGradesViewModel> {
+  late StudyGradesViewModel _viewModel;
 
   @override
   Widget icon(BuildContext context) {
@@ -23,14 +23,11 @@ class DualisNavigationEntry extends NavigationEntry {
   }
 
   @override
-  BaseViewModel initViewModel() {
-    if (_viewModel == null) {
-      _viewModel = StudyGradesViewModel(
-        KiwiContainer().resolve(),
-        KiwiContainer().resolve(),
-      );
-    }
-
+  StudyGradesViewModel initViewModel() {
+    _viewModel = StudyGradesViewModel(
+      KiwiContainer().resolve(),
+      KiwiContainer().resolve(),
+    );
     return _viewModel;
   }
 
@@ -43,25 +40,31 @@ class DualisNavigationEntry extends NavigationEntry {
   List<Widget> appBarActions(BuildContext context) {
     initViewModel();
     return [
-      PropertyChangeProvider<StudyGradesViewModel, Object>(
+      PropertyChangeProvider<StudyGradesViewModel, String>(
         value: _viewModel,
-        child: PropertyChangeConsumer(
-          builder: (BuildContext _, StudyGradesViewModel __, Set<Object> ___) =>
-              _viewModel.loginState != LoginState.LoggedIn
-                  ? IconButton(
-                      icon: Icon(Icons.help_outline),
-                      onPressed: () async {
-                        await DualisHelpDialog().show(context);
-                      },
-                      tooltip: L.of(context).helpButtonTooltip,
-                    )
-                  : IconButton(
-                      icon: const Icon(CustomIcons.logout),
-                      onPressed: () async {
-                        await _viewModel.logout();
-                      },
-                      tooltip: L.of(context).logoutButtonTooltip,
-                    ),
+        child: PropertyChangeConsumer<StudyGradesViewModel, String>(
+          builder: (
+            BuildContext _,
+            StudyGradesViewModel? model,
+            Set<String>? __,
+          ) {
+            if (model == null) return Container();
+            return model.loginState != LoginState.LoggedIn
+                ? IconButton(
+                    icon: Icon(Icons.help_outline),
+                    onPressed: () async {
+                      await DualisHelpDialog().show(context);
+                    },
+                    tooltip: L.of(context).helpButtonTooltip,
+                  )
+                : IconButton(
+                    icon: const Icon(CustomIcons.logout),
+                    onPressed: () async {
+                      await model.logout();
+                    },
+                    tooltip: L.of(context).logoutButtonTooltip,
+                  );
+          },
         ),
       ),
     ];

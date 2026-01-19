@@ -32,14 +32,16 @@ class ModulesFromCourseResultPageExtract {
       // Only rows with tds as child are modules
       if (row.children[0].localName != "td") continue;
 
-      DualisModule module = _extractModuleFromRow(row, endpointUrl);
-      modulesOfSemester.add(module);
+      var module = _extractModuleFromRow(row, endpointUrl);
+      if (module != null) {
+        modulesOfSemester.add(module);
+      }
     }
 
     return modulesOfSemester;
   }
 
-  DualisModule _extractModuleFromRow(
+  DualisModule? _extractModuleFromRow(
     Element row,
     String endpointUrl,
   ) {
@@ -55,10 +57,12 @@ class ModulesFromCourseResultPageExtract {
 
     status = trimAndEscapeString(status);
 
-    ExamState statusEnum;
+    var statusEnum = ExamState.Pending;
 
     if (status == "bestanden") {
       statusEnum = ExamState.Passed;
+    } else if (status == "nicht bestanden") {
+      statusEnum = ExamState.Failed;
     }
 
     if (grade == "noch nicht gesetzt") {
@@ -71,12 +75,12 @@ class ModulesFromCourseResultPageExtract {
       trimAndEscapeString(grade),
       trimAndEscapeString(credits),
       statusEnum,
-      url,
+      url ?? "",
     );
     return module;
   }
 
-  String _extractDetailsUrlFromButton(
+  String? _extractDetailsUrlFromButton(
     Element detailsButton,
     String endpointUrl,
   ) {

@@ -26,7 +26,7 @@ class DateManagementService {
     var url = "https://it.dhbw-stuttgart.de/DHermine/?page=texport";
 
     url += "&sel_typ=pub";
-    url += "&sel_jahrgang= ${parameters.year ?? "*"}";
+    url += "&sel_jahrgang= ${parameters.year}";
     url += "&sel_bezeichnung=*";
     url += "&selection=${parameters.includePast ? "**" : "*"}";
     url += "&permission=show";

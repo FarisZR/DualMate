@@ -19,11 +19,11 @@ class DualisScraper {
   DualisUrls get _dualisUrls => _dualisAuthentication.dualisUrls;
 
   Future<List<DualisModule>> loadAllModules([
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ]) async {
     var allModulesPageResponse = await _dualisAuthentication.authenticatedGet(
       _dualisUrls.studentResultsUrl,
-      cancellationToken,
+      cancellationToken ?? CancellationToken(),
     );
 
     return AllModulesExtract().extractAllModules(allModulesPageResponse);
@@ -31,11 +31,11 @@ class DualisScraper {
 
   Future<List<DualisExam>> loadModuleExams(
     String moduleDetailsUrl, [
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ]) async {
     var detailsResponse = await _dualisAuthentication.authenticatedGet(
       moduleDetailsUrl,
-      cancellationToken,
+      cancellationToken ?? CancellationToken(),
     );
 
     return ExamsFromModuleDetailsExtract().extractExamsFromModuleDetails(
@@ -44,11 +44,11 @@ class DualisScraper {
   }
 
   Future<List<DualisSemester>> loadSemesters([
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ]) async {
     var courseResultsResponse = await _dualisAuthentication.authenticatedGet(
       _dualisUrls.courseResultUrl,
-      cancellationToken,
+      cancellationToken ?? CancellationToken(),
     );
 
     var semesters = SemestersFromCourseResultPageExtract()
@@ -67,11 +67,13 @@ class DualisScraper {
 
   Future<List<DualisModule>> loadSemesterModules(
     String semesterName, [
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ]) async {
+    var semesterUrl = _dualisUrls.semesterCourseResultUrls[semesterName];
+    if (semesterUrl == null) return [];
     var coursePage = await _dualisAuthentication.authenticatedGet(
-      _dualisUrls.semesterCourseResultUrls[semesterName],
-      cancellationToken,
+      semesterUrl,
+      cancellationToken ?? CancellationToken(),
     );
 
     return ModulesFromCourseResultPageExtract()
@@ -79,11 +81,11 @@ class DualisScraper {
   }
 
   Future<StudyGrades> loadStudyGrades(
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ) async {
     var studentsResultsPage = await _dualisAuthentication.authenticatedGet(
       _dualisUrls.studentResultsUrl,
-      cancellationToken,
+      cancellationToken ?? CancellationToken(),
     );
 
     return StudyGradesFromStudentResultsPageExtract()
@@ -92,13 +94,13 @@ class DualisScraper {
 
   Future<Schedule> loadMonthlySchedule(
     DateTime dateInMonth,
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ) async {
     var requestUrl =
         "${_dualisUrls.monthlyScheduleUrl}01.${dateInMonth.month}.${dateInMonth.year}";
 
     var result = await _dualisAuthentication.authenticatedGet(
-        requestUrl, cancellationToken);
+      requestUrl, cancellationToken ?? CancellationToken());
 
     var schedule = MonthlyScheduleExtract().extractScheduleFromMonthly(result);
 
@@ -110,20 +112,24 @@ class DualisScraper {
   Future<LoginResult> login(
     String username,
     String password,
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ) {
-    return _dualisAuthentication.login(username, password, cancellationToken);
+    return _dualisAuthentication.login(
+      username,
+      password,
+      cancellationToken ?? CancellationToken(),
+    );
   }
 
   Future<LoginResult> loginWithPreviousCredentials(
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ) {
     return _dualisAuthentication
-        .loginWithPreviousCredentials(cancellationToken);
+        .loginWithPreviousCredentials(cancellationToken ?? CancellationToken());
   }
 
-  Future<void> logout(CancellationToken cancellationToken) {
-    return _dualisAuthentication.logout(cancellationToken);
+  Future<void> logout(CancellationToken? cancellationToken) {
+    return _dualisAuthentication.logout(cancellationToken ?? CancellationToken());
   }
 
   bool isLoggedIn() {

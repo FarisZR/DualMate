@@ -1,13 +1,9 @@
 DateTime toStartOfDay(DateTime dateTime) {
-  return dateTime == null
-      ? null
-      : DateTime(dateTime.year, dateTime.month, dateTime.day, 0, 0, 0);
+  return DateTime(dateTime.year, dateTime.month, dateTime.day, 0, 0, 0);
 }
 
 DateTime toStartOfMonth(DateTime dateTime) {
-  return dateTime == null
-      ? null
-      : DateTime(dateTime.year, dateTime.month, 1, 0, 0, 0);
+  return DateTime(dateTime.year, dateTime.month, 1, 0, 0, 0);
 }
 
 DateTime tomorrow(DateTime dateTime) {
@@ -15,9 +11,7 @@ DateTime tomorrow(DateTime dateTime) {
 }
 
 DateTime addDays(DateTime dateTime, int days) {
-  return dateTime == null
-      ? null
-      : DateTime(
+  return DateTime(
           dateTime.year,
           dateTime.month,
           dateTime.day + days,
@@ -28,15 +22,11 @@ DateTime addDays(DateTime dateTime, int days) {
 }
 
 DateTime toMonday(DateTime dateTime) {
-  return dateTime == null
-      ? null
-      : dateTime.subtract(Duration(days: dateTime.weekday - 1));
+  return dateTime.subtract(Duration(days: dateTime.weekday - 1));
 }
 
 DateTime toPreviousWeek(DateTime dateTime) {
-  return dateTime == null
-      ? null
-      : DateTime(
+  return DateTime(
           dateTime.year,
           dateTime.month,
           dateTime.day - 7,
@@ -47,9 +37,7 @@ DateTime toPreviousWeek(DateTime dateTime) {
 }
 
 DateTime toNextWeek(DateTime dateTime) {
-  return dateTime == null
-      ? null
-      : DateTime(
+  return DateTime(
           dateTime.year,
           dateTime.month,
           dateTime.day + 7,
@@ -60,9 +48,7 @@ DateTime toNextWeek(DateTime dateTime) {
 }
 
 DateTime toNextMonth(DateTime dateTime) {
-  return dateTime == null
-      ? null
-      : DateTime(
+  return DateTime(
           dateTime.year,
           dateTime.month + 1,
           dateTime.day,
@@ -73,7 +59,6 @@ DateTime toNextMonth(DateTime dateTime) {
 }
 
 DateTime toTimeOfDay(DateTime dateTime, int hour, int minute) {
-  if (dateTime == null) return null;
   return DateTime(
     dateTime.year,
     dateTime.month,
@@ -84,8 +69,6 @@ DateTime toTimeOfDay(DateTime dateTime, int hour, int minute) {
 }
 
 DateTime toTimeOfDayInFuture(DateTime dateTime, int hour, int minute) {
-  if (dateTime == null) return null;
-
   var newDateTime = DateTime(
     dateTime.year,
     dateTime.month,
@@ -106,8 +89,6 @@ bool isAtSameDay(DateTime date1, DateTime date2) {
 }
 
 DateTime toDayOfWeek(DateTime dateTime, int weekday) {
-  if (dateTime == null) return null;
-
   var startOfWeek = addDays(dateTime, -dateTime.weekday);
   return addDays(startOfWeek, weekday);
 }

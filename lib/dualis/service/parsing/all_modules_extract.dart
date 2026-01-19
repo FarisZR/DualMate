@@ -49,13 +49,14 @@ class AllModulesExtract {
     var grade = cells[4].innerHtml;
     var state = cells[5].children[0].attributes["alt"];
 
-    ExamState stateEnum;
+    var stateEnum = ExamState.Pending;
 
     if (state == "Bestanden") {
       stateEnum = ExamState.Passed;
-    }
-    if (state == "Offen") {
+    } else if (state == "Offen") {
       stateEnum = ExamState.Pending;
+    } else if (state == "Nicht bestanden") {
+      stateEnum = ExamState.Failed;
     }
 
     var module = DualisModule(
@@ -64,7 +65,7 @@ class AllModulesExtract {
       trimAndEscapeString(grade),
       trimAndEscapeString(credits),
       stateEnum,
-      null,
+      "",
     );
 
     return module;

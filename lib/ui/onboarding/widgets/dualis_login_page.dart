@@ -25,8 +25,12 @@ class _DualisLoginCredentialsPageState
   @override
   Widget build(BuildContext context) {
     return PropertyChangeConsumer<OnboardingStepViewModel, String>(
-      builder:
-          (BuildContext context, OnboardingStepViewModel base, Set<Object> _) {
+      builder: (
+        BuildContext context,
+        OnboardingStepViewModel? base,
+        Set<String>? _,
+      ) {
+        if (base == null) return Container();
         var viewModel = base as DualisLoginViewModel;
 
         if (_usernameEditingController.text != viewModel.username) {
@@ -73,7 +77,7 @@ class _DualisLoginCredentialsPageState
                     ? Text(
                         L.of(context).onboardingDualisWrongCredentials,
                         textAlign: TextAlign.start,
-                        style: TextStyle(color: Theme.of(context).errorColor),
+                        style: TextStyle(color: Theme.of(context).colorScheme.error),
                       )
                     : Container(),
               ),
@@ -120,7 +124,7 @@ class _DualisLoginCredentialsPageState
         child: Center(
           child: Text(
             L.of(context).onboardingDualisPageTitle,
-            style: Theme.of(context).textTheme.headline4,
+            style: Theme.of(context).textTheme.headlineMedium,
             textAlign: TextAlign.center,
           ),
         ),
@@ -133,7 +137,7 @@ class _DualisLoginCredentialsPageState
         padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
         child: Text(
           L.of(context).onboardingDualisPageDescription,
-          style: Theme.of(context).textTheme.bodyText2,
+          style: Theme.of(context).textTheme.bodyMedium,
           textAlign: TextAlign.justify,
         ),
       ),

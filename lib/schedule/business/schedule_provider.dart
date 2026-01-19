@@ -33,7 +33,7 @@ class ScheduleProvider {
   final List<ScheduleUpdatedCallback> _scheduleUpdatedCallbacks =
       <ScheduleUpdatedCallback>[];
 
-  ScheduleFilter _scheduleFilter;
+  late ScheduleFilter _scheduleFilter;
 
   final List<ScheduleEntryChangedCallback> _scheduleEntryChangedCallbacks =
       <ScheduleEntryChangedCallback>[];
@@ -75,27 +75,23 @@ class ScheduleProvider {
 
       var schedule = updatedSchedule.schedule;
 
-      if (schedule == null) {
-        print("No schedule returned!");
-      } else {
-        if (await _preferencesProvider.getPrettifySchedule()) {
-          schedule = SchedulePrettifier().prettifySchedule(schedule);
-        }
-
-        print("Schedule returned with ${schedule.entries.length} entries");
-
-        await _diffToCache(start, end, schedule);
-        await _scheduleEntryRepository.deleteScheduleEntriesBetween(start, end);
-        await _scheduleEntryRepository.saveSchedule(schedule);
-        await _scheduleQueryInformationRepository.saveScheduleQueryInformation(
-          ScheduleQueryInformation(start, end, DateTime.now()),
-        );
-
-        schedule = await _scheduleFilter.filter(schedule);
-
-        print("Filtered schedule has ${schedule.entries.length} entries");
+      if (await _preferencesProvider.getPrettifySchedule()) {
+        schedule = SchedulePrettifier().prettifySchedule(schedule);
       }
 
+      print("Schedule returned with ${schedule.entries.length} entries");
+
+      await _diffToCache(start, end, schedule);
+      await _scheduleEntryRepository.deleteScheduleEntriesBetween(start, end);
+      await _scheduleEntryRepository.saveSchedule(schedule);
+      await _scheduleQueryInformationRepository.saveScheduleQueryInformation(
+        ScheduleQueryInformation(start, end, DateTime.now()),
+      );
+
+      schedule = await _scheduleFilter.filter(schedule);
+
+      print("Filtered schedule has ${schedule.entries.length} entries");
+    
       for (var c in _scheduleUpdatedCallbacks) {
         await c(schedule, start, end);
       }

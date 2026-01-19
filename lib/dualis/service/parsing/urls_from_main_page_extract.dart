@@ -29,14 +29,15 @@ class UrlsFromMainPageExtract {
     var logoutElement = getElementById(document, "logoutButton");
 
     dualisUrls.courseResultUrl =
-        endpointUrl + courseResultsElement.attributes['href'];
+      endpointUrl + (courseResultsElement.attributes['href'] ?? "");
 
     dualisUrls.studentResultsUrl =
-        endpointUrl + studentResultsElement.attributes['href'];
+      endpointUrl + (studentResultsElement.attributes['href'] ?? "");
 
     dualisUrls.monthlyScheduleUrl =
-        endpointUrl + monthlyScheduleElement.attributes["href"];
+      endpointUrl + (monthlyScheduleElement.attributes["href"] ?? "");
 
-    dualisUrls.logoutUrl = endpointUrl + logoutElement.attributes['href'];
+    dualisUrls.logoutUrl =
+        endpointUrl + (logoutElement.attributes['href'] ?? "");
   }
 }

@@ -36,8 +36,9 @@ class NextDayInformationNotification extends TaskCallback {
 
     var nextScheduleEntry =
         await _scheduleEntryRepository.queryNextScheduleEntry(now);
-
-    if (nextScheduleEntry == null) return;
+    if (nextScheduleEntry == null) {
+      return;
+    }
 
     var format = DateFormat.Hm();
     var daysToNextEntry = toStartOfDay(nextScheduleEntry.start)
@@ -60,7 +61,7 @@ class NextDayInformationNotification extends TaskCallback {
 
   String _getNotificationMessage(
       int daysToNextEntry, ScheduleEntry nextScheduleEntry, DateFormat format) {
-    String message;
+    String message = "";
     if (daysToNextEntry == 0) {
       message = interpolate(
         _localization.notificationNextClassNextClassAtMessage,

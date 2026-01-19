@@ -24,31 +24,45 @@ class SelectThemeDialog {
       title: Text(L.of(context).selectThemeDialogTitle),
       content: PropertyChangeProvider<RootViewModel, String>(
         value: _rootViewModel,
-        child: PropertyChangeConsumer(
+        child: PropertyChangeConsumer<RootViewModel, String>(
           properties: const [
             "appTheme",
           ],
-          builder: (BuildContext context, RootViewModel model, Set properties) {
+          builder: (
+            BuildContext context,
+            RootViewModel? model,
+            Set<String>? properties,
+          ) {
+            if (model == null) return Container();
             return Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                RadioListTile(
+                RadioListTile<AppTheme>(
                   title: Text(L.of(context).selectThemeLight),
                   value: AppTheme.Light,
                   groupValue: _rootViewModel.appTheme,
-                  onChanged: (v) => _rootViewModel.setAppTheme(v),
+                  onChanged: (v) {
+                    if (v == null) return;
+                    _rootViewModel.setAppTheme(v);
+                  },
                 ),
-                RadioListTile(
+                RadioListTile<AppTheme>(
                   title: Text(L.of(context).selectThemeDark),
                   value: AppTheme.Dark,
                   groupValue: _rootViewModel.appTheme,
-                  onChanged: (v) => _rootViewModel.setAppTheme(v),
+                  onChanged: (v) {
+                    if (v == null) return;
+                    _rootViewModel.setAppTheme(v);
+                  },
                 ),
-                RadioListTile(
+                RadioListTile<AppTheme>(
                   title: Text(L.of(context).selectThemeSystem),
                   value: AppTheme.System,
                   groupValue: _rootViewModel.appTheme,
-                  onChanged: (v) => _rootViewModel.setAppTheme(v),
+                  onChanged: (v) {
+                    if (v == null) return;
+                    _rootViewModel.setAppTheme(v);
+                  },
                 ),
               ],
             );

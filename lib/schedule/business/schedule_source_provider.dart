@@ -54,8 +54,9 @@ class ScheduleSourceProvider {
       ScheduleSourceType.Mannheim: () async => await _icalScheduleSource(),
     };
 
-    if (initializer.containsKey(scheduleSourceType)) {
-      scheduleSource = await initializer[scheduleSourceType]();
+    var init = initializer[scheduleSourceType];
+    if (init != null) {
+      scheduleSource = await init();
     }
 
     _currentScheduleSource = scheduleSource;
@@ -72,9 +73,7 @@ class ScheduleSourceProvider {
   Future<ScheduleSourceType> _getScheduleSourceType() async {
     var type = await _preferencesProvider.getScheduleSourceType();
 
-    var scheduleSourceType = type != null
-        ? ScheduleSourceType.values[type]
-        : ScheduleSourceType.None;
+    var scheduleSourceType = ScheduleSourceType.values[type];
 
     return scheduleSourceType;
   }
@@ -172,7 +171,6 @@ class ScheduleSourceProvider {
   }
 
   Future<void> setupForMannheim(Course selectedCourse) async {
-    if(selectedCourse == null) return;
     await _preferencesProvider.setMannheimScheduleId(selectedCourse.scheduleId);
     await _preferencesProvider.setIcalUrl(selectedCourse.icalUrl);
     await _preferencesProvider
@@ -188,8 +186,7 @@ class ScheduleSourceProvider {
   }
 
   bool didSetupCorrectly() {
-    return _currentScheduleSource != null &&
-        !(_currentScheduleSource is InvalidScheduleSource);
+    return !(_currentScheduleSource is InvalidScheduleSource);
   }
 
   void addDidChangeScheduleSourceCallback(OnDidChangeScheduleSource callback) {

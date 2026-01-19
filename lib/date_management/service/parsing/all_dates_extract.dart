@@ -24,7 +24,7 @@ class AllDatesExtract {
     var dateEntries = <DateEntry>[];
 
     for (var a in dateContainingElement.nodes.sublist(0)) {
-      var text = a.text;
+      var text = a.text ?? "";
 
       var lines = text.split("\n");
 
@@ -34,16 +34,16 @@ class AllDatesExtract {
         if (dateEntry != null) {
           dateEntries.add(dateEntry);
         }
-      }
+            }
     }
 
     dateEntries
-        .sort((DateEntry e1, DateEntry e2) => e1.start?.compareTo(e2.start));
+        .sort((DateEntry e1, DateEntry e2) => e1.start.compareTo(e2.start));
 
     return dateEntries;
   }
 
-  DateEntry _parseDateEntryLine(String line, String databaseName) {
+  DateEntry? _parseDateEntryLine(String line, String databaseName) {
     var parts = line.split(';');
 
     if (parts.length != 5) {
@@ -55,16 +55,21 @@ class AllDatesExtract {
       parts[3].trim(),
     );
 
+    if (date == null) {
+      return null;
+    }
+
     return DateEntry(
         comment: parts[4].trim(),
         description: parts[0].trim(),
         year: parts[1].trim(),
         databaseName: databaseName,
         start: date,
-        end: date);
+      end: date,
+      room: "");
   }
 
-  DateTime _parseDateTime(String date, String time) {
+  DateTime? _parseDateTime(String date, String time) {
     if (time == "24:00") {
       time = "00:00";
     }

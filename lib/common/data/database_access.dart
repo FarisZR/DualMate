@@ -4,15 +4,13 @@ import 'package:sqflite/sqflite.dart';
 
 class DatabaseAccess {
   static const String _databaseName = "Database.db";
-  static Database _databaseInstance;
+  static Database? _databaseInstance;
 
   static const String idColumnName = "id";
 
   Future<Database> get _database async {
-    if (_databaseInstance != null) return _databaseInstance;
-
-    _databaseInstance = await _initDatabase();
-    return _databaseInstance;
+    _databaseInstance ??= await _initDatabase();
+    return _databaseInstance!;
   }
 
   Future<Database> _initDatabase() async {
@@ -60,19 +58,21 @@ class DatabaseAccess {
   }
 
   Future<List<Map<String, dynamic>>> queryRows(String table,
-      {bool distinct,
-      List<String> columns,
-      String where,
-      List<dynamic> whereArgs,
-      String groupBy,
-      String having,
-      String orderBy,
-      int limit,
-      int offset}) async {
+      {bool? distinct,
+      List<String>? columns,
+      String? where,
+      List<dynamic>? whereArgs,
+      String? groupBy,
+      String? having,
+      String? orderBy,
+      int? limit,
+      int? offset}) async {
     Database db = await _database;
 
-    for (int i = 0; i < (whereArgs?.length ?? 0); i++) {
-      whereArgs[i] = whereArgs[i] ?? "";
+    if (whereArgs != null) {
+      for (int i = 0; i < whereArgs.length; i++) {
+        whereArgs[i] = whereArgs[i] ?? "";
+      }
     }
 
     return await db.query(
@@ -92,12 +92,12 @@ class DatabaseAccess {
   Future<int> queryRowCount(String table) async {
     Database db = await _database;
     return Sqflite.firstIntValue(
-        await db.rawQuery('SELECT COUNT(*) FROM $table'));
+        await db.rawQuery('SELECT COUNT(*) FROM $table')) ?? 0;
   }
 
   Future<int> queryAggregator(String query, List<dynamic> arguments) async {
     Database db = await _database;
-    return Sqflite.firstIntValue(await db.rawQuery(query, arguments));
+    return Sqflite.firstIntValue(await db.rawQuery(query, arguments)) ?? 0;
   }
 
   Future<int> update(String table, Map<String, dynamic> row) async {
@@ -114,8 +114,8 @@ class DatabaseAccess {
 
   Future<int> deleteWhere(
     String table, {
-    String where,
-    List<dynamic> whereArgs,
+    String? where,
+    List<dynamic>? whereArgs,
   }) async {
     Database db = await _database;
     return await db.delete(

@@ -21,7 +21,7 @@ class _MannheimPageState extends State<MannheimPage> {
           child: Center(
             child: Text(
               L.of(context).onboardingMannheimTitle,
-              style: Theme.of(context).textTheme.headline4,
+              style: Theme.of(context).textTheme.headlineMedium,
               textAlign: TextAlign.center,
             ),
           ),
@@ -32,7 +32,7 @@ class _MannheimPageState extends State<MannheimPage> {
         ),
         Text(
           L.of(context).onboardingMannheimDescription,
-          style: Theme.of(context).textTheme.bodyText2,
+          style: Theme.of(context).textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
         Expanded(
@@ -50,8 +50,12 @@ class SelectMannheimCourseWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PropertyChangeConsumer<OnboardingStepViewModel, String>(
-      builder:
-          (BuildContext context, OnboardingStepViewModel model, Set<Object> _) {
+      builder: (
+        BuildContext context,
+        OnboardingStepViewModel? model,
+        Set<String>? _,
+      ) {
+        if (model == null) return Container();
         var viewModel = model as MannheimViewModel;
 
         switch (viewModel.loadingState) {
@@ -63,7 +67,6 @@ class SelectMannheimCourseWidget extends StatelessWidget {
             return _buildLoadingError(context, viewModel);
         }
 
-        return Container();
       },
     );
   }
@@ -77,7 +80,7 @@ class SelectMannheimCourseWidget extends StatelessWidget {
       color: Colors.transparent,
       child: ListView.builder(
         padding: EdgeInsets.all(0),
-        itemCount: viewModel.courses?.length ?? 0,
+        itemCount: viewModel.courses.length,
         itemBuilder: (BuildContext context, int index) =>
             _buildCourseListTile(viewModel, index, context),
       ),

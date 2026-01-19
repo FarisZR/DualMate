@@ -8,18 +8,20 @@ import 'package:dhbwstudentapp/native/widget/ios_widget_helper.dart';
 /// methods to enable/disable or update the widget
 ///
 class WidgetHelper {
-  static WidgetHelper _instance;
+  static WidgetHelper? _instance;
 
-  WidgetHelper() {
-    if (_instance != null) return;
+  factory WidgetHelper() {
+    _instance ??= _createInstance();
+    return _instance!;
+  }
 
+  static WidgetHelper _createInstance() {
     if (Platform.isAndroid) {
-      _instance = AndroidWidgetHelper();
+      return AndroidWidgetHelper();
     } else if (Platform.isIOS) {
-      _instance = IOSWidgetHelper();
-    } else {
-      _instance = VoidWidgetHelper();
+      return IOSWidgetHelper();
     }
+    return VoidWidgetHelper();
   }
 
   ///
@@ -27,14 +29,16 @@ class WidgetHelper {
   /// scheduled and will happen soon.
   ///
   Future<void> requestWidgetRefresh() {
-    return _instance.requestWidgetRefresh();
+    _instance ??= _createInstance();
+    return _instance!.requestWidgetRefresh();
   }
 
   ///
   /// Checks if widgets are supported by the device
   ///
   Future<bool> areWidgetsSupported() {
-    return _instance.areWidgetsSupported();
+    _instance ??= _createInstance();
+    return _instance!.areWidgetsSupported();
   }
 
   ///
@@ -42,7 +46,8 @@ class WidgetHelper {
   /// its full functionality.
   ///
   Future<void> enableWidget() {
-    return _instance.enableWidget();
+    _instance ??= _createInstance();
+    return _instance!.enableWidget();
   }
 
   ///
@@ -50,7 +55,8 @@ class WidgetHelper {
   /// only provide placeholder content or limited functionality.
   ///
   Future<void> disableWidget() {
-    return _instance.disableWidget();
+    _instance ??= _createInstance();
+    return _instance!.disableWidget();
   }
 }
 

@@ -18,7 +18,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.dumpErrorToConsole(details);
-    reportException(details.exception, details.stack);
+    reportException(details.exception, details.stack ?? StackTrace.current);
   };
 
   await initializeApp(false);

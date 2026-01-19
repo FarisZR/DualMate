@@ -17,13 +17,9 @@ class Session {
   ///
   Future<String> get(
     String url, [
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ]) async {
     var response = await rawGet(url, cancellationToken);
-
-    if (response == null) {
-      return null;
-    }
 
     try {
       return utf8.decode(response.bodyBytes);
@@ -34,14 +30,13 @@ class Session {
 
   Future<Response> rawGet(
     String url, [
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ]) async {
-    if (cancellationToken == null) cancellationToken = CancellationToken();
-
     var requestCancellationToken = http.CancellationToken();
+    var token = cancellationToken ?? CancellationToken();
 
     try {
-      cancellationToken.setCancellationCallback(() {
+      token.setCancellationCallback(() {
         requestCancellationToken.cancel();
       });
 
@@ -53,8 +48,13 @@ class Session {
         headers: cookies,
       );
 
-      if (response == null && !requestCancellationToken.isCanceled)
+      if (response == null && !requestCancellationToken.isCanceled) {
         throw ServiceRequestFailed("Http request failed!");
+      }
+
+      if (response == null) {
+        throw OperationCancelledException();
+      }
 
       _updateCookie(response);
 
@@ -62,12 +62,13 @@ class Session {
     } on http.OperationCanceledError catch (_) {
       throw OperationCancelledException();
     } catch (ex) {
-      if (!requestCancellationToken.isCanceled) rethrow;
+      if (requestCancellationToken.isCanceled) {
+        throw OperationCancelledException();
+      }
+      rethrow;
     } finally {
-      cancellationToken.setCancellationCallback(null);
+      token.setCancellationCallback(null);
     }
-
-    return null;
   }
 
   ///
@@ -76,13 +77,9 @@ class Session {
   Future<String> post(
     String url,
     dynamic data, [
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ]) async {
     var response = await rawPost(url, data, cancellationToken);
-
-    if (response == null) {
-      return null;
-    }
 
     try {
       return utf8.decode(response.bodyBytes);
@@ -94,13 +91,13 @@ class Session {
   Future<Response> rawPost(
     String url,
     dynamic data, [
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ]) async {
-    if (cancellationToken == null) cancellationToken = CancellationToken();
     var requestCancellationToken = http.CancellationToken();
+    var token = cancellationToken ?? CancellationToken();
 
     try {
-      cancellationToken.setCancellationCallback(() {
+      token.setCancellationCallback(() {
         requestCancellationToken.cancel();
       });
 
@@ -111,8 +108,13 @@ class Session {
         cancelToken: requestCancellationToken,
       );
 
-      if (response == null && !requestCancellationToken.isCanceled)
+      if (response == null && !requestCancellationToken.isCanceled) {
         throw ServiceRequestFailed("Http request failed!");
+      }
+
+      if (response == null) {
+        throw OperationCancelledException();
+      }
 
       _updateCookie(response);
 
@@ -120,24 +122,24 @@ class Session {
     } on http.OperationCanceledError catch (_) {
       throw OperationCancelledException();
     } catch (ex) {
-      if (!requestCancellationToken.isCanceled) rethrow;
+      if (requestCancellationToken.isCanceled) {
+        throw OperationCancelledException();
+      }
+      rethrow;
     } finally {
-      cancellationToken.setCancellationCallback(null);
+      token.setCancellationCallback(null);
     }
-
-    return null;
   }
 
   void _updateCookie(Response response) {
-    String rawCookie = response.headers['set-cookie'];
-    if (rawCookie != null) {
-      int index = rawCookie.indexOf(';');
+    String rawCookie = response.headers['set-cookie'] ?? "";
+    if (rawCookie.isEmpty) return;
+    int index = rawCookie.indexOf(';');
 
-      var cookie = (index == -1) ? rawCookie : rawCookie.substring(0, index);
+    var cookie = (index == -1) ? rawCookie : rawCookie.substring(0, index);
 
-      cookie = cookie.replaceAll(" ", "");
+    cookie = cookie.replaceAll(" ", "");
 
-      cookies['cookie'] = cookie;
-    }
+    cookies['cookie'] = cookie;
   }
 }

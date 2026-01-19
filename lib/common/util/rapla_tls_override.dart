@@ -41,7 +41,7 @@ xw/ogM4cKGR0GQjTQuPOAF1/sdwTsOEFy9EgqoZ0njnnkf3/W9b3raYvAwtt41dU
 ''';
 
   @override
-  HttpClient createHttpClient(SecurityContext context) {
+  HttpClient createHttpClient(SecurityContext? context) {
     final SecurityContext securityContext =
         context ?? SecurityContext(withTrustedRoots: true);
     try {

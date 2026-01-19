@@ -1,0 +1,6 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "docker build": true
+    },
+    "java.configuration.updateBuildConfiguration": "automatic"
+}

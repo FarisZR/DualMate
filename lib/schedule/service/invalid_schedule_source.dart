@@ -7,7 +7,7 @@ class InvalidScheduleSource extends ScheduleSource {
   Future<ScheduleQueryResult> querySchedule(
     DateTime from,
     DateTime to, [
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ]) {
     throw StateError("Schedule source not properly configured");
   }

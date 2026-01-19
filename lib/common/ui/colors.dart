@@ -79,29 +79,111 @@ class ColorPalettes {
 
     var brightness = isDark ? Brightness.dark : Brightness.light;
 
-    var themeData = ThemeData(
+    var baseTheme = isDark ? ThemeData.dark() : ThemeData.light();
+    var colorScheme = ColorScheme.fromSwatch(
+      primarySwatch: ColorPalettes.main,
       brightness: brightness,
-      toggleableActiveColor:
-          isDark ? ColorPalettes.main[700] : ColorPalettes.main[600],
-      colorScheme:
-          ColorScheme.fromSwatch(primarySwatch: ColorPalettes.main).copyWith(
-        secondary: ColorPalettes.main[500],
-        brightness: brightness,
+    ).copyWith(
+      secondary: ColorPalettes.main[500],
+      background: isDark ? const Color(0xFF121212) : baseTheme.colorScheme.background,
+      surface: isDark ? const Color(0xFF1E1E1E) : baseTheme.colorScheme.surface,
+    );
+
+    var themeData = baseTheme.copyWith(
+      brightness: brightness,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor:
+          isDark ? const Color(0xFF121212) : baseTheme.scaffoldBackgroundColor,
+      appBarTheme: baseTheme.appBarTheme.copyWith(
+        backgroundColor:
+            isDark ? const Color(0xFF1B1B1B) : baseTheme.appBarTheme.backgroundColor,
+        foregroundColor:
+            isDark ? Colors.white : baseTheme.appBarTheme.foregroundColor,
+      ),
+      inputDecorationTheme: baseTheme.inputDecorationTheme.copyWith(
+        filled: true,
+        fillColor: isDark ? const Color(0xFF1E1E1E) : baseTheme.inputDecorationTheme.fillColor,
+        hintStyle: TextStyle(
+          color: isDark ? Colors.white70 : Colors.black54,
+        ),
+        labelStyle: TextStyle(
+          color: isDark ? Colors.white70 : Colors.black87,
+        ),
+        floatingLabelStyle: TextStyle(
+          color: isDark ? Colors.white : colorScheme.primary,
+        ),
+        helperStyle: TextStyle(
+          color: isDark ? Colors.white60 : Colors.black54,
+        ),
+        enabledBorder: UnderlineInputBorder(
+          borderSide: BorderSide(
+            color: isDark ? Colors.white30 : Colors.black26,
+          ),
+        ),
+        focusedBorder: UnderlineInputBorder(
+          borderSide: BorderSide(
+            color: colorScheme.primary,
+            width: 2,
+          ),
+        ),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: MaterialStateProperty.resolveWith<Color?>(
+          (Set<MaterialState> states) {
+            if (states.contains(MaterialState.disabled)) return null;
+            if (states.contains(MaterialState.selected)) {
+              return isDark ? ColorPalettes.main[700] : ColorPalettes.main[600];
+            }
+            return null;
+          },
+        ),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: MaterialStateProperty.resolveWith<Color?>(
+          (Set<MaterialState> states) {
+            if (states.contains(MaterialState.disabled)) return null;
+            if (states.contains(MaterialState.selected)) {
+              return isDark ? ColorPalettes.main[700] : ColorPalettes.main[600];
+            }
+            return null;
+          },
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: MaterialStateProperty.resolveWith<Color?>(
+          (Set<MaterialState> states) {
+            if (states.contains(MaterialState.disabled)) return null;
+            if (states.contains(MaterialState.selected)) {
+              return isDark ? ColorPalettes.main[700] : ColorPalettes.main[600];
+            }
+            return null;
+          },
+        ),
+        trackColor: MaterialStateProperty.resolveWith<Color?>(
+          (Set<MaterialState> states) {
+            if (states.contains(MaterialState.disabled)) return null;
+            if (states.contains(MaterialState.selected)) {
+              return isDark ? ColorPalettes.main[700] : ColorPalettes.main[600];
+            }
+            return null;
+          },
+        ),
       ),
     );
 
     return themeData.copyWith(
       snackBarTheme: themeData.snackBarTheme.copyWith(
         backgroundColor: isDark ? Color(0xff363635) : Color(0xfffafafa),
-        contentTextStyle: themeData.textTheme.bodyText1.copyWith(
-          color:
-              isDark ? Color(0xffe4e4e4) : themeData.textTheme.bodyText1.color,
+        contentTextStyle: (themeData.textTheme.bodyLarge ?? const TextStyle())
+            .copyWith(
+          color: isDark
+              ? const Color(0xffe4e4e4)
+              : themeData.textTheme.bodyLarge?.color,
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          primary: ColorPalettes.main,
-          padding: EdgeInsets.symmetric(horizontal: 16.0),
+          foregroundColor: ColorPalettes.main, padding: EdgeInsets.symmetric(horizontal: 16.0),
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(4.0)),
           ),

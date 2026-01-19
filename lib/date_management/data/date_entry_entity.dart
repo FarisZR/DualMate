@@ -2,7 +2,7 @@ import 'package:dhbwstudentapp/common/data/database_entity.dart';
 import 'package:dhbwstudentapp/date_management/model/date_entry.dart';
 
 class DateEntryEntity extends DatabaseEntity {
-  DateEntry _dateEntry;
+  late DateEntry _dateEntry;
 
   DateEntryEntity.fromModel(DateEntry dateEntry) {
     _dateEntry = dateEntry;
@@ -14,30 +14,29 @@ class DateEntryEntity extends DatabaseEntity {
 
   @override
   void fromMap(Map<String, dynamic> map) {
-    DateTime date;
-    if (map["date"] != null) {
-      date = DateTime.fromMillisecondsSinceEpoch(map["date"]);
-    }
+    var date = map["date"] != null
+        ? DateTime.fromMillisecondsSinceEpoch(map["date"])
+        : DateTime.fromMillisecondsSinceEpoch(0);
 
     _dateEntry = DateEntry(
-      comment: map["comment"],
-      description: map["description"],
-      year: map["year"],
-      databaseName: map["databaseName"],
+      comment: map["comment"] ?? "",
+      description: map["description"] ?? "",
+      year: map["year"] ?? "",
+      databaseName: map["databaseName"] ?? "",
       start: date,
       end: date,
-      room: map["room"]
+      room: map["room"] ?? "",
     );
   }
 
   @override
   Map<String, dynamic> toMap() {
     return {
-      "date": _dateEntry.start?.millisecondsSinceEpoch ?? 0,
-      "comment": _dateEntry.comment ?? "",
-      "description": _dateEntry.description ?? "",
-      "year": _dateEntry.year ?? "",
-      "databaseName": _dateEntry.databaseName ?? ""
+      "date": _dateEntry.start.millisecondsSinceEpoch,
+      "comment": _dateEntry.comment,
+      "description": _dateEntry.description,
+      "year": _dateEntry.year,
+      "databaseName": _dateEntry.databaseName
     };
   }
 

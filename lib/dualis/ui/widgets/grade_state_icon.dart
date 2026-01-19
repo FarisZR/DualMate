@@ -5,8 +5,8 @@ class GradeStateIcon extends StatelessWidget {
   final ExamState state;
 
   const GradeStateIcon({
-    Key key,
-    this.state,
+    Key? key,
+    required this.state,
   }) : super(key: key);
 
   @override
@@ -18,8 +18,8 @@ class GradeStateIcon extends StatelessWidget {
         return const Icon(Icons.close, color: Colors.red);
       case ExamState.Pending:
         return Container();
+      default:
+        return Container();
     }
-
-    return Container();
   }
 }

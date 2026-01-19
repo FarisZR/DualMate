@@ -14,8 +14,8 @@ class EnterDualisCredentialsDialog {
   final TextEditingController _passwordEditingController =
       TextEditingController();
 
-  String username;
-  String password;
+  String username = "";
+  String password = "";
 
   EnterDualisCredentialsDialog(
     this._preferencesProvider,
@@ -51,7 +51,7 @@ class EnterDualisCredentialsDialog {
             padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
             child: Text(
               L.of(context).onboardingDualisSourceDescription,
-              style: Theme.of(context).textTheme.bodyText2,
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),
           LoginCredentialsWidget(

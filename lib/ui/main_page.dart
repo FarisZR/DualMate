@@ -1,4 +1,3 @@
-import 'package:dhbwstudentapp/common/logging/analytics.dart';
 import 'package:dhbwstudentapp/common/ui/app_launch_dialogs.dart';
 import 'package:dhbwstudentapp/common/util/platform_util.dart';
 import 'package:dhbwstudentapp/ui/navigation/navigation_entry.dart';
@@ -19,7 +18,7 @@ class MainPage extends StatefulWidget {
   _MainPageState createState() => _MainPageState();
 }
 
-class _MainPageState extends State<MainPage> with NavigatorObserver {
+class _MainPageState extends State<MainPage> {
   bool _appLaunchDialogsShown = false;
 
   final ValueNotifier<int> _currentEntryIndex = ValueNotifier<int>(0);
@@ -40,13 +39,12 @@ class _MainPageState extends State<MainPage> with NavigatorObserver {
       key: NavigatorKey.mainKey,
       onGenerateRoute: generateDrawerRoute,
       initialRoute: "schedule",
-      observers: [this, mainNavigationObserver],
     );
 
     return ChangeNotifierProvider.value(
       value: _currentEntryIndex,
       child: Consumer<ValueNotifier<int>>(
-        builder: (BuildContext context, value, Widget child) {
+        builder: (BuildContext context, value, Widget? child) {
           Widget content;
 
           if (PlatformUtil.isPhone() || PlatformUtil.isPortrait(context)) {
@@ -64,11 +62,11 @@ class _MainPageState extends State<MainPage> with NavigatorObserver {
   Widget buildPhoneLayout(BuildContext context, Navigator navigator) {
     return WillPopScope(
       onWillPop: () async {
-        var canPop = NavigatorKey.mainKey.currentState.canPop();
+        var canPop = NavigatorKey.mainKey.currentState?.canPop() ?? false;
 
         if (!canPop) return true;
 
-        NavigatorKey.mainKey.currentState.pop();
+        NavigatorKey.mainKey.currentState?.pop();
 
         return false;
       },
@@ -80,8 +78,8 @@ class _MainPageState extends State<MainPage> with NavigatorObserver {
           iconTheme: Theme.of(context).iconTheme,
           title: Text(currentEntry.title(context)),
           actions: currentEntry.appBarActions(context),
-          toolbarTextStyle: Theme.of(context).textTheme.bodyText2,
-          titleTextStyle: Theme.of(context).textTheme.headline6,
+          toolbarTextStyle: Theme.of(context).textTheme.bodyMedium,
+          titleTextStyle: Theme.of(context).textTheme.titleLarge,
         ),
         body: navigator,
         drawer: MyNavigationDrawer(
@@ -102,8 +100,8 @@ class _MainPageState extends State<MainPage> with NavigatorObserver {
         iconTheme: Theme.of(context).iconTheme,
         title: Text(currentEntry.title(context)),
         actions: currentEntry.appBarActions(context),
-        toolbarTextStyle: Theme.of(context).textTheme.bodyText2,
-        titleTextStyle: Theme.of(context).textTheme.headline6,
+        toolbarTextStyle: Theme.of(context).textTheme.bodyMedium,
+        titleTextStyle: Theme.of(context).textTheme.titleLarge,
       ),
       body: Row(
         children: [
@@ -147,7 +145,7 @@ class _MainPageState extends State<MainPage> with NavigatorObserver {
     _currentEntryIndex.value = index;
 
     NavigatorKey.mainKey.currentState
-        .pushNamedAndRemoveUntil(currentEntry.route, (route) {
+        ?.pushNamedAndRemoveUntil(currentEntry.route, (route) {
       return route.settings.name == navigationEntries[0].route;
     });
   }
@@ -160,27 +158,4 @@ class _MainPageState extends State<MainPage> with NavigatorObserver {
     }
   }
 
-  void updateNavigationDrawer(String routeName) {
-    for (int i = 0; i < navigationEntries.length; i++) {
-      if (navigationEntries[i].route == routeName) {
-        _currentEntryIndex.value = i;
-        break;
-      }
-    }
-  }
-
-  @override
-  void didPop(Route<dynamic> route, Route<dynamic> previousRoute) {
-    updateNavigationDrawer(previousRoute.settings.name);
-  }
-
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic> previousRoute) {
-    updateNavigationDrawer(route.settings.name);
-  }
-
-  @override
-  void didReplace({Route<dynamic> newRoute, Route<dynamic> oldRoute}) {
-    updateNavigationDrawer(newRoute.settings.name);
-  }
 }

@@ -16,14 +16,14 @@ import 'package:http/http.dart';
 class DualisAuthentication {
   final RegExp _tokenRegex = RegExp("ARGUMENTS=-N([0-9]{15})");
 
-  String _username;
-  String _password;
+  late String _username;
+  late String _password;
 
-  DualisUrls _dualisUrls;
+  late DualisUrls _dualisUrls;
   DualisUrls get dualisUrls => _dualisUrls;
 
-  String _authToken;
-  Session _session;
+  String _authToken = "";
+  late Session _session;
 
   LoginResult _loginState = LoginResult.LoggedOut;
   LoginResult get loginState => _loginState;
@@ -33,10 +33,7 @@ class DualisAuthentication {
     String password,
     CancellationToken cancellationToken,
   ) async {
-    username = username ?? this._username;
-    password = password ?? this._password;
-
-    _dualisUrls = dualisUrls ?? DualisUrls();
+    _dualisUrls = DualisUrls();
 
     this._username = username;
     this._password = password;
@@ -58,8 +55,14 @@ class DualisAuthentication {
 
     // TODO: Test for login failed page
 
+    var refreshHeader = loginResponse.headers['refresh'];
+    if (refreshHeader == null) {
+      _loginState = LoginResult.LoginFailed;
+      return loginState;
+    }
+
     var redirectUrl = LoginRedirectUrlExtract().getUrlFromHeader(
-      loginResponse.headers['refresh'],
+      refreshHeader,
       dualisEndpoint,
     );
 
@@ -73,15 +76,17 @@ class DualisAuthentication {
       cancellationToken,
     );
 
-    dualisUrls.mainPageUrl = LoginRedirectUrlExtract().readRedirectUrl(
+    var mainPageUrl = LoginRedirectUrlExtract().readRedirectUrl(
       redirectPage,
       dualisEndpoint,
     );
 
-    if (dualisUrls.mainPageUrl == null) {
+    if (mainPageUrl == null || mainPageUrl.isEmpty) {
       _loginState = LoginResult.LoginFailed;
       return loginState;
     }
+
+    dualisUrls.mainPageUrl = mainPageUrl;
 
     _updateAccessToken(dualisUrls.mainPageUrl);
 
@@ -100,10 +105,10 @@ class DualisAuthentication {
     return loginState;
   }
 
-  Future<Response> _makeLoginRequest(
+  Future<Response?> _makeLoginRequest(
     String user,
     String password, [
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ]) async {
     var loginUrl = dualisEndpoint + "/scripts/mgrqispi.dll";
 
@@ -124,7 +129,7 @@ class DualisAuthentication {
       var loginResponse = await _session.rawPost(
         loginUrl,
         data,
-        cancellationToken,
+        cancellationToken ?? CancellationToken(),
       );
       return loginResponse;
     } on ServiceRequestFailed {
@@ -147,7 +152,7 @@ class DualisAuthentication {
       cancellationToken,
     );
 
-    cancellationToken?.throwIfCancelled();
+    cancellationToken.throwIfCancelled();
 
     if (!TimeoutExtract().isTimeoutErrorPage(result) &&
         !AccessDeniedExtract().isAccessDeniedPage(result)) {
@@ -163,16 +168,19 @@ class DualisAuthentication {
       );
     }
 
-    return null;
+    return "";
   }
 
   Future<void> logout([
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ]) async {
-    var logoutRequest = _session.get(dualisUrls.logoutUrl, cancellationToken);
+    var logoutRequest = _session.get(
+      dualisUrls.logoutUrl,
+      cancellationToken ?? CancellationToken(),
+    );
 
-    _session = null;
-    _dualisUrls = null;
+    _session = Session();
+    _dualisUrls = DualisUrls();
     _loginState = LoginResult.LoggedOut;
 
     await logoutRequest;
@@ -188,7 +196,7 @@ class DualisAuthentication {
 
     if (tokenMatch == null) return;
 
-    _authToken = tokenMatch.group(1);
+    _authToken = tokenMatch.group(1) ?? _authToken;
   }
 
   ///

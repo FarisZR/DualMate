@@ -14,23 +14,23 @@ class DualisScheduleSource extends ScheduleSource {
 
   @override
   Future<ScheduleQueryResult> querySchedule(DateTime from, DateTime to,
-      [CancellationToken cancellationToken]) async {
-    if (cancellationToken == null) cancellationToken = CancellationToken();
-
+      [CancellationToken? cancellationToken]) async {
+    var token = cancellationToken ?? CancellationToken();
     DateTime current = toStartOfMonth(from);
 
     var schedule = Schedule();
     var allErrors = <ParseError>[];
 
-    if (!_dualisScraper.isLoggedIn())
-      await _dualisScraper.loginWithPreviousCredentials(cancellationToken);
+    if (!_dualisScraper.isLoggedIn()) {
+      await _dualisScraper.loginWithPreviousCredentials(token);
+    }
 
-    while (to.isAfter(current) && !cancellationToken.isCancelled()) {
+    while (to.isAfter(current) && !token.isCancelled()) {
       try {
         var monthSchedule = await _dualisScraper.loadMonthlySchedule(
-            current, cancellationToken);
+            current, token);
 
-        if (monthSchedule != null) schedule.merge(monthSchedule);
+        schedule.merge(monthSchedule);
       } on OperationCancelledException {
         rethrow;
       } on ParseException catch (ex, trace) {
@@ -43,7 +43,7 @@ class DualisScheduleSource extends ScheduleSource {
       current = toNextMonth(current);
     }
 
-    if (cancellationToken.isCancelled()) throw OperationCancelledException();
+    if (token.isCancelled()) throw OperationCancelledException();
 
     schedule = schedule.trim(from, to);
 

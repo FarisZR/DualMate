@@ -78,11 +78,11 @@ class BackgroundWorkScheduler extends WorkSchedulerService {
       id,
       id,
       frequency: delay,
-      existingWorkPolicy: ExistingWorkPolicy.keep,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
       initialDelay: delay,
       constraints: Constraints(
         networkType:
-            needsNetwork ? NetworkType.connected : NetworkType.not_required,
+            needsNetwork ? NetworkType.connected : NetworkType.notRequired,
       ),
     );
   }

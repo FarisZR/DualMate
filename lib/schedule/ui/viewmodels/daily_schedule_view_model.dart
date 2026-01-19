@@ -8,9 +8,9 @@ class DailyScheduleViewModel extends BaseViewModel {
 
   final ScheduleProvider scheduleProvider;
 
-  DateTime currentDate;
+  DateTime currentDate = DateTime.now();
 
-  Schedule daySchedule;
+  Schedule daySchedule = Schedule();
 
   DailyScheduleViewModel(this.scheduleProvider) {
     scheduleProvider.addScheduleUpdatedCallback(_scheduleUpdatedCallback);
@@ -48,8 +48,6 @@ class DailyScheduleViewModel extends BaseViewModel {
     DateTime start,
     DateTime end,
   ) async {
-    if (schedule == null) return;
-
     start = toStartOfDay(start);
     end = toStartOfDay(tomorrow(end));
 

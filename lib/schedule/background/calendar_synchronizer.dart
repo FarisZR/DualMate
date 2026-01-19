@@ -35,10 +35,11 @@ class CalendarSynchronizer {
           listDateEntries;
 
       if (await preferencesProvider.isCalendarSyncEnabled()) {
-        Calendar selectedCalendar =
+        Calendar? selectedCalendar =
             await preferencesProvider.getSelectedCalendar();
-        if (selectedCalendar == null) return;
-        CalendarAccess().addOrUpdateDates(listDateEntries, selectedCalendar);
+        if (selectedCalendar != null) {
+          CalendarAccess().addOrUpdateDates(listDateEntries, selectedCalendar);
+        }
       }
     });
   }

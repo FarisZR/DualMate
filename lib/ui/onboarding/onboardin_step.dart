@@ -17,7 +17,7 @@ abstract class OnboardingStep {
 
   OnboardingStepViewModel viewModel();
 
-  String nextStep();
+  String? nextStep();
 }
 
 class SelectSourceOnboardingStep extends OnboardingStep {
@@ -31,7 +31,7 @@ class SelectSourceOnboardingStep extends OnboardingStep {
   }
 
   @override
-  String nextStep() {
+  String? nextStep() {
     return _viewModel.nextStep();
   }
 
@@ -53,7 +53,7 @@ class DualisCredentialsOnboardingStep extends OnboardingStep {
   }
 
   @override
-  String nextStep() {
+  String? nextStep() {
     return null;
   }
 
@@ -64,7 +64,7 @@ class DualisCredentialsOnboardingStep extends OnboardingStep {
 }
 
 class RaplaOnboardingStep extends OnboardingStep {
-  RaplaUrlViewModel _viewModel = RaplaUrlViewModel(
+  final RaplaUrlViewModel _viewModel = RaplaUrlViewModel(
     KiwiContainer().resolve(),
     KiwiContainer().resolve(),
   );
@@ -75,7 +75,7 @@ class RaplaOnboardingStep extends OnboardingStep {
   }
 
   @override
-  String nextStep() {
+  String? nextStep() {
     return "dualis";
   }
 
@@ -86,7 +86,7 @@ class RaplaOnboardingStep extends OnboardingStep {
 }
 
 class IcalOnboardingStep extends OnboardingStep {
-  IcalUrlViewModel _viewModel = IcalUrlViewModel(
+  final IcalUrlViewModel _viewModel = IcalUrlViewModel(
     KiwiContainer().resolve(),
     KiwiContainer().resolve(),
   );
@@ -97,7 +97,7 @@ class IcalOnboardingStep extends OnboardingStep {
   }
 
   @override
-  String nextStep() {
+  String? nextStep() {
     return "dualis";
   }
 
@@ -108,7 +108,9 @@ class IcalOnboardingStep extends OnboardingStep {
 }
 
 class MannheimOnboardingStep extends OnboardingStep {
-  MannheimViewModel _viewModel;
+  final MannheimViewModel _viewModel = MannheimViewModel(
+    KiwiContainer().resolve(),
+  );
 
   @override
   Widget buildContent(BuildContext context) {
@@ -116,18 +118,12 @@ class MannheimOnboardingStep extends OnboardingStep {
   }
 
   @override
-  String nextStep() {
+  String? nextStep() {
     return "dualis";
   }
 
   @override
   OnboardingStepViewModel viewModel() {
-    if (_viewModel == null) {
-      _viewModel = MannheimViewModel(
-        KiwiContainer().resolve(),
-      );
-    }
-
     return _viewModel;
   }
 }

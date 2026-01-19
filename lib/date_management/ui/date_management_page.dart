@@ -1,5 +1,4 @@
 import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
 import 'package:dhbwstudentapp/common/ui/widgets/error_display.dart';
 import 'package:dhbwstudentapp/common/util/date_utils.dart';
 import 'package:dhbwstudentapp/date_management/model/date_entry.dart';
@@ -14,9 +13,10 @@ import 'package:provider/provider.dart';
 class DateManagementPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    DateManagementViewModel viewModel = Provider.of<BaseViewModel>(context);
+    DateManagementViewModel viewModel =
+        Provider.of<DateManagementViewModel>(context);
 
-    return PropertyChangeProvider<DateManagementViewModel, Object>(
+    return PropertyChangeProvider<DateManagementViewModel, String>(
       value: viewModel,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -44,22 +44,25 @@ class DateManagementPage extends StatelessWidget {
         children: <Widget>[
           SingleChildScrollView(
             scrollDirection: Axis.vertical,
-            child: PropertyChangeConsumer(
+            child: PropertyChangeConsumer<DateManagementViewModel, String>(
               builder: (
                 BuildContext context,
-                DateManagementViewModel model,
-                _,
-              ) =>
-                  AnimatedSwitcher(
+                DateManagementViewModel? model,
+                Set<String>? properties,
+              ) {
+                if (model == null) return Container();
+                return AnimatedSwitcher(
                       duration: const Duration(milliseconds: 200),
                       child: Column(
                         key: ValueKey(
-                            viewModel?.dateSearchParameters?.toString() ?? ""),
+                            viewModel.dateSearchParameters.toString()),
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
                           _buildAllDatesDataTable(model, context),
                         ],
-                      )),
+                      ),
+                );
+                },
             ),
           ),
           Align(
@@ -94,7 +97,7 @@ class DateManagementPage extends StatelessWidget {
     BuildContext context,
   ) {
     var dataRows = <DataRow>[];
-    for (DateEntry dateEntry in model?.allDates ?? []) {
+    for (DateEntry dateEntry in model.allDates) {
       dataRows.add(
         DataRow(
           cells: <DataCell>[
@@ -113,7 +116,8 @@ class DateManagementPage extends StatelessWidget {
                     Text(
                       DateFormat.yMd(L.of(context).locale.languageCode)
                           .format(dateEntry.start),
-                      style: Theme.of(context).textTheme.bodyText1,
+                        style: Theme.of(context).textTheme.bodyLarge ??
+                          const TextStyle(),
                     ),
                     // When the date entry has a time of 00:00 don't show it.
                     // It means the date entry is for the whole day
@@ -152,14 +156,12 @@ class DateManagementPage extends StatelessWidget {
   }
 
   Widget buildErrorDisplay(BuildContext context) {
-    return PropertyChangeConsumer<DateManagementViewModel, Object>(
-      properties: const [
-        "updateFailed",
-      ],
-      builder: (BuildContext context, DateManagementViewModel model,
-              Set properties) =>
+    return PropertyChangeConsumer<DateManagementViewModel, String>(
+      properties: const ["updateFailed"],
+      builder: (BuildContext context, DateManagementViewModel? model,
+              Set<String>? properties) =>
           ErrorDisplay(
-        show: model.updateFailed,
+        show: model?.updateFailed ?? false,
       ),
     );
   }

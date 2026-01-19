@@ -15,8 +15,8 @@ class CalendarExportPage extends StatefulWidget {
   final bool isCalendarSyncEnabled;
 
   const CalendarExportPage(
-      {Key key,
-      this.entriesToExport,
+  {Key? key,
+  required this.entriesToExport,
       this.isCalendarSyncWidget = false,
       this.isCalendarSyncEnabled = false})
       : super(key: key);
@@ -30,7 +30,7 @@ class _CalendarExportPageState extends State<CalendarExportPage> {
   final List<DateEntry> entriesToExport;
   final bool isCalendarSyncWidget;
   final bool isCalendarSyncEnabled;
-  CalendarExportViewModel viewModel;
+  late CalendarExportViewModel viewModel;
 
   _CalendarExportPageState(this.entriesToExport, this.isCalendarSyncWidget,
       this.isCalendarSyncEnabled);
@@ -60,8 +60,8 @@ class _CalendarExportPageState extends State<CalendarExportPage> {
           title: Text(this.isCalendarSyncWidget
               ? L.of(context).calendarSyncPageTitle
               : L.of(context).dateManagementExportToCalendar),
-          toolbarTextStyle: Theme.of(context).textTheme.bodyText2,
-          titleTextStyle: Theme.of(context).textTheme.headline6,
+          toolbarTextStyle: Theme.of(context).textTheme.bodyMedium,
+          titleTextStyle: Theme.of(context).textTheme.titleLarge,
         ),
         body: Column(
           children: <Widget>[
@@ -89,19 +89,23 @@ class _CalendarExportPageState extends State<CalendarExportPage> {
   Widget _buildCalendarList() {
     return Expanded(
       child: PropertyChangeConsumer<CalendarExportViewModel, String>(
-        builder: (BuildContext context, CalendarExportViewModel viewModel, _) =>
-            ListView.builder(
-          itemCount: viewModel.calendars.length,
-          itemBuilder: (BuildContext context, int index) {
-            var isSelected = viewModel.selectedCalendar?.id ==
-                viewModel.calendars[index]?.id;
+        builder: (BuildContext context, CalendarExportViewModel? viewModel,
+                Set<String>? properties) {
+          if (viewModel == null) return const SizedBox();
+          return ListView.builder(
+            itemCount: viewModel.calendars.length,
+            itemBuilder: (BuildContext context, int index) {
+              var selectedCalendar = viewModel.selectedCalendar;
+              var isSelected = selectedCalendar != null &&
+                  selectedCalendar.id == viewModel.calendars[index].id;
 
-            return _buildCalendarListEntry(
-              viewModel.calendars[index],
-              isSelected,
-            );
-          },
-        ),
+              return _buildCalendarListEntry(
+                viewModel.calendars[index],
+                isSelected,
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -163,9 +167,11 @@ class _CalendarExportPageState extends State<CalendarExportPage> {
               height: 24,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? Color(calendar.color) : Colors.transparent,
+                color: isSelected
+                    ? Color(calendar.color ?? 0xFF000000)
+                    : Colors.transparent,
                 border: Border.all(
-                  color: Color(calendar.color),
+                  color: Color(calendar.color ?? 0xFF000000),
                   width: 4,
                 ),
               ),
@@ -181,7 +187,7 @@ class _CalendarExportPageState extends State<CalendarExportPage> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 0, 0),
-              child: Text(calendar.name),
+              child: Text(calendar.name ?? ""),
             ),
           ],
         ),
@@ -191,61 +197,64 @@ class _CalendarExportPageState extends State<CalendarExportPage> {
 
   Widget _buildExportButton() {
     return PropertyChangeConsumer<CalendarExportViewModel, String>(
-      builder: (BuildContext context, CalendarExportViewModel viewModel, _) =>
-          viewModel.isExporting
-              ? const Padding(
-                  padding: EdgeInsets.fromLTRB(8, 8, 8, 15),
-                  child: SizedBox(
-                      height: 32,
-                      width: 32,
-                      child: CircularProgressIndicator()),
-                )
-              : Container(
-                  decoration: !viewModel.canExport
-                      ? new BoxDecoration(
-                          color: Theme.of(context).colorScheme.background)
-                      : new BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 0, 0, 10),
-                    child: ListTile(
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(4.0)),
+      builder: (BuildContext context, CalendarExportViewModel? viewModel,
+              Set<String>? properties) {
+        if (viewModel == null) return const SizedBox();
+        return viewModel.isExporting
+            ? const Padding(
+                padding: EdgeInsets.fromLTRB(8, 8, 8, 15),
+                child: SizedBox(
+                    height: 32,
+                    width: 32,
+                    child: CircularProgressIndicator()),
+              )
+            : Container(
+                decoration: !viewModel.canExport
+                    ? new BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface)
+                    : new BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
                       ),
-                      title: Text(
-                        this.isCalendarSyncWidget
-                            ? L
-                                .of(context)
-                                .calendarSyncPageBeginSync
-                                .toUpperCase()
-                            : L
-                                .of(context)
-                                .dateManagementExportToCalendarConfirm
-                                .toUpperCase(),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white,
-                        ),
-                      ),
-                      onTap: viewModel.canExport
-                          ? () async {
-                              if (this.isCalendarSyncWidget) {
-                                var preferencesProvider = KiwiContainer()
-                                    .resolve<PreferencesProvider>();
-                                preferencesProvider.setSelectedCalendar(
-                                    viewModel.selectedCalendar);
-                                preferencesProvider
-                                    .setIsCalendarSyncEnabled(true);
-                              }
-                              await viewModel.export();
-                              Navigator.of(context).pop();
-                            }
-                          : null,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 10),
+                  child: ListTile(
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(4.0)),
                     ),
+                    title: Text(
+                      this.isCalendarSyncWidget
+                          ? L
+                              .of(context)
+                              .calendarSyncPageBeginSync
+                              .toUpperCase()
+                          : L
+                              .of(context)
+                              .dateManagementExportToCalendarConfirm
+                              .toUpperCase(),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                    onTap: viewModel.canExport
+                        ? () async {
+                            if (this.isCalendarSyncWidget) {
+                              var preferencesProvider = KiwiContainer()
+                                  .resolve<PreferencesProvider>();
+                              preferencesProvider.setSelectedCalendar(
+                                  viewModel.selectedCalendar);
+                              preferencesProvider
+                                  .setIsCalendarSyncEnabled(true);
+                            }
+                            await viewModel.export();
+                            Navigator.of(context).pop();
+                          }
+                        : null,
                   ),
                 ),
+              );
+      },
     );
   }
 }

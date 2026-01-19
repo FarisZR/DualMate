@@ -37,7 +37,7 @@ class NotificationApi {
   ///
   /// Show a notification with the given title and message
   ///
-  Future showNotification(String title, String message, [int id]) async {
+  Future<void> showNotification(String title, String message, [int? id]) async {
     var androidPlatformChannelSpecifics = AndroidNotificationDetails(
       'Notifications',
       'Notifications',
@@ -71,8 +71,8 @@ class NotificationApi {
     );
   }
 
-  void onDidReceiveLocalNotification(
-      int id, String title, String body, String payload) {}
+    void onDidReceiveLocalNotification(
+      int id, String? title, String? body, String? payload) {}
 
   void selectNotification(NotificationResponse notificationResponse) {}
 }
@@ -94,14 +94,14 @@ class VoidNotificationApi implements NotificationApi {
   }
 
   @override
-  void onDidReceiveLocalNotification(
-      int id, String title, String body, String payload) {}
+    void onDidReceiveLocalNotification(
+      int id, String? title, String? body, String? payload) {}
 
   @override
   void selectNotification(NotificationResponse notificationResponse) {}
 
   @override
-  Future showNotification(String title, String message, [int id]) {
+  Future<void> showNotification(String title, String message, [int? id]) {
     return Future.value();
   }
 }

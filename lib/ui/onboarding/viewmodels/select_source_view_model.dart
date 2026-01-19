@@ -14,7 +14,7 @@ class SelectSourceViewModel extends OnboardingStepViewModel {
 
   void setScheduleSourceType(ScheduleSourceType type) {
     _scheduleSourceType = type;
-    setIsValid(_scheduleSourceType != null);
+    setIsValid(true);
 
     notifyListeners("scheduleSourceType");
   }
@@ -37,7 +37,5 @@ class SelectSourceViewModel extends OnboardingStepViewModel {
       case ScheduleSourceType.Ical:
         return "ical";
     }
-
-    return null;
   }
 }

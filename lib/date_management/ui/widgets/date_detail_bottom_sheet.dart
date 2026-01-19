@@ -8,7 +8,8 @@ import 'package:intl/intl.dart';
 class DateDetailBottomSheet extends StatelessWidget {
   final DateEntry dateEntry;
 
-  const DateDetailBottomSheet({Key key, this.dateEntry}) : super(key: key);
+  const DateDetailBottomSheet({Key? key, required this.dateEntry})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +48,8 @@ class DateDetailBottomSheet extends StatelessWidget {
                   Expanded(
                     child: Text(
                       dateEntry.description,
-                      style: Theme.of(context).textTheme.headline5,
+                        style: Theme.of(context).textTheme.headlineSmall ??
+                          const TextStyle(),
                     ),
                   ),
                   Padding(
@@ -58,7 +60,8 @@ class DateDetailBottomSheet extends StatelessWidget {
                         Text(
                           date,
                           softWrap: true,
-                          style: Theme.of(context).textTheme.subtitle2,
+                            style: Theme.of(context).textTheme.titleSmall ??
+                              const TextStyle(),
                         ),
                         isAtMidnight(dateEntry.start)
                             ? Container()

@@ -12,12 +12,25 @@ class RaplaMonthlyResponseParser {
   static ScheduleQueryResult parseMonthlyTable(
     Element monthTable,
   ) {
-    var title = monthTable.parent.getElementsByClassName("title");
+    var title = monthTable.parent?.getElementsByClassName("title") ?? [];
+    if (title.isEmpty) {
+      return ScheduleQueryResult(
+        Schedule.fromList([]),
+        [ParseError("Missing month title", StackTrace.current)],
+      );
+    }
 
     var monthAndYear = title[0].text;
     var yearString = monthAndYear.split(" ")[1];
     var year = int.tryParse(yearString);
     var month = _monthStringToDateTime(monthAndYear);
+
+    if (year == null || month == null) {
+      return ScheduleQueryResult(
+        Schedule.fromList([]),
+        [ParseError("Invalid month/year", StackTrace.current)],
+      );
+    }
 
     var dayCells = monthTable.getElementsByClassName("month_cell");
 
@@ -32,6 +45,7 @@ class RaplaMonthlyResponseParser {
 
       var dayNumberString = dayNumber[0].text;
       var day = int.tryParse(dayNumberString);
+      if (day == null) continue;
 
       for (var dayEntry in dayEntries) {
         try {
@@ -50,7 +64,7 @@ class RaplaMonthlyResponseParser {
     return ScheduleQueryResult(Schedule.fromList(allEntries), parseErrors);
   }
 
-  static int _monthStringToDateTime(String monthAndYear) {
+  static int? _monthStringToDateTime(String monthAndYear) {
     var monthString = monthAndYear.split(" ")[0];
     var monthNames = {
       "Januar": DateTime.january,
@@ -67,7 +81,6 @@ class RaplaMonthlyResponseParser {
       "Dezember": DateTime.december,
     };
 
-    var month = monthNames[monthString];
-    return month;
+    return monthNames[monthString];
   }
 }

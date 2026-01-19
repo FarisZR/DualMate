@@ -51,8 +51,8 @@ class StudyGradesFromStudentResultsPageExtract {
     gainedCredits = gainedCredits.replaceAll(",", ".");
 
     var credits = _Credits();
-    credits.gainedCredits = double.tryParse(gainedCredits);
-    credits.totalCredits = double.tryParse(neededCredits);
+    credits.gainedCredits = double.tryParse(gainedCredits) ?? 0.0;
+    credits.totalCredits = double.tryParse(neededCredits) ?? 0.0;
 
     return credits;
   }
@@ -73,19 +73,21 @@ class StudyGradesFromStudentResultsPageExtract {
     );
 
     _Gpa gpa = _Gpa();
-    gpa.totalGpa = double.tryParse(totalGpa.replaceAll(",", "."));
-    gpa.mainModulesGpa = double.tryParse(mainModulesGpa.replaceAll(",", "."));
+    gpa.totalGpa =
+      double.tryParse(totalGpa.replaceAll(",", ".")) ?? 0.0;
+    gpa.mainModulesGpa =
+      double.tryParse(mainModulesGpa.replaceAll(",", ".")) ?? 0.0;
 
     return gpa;
   }
 }
 
 class _Credits {
-  double totalCredits;
-  double gainedCredits;
+  double totalCredits = 0.0;
+  double gainedCredits = 0.0;
 }
 
 class _Gpa {
-  double totalGpa;
-  double mainModulesGpa;
+  double totalGpa = 0.0;
+  double mainModulesGpa = 0.0;
 }

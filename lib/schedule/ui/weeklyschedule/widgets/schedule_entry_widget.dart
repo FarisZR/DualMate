@@ -10,9 +10,9 @@ class ScheduleEntryWidget extends StatelessWidget {
   final ScheduleEntryTapCallback onScheduleEntryTap;
 
   const ScheduleEntryWidget({
-    Key key,
-    this.scheduleEntry,
-    this.onScheduleEntryTap,
+    Key? key,
+    required this.scheduleEntry,
+    required this.onScheduleEntryTap,
   }) : super(key: key);
 
   @override
@@ -25,7 +25,7 @@ class ScheduleEntryWidget extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(1, 0, 1, 0),
       child: InkWell(
         onTap: () {
-          if (onScheduleEntryTap != null) onScheduleEntryTap(scheduleEntry);
+          onScheduleEntryTap(scheduleEntry);
         },
         child: Padding(
           padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),

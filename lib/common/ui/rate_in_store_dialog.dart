@@ -4,7 +4,7 @@ import 'package:dhbwstudentapp/common/i18n/localizations.dart';
 import 'package:dhbwstudentapp/common/logging/analytics.dart';
 import 'package:dhbwstudentapp/common/util/platform_util.dart';
 import 'package:flutter/material.dart';
-import 'package:launch_review/launch_review.dart';
+import 'package:in_app_review/in_app_review.dart';
 
 ///
 /// Dialog which asks the user to rate the app in the store
@@ -55,10 +55,10 @@ class RateInStoreDialog {
     );
   }
 
-  ButtonBar _buildButtonBar(BuildContext context) {
-    return ButtonBar(
-      mainAxisSize: MainAxisSize.max,
-      buttonPadding: const EdgeInsets.fromLTRB(5, 0, 5, 0),
+  OverflowBar _buildButtonBar(BuildContext context) {
+    return OverflowBar(
+      spacing: 8,
+      overflowSpacing: 8,
       children: <Widget>[
         TextButton(
           child: Text(L.of(context).rateDialogDoNotRateButton.toUpperCase()),
@@ -93,7 +93,10 @@ class RateInStoreDialog {
   }
 
   Future<void> _rateNow() async {
-    LaunchReview.launch();
+    final inAppReview = InAppReview.instance;
+    if (await inAppReview.isAvailable()) {
+      await inAppReview.openStoreListing();
+    }
     await analytics.logEvent(name: "rateNow");
     await _preferencesProvider.setDontShowRateNowDialog(true);
   }

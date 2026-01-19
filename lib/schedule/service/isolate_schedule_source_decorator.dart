@@ -11,20 +11,21 @@ import 'package:dhbwstudentapp/schedule/service/schedule_source.dart';
 class IsolateScheduleSourceDecorator extends ScheduleSource {
   final ScheduleSource _scheduleSource;
 
-  Stream _isolateToMain;
-  Isolate _isolate;
-  SendPort _sendPort;
+  late Stream _isolateToMain;
+  late SendPort _sendPort;
+  bool _isInitialized = false;
 
   IsolateScheduleSourceDecorator(this._scheduleSource);
 
   @override
   Future<ScheduleQueryResult> querySchedule(DateTime from, DateTime to,
-      [CancellationToken cancellationToken]) async {
+      [CancellationToken? cancellationToken]) async {
     await _initializeIsolate();
+    var token = cancellationToken ?? CancellationToken();
 
     // Use the cancellation token to send a cancel message.
     // The isolate then uses a new instance to cancel the request
-    cancellationToken.setCancellationCallback(() {
+    token.setCancellationCallback(() {
       _sendPort.send({"type": "cancel"});
     });
 
@@ -37,40 +38,36 @@ class IsolateScheduleSourceDecorator extends ScheduleSource {
 
     final completer = Completer<ScheduleQueryResult>();
 
-    ScheduleQueryFailedException potentialException;
-
     final subscription = _isolateToMain.listen((result) {
-      cancellationToken.setCancellationCallback(null);
+      token.setCancellationCallback(null);
 
-      if (result != null && !(result is ScheduleQueryResult)) {
-        potentialException = ScheduleQueryFailedException(result);
-        completer.complete(null);
-      } else {
+      if (result == null) {
+        completer.completeError(OperationCancelledException());
+      } else if (result is ScheduleQueryResult) {
         completer.complete(result);
+      } else {
+        completer.completeError(ScheduleQueryFailedException(result));
       }
     });
 
     final result = await completer.future;
 
-    subscription.cancel();
-
-    if (potentialException != null) {
-      throw potentialException;
-    }
+    await subscription.cancel();
 
     return result;
   }
 
   Future<void> _initializeIsolate() async {
-    if (_isolate != null && _isolateToMain != null && _sendPort != null) return;
+    if (_isInitialized) return;
 
     var isolateToMain = ReceivePort();
 
     // Use a broadcast stream. The normal ReceivePort closes after one subscription
     _isolateToMain = isolateToMain.asBroadcastStream();
-    _isolate = await Isolate.spawn(
+    await Isolate.spawn(
         scheduleSourceIsolateEntryPoint, isolateToMain.sendPort);
     _sendPort = await _isolateToMain.first;
+    _isInitialized = true;
   }
 
   @override
@@ -84,7 +81,7 @@ void scheduleSourceIsolateEntryPoint(SendPort sendPort) async {
   var port = ReceivePort();
   sendPort.send(port.sendPort);
 
-  CancellationToken token;
+  CancellationToken? token;
 
   await for (var message in port) {
     if (message["type"] == "execute") {

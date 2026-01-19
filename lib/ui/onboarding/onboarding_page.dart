@@ -1,5 +1,4 @@
 import 'package:animations/animations.dart';
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
 import 'package:dhbwstudentapp/common/ui/viewmodels/root_view_model.dart';
 import 'package:dhbwstudentapp/ui/onboarding/viewmodels/onboarding_view_model.dart';
 import 'package:dhbwstudentapp/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
@@ -10,7 +9,7 @@ import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 
 class OnboardingPage extends StatefulWidget {
-  const OnboardingPage({Key key}) : super(key: key);
+  const OnboardingPage({Key? key}) : super(key: key);
 
   @override
   _OnboardingPageState createState() => _OnboardingPageState();
@@ -18,14 +17,14 @@ class OnboardingPage extends StatefulWidget {
 
 class _OnboardingPageState extends State<OnboardingPage>
     with TickerProviderStateMixin {
-  AnimationController _controller;
-  OnboardingViewModel viewModel;
-
-  _OnboardingPageState();
+  late AnimationController _controller;
+  late OnboardingViewModel viewModel;
 
   @override
   void initState() {
     super.initState();
+
+    _controller = AnimationController(vsync: this);
 
     viewModel = OnboardingViewModel(
       KiwiContainer().resolve(),
@@ -41,7 +40,6 @@ class _OnboardingPageState extends State<OnboardingPage>
       },
     );
 
-    _controller = AnimationController(vsync: this);
   }
 
   @override
@@ -75,7 +73,12 @@ class _OnboardingPageState extends State<OnboardingPage>
           child: Padding(
             padding: const EdgeInsets.fromLTRB(0, 120, 0, 90),
             child: PropertyChangeConsumer<OnboardingViewModel, String>(
-              builder: (BuildContext context, BaseViewModel model, _) {
+              builder: (
+                BuildContext context,
+                OnboardingViewModel? model,
+                Set<String>? _,
+              ) {
+                if (model == null) return Container();
                 return Column(
                   mainAxisSize: MainAxisSize.max,
                   mainAxisAlignment: MainAxisAlignment.start,
@@ -102,7 +105,7 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   Widget _buildActiveOnboardingPage(OnboardingViewModel model) {
     var currentStep = model.pages[model.currentStep];
-    var contentWidget = currentStep.buildContent(context);
+    var contentWidget = currentStep?.buildContent(context) ?? Container();
 
     Widget body = Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -146,8 +149,9 @@ class _OnboardingPageState extends State<OnboardingPage>
   }
 
   void _onboardingFinished() {
-    var rootViewModel = PropertyChangeProvider.of<RootViewModel, String>(context).value;
-    rootViewModel.setIsOnboarding(false);
+    var rootProvider =
+        PropertyChangeProvider.of<RootViewModel, String>(context);
+    rootProvider?.value.setIsOnboarding(false);
 
     Navigator.of(context).pushReplacementNamed("main");
   }

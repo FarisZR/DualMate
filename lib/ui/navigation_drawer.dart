@@ -16,10 +16,10 @@ class MyNavigationDrawer extends StatelessWidget {
   final bool isInDrawer;
 
   const MyNavigationDrawer({
-    Key key,
-    this.selectedIndex,
-    this.onTap,
-    this.entries,
+    Key? key,
+    required this.selectedIndex,
+    required this.onTap,
+    required this.entries,
     this.isInDrawer = true,
   }) : super(key: key);
 
@@ -71,7 +71,7 @@ class MyNavigationDrawer extends StatelessWidget {
           children: <Widget>[
             Text(
               L.of(context).applicationName,
-              style: Theme.of(context).textTheme.headline5,
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
           ],
         ),
@@ -81,10 +81,10 @@ class MyNavigationDrawer extends StatelessWidget {
 
   Widget _createDrawerItem(
     BuildContext context, {
-    Widget icon,
-    String text,
-    bool isSelected,
-    int index,
+    required Widget icon,
+    required String text,
+    required bool isSelected,
+    required int index,
   }) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),

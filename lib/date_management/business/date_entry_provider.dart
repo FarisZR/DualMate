@@ -41,8 +41,9 @@ class DateEntryProvider {
       }
     }
 
-    cachedEntries.sort((DateEntry a1, DateEntry a2) =>
-        a1?.start?.compareTo(a2?.start));
+    cachedEntries.sort(
+      (DateEntry a1, DateEntry a2) => a1.start.compareTo(a2.start),
+    );
 
     print("Read cached ${cachedEntries.length} date entries");
 

@@ -5,8 +5,12 @@ class BannerWidget extends StatelessWidget {
   final String buttonText;
   final VoidCallback onButtonTap;
 
-  const BannerWidget({Key key, this.message, this.buttonText, this.onButtonTap})
-      : super(key: key);
+  const BannerWidget({
+    Key? key,
+    required this.message,
+    required this.buttonText,
+    required this.onButtonTap,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +34,7 @@ class BannerWidget extends StatelessWidget {
             Text(
               message,
             ),
-            buttonText != null
-                ? Column(
+            Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: <Widget>[
                       Padding(
@@ -42,8 +45,7 @@ class BannerWidget extends StatelessWidget {
                         ),
                       ),
                     ],
-                  )
-                : Container(),
+                  ),
           ],
         ),
       ),

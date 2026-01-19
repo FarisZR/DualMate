@@ -9,8 +9,8 @@ import 'package:kiwi/kiwi.dart';
 /// correct language
 ///
 class LocalizationInitialize {
-  PreferencesProvider _preferencesProvider;
-  String _languageCode;
+  PreferencesProvider? _preferencesProvider;
+  String? _languageCode;
 
   ///
   /// Initialize the localization using the provided language code
@@ -25,7 +25,7 @@ class LocalizationInitialize {
   Future<void> setupLocalizations() async {
     var localization = L(Locale(
       _languageCode ??
-          (await _preferencesProvider?.getLastUsedLanguageCode() ?? "en"),
+          (await _preferencesProvider!.getLastUsedLanguageCode()) ?? "en",
     ));
     KiwiContainer().registerInstance(localization);
   }

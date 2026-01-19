@@ -33,17 +33,17 @@ class StudyOverviewPage extends StatelessWidget {
         children: <Widget>[
           Text(
             L.of(context).dualisOverview,
-            style: Theme.of(context).textTheme.headline6,
+            style: Theme.of(context).textTheme.titleLarge,
           ),
-          PropertyChangeConsumer(
+          PropertyChangeConsumer<StudyGradesViewModel, String>(
             properties: const ["studyGrades"],
             builder: (
               BuildContext context,
-              StudyGradesViewModel model,
-              Set properties,
-            ) =>
-                model.studyGrades != null
-                    ? Column(
+              StudyGradesViewModel? model,
+              Set<String>? properties,
+            ) {
+              if (model == null) return Container();
+              return Column(
                         mainAxisAlignment: MainAxisAlignment.start,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
@@ -55,7 +55,7 @@ class StudyOverviewPage extends StatelessWidget {
                               children: <Widget>[
                                 Text(
                                   model.studyGrades.gpaTotal.toString(),
-                                  style: Theme.of(context).textTheme.headline3,
+                                  style: Theme.of(context).textTheme.displaySmall,
                                 ),
                                 Padding(
                                   padding:
@@ -73,7 +73,7 @@ class StudyOverviewPage extends StatelessWidget {
                             children: <Widget>[
                               Text(
                                 model.studyGrades.gpaMainModules.toString(),
-                                style: Theme.of(context).textTheme.headline3,
+                                style: Theme.of(context).textTheme.displaySmall,
                               ),
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(16, 0, 0, 0),
@@ -91,7 +91,7 @@ class StudyOverviewPage extends StatelessWidget {
                               children: <Widget>[
                                 Text(
                                   "${model.studyGrades.creditsGained} / ${model.studyGrades.creditsTotal}",
-                                  style: Theme.of(context).textTheme.headline3,
+                                  style: Theme.of(context).textTheme.displaySmall,
                                 ),
                                 Padding(
                                   padding:
@@ -104,8 +104,8 @@ class StudyOverviewPage extends StatelessWidget {
                             ),
                           ),
                         ],
-                      )
-                    : buildProgressIndicator(),
+                      );
+            },
           ),
         ],
       ),
@@ -122,19 +122,18 @@ class StudyOverviewPage extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
             child: Text(
               L.of(context).dualisOverviewModuleGrades,
-              style: Theme.of(context).textTheme.headline6,
+              style: Theme.of(context).textTheme.titleLarge,
             ),
           ),
-          PropertyChangeConsumer(
+          PropertyChangeConsumer<StudyGradesViewModel, String>(
             properties: const ["allModules"],
             builder: (
               BuildContext context,
-              StudyGradesViewModel model,
-              Set properties,
-            ) =>
-                model.allModules != null
-                    ? buildModulesDataTable(context, model)
-                    : buildProgressIndicator(),
+              StudyGradesViewModel? model,
+              Set<String>? properties,
+            ) => model == null
+                ? Container()
+                : buildModulesDataTable(context, model),
           ),
         ],
       ),

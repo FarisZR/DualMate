@@ -20,11 +20,13 @@ class FakeAccountDualisScraperDecorator implements DualisScraper {
   final DualisScraper _fakeDualisScraper = FakeDataDualisScraper();
   final DualisScraper _originalDualisScraper;
 
-  DualisScraper _currentDualisScraper;
+  late DualisScraper _currentDualisScraper;
 
   FakeAccountDualisScraperDecorator(
     this._originalDualisScraper,
-  );
+  ) {
+    _currentDualisScraper = _originalDualisScraper;
+  }
 
   @override
   bool isLoggedIn() {
@@ -33,59 +35,62 @@ class FakeAccountDualisScraperDecorator implements DualisScraper {
 
   @override
   Future<List<DualisModule>> loadAllModules(
-      [CancellationToken cancellationToken]) {
-    return _currentDualisScraper.loadAllModules();
+      [CancellationToken? cancellationToken]) {
+    return _currentDualisScraper
+        .loadAllModules(cancellationToken ?? CancellationToken());
   }
 
   @override
   Future<List<DualisExam>> loadModuleExams(
     String moduleDetailsUrl, [
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ]) {
     return _currentDualisScraper.loadModuleExams(
       moduleDetailsUrl,
-      cancellationToken,
+      cancellationToken ?? CancellationToken(),
     );
   }
 
   @override
   Future<Schedule> loadMonthlySchedule(
     DateTime dateInMonth,
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ) {
     return _currentDualisScraper.loadMonthlySchedule(
       dateInMonth,
-      cancellationToken,
+      cancellationToken ?? CancellationToken(),
     );
   }
 
   @override
   Future<List<DualisModule>> loadSemesterModules(
     String semesterName, [
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ]) {
     return _currentDualisScraper.loadSemesterModules(
       semesterName,
-      cancellationToken,
+      cancellationToken ?? CancellationToken(),
     );
   }
 
   @override
   Future<List<DualisSemester>> loadSemesters(
-      [CancellationToken cancellationToken]) {
-    return _currentDualisScraper.loadSemesters(cancellationToken);
+      [CancellationToken? cancellationToken]) {
+    return _currentDualisScraper
+        .loadSemesters(cancellationToken ?? CancellationToken());
   }
 
   @override
-  Future<StudyGrades> loadStudyGrades(CancellationToken cancellationToken) {
-    return _currentDualisScraper.loadStudyGrades(cancellationToken);
+  Future<StudyGrades> loadStudyGrades(CancellationToken? cancellationToken) {
+    return _currentDualisScraper
+        .loadStudyGrades(cancellationToken ?? CancellationToken());
   }
 
   @override
   Future<LoginResult> login(
     String username,
     String password,
-    CancellationToken cancellationToken,
+    CancellationToken? cancellationToken,
   ) {
     if (username == fakeUsername && password == fakePassword) {
       _currentDualisScraper = _fakeDualisScraper;
@@ -95,22 +100,22 @@ class FakeAccountDualisScraperDecorator implements DualisScraper {
     return _currentDualisScraper.login(
       username,
       password,
-      cancellationToken,
+      cancellationToken ?? CancellationToken(),
     );
   }
 
   @override
   Future<LoginResult> loginWithPreviousCredentials(
-      CancellationToken cancellationToken) {
+      CancellationToken? cancellationToken) {
     return _currentDualisScraper.loginWithPreviousCredentials(
-      cancellationToken,
+      cancellationToken ?? CancellationToken(),
     );
   }
 
   @override
-  Future<void> logout(CancellationToken cancellationToken) {
+  Future<void> logout(CancellationToken? cancellationToken) {
     return _currentDualisScraper.logout(
-      cancellationToken,
+      cancellationToken ?? CancellationToken(),
     );
   }
 

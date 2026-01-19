@@ -9,8 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 
-class ScheduleNavigationEntry extends NavigationEntry {
-  ScheduleViewModel _viewModel;
+class ScheduleNavigationEntry extends NavigationEntry<ScheduleViewModel> {
+  late ScheduleViewModel _viewModel;
 
   @override
   Widget icon(BuildContext context) {
@@ -18,13 +18,10 @@ class ScheduleNavigationEntry extends NavigationEntry {
   }
 
   @override
-  BaseViewModel initViewModel() {
-    if (_viewModel != null) return _viewModel;
-
+  ScheduleViewModel initViewModel() {
     _viewModel = ScheduleViewModel(
       KiwiContainer().resolve(),
     );
-
     return _viewModel;
   }
 
@@ -44,10 +41,13 @@ class ScheduleNavigationEntry extends NavigationEntry {
     return [
       PropertyChangeProvider<ScheduleViewModel, String>(
         value: _viewModel,
-        child: PropertyChangeConsumer(
+        child: PropertyChangeConsumer<ScheduleViewModel, String>(
             properties: const ["didSetupProperly"],
-            builder: (BuildContext _, ScheduleViewModel __, Set<Object> ___) =>
-                _viewModel.didSetupProperly
+            builder: (
+              BuildContext _,
+              ScheduleViewModel? __,
+              Set<String>? ___,
+            ) => _viewModel.didSetupProperly
                     ? Container()
                     : IconButton(
                         icon: Icon(Icons.help_outline),
@@ -59,10 +59,13 @@ class ScheduleNavigationEntry extends NavigationEntry {
       ),
       PropertyChangeProvider<ScheduleViewModel, String>(
         value: _viewModel,
-        child: PropertyChangeConsumer(
+        child: PropertyChangeConsumer<ScheduleViewModel, String>(
           properties: const ["didSetupProperly"],
-          builder: (BuildContext _, ScheduleViewModel __, Set<Object> ___) =>
-              _viewModel.didSetupProperly
+          builder: (
+            BuildContext _,
+            ScheduleViewModel? __,
+            Set<String>? ___,
+          ) => _viewModel.didSetupProperly
                   ? IconButton(
                       icon: Icon(Icons.filter_alt),
                       onPressed: () async {

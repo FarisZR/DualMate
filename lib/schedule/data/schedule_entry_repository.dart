@@ -34,7 +34,7 @@ class ScheduleEntryRepository {
     return schedule;
   }
 
-  Future<ScheduleEntry> queryExistingScheduleEntry(ScheduleEntry entry) async {
+  Future<ScheduleEntry?> queryExistingScheduleEntry(ScheduleEntry entry) async {
     var rows = await _database.queryRows(
       ScheduleEntryEntity.tableName(),
       where: "start=? AND end=? AND title=? AND details=? AND professor=?",
@@ -52,7 +52,7 @@ class ScheduleEntryRepository {
     return ScheduleEntryEntity.fromMap(rows[0]).asScheduleEntry();
   }
 
-  Future<ScheduleEntry> queryNextScheduleEntry(DateTime dateTime) async {
+  Future<ScheduleEntry?> queryNextScheduleEntry(DateTime dateTime) async {
     var nextScheduleEntry = await _database.queryRows(
       ScheduleEntryEntity.tableName(),
       where: "start>?",
@@ -80,31 +80,27 @@ class ScheduleEntryRepository {
   }
 
   Future<void> saveScheduleEntry(ScheduleEntry entry) async {
-    var row = ScheduleEntryEntity.fromModel(entry).toMap();
-
     var existingEntry = await queryExistingScheduleEntry(entry);
 
-    if (existingEntry != null) {
-      entry.id = existingEntry.id;
-      return;
-    }
-
-    if (entry.id == null) {
-      var id = await _database.insert(ScheduleEntryEntity.tableName(), row);
-      entry.id = id;
+    if (existingEntry == null) {
+      var row = ScheduleEntryEntity.fromModel(entry).toMap();
+      entry.id = await _database.insert(ScheduleEntryEntity.tableName(), row);
     } else {
+      entry.id = existingEntry.id;
+      var row = ScheduleEntryEntity.fromModel(entry).toMap();
       await _database.update(ScheduleEntryEntity.tableName(), row);
     }
   }
 
   Future<void> saveSchedule(Schedule schedule) async {
-    for (var entry in schedule.entries ?? []) {
-      saveScheduleEntry(entry);
+    for (var entry in schedule.entries) {
+      await saveScheduleEntry(entry);
     }
   }
 
   Future<void> deleteScheduleEntry(ScheduleEntry entry) async {
-    await _database.delete(ScheduleEntryEntity.tableName(), entry.id);
+    if (entry.id == null) return;
+    await _database.delete(ScheduleEntryEntity.tableName(), entry.id!);
   }
 
   Future<void> deleteScheduleEntriesBetween(

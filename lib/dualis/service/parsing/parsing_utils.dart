@@ -1,12 +1,8 @@
 import 'package:html/dom.dart';
-
-import 'package:universal_html/html.dart' as html;
+import 'package:html/parser.dart' show parseFragment;
 
 String trimAndEscapeString(String htmlString) {
-  if (htmlString == null) return null;
-
-  var text = html.Element.span()..appendHtml(htmlString);
-  return text.innerText.trim();
+  return parseFragment(htmlString).text?.trim() ?? '';
 }
 
 Element getElementByTagName(
@@ -58,10 +54,10 @@ class ParseException implements Exception {
 
 class ElementNotFoundParseException implements ParseException {
   @override
-  Object innerException;
+  late Object innerException;
 
   @override
-  StackTrace trace;
+  late StackTrace trace;
 
   final String elementDescription;
 

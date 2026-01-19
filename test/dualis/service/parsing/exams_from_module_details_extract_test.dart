@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dhbwstudentapp/dualis/service/parsing/exams_from_module_details_extract.dart';
+import 'package:dhbwstudentapp/dualis/model/exam_grade.dart';
 import 'package:dhbwstudentapp/dualis/service/parsing/parsing_utils.dart';
 import 'package:test/test.dart';
 
@@ -18,11 +19,13 @@ Future<void> main() async {
 
     expect(exams[0].name, "Klausurarbeit (50%)");
     expect(exams[0].semester, "WiSe xx/yy");
-    expect(exams[0].grade, "4,0");
+    expect(exams[0].grade.gradeValue, "4,0");
+    expect(exams[0].grade.state, ExamGradeState.Graded);
     expect(exams[0].moduleName, "T3INF1001.1 Lineare Algebra (STG-TINF19IN)");
     expect(exams[0].tryNr, "Versuch  1");
 
-    expect(exams[1].grade, "");
+    expect(exams[1].grade.gradeValue, "");
+    expect(exams[1].grade.state, ExamGradeState.NotGraded);
   });
 
   test('ExamsFromModuleDetailsExtract invalid html throws exception', () async {

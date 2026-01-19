@@ -10,12 +10,12 @@ class ErrorReportScheduleSourceDecorator extends ScheduleSource {
 
   @override
   Future<ScheduleQueryResult> querySchedule(DateTime from, DateTime to,
-      [CancellationToken cancellationToken]) async {
+      [CancellationToken? cancellationToken]) async {
     try {
       var schedule = await _scheduleSource.querySchedule(
         from,
         to,
-        cancellationToken,
+        cancellationToken ?? CancellationToken(),
       );
 
       return schedule;
@@ -25,7 +25,7 @@ class ErrorReportScheduleSourceDecorator extends ScheduleSource {
         // Do not log connectivity exceptions
         if (ex.innerException is ServiceRequestFailed) rethrow;
 
-        await reportException(ex, ex.trace);
+        await reportException(ex, ex.trace ?? StackTrace.current);
       } else {
         await reportException(ex, trace);
       }

@@ -22,7 +22,7 @@ class _RaplaUrlPageState extends State<RaplaUrlPage> {
           child: Center(
             child: Text(
               L.of(context).onboardingRaplaPageTitle,
-              style: Theme.of(context).textTheme.headline4,
+              style: Theme.of(context).textTheme.headlineMedium,
               textAlign: TextAlign.center,
             ),
           ),
@@ -33,15 +33,19 @@ class _RaplaUrlPageState extends State<RaplaUrlPage> {
         ),
         Text(
           L.of(context).onboardingRaplaPageDescription,
-          style: Theme.of(context).textTheme.bodyText2,
+          style: Theme.of(context).textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(0, 32, 0, 0),
             child: PropertyChangeConsumer<OnboardingStepViewModel, String>(
-              builder: (BuildContext context, OnboardingStepViewModel model,
-                  Set<Object> _) {
+              builder: (
+                BuildContext context,
+                OnboardingStepViewModel? model,
+                Set<String>? _,
+              ) {
+                if (model == null) return Container();
                 var viewModel = model as RaplaUrlViewModel;
 
                 if (_urlTextController.text != viewModel.raplaUrl)
@@ -56,7 +60,7 @@ class _RaplaUrlPageState extends State<RaplaUrlPage> {
                         child: TextField(
                           controller: _urlTextController,
                           decoration: InputDecoration(
-                            errorText: (viewModel.urlHasError ?? false)
+                            errorText: viewModel.urlHasError
                                 ? L.of(context).onboardingRaplaUrlInvalid
                                 : null,
                             hintText: L.of(context).onboardingRaplaUrlHint,

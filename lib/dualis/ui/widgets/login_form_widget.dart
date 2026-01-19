@@ -19,14 +19,14 @@ class LoginForm extends StatefulWidget {
   final String loginFailedText;
 
   const LoginForm({
-    Key key,
-    this.onLogin,
-    this.title,
-    this.loginFailedText,
-    this.onLoadCredentials,
-    this.onSaveCredentials,
-    this.onClearCredentials,
-    this.getDoSaveCredentials,
+    Key? key,
+    required this.onLogin,
+    required this.title,
+    required this.loginFailedText,
+    required this.onLoadCredentials,
+    required this.onSaveCredentials,
+    required this.onClearCredentials,
+    required this.getDoSaveCredentials,
   }) : super(key: key);
 
   @override
@@ -74,22 +74,21 @@ class _LoginFormState extends State<LoginForm> {
   void initState() {
     super.initState();
 
-    if (_onLoadCredentials != null && _getDoSaveCredentials != null) {
-      _getDoSaveCredentials().then((value) {
-        setState(() {
-          _storeCredentials = value;
-        });
-
-        _onLoadCredentials().then((value) {
-          _usernameEditingController.text = value.username;
-          _passwordEditingController.text = value.password;
-
-          if (mounted) {
-            setState(() {});
-          }
-        });
+    _getDoSaveCredentials().then((value) {
+      if (!mounted) return;
+      setState(() {
+        _storeCredentials = value;
       });
-    }
+
+      _onLoadCredentials().then((value) {
+        _usernameEditingController.text = value.username;
+        _passwordEditingController.text = value.password;
+
+        if (mounted) {
+          setState(() {});
+        }
+      });
+    });
   }
 
   @override
@@ -98,12 +97,10 @@ class _LoginFormState extends State<LoginForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        _title != null
-            ? Padding(
-                padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
-                child: _title,
-              )
-            : Container(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
+          child: _title,
+        ),
         TextField(
           controller: _usernameEditingController,
           decoration: InputDecoration(
@@ -130,7 +127,8 @@ class _LoginFormState extends State<LoginForm> {
             title: Text(
               L.of(context).dualisStoreCredentials,
             ),
-            onChanged: (bool value) {
+            onChanged: (bool? value) {
+              if (value == null) return;
               setState(() {
                 _storeCredentials = value;
               });
@@ -165,7 +163,7 @@ class _LoginFormState extends State<LoginForm> {
       _isLoading = true;
     });
 
-    if (!_storeCredentials && _onClearCredentials != null) {
+    if (!_storeCredentials) {
       await _onClearCredentials();
     }
 
@@ -176,10 +174,11 @@ class _LoginFormState extends State<LoginForm> {
 
     bool loginSuccess = await _onLogin(credentials);
 
-    if (loginSuccess && _storeCredentials && _onSaveCredentials != null) {
+    if (loginSuccess && _storeCredentials) {
       await _onSaveCredentials(credentials);
     }
 
+    if (!mounted) return;
     setState(() {
       _isLoading = false;
       _loginFailed = !loginSuccess;

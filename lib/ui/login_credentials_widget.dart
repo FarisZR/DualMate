@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 class LoginCredentialsWidget extends StatefulWidget {
   final TextEditingController usernameEditingController;
   final TextEditingController passwordEditingController;
-  final Function onSubmitted;
+  final VoidCallback onSubmitted;
 
   const LoginCredentialsWidget({
-    Key key,
-    this.usernameEditingController,
-    this.passwordEditingController,
-    this.onSubmitted,
+    Key? key,
+    required this.usernameEditingController,
+    required this.passwordEditingController,
+    required this.onSubmitted,
   }) : super(key: key);
 
   @override
@@ -24,7 +24,7 @@ class LoginCredentialsWidget extends StatefulWidget {
 class _LoginCredentialsWidgetState extends State<LoginCredentialsWidget> {
   final TextEditingController _usernameEditingController;
   final TextEditingController _passwordEditingController;
-  final Function _onSubmitted;
+  final VoidCallback _onSubmitted;
 
   final _focus = FocusNode();
 
@@ -58,9 +58,7 @@ class _LoginCredentialsWidgetState extends State<LoginCredentialsWidget> {
           ),
           focusNode: _focus,
           onSubmitted: (v) {
-            if (_onSubmitted != null) {
-              _onSubmitted();
-            }
+            _onSubmitted();
           },
         ),
       ],

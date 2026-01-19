@@ -8,12 +8,12 @@ class DateEntry {
   final String room;
 
   DateEntry({
-    this.description,
-    this.year,
-    this.comment,
-    this.databaseName,
-    this.start,
-    this.end,
-    this.room
+    required this.description,
+    required this.year,
+    required this.comment,
+    required this.databaseName,
+    required this.start,
+    required this.end,
+    required this.room,
   });
 }

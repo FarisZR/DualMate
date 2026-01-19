@@ -8,11 +8,11 @@ const String dualisEndpoint = "https://dualis.dhbw.de";
 /// access token contained within the urls.
 ///
 class DualisUrls {
-  String courseResultUrl;
-  String studentResultsUrl;
-  String logoutUrl;
-  String mainPageUrl;
-  String monthlyScheduleUrl;
+  late String courseResultUrl;
+  late String studentResultsUrl;
+  late String logoutUrl;
+  late String mainPageUrl;
+  late String monthlyScheduleUrl;
 
   Map<String, String> semesterCourseResultUrls = {};
 }

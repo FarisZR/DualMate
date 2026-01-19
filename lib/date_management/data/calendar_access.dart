@@ -24,9 +24,9 @@ class CalendarAccess {
     try {
       var permissionsGranted = await _deviceCalendarPlugin.hasPermissions();
 
-      if (permissionsGranted.isSuccess && !permissionsGranted.data) {
+      if (permissionsGranted.isSuccess && permissionsGranted.data != true) {
         permissionsGranted = await _deviceCalendarPlugin.requestPermissions();
-        if (!permissionsGranted.isSuccess || !permissionsGranted.data) {
+        if (!permissionsGranted.isSuccess || permissionsGranted.data != true) {
           return CalendarPermission.PermissionDenied;
         }
       }
@@ -42,8 +42,8 @@ class CalendarAccess {
   Future<List<Calendar>> queryWriteableCalendars() async {
     final calendarsResult = await _deviceCalendarPlugin.retrieveCalendars();
     var writeableCalendars = <Calendar>[];
-    for (var calendar in calendarsResult?.data ?? <Calendar>[]) {
-      if (!calendar.isReadOnly) {
+    for (var calendar in calendarsResult.data ?? <Calendar>[]) {
+      if (calendar.isReadOnly != true) {
         writeableCalendars.add(calendar);
       }
     }
@@ -55,7 +55,7 @@ class CalendarAccess {
     List<DateEntry> dateEntries,
     Calendar calendar,
   ) async {
-    if ((dateEntries ?? []).isEmpty) return;
+    if (dateEntries.isEmpty) return;
 
     var existingEvents =
         await _getExistingEventsFromCalendar(dateEntries, calendar);
@@ -65,7 +65,7 @@ class CalendarAccess {
     }
   }
 
-  Future _addOrUpdateEntry(
+    Future _addOrUpdateEntry(
       List<Event> existingEvents, DateEntry entry, Calendar calendar) async {
     // Find the id in the existing events in order that the "update" part of
     // createOrUpdateEvent(...) works
@@ -95,22 +95,28 @@ class CalendarAccess {
     ));
   }
 
-  String _getIdOfExistingEvent(List<Event> existingEvents, DateEntry entry) {
+  String? _getIdOfExistingEvent(List<Event> existingEvents, DateEntry entry) {
     var existingEvent = existingEvents
-        .where((element) => (element.title == entry.description && element.start.toUtc().isAtSameMomentAs(entry.start.toUtc())))
+        .where((element) =>
+            element.start != null &&
+            element.title == entry.description &&
+            element.start!.toUtc().isAtSameMomentAs(entry.start.toUtc()))
         .toList();
-    String id;
 
     if (existingEvent.isNotEmpty) {
-      id = existingEvent[0].eventId;
+      return existingEvent[0].eventId;
     }
-    return id;
+    return null;
   }
 
   Future<List<Event>> _getExistingEventsFromCalendar(
       List<DateEntry> dateEntries, Calendar calendar) async {
     var firstEntry = _findFirstEntry(dateEntries);
     var lastEntry = _findLastEntry(dateEntries);
+
+    if (firstEntry == null || lastEntry == null) {
+      return <Event>[];
+    }
 
     var existingEventsResult = await _deviceCalendarPlugin.retrieveEvents(
         calendar.id,
@@ -121,17 +127,20 @@ class CalendarAccess {
 
     var existingEvents = <Event>[];
 
-    if (existingEventsResult.isSuccess) {
-      existingEvents = existingEventsResult.data.toList();
+    if (existingEventsResult.isSuccess && existingEventsResult.data != null) {
+      existingEvents = existingEventsResult.data!.toList();
     }
     return existingEvents;
   }
 
-  DateEntry _findFirstEntry(List<DateEntry> entries) {
+  DateEntry? _findFirstEntry(List<DateEntry> entries) {
+    if (entries.isEmpty) {
+      return null;
+    }
     var firstEntry = entries[0];
 
     for (var entry in entries) {
-      if (entry.end.isBefore(firstEntry?.end)) {
+      if (entry.end.isBefore(firstEntry.end)) {
         firstEntry = entry;
       }
     }
@@ -139,7 +148,10 @@ class CalendarAccess {
     return firstEntry;
   }
 
-  DateEntry _findLastEntry(List<DateEntry> entries) {
+  DateEntry? _findLastEntry(List<DateEntry> entries) {
+    if (entries.isEmpty) {
+      return null;
+    }
     var lastEntry = entries[0];
 
     for (var entry in entries) {

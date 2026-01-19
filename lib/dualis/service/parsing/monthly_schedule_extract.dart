@@ -25,25 +25,33 @@ class MonthlyScheduleExtract {
     for (var appointment in appointments) {
       var entry = _extractEntry(appointment);
 
-      allEntries.add(entry);
+      if (entry != null) {
+        allEntries.add(entry);
+      }
     }
 
     allEntries.sort(
-      (ScheduleEntry e1, ScheduleEntry e2) => e1?.start?.compareTo(e2?.start),
+      (ScheduleEntry e1, ScheduleEntry e2) => e1.start.compareTo(e2.start),
     );
 
     return Schedule.fromList(allEntries);
   }
 
-  ScheduleEntry _extractEntry(Element appointment) {
-    var date = appointment.parent.parent
-        .querySelector(".tbsubhead a")
-        .attributes["title"];
+  ScheduleEntry? _extractEntry(Element appointment) {
+    var date = appointment.parent
+        ?.parent
+        ?.querySelector(".tbsubhead a")
+        ?.attributes["title"];
 
     var information = appointment.attributes["title"];
+    if (date == null || information == null) return null;
+
     var informationParts = information.split(" / ");
+    if (informationParts.length < 3) return null;
 
     var startAndEnd = informationParts[0].split(" - ");
+    if (startAndEnd.length < 2) return null;
+
     var start = "$date ${startAndEnd[0]}";
     var end = "$date ${startAndEnd[1]}";
     var room = informationParts[1];

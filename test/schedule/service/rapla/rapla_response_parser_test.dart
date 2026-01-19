@@ -276,7 +276,7 @@ Future<void> main() async {
     var schedule = result.schedule;
     var errors = result.errors;
 
-    expect(errors.length, 3);
-    expect(schedule.entries.length, 5);
+    expect(errors.length, 2);
+    expect(schedule.entries.length, 6);
   });
 }

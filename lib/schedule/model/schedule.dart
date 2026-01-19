@@ -40,28 +40,30 @@ class Schedule {
     return schedule;
   }
 
-  DateTime getStartDate() {
+  DateTime? getStartDate() {
     if (entries.isEmpty) return null;
 
-    var date = entries?.reduce((ScheduleEntry a, ScheduleEntry b) {
+    var date = entries.reduce((ScheduleEntry a, ScheduleEntry b) {
       return a.start.isBefore(b.start) ? a : b;
-    })?.start;
+    }).start;
 
     return date;
   }
 
-  DateTime getEndDate() {
+  DateTime? getEndDate() {
     if (entries.isEmpty) return null;
 
-    var date = entries?.reduce((ScheduleEntry a, ScheduleEntry b) {
+    var date = entries.reduce((ScheduleEntry a, ScheduleEntry b) {
       return a.end.isAfter(b.end) ? a : b;
-    })?.end;
+    }).end;
 
     return date;
   }
 
-  DateTime getStartTime() {
-    DateTime earliestTime;
+  DateTime? getStartTime() {
+    if (entries.isEmpty) return null;
+
+    DateTime? earliestTime;
 
     for (var entry in entries) {
       var entryTime = DateTime(
@@ -83,8 +85,10 @@ class Schedule {
     return earliestTime;
   }
 
-  DateTime getEndTime() {
-    DateTime latestTime;
+  DateTime? getEndTime() {
+    if (entries.isEmpty) return null;
+
+    DateTime? latestTime;
 
     for (var entry in entries) {
       var entryTime = DateTime(
@@ -106,8 +110,8 @@ class Schedule {
     return latestTime;
   }
 
-  Schedule copyWith({List<ScheduleEntry> entries}) {
-    var schedule = Schedule.fromList(entries);
+  Schedule copyWith({List<ScheduleEntry>? entries}) {
+    var schedule = Schedule.fromList(entries ?? this.entries);
 
     schedule.urls.addAll(urls);
 

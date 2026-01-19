@@ -1,5 +1,4 @@
 import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
 import 'package:dhbwstudentapp/dualis/ui/viewmodels/study_grades_view_model.dart';
 import 'package:dhbwstudentapp/dualis/ui/widgets/login_form_widget.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +7,8 @@ import 'package:provider/provider.dart';
 class DualisLoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    StudyGradesViewModel viewModel = Provider.of<BaseViewModel>(context);
+    StudyGradesViewModel viewModel =
+        Provider.of<StudyGradesViewModel>(context);
     return buildLoginPage(context, viewModel);
   }
 
@@ -25,7 +25,7 @@ class DualisLoginPage extends StatelessWidget {
                 loginFailedText: L.of(context).dualisLoginFailed,
                 title: Text(
                   L.of(context).dualisLogin,
-                  style: Theme.of(context).textTheme.headline6,
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
                 onLogin: model.login,
                 onLoadCredentials: model.loadCredentials,

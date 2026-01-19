@@ -1,8 +1,6 @@
 import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
-import 'package:provider/provider.dart';
 
 ///
 /// This widget uses a [List<PageDefinition>] instance and displays a bottom
@@ -15,9 +13,9 @@ import 'package:provider/provider.dart';
 ///
 class PagerWidget extends StatefulWidget {
   final List<PageDefinition> pages;
-  final String pagesId;
+  final String? pagesId;
 
-  const PagerWidget({Key key, @required this.pages, this.pagesId})
+  const PagerWidget({Key? key, required this.pages, this.pagesId})
       : super(key: key);
 
   @override
@@ -27,7 +25,7 @@ class PagerWidget extends StatefulWidget {
 class _PagerWidgetState extends State<PagerWidget> {
   final PreferencesProvider preferencesProvider = KiwiContainer().resolve();
 
-  final String pagesId;
+  final String? pagesId;
   final List<PageDefinition> pages;
   int _currentPage = 0;
 
@@ -49,10 +47,7 @@ class _PagerWidgetState extends State<PagerWidget> {
           key: ValueKey(_currentPage),
           children: <Widget>[
             Expanded(
-              child: _wrapWithChangeNotifierProvider(
-                pages[_currentPage].builder(context),
-                pages[_currentPage].viewModel,
-              ),
+              child: pages[_currentPage].builder(context),
             ),
           ],
         ),
@@ -64,15 +59,6 @@ class _PagerWidgetState extends State<PagerWidget> {
         },
         items: buildBottomNavigationBarItems(),
       ),
-    );
-  }
-
-  Widget _wrapWithChangeNotifierProvider(Widget child, BaseViewModel value) {
-    if (value == null) return child;
-
-    return ChangeNotifierProvider.value(
-      child: child,
-      value: value,
     );
   }
 
@@ -98,9 +84,9 @@ class _PagerWidgetState extends State<PagerWidget> {
     setState(() {
       _currentPage = page;
     });
-
-    if (pagesId == null) return;
-    await preferencesProvider.set("${pagesId}_active_page", page);
+    if (pagesId != null) {
+      await preferencesProvider.set("${pagesId}_active_page", page);
+    }
   }
 
   Future<void> loadActivePage() async {
@@ -110,9 +96,9 @@ class _PagerWidgetState extends State<PagerWidget> {
       "${pagesId}_active_page",
     );
 
-    if (selectedPage == null) return;
-
-    if (selectedPage > 0 && selectedPage < pages.length) {
+    if (selectedPage != null &&
+        selectedPage > 0 &&
+        selectedPage < pages.length) {
       setState(() {
         _currentPage = selectedPage;
       });
@@ -124,12 +110,10 @@ class PageDefinition {
   final Widget icon;
   final String text;
   final WidgetBuilder builder;
-  final BaseViewModel viewModel;
 
   PageDefinition({
-    @required this.icon,
-    @required this.text,
-    @required this.builder,
-    this.viewModel,
+    required this.icon,
+    required this.text,
+    required this.builder,
   });
 }

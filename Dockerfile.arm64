@@ -1,0 +1,14 @@
+FROM ghcr.io/cirruslabs/flutter:3.7.12
+
+ENV ANDROID_SDK_ROOT=/opt/android-sdk
+ENV ANDROID_HOME=/opt/android-sdk
+ENV PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+
+RUN yes | sdkmanager --licenses
+RUN sdkmanager \
+    "platform-tools" \
+    "platforms;android-34" \
+    "build-tools;34.0.0" \
+    "ndk;23.1.7779620"
+
+WORKDIR /workspace

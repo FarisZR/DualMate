@@ -13,7 +13,7 @@ class SelectSourceDialog {
   final PreferencesProvider _preferencesProvider;
   final ScheduleSourceProvider _scheduleSourceProvider;
 
-  ScheduleSourceType _currentScheduleSource;
+  late ScheduleSourceType _currentScheduleSource;
 
   SelectSourceDialog(this._preferencesProvider, this._scheduleSourceProvider);
 
@@ -35,37 +35,47 @@ class SelectSourceDialog {
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
           child: Text(
             L.of(context).onboardingScheduleSourceDescription,
-            style: Theme.of(context).textTheme.bodyText2,
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
-        RadioListTile(
+        RadioListTile<ScheduleSourceType>(
           groupValue: _currentScheduleSource,
           value: ScheduleSourceType.Rapla,
-          onChanged: (v) => sourceSelected(v, context),
+          onChanged: (v) {
+            if (v != null) sourceSelected(v, context);
+          },
           title: Text(L.of(context).scheduleSourceTypeRapla),
         ),
-        RadioListTile(
+        RadioListTile<ScheduleSourceType>(
           groupValue: _currentScheduleSource,
           value: ScheduleSourceType.Dualis,
-          onChanged: (v) => sourceSelected(v, context),
+          onChanged: (v) {
+            if (v != null) sourceSelected(v, context);
+          },
           title: Text(L.of(context).scheduleSourceTypeDualis),
         ),
-        RadioListTile(
+        RadioListTile<ScheduleSourceType>(
           groupValue: _currentScheduleSource,
           value: ScheduleSourceType.Mannheim,
-          onChanged: (v) => sourceSelected(v, context),
+          onChanged: (v) {
+            if (v != null) sourceSelected(v, context);
+          },
           title: Text(L.of(context).scheduleSourceTypeMannheim),
         ),
-        RadioListTile(
+        RadioListTile<ScheduleSourceType>(
           groupValue: _currentScheduleSource,
           value: ScheduleSourceType.Ical,
-          onChanged: (v) => sourceSelected(v, context),
+          onChanged: (v) {
+            if (v != null) sourceSelected(v, context);
+          },
           title: Text(L.of(context).scheduleSourceTypeIcal),
         ),
-        RadioListTile(
+        RadioListTile<ScheduleSourceType>(
           groupValue: _currentScheduleSource,
           value: ScheduleSourceType.None,
-          onChanged: (v) => sourceSelected(v, context),
+          onChanged: (v) {
+            if (v != null) sourceSelected(v, context);
+          },
           title: Text(L.of(context).scheduleSourceTypeNone),
         )
       ],

@@ -1,5 +1,4 @@
 import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
 import 'package:dhbwstudentapp/schedule/ui/dailyschedule/daily_schedule_page.dart';
 import 'package:dhbwstudentapp/schedule/ui/viewmodels/daily_schedule_view_model.dart';
 import 'package:dhbwstudentapp/schedule/ui/viewmodels/schedule_view_model.dart';
@@ -28,8 +27,15 @@ class _SchedulePageState extends State<SchedulePage> {
   );
 
   @override
+  void dispose() {
+    weeklyScheduleViewModel.dispose();
+    dailyScheduleViewModel.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    ScheduleViewModel viewModel = Provider.of<BaseViewModel>(context);
+    ScheduleViewModel viewModel = Provider.of<ScheduleViewModel>(context);
 
     if (!viewModel.didSetupProperly) {
       return ScheduleEmptyState();
@@ -39,14 +45,18 @@ class _SchedulePageState extends State<SchedulePage> {
           PageDefinition(
             icon: Icon(Icons.view_week),
             text: L.of(context).pageWeekOverviewTitle,
-            builder: (_) => WeeklySchedulePage(),
-            viewModel: weeklyScheduleViewModel,
+            builder: (_) => ChangeNotifierProvider<WeeklyScheduleViewModel>.value(
+              value: weeklyScheduleViewModel,
+              child: WeeklySchedulePage(),
+            ),
           ),
           PageDefinition(
             icon: Icon(Icons.view_day),
             text: L.of(context).pageDayOverviewTitle,
-            builder: (_) => DailySchedulePage(),
-            viewModel: dailyScheduleViewModel,
+            builder: (_) => ChangeNotifierProvider<DailyScheduleViewModel>.value(
+              value: dailyScheduleViewModel,
+              child: DailySchedulePage(),
+            ),
           ),
         ],
       );

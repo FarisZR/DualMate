@@ -25,8 +25,8 @@ class ScheduleFilterPage extends StatelessWidget {
           elevation: 0,
           iconTheme: Theme.of(context).iconTheme,
           title: Text(L.of(context).filterTitle),
-          toolbarTextStyle: Theme.of(context).textTheme.bodyText2,
-          titleTextStyle: Theme.of(context).textTheme.headline6,
+          toolbarTextStyle: Theme.of(context).textTheme.bodyMedium,
+          titleTextStyle: Theme.of(context).textTheme.titleLarge,
         ),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -39,21 +39,23 @@ class ScheduleFilterPage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
                 L.of(context).filterDisplayedClasses,
-                style: Theme.of(context).textTheme.headline6,
+                style: Theme.of(context).textTheme.titleLarge,
               ),
             ),
             Expanded(
               child: PropertyChangeProvider<FilterViewModel, String>(
                 value: _viewModel,
                 child: PropertyChangeConsumer<FilterViewModel, String>(
-                    builder: (BuildContext _, FilterViewModel viewModel,
-                            Set<Object> ___) =>
-                        ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: viewModel.filterStates.length,
-                          itemBuilder: (context, index) =>
-                              FilterStateRow(viewModel.filterStates[index]),
-                        )),
+                    builder: (BuildContext _, FilterViewModel? viewModel,
+                            Set<String>? ___) {
+                      if (viewModel == null) return Container();
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: viewModel.filterStates.length,
+                        itemBuilder: (context, index) =>
+                            FilterStateRow(viewModel.filterStates[index]),
+                      );
+                    }),
               ),
             )
           ],
@@ -88,6 +90,7 @@ class _FilterStateRowState extends State<FilterStateRow> {
     return CheckboxListTile(
       value: isChecked,
       onChanged: (checked) {
+        if (checked == null) return;
         setState(() {
           isChecked = checked;
           widget.filterState.isDisplayed = isChecked;

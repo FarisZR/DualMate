@@ -13,7 +13,7 @@ class RaplaScheduleSource extends ScheduleSource {
 
   String raplaUrl;
 
-  RaplaScheduleSource({this.raplaUrl});
+  RaplaScheduleSource({String? raplaUrl}) : raplaUrl = raplaUrl ?? "";
 
   void setEndpointUrl(String url) {
     raplaUrl = url;
@@ -21,26 +21,23 @@ class RaplaScheduleSource extends ScheduleSource {
 
   @override
   Future<ScheduleQueryResult> querySchedule(DateTime from, DateTime to,
-      [CancellationToken cancellationToken]) async {
+      [CancellationToken? cancellationToken]) async {
+    var token = cancellationToken ?? CancellationToken();
     DateTime current = toDayOfWeek(from, DateTime.monday);
-
-    if (cancellationToken == null) cancellationToken = CancellationToken();
 
     var schedule = Schedule();
     var allErrors = <ParseError>[];
 
     var didChangeMonth = false;
 
-    while ((to.isAfter(current) && !cancellationToken.isCancelled()) ||
+    while ((to.isAfter(current) && !token.isCancelled()) ||
         didChangeMonth) {
       try {
-        var weekSchedule = await _fetchRaplaSource(current, cancellationToken);
+        var weekSchedule = await _fetchRaplaSource(current, token);
 
-        if (weekSchedule.schedule != null) {
-          schedule.merge(weekSchedule.schedule);
-        }
+        schedule.merge(weekSchedule.schedule);
 
-        allErrors.addAll(weekSchedule.errors ?? []);
+        allErrors.addAll(weekSchedule.errors);
       } on OperationCancelledException {
         rethrow;
       } on ParseException catch (ex, trace) {
@@ -60,7 +57,7 @@ class RaplaScheduleSource extends ScheduleSource {
       didChangeMonth = currentMonth != nextMonth;
     }
 
-    if (cancellationToken.isCancelled()) throw OperationCancelledException();
+    if (token.isCancelled()) throw OperationCancelledException();
 
     schedule = schedule.trim(from, to);
 
@@ -74,15 +71,12 @@ class RaplaScheduleSource extends ScheduleSource {
     var requestUri = _buildRequestUri(date);
 
     var response = await _makeRequest(requestUri, cancellationToken);
-    if (response == null) return null;
 
     try {
       var schedule = responseParser.parseSchedule(response.body);
 
-      if (schedule?.schedule?.urls != null) {
-        schedule.schedule.urls.add(requestUri.toString());
-      }
-
+      schedule.schedule.urls.add(requestUri.toString());
+    
       return schedule;
     } on ParseException catch (_) {
       rethrow;
@@ -117,16 +111,34 @@ class RaplaScheduleSource extends ScheduleSource {
     Map<String, String> parameters = {};
 
     if (hasKeyParameter) {
-      parameters["key"] = uri.queryParameters["key"];
+      var key = uri.queryParameters["key"];
+      if (key != null) {
+        parameters["key"] = key;
+      }
 
       if (hasAllocatableId) {
-        parameters["allocatable_id"] = uri.queryParameters["allocatable_id"];
+        var alloc = uri.queryParameters["allocatable_id"];
+        if (alloc != null) {
+          parameters["allocatable_id"] = alloc;
+        }
       }
-      if (hasSalt) parameters["salt"] = uri.queryParameters["salt"];
+      if (hasSalt) {
+        var salt = uri.queryParameters["salt"];
+        if (salt != null) parameters["salt"] = salt;
+      }
     } else {
-      if (hasUserParameter) parameters["user"] = uri.queryParameters["user"];
-      if (hasFileParameter) parameters["file"] = uri.queryParameters["file"];
-      if (hasPageParameter) parameters["page"] = uri.queryParameters["page"];
+      if (hasUserParameter) {
+        var user = uri.queryParameters["user"];
+        if (user != null) parameters["user"] = user;
+      }
+      if (hasFileParameter) {
+        var file = uri.queryParameters["file"];
+        if (file != null) parameters["file"] = file;
+      }
+      if (hasPageParameter) {
+        var page = uri.queryParameters["page"];
+        if (page != null) parameters["page"] = page;
+      }
     }
 
     parameters["day"] = date.day.toString();
@@ -141,30 +153,37 @@ class RaplaScheduleSource extends ScheduleSource {
   }
 
   Future<Response> _makeRequest(
-      Uri uri, CancellationToken cancellationToken) async {
+      Uri uri, CancellationToken? cancellationToken) async {
     var requestCancellationToken = http.CancellationToken();
+    var token = cancellationToken ?? CancellationToken();
 
     try {
-      cancellationToken.setCancellationCallback(() {
+      token.setCancellationCallback(() {
         requestCancellationToken.cancel();
       });
 
       var response = await http.HttpClientHelper.get(uri,
           cancelToken: requestCancellationToken);
 
-      if (response == null && !requestCancellationToken.isCanceled)
+      if (response == null && !requestCancellationToken.isCanceled) {
         throw ServiceRequestFailed("Http request failed!");
+      }
+
+      if (response == null) {
+        throw OperationCancelledException();
+      }
 
       return response;
     } on http.OperationCanceledError catch (_) {
       throw OperationCancelledException();
     } catch (ex) {
-      if (!requestCancellationToken.isCanceled) rethrow;
+      if (requestCancellationToken.isCanceled) {
+        throw OperationCancelledException();
+      }
+      rethrow;
     } finally {
-      cancellationToken.setCancellationCallback(null);
+      token.setCancellationCallback(null);
     }
-
-    return null;
   }
 
   @override
@@ -181,28 +200,26 @@ class RaplaScheduleSource extends ScheduleSource {
       return false;
     }
 
-    if (uri != null) {
-      bool hasKeyParameter = uri.queryParameters.containsKey("key");
-      bool hasUserParameter = uri.queryParameters.containsKey("user");
-      bool hasFileParameter = uri.queryParameters.containsKey("file");
-      bool hasPageParameter = uri.queryParameters.containsKey("page");
+    bool hasKeyParameter = uri.queryParameters.containsKey("key");
+    bool hasUserParameter = uri.queryParameters.containsKey("user");
+    bool hasFileParameter = uri.queryParameters.containsKey("file");
+    bool hasPageParameter = uri.queryParameters.containsKey("page");
 
-      bool hasAllocatableId = uri.queryParameters.containsKey("allocatable_id");
-      bool hasSalt = uri.queryParameters.containsKey("salt");
+    bool hasAllocatableId = uri.queryParameters.containsKey("allocatable_id");
+    bool hasSalt = uri.queryParameters.containsKey("salt");
 
-      if (hasUserParameter && hasFileParameter && hasPageParameter) {
-        return true;
-      }
-
-      if (hasSalt && hasAllocatableId && hasKeyParameter) {
-        return true;
-      }
-
-      if (hasKeyParameter) {
-        return true;
-      }
+    if (hasUserParameter && hasFileParameter && hasPageParameter) {
+      return true;
     }
 
+    if (hasSalt && hasAllocatableId && hasKeyParameter) {
+      return true;
+    }
+
+    if (hasKeyParameter) {
+      return true;
+    }
+  
     return false;
   }
 }
@@ -215,9 +232,9 @@ enum FailureReason {
 
 class ScheduleOrFailure {
   final FailureReason reason;
-  final Schedule schedule;
-  final Object exception;
-  final StackTrace trace;
+  final Schedule? schedule;
+  final Object? exception;
+  final StackTrace? trace;
 
   bool get success => reason == FailureReason.Success;
 
@@ -232,5 +249,5 @@ class ScheduleOrFailure {
 
   ScheduleOrFailure.failRequestError(this.exception, this.trace)
       : reason = FailureReason.RequestError,
-        schedule = null;
+    schedule = null;
 }

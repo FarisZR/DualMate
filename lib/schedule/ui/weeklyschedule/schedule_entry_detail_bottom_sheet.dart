@@ -10,7 +10,8 @@ import 'package:intl/intl.dart';
 class ScheduleEntryDetailBottomSheet extends StatelessWidget {
   final ScheduleEntry scheduleEntry;
 
-  const ScheduleEntryDetailBottomSheet({Key key, this.scheduleEntry})
+    const ScheduleEntryDetailBottomSheet(
+      {Key? key, required this.scheduleEntry})
       : super(key: key);
 
   @override
@@ -90,7 +91,7 @@ class ScheduleEntryDetailBottomSheet extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 0, 0),
                       child: Text(
-                        scheduleEntry.title ?? "",
+                        scheduleEntry.title,
                         softWrap: true,
                         style: textStyleScheduleEntryBottomPageTitle(context),
                       ),
@@ -106,7 +107,7 @@ class ScheduleEntryDetailBottomSheet extends StatelessWidget {
                 children: <Widget>[
                   Expanded(
                     child: Text(
-                      scheduleEntry.professor ?? "",
+                      scheduleEntry.professor,
                     ),
                   ),
                   Text(
@@ -116,13 +117,13 @@ class ScheduleEntryDetailBottomSheet extends StatelessWidget {
                 ],
               ),
             ),
-            scheduleEntry.room?.isEmpty ?? true
+            scheduleEntry.room.isEmpty
                 ? Container()
                 : Padding(
                     padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
                     child: Text(scheduleEntry.room.replaceAll(",", "\n")),
                   ),
-            scheduleEntry.details?.isEmpty ?? true
+            scheduleEntry.details.isEmpty
                 ? Container()
                 : Padding(
                     padding: const EdgeInsets.fromLTRB(0, 16, 0, 16),
@@ -131,7 +132,7 @@ class ScheduleEntryDetailBottomSheet extends StatelessWidget {
                       height: 1,
                     ),
                   ),
-            scheduleEntry.details?.isEmpty ?? true
+            scheduleEntry.details.isEmpty
                 ? Container()
                 : Text(scheduleEntry.details),
           ],

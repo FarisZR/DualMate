@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class TitleListTile extends StatelessWidget {
   final String title;
 
-  const TitleListTile({Key key, this.title}) : super(key: key);
+  const TitleListTile({Key? key, required this.title}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +13,7 @@ class TitleListTile extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 24, 16, 4),
           child: Text(
             title,
-            style: Theme.of(context).textTheme.caption,
+            style: Theme.of(context).textTheme.bodySmall ?? const TextStyle(),
           ),
         ),
       ],

@@ -6,16 +6,17 @@ import 'package:flutter/material.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 
 class SelectSourcePage extends StatelessWidget {
-  const SelectSourcePage({Key key}) : super(key: key);
+  const SelectSourcePage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return PropertyChangeConsumer<OnboardingStepViewModel, String>(
       builder: (
         BuildContext context,
-        OnboardingStepViewModel model,
-        Set<Object> _,
+        OnboardingStepViewModel? model,
+        Set<String>? _,
       ) {
+        if (model == null) return Container();
         var viewModel = model as SelectSourceViewModel;
         return Column(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -25,7 +26,7 @@ class SelectSourcePage extends StatelessWidget {
               child: Center(
                 child: Text(
                   L.of(context).onboardingScheduleSourceTitle,
-                  style: Theme.of(context).textTheme.headline4,
+                  style: Theme.of(context).textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -36,7 +37,7 @@ class SelectSourcePage extends StatelessWidget {
             ),
             Text(
               L.of(context).onboardingScheduleSourceDescription,
-              style: Theme.of(context).textTheme.bodyText2,
+              style: Theme.of(context).textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
             Expanded(
@@ -82,7 +83,7 @@ class SelectSourcePage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 32, 16, 8),
               child: Text(
                 L.of(context).disclaimer,
-                style: Theme.of(context).textTheme.overline,
+                style: Theme.of(context).textTheme.labelSmall,
               ),
             ),
           ],
@@ -98,7 +99,10 @@ class SelectSourcePage extends StatelessWidget {
       String title) {
     return RadioListTile(
       value: type, //model.useDualis,
-      onChanged: viewModel.setScheduleSourceType,
+      onChanged: (value) {
+        if (value == null) return;
+        viewModel.setScheduleSourceType(value);
+      },
       title: Text(title),
       groupValue: viewModel.scheduleSourceType,
     );

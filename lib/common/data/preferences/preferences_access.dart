@@ -22,24 +22,26 @@ class PreferencesAccess {
     throw InvalidValueTypeException(T);
   }
 
-  Future<T> get<T>(String key) async {
+  Future<T?> get<T>(String key) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    T value;
+    T? value;
 
     switch (T) {
       case bool:
-        value = prefs.getBool(key) as T;
+        value = prefs.getBool(key) as T?;
         break;
       case String:
-        value = prefs.getString(key) as T;
+        value = prefs.getString(key) as T?;
         break;
       case double:
-        value = prefs.getDouble(key) as T;
+        value = prefs.getDouble(key) as T?;
         break;
       case int:
-        value = prefs.getInt(key) as T;
+        value = prefs.getInt(key) as T?;
         break;
+      default:
+        throw InvalidValueTypeException(T);
     }
 
     return value;

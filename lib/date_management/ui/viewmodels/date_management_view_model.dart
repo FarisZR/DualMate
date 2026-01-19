@@ -33,15 +33,15 @@ class DateManagementViewModel extends BaseViewModel {
 
   final CancelableMutex _updateMutex = CancelableMutex();
 
-  Timer _errorResetTimer;
+  Timer? _errorResetTimer;
 
-  List<String> _years;
+  final List<String> _years = [];
   List<String> get years => _years;
 
-  String _currentSelectedYear;
+  late String _currentSelectedYear;
   String get currentSelectedYear => _currentSelectedYear;
 
-  List<DateEntry> _allDates;
+  List<DateEntry> _allDates = <DateEntry>[];
   List<DateEntry> get allDates => _allDates;
 
   bool _showPassedDates = false;
@@ -53,7 +53,7 @@ class DateManagementViewModel extends BaseViewModel {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  DateDatabase _currentDateDatabase;
+  late DateDatabase _currentDateDatabase;
   DateDatabase get currentDateDatabase => _currentDateDatabase;
 
   int _dateEntriesKeyIndex = 0;
@@ -66,17 +66,17 @@ class DateManagementViewModel extends BaseViewModel {
         showPassedDates,
         showFutureDates,
         currentSelectedYear,
-        currentDateDatabase?.id,
+        currentDateDatabase.id,
       );
 
   DateManagementViewModel(this._dateEntryProvider, this._preferencesProvider) {
     _buildYearsArray();
+    _currentSelectedYear = DateTime.now().year.toString();
+    _currentDateDatabase = _allDateDatabases.first;
     _loadDefaultSelection();
   }
 
   void _buildYearsArray() {
-    _years = [];
-
     for (var i = 2017; i < DateTime.now().year + 3; i++) {
       _years.add(i.toString());
     }
@@ -117,7 +117,7 @@ class DateManagementViewModel extends BaseViewModel {
     notifyListeners("updateFailed");
   }
 
-  Future<List<DateEntry>> _readUpdatedDateEntries() async {
+  Future<List<DateEntry>?> _readUpdatedDateEntries() async {
     try {
       var loadedDateEntries = await _dateEntryProvider.getDateEntries(
         dateSearchParameters,
@@ -157,7 +157,7 @@ class DateManagementViewModel extends BaseViewModel {
     _currentDateDatabase = database;
     notifyListeners("currentDateDatabase");
 
-    _preferencesProvider.setLastViewedDateEntryDatabase(database?.id);
+    _preferencesProvider.setLastViewedDateEntryDatabase(database.id);
   }
 
   void setCurrentSelectedYear(String year) {
@@ -183,19 +183,17 @@ class DateManagementViewModel extends BaseViewModel {
     }
 
     var year = await _preferencesProvider.getLastViewedDateEntryYear();
-    if (year != null) {
+    if (year != null && years.contains(year)) {
       setCurrentSelectedYear(year);
     } else {
-      setCurrentSelectedYear(years[0]);
+      setCurrentSelectedYear(_currentSelectedYear);
     }
-
+  
     await updateDates();
   }
 
   void _cancelErrorInFuture() async {
-    if (_errorResetTimer != null) {
-      _errorResetTimer.cancel();
-    }
+    _errorResetTimer?.cancel();
 
     _errorResetTimer = Timer(
       const Duration(seconds: 5),

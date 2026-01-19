@@ -25,26 +25,26 @@ class StudyGradesViewModel extends BaseViewModel {
   LoginState _loginState = LoginState.LoggedOut;
   LoginState get loginState => _loginState;
 
-  StudyGrades _studyGrades;
+  StudyGrades _studyGrades = StudyGrades(0, 0, 0, 0);
   StudyGrades get studyGrades => _studyGrades;
   final CancelableMutex _studyGradesCancellationToken = CancelableMutex();
 
-  List<Module> _allModules;
+  List<Module> _allModules = [];
   List<Module> get allModules => _allModules;
   final CancelableMutex _allModulesCancellationToken = CancelableMutex();
 
-  List<String> _semesterNames;
+  List<String> _semesterNames = [];
   List<String> get allSemesterNames => _semesterNames;
   final CancelableMutex _semesterNamesCancellationToken = CancelableMutex();
 
-  Semester _currentSemester;
+  Semester _currentSemester = Semester("", []);
   Semester get currentSemester => _currentSemester;
   final CancelableMutex _currentSemesterCancellationToken = CancelableMutex();
 
-  String _currentSemesterName;
+  String _currentSemesterName = "";
   String get currentSemesterName => _currentSemesterName;
 
-  String _currentLoadingSemesterName;
+  String _currentLoadingSemesterName = "";
 
   StudyGradesViewModel(this._preferencesProvider, this._dualisService);
 
@@ -109,8 +109,6 @@ class StudyGradesViewModel extends BaseViewModel {
   }
 
   Future<void> loadStudyGrades() async {
-    if (_studyGrades != null) return Future.value();
-
     print("Loading study grades...");
 
     await _studyGradesCancellationToken.acquireAndCancelOther();
@@ -130,8 +128,6 @@ class StudyGradesViewModel extends BaseViewModel {
   }
 
   Future<void> loadAllModules() async {
-    if (_allModules != null) return Future.value();
-
     print("Loading all modules...");
 
     await _allModulesCancellationToken.acquireAndCancelOther();
@@ -152,7 +148,7 @@ class StudyGradesViewModel extends BaseViewModel {
   }
 
   Future<void> loadSemester(String semesterName) async {
-    if (_currentSemester != null && _currentSemesterName == semesterName)
+    if (_currentSemesterName == semesterName)
       return Future.value();
 
     if (_currentLoadingSemesterName == semesterName) return Future.value();
@@ -161,7 +157,7 @@ class StudyGradesViewModel extends BaseViewModel {
 
     _currentLoadingSemesterName = semesterName;
     _currentSemesterName = semesterName;
-    _currentSemester = null;
+    _currentSemester = Semester("", []);
     notifyListeners("currentSemesterName");
     notifyListeners("currentSemester");
 
@@ -186,8 +182,6 @@ class StudyGradesViewModel extends BaseViewModel {
   }
 
   Future<void> loadSemesterNames() async {
-    if (_semesterNames != null) return Future.value();
-
     print("Loading semester names...");
 
     await _semesterNamesCancellationToken.acquireAndCancelOther();
@@ -210,7 +204,6 @@ class StudyGradesViewModel extends BaseViewModel {
   }
 
   Future _loadInitialSemester() async {
-    if (_semesterNames == null) return;
     if (_semesterNames.isEmpty) return;
 
     var lastViewedSemester = await _preferencesProvider.getLastViewedSemester();
@@ -236,12 +229,12 @@ class StudyGradesViewModel extends BaseViewModel {
     await _dualisService.logout();
 
     _loginState = LoginState.LoggedOut;
-    _studyGrades = null;
-    _allModules = null;
-    _semesterNames = null;
-    _currentSemester = null;
-    _currentSemesterName = null;
-    _currentLoadingSemesterName = null;
+    _studyGrades = StudyGrades(0, 0, 0, 0);
+    _allModules = [];
+    _semesterNames = [];
+    _currentSemester = Semester("", []);
+    _currentSemesterName = "";
+    _currentLoadingSemesterName = "";
 
     notifyListeners();
 

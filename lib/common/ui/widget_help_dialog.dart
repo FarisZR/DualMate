@@ -50,10 +50,10 @@ class WidgetHelpDialog {
     );
   }
 
-  ButtonBar _buildButtonBar(BuildContext context) {
-    return ButtonBar(
-      mainAxisSize: MainAxisSize.max,
-      buttonPadding: const EdgeInsets.fromLTRB(5, 0, 5, 0),
+  OverflowBar _buildButtonBar(BuildContext context) {
+    return OverflowBar(
+      spacing: 8,
+      overflowSpacing: 8,
       children: <Widget>[
         TextButton(
           child: Text(L.of(context).dialogOk.toUpperCase()),

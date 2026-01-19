@@ -8,7 +8,7 @@ class IcalUrlViewModel extends OnboardingStepViewModel {
   final PreferencesProvider preferencesProvider;
   final ScheduleSourceProvider scheduleSourceProvider;
 
-  String _url;
+  String _url = "";
   String get url => _url;
 
   bool urlHasError = false;
@@ -32,10 +32,10 @@ class IcalUrlViewModel extends OnboardingStepViewModel {
   }
 
   Future<void> pasteUrl() async {
-    ClipboardData data = await Clipboard.getData('text/plain');
+    ClipboardData? data = await Clipboard.getData('text/plain');
 
     if (data?.text != null) {
-      setUrl(data.text);
+      setUrl(data!.text!);
     }
   }
 

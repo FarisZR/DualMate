@@ -32,7 +32,7 @@ abstract class EnterUrlDialog {
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
             child: Text(
               message(context),
-              style: Theme.of(context).textTheme.bodyText2,
+              style: Theme.of(context).textTheme.bodyMedium,
               textAlign: TextAlign.left,
             ),
           ),
@@ -49,7 +49,7 @@ abstract class EnterUrlDialog {
                     builder: (
                       BuildContext context,
                       ValueNotifier<String> url,
-                      Widget child,
+                      Widget? child,
                     ) {
                       if (_urlTextController.text != url.value)
                         _urlTextController.text = url.value;
@@ -58,7 +58,7 @@ abstract class EnterUrlDialog {
                         builder: (
                           BuildContext context,
                           ValueNotifier<bool> hasUrlError,
-                          Widget child,
+                          Widget? child,
                         ) =>
                             TextField(
                           controller: _urlTextController,
@@ -103,7 +103,7 @@ abstract class EnterUrlDialog {
         value: _hasUrlError,
         child: Consumer(
           builder: (BuildContext context, ValueNotifier<bool> hasUrlError,
-                  Widget child) =>
+            Widget? child) =>
               TextButton(
             child: Text(L.of(context).dialogOk.toUpperCase()),
             onPressed: hasUrlError.value
@@ -120,10 +120,11 @@ abstract class EnterUrlDialog {
   }
 
   Future _pasteUrl() async {
-    ClipboardData data = await Clipboard.getData('text/plain');
+    ClipboardData? data = await Clipboard.getData('text/plain');
+    var text = data?.text;
 
-    if (data?.text != null) {
-      _setUrl(data.text);
+    if (text != null) {
+      _setUrl(text);
     }
   }
 

@@ -39,10 +39,10 @@ class ScheduleDiffCalculator {
     return entry1.start.isAtSameMomentAs(entry2.start) &&
         entry1.end.isAtSameMomentAs(entry2.end) &&
         entry1.type == entry2.type &&
-        (entry1.room ?? "") == (entry2.room ?? "") &&
-        (entry1.details ?? "") == (entry2.details ?? "") &&
-        (entry1.title ?? "") == (entry2.title ?? "") &&
-        (entry1.professor ?? "") == (entry2.professor ?? "");
+      entry1.room == entry2.room &&
+      entry1.details == entry2.details &&
+      entry1.title == entry2.title &&
+      entry1.professor == entry2.professor;
   }
 
   ScheduleDiff _tryConnectNewAndOldEntries(
@@ -166,7 +166,13 @@ class ScheduleDiff {
   final List<ScheduleEntry> removedEntries;
   final List<UpdatedEntry> updatedEntries;
 
-  ScheduleDiff({this.addedEntries, this.removedEntries, this.updatedEntries});
+  ScheduleDiff({
+    List<ScheduleEntry>? addedEntries,
+    List<ScheduleEntry>? removedEntries,
+    List<UpdatedEntry>? updatedEntries,
+  })  : addedEntries = addedEntries ?? [],
+        removedEntries = removedEntries ?? [],
+        updatedEntries = updatedEntries ?? [];
 
   bool didSomethingChange() {
     return addedEntries.isNotEmpty ||

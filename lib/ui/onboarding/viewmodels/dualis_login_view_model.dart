@@ -7,8 +7,8 @@ class DualisLoginViewModel extends OnboardingStepViewModel {
   final PreferencesProvider preferencesProvider;
   final DualisService dualisService;
 
-  String username;
-  String password;
+  String username = "";
+  String password = "";
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;

@@ -4,7 +4,7 @@ class ScheduleQueryResult {
   final Schedule schedule;
   final List<ParseError> errors;
 
-  bool get hasError => errors?.isNotEmpty ?? false;
+  bool get hasError => errors.isNotEmpty;
 
   ScheduleQueryResult(this.schedule, this.errors);
 }
@@ -14,6 +14,6 @@ class ParseError {
   final String trace;
 
   ParseError(Object object, StackTrace trace)
-      : object = object?.toString(),
-        trace = trace?.toString();
+      : object = object.toString(),
+        trace = trace.toString();
 }

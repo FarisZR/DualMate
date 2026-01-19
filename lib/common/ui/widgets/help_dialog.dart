@@ -18,7 +18,8 @@ abstract class HelpDialog {
       title: Text(title(context)),
       content: Text(
         content(context),
-        style: Theme.of(context).textTheme.bodyText2,
+        style: Theme.of(context).textTheme.bodyMedium ??
+            Theme.of(context).textTheme.bodySmall,
       ),
       actions: [
         TextButton(

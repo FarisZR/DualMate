@@ -20,7 +20,7 @@ class ExamResultsPage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
               child: Text(
                 L.of(context).dualisExamResultsTitle,
-                style: Theme.of(context).textTheme.headline6,
+                style: Theme.of(context).textTheme.titleLarge,
               ),
             ),
             Padding(
@@ -31,46 +31,50 @@ class ExamResultsPage extends StatelessWidget {
                   Text(L.of(context).dualisExamResultsSemesterSelect),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(24, 0, 0, 0),
-                    child: PropertyChangeConsumer(
+                    child: PropertyChangeConsumer<StudyGradesViewModel, String>(
                       properties: const [
                         "currentSemesterName",
                         "allSemesterNames",
                       ],
                       builder: (
                         BuildContext context,
-                        StudyGradesViewModel model,
-                        Set properties,
-                      ) =>
-                          DropdownButton(
-                        onChanged: (value) => model.loadSemester(value),
-                        value: model.currentSemesterName,
-                        items: (model.allSemesterNames ?? [])
-                            .map(
-                              (n) => DropdownMenuItem(
-                                child: Text(n),
-                                value: n,
-                              ),
-                            )
-                            .toList(),
-                      ),
+                        StudyGradesViewModel? model,
+                        Set<String>? properties,
+                      ) {
+                        if (model == null) return Container();
+                        return DropdownButton<String>(
+                          onChanged: (value) {
+                            if (value != null) {
+                              model.loadSemester(value);
+                            }
+                          },
+                          value: model.currentSemesterName.isEmpty
+                              ? null
+                              : model.currentSemesterName,
+                          items: model.allSemesterNames
+                              .map(
+                                (n) => DropdownMenuItem<String>(
+                                  child: Text(n),
+                                  value: n,
+                                ),
+                              )
+                              .toList(),
+                        );
+                      },
                     ),
                   )
                 ],
               ),
             ),
-            PropertyChangeConsumer(
+            PropertyChangeConsumer<StudyGradesViewModel, String>(
               properties: const ["currentSemester"],
               builder: (
                 BuildContext context,
-                StudyGradesViewModel model,
-                Set properties,
-              ) =>
-                  model.currentSemester != null
-                      ? buildModulesColumn(context, model)
-                      : const Padding(
-                          padding: EdgeInsets.fromLTRB(0, 16, 0, 0),
-                          child: Center(child: CircularProgressIndicator()),
-                        ),
+                StudyGradesViewModel? model,
+                Set<String>? properties,
+              ) => model == null
+                  ? Container()
+                  : buildModulesColumn(context, model),
             ),
           ],
         ),
@@ -81,17 +85,18 @@ class ExamResultsPage extends StatelessWidget {
   Widget buildModulesColumn(
       BuildContext context, StudyGradesViewModel viewModel) {
     return AnimatedSwitcher(
-      layoutBuilder: (Widget currentChild, List<Widget> previousChildren) {
+      layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
         List<Widget> children = previousChildren;
-        if (currentChild != null)
+        if (currentChild != null) {
           children = children.toList()..add(currentChild);
+        }
         return Stack(
           children: children,
           alignment: Alignment.topCenter,
         );
       },
       child: Column(
-        key: ValueKey("semester_${viewModel.currentSemester?.name}"),
+        key: ValueKey("semester_${viewModel.currentSemester.name}"),
         children: buildModulesDataTables(context, viewModel),
       ),
       duration: const Duration(milliseconds: 200),
@@ -131,11 +136,11 @@ class ExamResultsPage extends StatelessWidget {
               children: <Widget>[
                 Text(
                   exam.name ?? "",
-                  style: Theme.of(context).textTheme.caption,
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
                 Text(
                   exam.semester ?? "",
-                  style: Theme.of(context).textTheme.caption,
+                  style: Theme.of(context).textTheme.bodySmall,
                   textScaleFactor: exam.semester == "" ? 0 : 1,
                 ),
               ],
@@ -164,7 +169,6 @@ class ExamResultsPage extends StatelessWidget {
         return Text(L.of(context).examNotPassed);
     }
 
-    return Text("");
   }
 
   List<DataColumn> buildModuleColumns(BuildContext context, var module,
@@ -189,7 +193,7 @@ class ExamResultsPage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(0, 0, 10, 16),
               child: Text(
                 (module.name ?? ""),
-                style: Theme.of(context).textTheme.subtitle2,
+                style: Theme.of(context).textTheme.titleSmall,
                 softWrap: true,
               ),
             ),

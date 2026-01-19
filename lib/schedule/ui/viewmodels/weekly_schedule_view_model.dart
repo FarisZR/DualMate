@@ -18,11 +18,13 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   final ScheduleProvider scheduleProvider;
   final ScheduleSourceProvider scheduleSourceProvider;
 
-  DateTime currentDateStart;
-  DateTime currentDateEnd;
+  late DateTime currentDateStart;
+  late DateTime currentDateEnd;
 
-  DateTime clippedDateStart;
-  DateTime clippedDateEnd;
+  bool _hasCurrentDateRange = false;
+
+  DateTime? clippedDateStart;
+  DateTime? clippedDateEnd;
 
   bool didUpdateScheduleIntoFuture = true;
 
@@ -33,24 +35,24 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   bool get hasQueryErrors => _hasQueryErrors;
 
-  VoidCallback _queryFailedCallback;
+  VoidCallback? _queryFailedCallback;
 
   bool updateFailed = false;
 
   bool isUpdating = false;
-  Schedule weekSchedule;
+  Schedule? weekSchedule;
 
-  String scheduleUrl;
+  String? scheduleUrl;
 
   DateTime get now => DateTime.now();
 
-  Timer _errorResetTimer;
-  Timer _updateNowTimer;
+  Timer? _errorResetTimer;
+  Timer? _updateNowTimer;
 
   final CancelableMutex _updateMutex = CancelableMutex();
 
-  DateTime lastRequestedStart;
-  DateTime lastRequestedEnd;
+  late DateTime lastRequestedStart;
+  late DateTime lastRequestedEnd;
 
   WeeklyScheduleViewModel(
     this.scheduleProvider,
@@ -80,17 +82,22 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     if (setupSuccess) await updateSchedule(currentDateStart, currentDateEnd);
   }
 
-  void _setSchedule(Schedule schedule, DateTime start, DateTime end) {
+  void _setSchedule(Schedule? schedule, DateTime start, DateTime end) {
     weekSchedule = schedule;
-    didUpdateScheduleIntoFuture = currentDateStart?.isBefore(start) ?? true;
+    if (_hasCurrentDateRange) {
+      didUpdateScheduleIntoFuture = currentDateStart.isBefore(start);
+    } else {
+      didUpdateScheduleIntoFuture = false;
+      _hasCurrentDateRange = true;
+    }
     currentDateStart = start;
     currentDateEnd = end;
 
     if (weekSchedule != null) {
-      var scheduleStart = weekSchedule.getStartDate();
-      var scheduleEnd = weekSchedule.getEndDate();
+      var scheduleStart = weekSchedule!.getStartDate();
+      var scheduleEnd = weekSchedule!.getEndDate();
 
-      if (scheduleStart == null && scheduleEnd == null) {
+      if (scheduleStart == null || scheduleEnd == null) {
         clippedDateStart = toDayOfWeek(start, DateTime.monday);
         clippedDateEnd = toDayOfWeek(start, DateTime.friday);
       } else {
@@ -98,8 +105,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         clippedDateEnd = toDayOfWeek(scheduleEnd, DateTime.friday);
       }
 
-      if (scheduleEnd?.isAfter(clippedDateEnd) ?? false)
+      if (scheduleEnd != null && scheduleEnd.isAfter(clippedDateEnd!)) {
         clippedDateEnd = scheduleEnd;
+      }
 
       displayStartHour = weekSchedule?.getStartTime()?.hour ?? 23;
       displayStartHour = min(7, displayStartHour);
@@ -177,7 +185,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     );
     cancellationToken.throwIfCancelled();
 
-    if (updatedSchedule?.schedule != null) {
+    if (updatedSchedule != null) {
       var schedule = updatedSchedule.schedule;
 
       _setSchedule(schedule, start, end);
@@ -192,7 +200,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       scheduleUrl = schedule.urls.isNotEmpty ? schedule.urls[0] : null;
     }
 
-    updateFailed = updatedSchedule == null;
+    updateFailed = (updatedSchedule == null);
     notifyListeners("updateFailed");
 
     if (updateFailed) {
@@ -202,7 +210,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     print("Refreshing done");
   }
 
-  Future<ScheduleQueryResult> _readScheduleFromService(
+  Future<ScheduleQueryResult?> _readScheduleFromService(
     DateTime start,
     DateTime end,
     CancellationToken token,
@@ -213,15 +221,15 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         end,
         token,
       );
-    } on OperationCancelledException {} on ScheduleQueryFailedException {}
-
-    return null;
+    } on OperationCancelledException {
+      return null;
+    } on ScheduleQueryFailedException {
+      return null;
+    }
   }
 
   void _cancelErrorInFuture() {
-    if (_errorResetTimer != null) {
-      _errorResetTimer.cancel();
-    }
+    _errorResetTimer?.cancel();
 
     _errorResetTimer = Timer(
       const Duration(seconds: 5),
@@ -233,7 +241,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   void ensureUpdateNowTimerRunning() {
-    if (_updateNowTimer == null || !_updateNowTimer.isActive) {
+    if (_updateNowTimer == null || !_updateNowTimer!.isActive) {
       _updateNowTimer = Timer.periodic(const Duration(minutes: 1), (_) {
         notifyListeners("now");
       });
@@ -245,10 +253,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     super.dispose();
 
     _updateNowTimer?.cancel();
-    _updateNowTimer = null;
 
     _errorResetTimer?.cancel();
-    _errorResetTimer = null;
   }
 
   void setQueryFailedCallback(VoidCallback callback) {

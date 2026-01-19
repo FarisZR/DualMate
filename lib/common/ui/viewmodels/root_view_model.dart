@@ -5,10 +5,10 @@ import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
 class RootViewModel extends BaseViewModel {
   final PreferencesProvider _preferencesProvider;
 
-  AppTheme _appTheme;
+  late AppTheme _appTheme;
   AppTheme get appTheme => _appTheme;
 
-  bool _isOnboarding;
+  late bool _isOnboarding;
   bool get isOnboarding => _isOnboarding;
 
   RootViewModel(this._preferencesProvider);

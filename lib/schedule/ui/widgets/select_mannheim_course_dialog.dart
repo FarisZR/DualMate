@@ -9,7 +9,7 @@ import 'package:property_change_notifier/property_change_notifier.dart';
 class SelectMannheimCourseDialog {
   final ScheduleSourceProvider _scheduleSourceProvider;
 
-  MannheimViewModel _mannheimViewModel;
+  late MannheimViewModel _mannheimViewModel;
 
   SelectMannheimCourseDialog(
     this._scheduleSourceProvider,
@@ -41,7 +41,7 @@ class SelectMannheimCourseDialog {
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
                 child: Text(
                   L.of(context).onboardingMannheimDescription,
-                  style: Theme.of(context).textTheme.bodyText2,
+                  style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
               Expanded(

@@ -19,8 +19,8 @@ class ExamsFromModuleDetailsExtract {
     var tableExams = getElementByTagName(document, "tbody");
     var tableExamsRows = tableExams.getElementsByTagName("tr");
 
-    String currentTry;
-    String currentModule;
+    var currentTry = "";
+    var currentModule = "";
 
     var exams = <DualisExam>[];
 

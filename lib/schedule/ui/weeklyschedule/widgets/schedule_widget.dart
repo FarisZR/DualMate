@@ -22,14 +22,14 @@ class ScheduleWidget extends StatelessWidget {
   final ScheduleEntryTapCallback onScheduleEntryTap;
 
   const ScheduleWidget({
-    Key key,
-    this.schedule,
-    this.displayStart,
-    this.displayEnd,
-    this.onScheduleEntryTap,
-    this.now,
-    this.displayStartHour,
-    this.displayEndHour,
+    Key? key,
+    required this.schedule,
+    required this.displayStart,
+    required this.displayEnd,
+    required this.onScheduleEntryTap,
+    required this.now,
+    required this.displayStartHour,
+    required this.displayEndHour,
   }) : super(key: key);
 
   @override
@@ -65,15 +65,13 @@ class ScheduleWidget extends StatelessWidget {
 
     var entryWidgets = <Widget>[];
 
-    if (schedule != null) {
-      entryWidgets = buildEntryWidgets(
-        hourHeight,
-        minuteHeight,
-        width - 50,
-        days,
-      );
-    }
-
+    entryWidgets = buildEntryWidgets(
+      hourHeight,
+      minuteHeight,
+      width - 50,
+      days,
+    );
+  
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
@@ -112,9 +110,9 @@ class ScheduleWidget extends StatelessWidget {
 
   int calculateDisplayedDays() {
     var startEndDifference =
-        toStartOfDay(displayEnd)?.difference(toStartOfDay(displayStart));
+        toStartOfDay(displayEnd).difference(toStartOfDay(displayStart));
 
-    var days = (startEndDifference?.inDays ?? 0) + 1;
+    var days = startEndDifference.inDays + 1;
 
     if (days > 7) {
       days = 7;
@@ -191,7 +189,6 @@ class ScheduleWidget extends StatelessWidget {
 
   List<Widget> buildEntryWidgets(
       double hourHeight, double minuteHeight, double width, int columns) {
-    if (schedule == null) return <Widget>[];
     if (schedule.entries.isEmpty) return <Widget>[];
 
     var entryWidgets = <Widget>[];

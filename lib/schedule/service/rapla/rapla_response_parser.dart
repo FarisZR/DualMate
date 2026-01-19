@@ -27,7 +27,10 @@ class RaplaResponseParser {
     }
 
     return ScheduleQueryResult(Schedule(), [
-      ParseError("Did not find a week_table and month_table class", null),
+      ParseError(
+        "Did not find a week_table and month_table class",
+        StackTrace.current,
+      ),
     ]);
   }
 }

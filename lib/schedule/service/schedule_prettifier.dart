@@ -41,8 +41,8 @@ class SchedulePrettifier {
   }
 
   ScheduleEntry _removeCourseFromTitle(ScheduleEntry entry) {
-    var title = entry.title ?? "";
-    var details = entry.details ?? "";
+    var title = entry.title;
+    var details = entry.details;
 
     var titleRegex =
     RegExp("[A-Z]{3,}-?[A-Z]+[0-9]*[A-Z]*[0-9]*[\/]?[A-Z]*[0-9]*[ ]*-?");

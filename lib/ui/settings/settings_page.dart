@@ -53,8 +53,8 @@ class _SettingsPageState extends State<SettingsPage> {
         elevation: 0,
         iconTheme: Theme.of(context).iconTheme,
         title: Text(L.of(context).settingsPageTitle),
-        toolbarTextStyle: Theme.of(context).textTheme.bodyText2,
-        titleTextStyle: Theme.of(context).textTheme.headline6,
+        toolbarTextStyle: Theme.of(context).textTheme.bodyMedium,
+        titleTextStyle: Theme.of(context).textTheme.titleLarge,
       ),
       body: PropertyChangeProvider<SettingsViewModel, String>(
         value: settingsViewModel,
@@ -70,7 +70,7 @@ class _SettingsPageState extends State<SettingsPage> {
       padding: const EdgeInsets.all(32),
       child: Text(
         L.of(context).disclaimer,
-        style: Theme.of(context).textTheme.overline,
+        style: Theme.of(context).textTheme.labelSmall,
       ),
     );
   }
@@ -115,12 +115,16 @@ class _SettingsPageState extends State<SettingsPage> {
           ).show(context);
         },
       ),
-      PropertyChangeConsumer(
+      PropertyChangeConsumer<SettingsViewModel, String>(
         properties: const [
           "prettifySchedule",
         ],
-        builder:
-            (BuildContext context, SettingsViewModel model, Set properties) {
+        builder: (
+          BuildContext context,
+          SettingsViewModel? model,
+          Set<String>? properties,
+        ) {
+          if (model == null) return Container();
           return SwitchListTile(
             title: Text(L.of(context).settingsPrettifySchedule),
             onChanged: model.setPrettifySchedule,
@@ -154,7 +158,7 @@ class _SettingsPageState extends State<SettingsPage> {
               .isCalendarSyncEnabled();
           List<DateEntry> entriesToExport =
               KiwiContainer().resolve<ListDateEntries30d>().listDateEntries;
-          await NavigatorKey.rootKey.currentState.push(MaterialPageRoute(
+          await NavigatorKey.rootKey.currentState?.push(MaterialPageRoute(
               builder: (BuildContext context) => CalendarExportPage(
                     entriesToExport: entriesToExport,
                     isCalendarSyncWidget: true,
@@ -169,15 +173,19 @@ class _SettingsPageState extends State<SettingsPage> {
 
   List<Widget> buildNotificationSettings(BuildContext context) {
     WorkSchedulerService service = KiwiContainer().resolve();
-    if (service?.isSchedulingAvailable() ?? false) {
+    if (service.isSchedulingAvailable()) {
       return [
         TitleListTile(title: L.of(context).settingsNotificationsTitle),
-        PropertyChangeConsumer(
+        PropertyChangeConsumer<SettingsViewModel, String>(
           properties: const [
             "notifyAboutNextDay",
           ],
-          builder:
-              (BuildContext context, SettingsViewModel model, Set properties) {
+          builder: (
+            BuildContext context,
+            SettingsViewModel? model,
+            Set<String>? properties,
+          ) {
+            if (model == null) return Container();
             return SwitchListTile(
               title: Text(L.of(context).settingsNotificationsNextDay),
               onChanged: model.setNotifyAboutNextDay,
@@ -185,12 +193,16 @@ class _SettingsPageState extends State<SettingsPage> {
             );
           },
         ),
-        PropertyChangeConsumer(
+        PropertyChangeConsumer<SettingsViewModel, String>(
           properties: const [
             "notifyAboutScheduleChanges",
           ],
-          builder:
-              (BuildContext context, SettingsViewModel model, Set properties) {
+          builder: (
+            BuildContext context,
+            SettingsViewModel? model,
+            Set<String>? properties,
+          ) {
+            if (model == null) return Container();
             return SwitchListTile(
               title: Text(L.of(context).settingsNotificationsScheduleChange),
               onChanged: model.setNotifyAboutScheduleChanges,
@@ -208,21 +220,27 @@ class _SettingsPageState extends State<SettingsPage> {
   List<Widget> buildDesignSettings(BuildContext context) {
     return [
       TitleListTile(title: L.of(context).settingsDesign),
-      PropertyChangeConsumer(
+      PropertyChangeConsumer<RootViewModel, String>(
         properties: const [
           "appTheme",
         ],
-        builder: (BuildContext context, RootViewModel model, Set properties) {
+        builder: (
+          BuildContext context,
+          RootViewModel? model,
+          Set<String>? properties,
+        ) {
+          if (model == null) return Container();
           return ListTile(
             title: Text(L.of(context).settingsDarkMode),
             onTap: () async {
               await SelectThemeDialog(model).show(context);
             },
             subtitle: Text({
-              AppTheme.Dark: L.of(context).selectThemeDark,
-              AppTheme.Light: L.of(context).selectThemeLight,
-              AppTheme.System: L.of(context).selectThemeSystem,
-            }[model.appTheme]),
+                  AppTheme.Dark: L.of(context).selectThemeDark,
+                  AppTheme.Light: L.of(context).selectThemeLight,
+                  AppTheme.System: L.of(context).selectThemeSystem,
+                }[model.appTheme] ??
+                ""),
           );
         },
       ),

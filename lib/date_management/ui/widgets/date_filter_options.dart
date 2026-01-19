@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 class DateFilterOptions extends StatefulWidget {
   final DateManagementViewModel viewModel;
 
-  const DateFilterOptions({Key key, this.viewModel}) : super(key: key);
+  const DateFilterOptions({Key? key, required this.viewModel})
+      : super(key: key);
 
   @override
   _DateFilterOptionsState createState() => _DateFilterOptionsState(viewModel);
@@ -98,14 +99,12 @@ class _DateFilterOptionsState extends State<DateFilterOptions> {
       ));
     }
 
-    if (viewModel.currentSelectedYear != null) {
-      chips.add(Chip(
-        label: Text(viewModel.currentSelectedYear),
-        visualDensity: VisualDensity.compact,
-      ));
-    }
-
-    var database = viewModel.currentDateDatabase?.displayName ?? "";
+    chips.add(Chip(
+      label: Text(viewModel.currentSelectedYear),
+      visualDensity: VisualDensity.compact,
+    ));
+  
+    var database = viewModel.currentDateDatabase.displayName;
     if (database != "") {
       chips.add(Chip(
         label: Text(database),
@@ -145,11 +144,13 @@ class _DateFilterOptionsState extends State<DateFilterOptions> {
                   ),
                   Expanded(
                     flex: 1,
-                    child: DropdownButton(
+                    child: DropdownButton<DateDatabase>(
                       isExpanded: true,
                       value: viewModel.currentDateDatabase,
-                      onChanged: (value) {
-                        viewModel.setCurrentDateDatabase(value);
+                      onChanged: (DateDatabase? value) {
+                        if (value != null) {
+                          viewModel.setCurrentDateDatabase(value);
+                        }
                       },
                       items: _buildDatabaseMenuItems(),
                     ),
@@ -169,11 +170,13 @@ class _DateFilterOptionsState extends State<DateFilterOptions> {
                   ),
                   Expanded(
                     flex: 1,
-                    child: DropdownButton(
+                    child: DropdownButton<String>(
                       isExpanded: true,
                       value: viewModel.currentSelectedYear,
-                      onChanged: (value) {
-                        viewModel.setCurrentSelectedYear(value);
+                      onChanged: (String? value) {
+                        if (value != null) {
+                          viewModel.setCurrentSelectedYear(value);
+                        }
                       },
                       items: _buildYearsMenuItems(),
                     ),
@@ -184,16 +187,20 @@ class _DateFilterOptionsState extends State<DateFilterOptions> {
                 title: Text(L.of(context).dateManagementCheckBoxFutureDates),
                 value: viewModel.showFutureDates,
                 dense: true,
-                onChanged: (bool value) {
-                  viewModel.setShowFutureDates(value);
+                onChanged: (bool? value) {
+                  if (value != null) {
+                    viewModel.setShowFutureDates(value);
+                  }
                 },
               ),
               CheckboxListTile(
                 title: Text(L.of(context).dateManagementCheckBoxPassedDates),
                 value: viewModel.showPassedDates,
                 dense: true,
-                onChanged: (bool value) {
-                  viewModel.setShowPassedDates(value);
+                onChanged: (bool? value) {
+                  if (value != null) {
+                    viewModel.setShowPassedDates(value);
+                  }
                 },
               ),
             ],

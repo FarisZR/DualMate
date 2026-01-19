@@ -26,6 +26,9 @@ class SemestersFromCourseResultPageExtract {
       throw ElementNotFoundParseException("semester selector container");
 
     var url = _extractSemesterDetailUrlPart(semesterSelector, endpointUrl);
+    if (url == null) {
+      throw ElementNotFoundParseException("semester selector url");
+    }
 
     var semesters = <DualisSemester>[];
 
@@ -33,12 +36,12 @@ class SemestersFromCourseResultPageExtract {
       var id = option.attributes["value"];
       var name = option.innerHtml;
 
+      if (id == null || id.isEmpty) continue;
+
       String detailsUrl;
 
-      if (url != null) {
-        detailsUrl = url + id;
-      }
-
+      detailsUrl = url + id;
+    
       semesters.add(DualisSemester(
         name,
         detailsUrl,
@@ -49,11 +52,12 @@ class SemestersFromCourseResultPageExtract {
     return semesters;
   }
 
-  String _extractSemesterDetailUrlPart(
+  String? _extractSemesterDetailUrlPart(
     Element semesterSelector,
     String endpointUrl,
   ) {
     var dropDownSemesterSelector = semesterSelector.attributes["onchange"];
+    if (dropDownSemesterSelector == null) return null;
 
     var regExp = RegExp("'([A-z0-9]*)'");
 
@@ -61,10 +65,10 @@ class SemestersFromCourseResultPageExtract {
 
     if (matches.length != 4) return null;
 
-    var applicationName = matches[0].group(1);
-    var programName = matches[1].group(1);
-    var sessionNo = matches[2].group(1);
-    var menuId = matches[3].group(1);
+    var applicationName = matches[0].group(1) ?? "";
+    var programName = matches[1].group(1) ?? "";
+    var sessionNo = matches[2].group(1) ?? "";
+    var menuId = matches[3].group(1) ?? "";
 
     var url = endpointUrl + "/scripts/mgrqispi.dll";
     url += "?APPNAME=$applicationName";

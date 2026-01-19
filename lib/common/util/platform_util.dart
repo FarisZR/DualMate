@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 
 class PlatformUtil {
   static bool isPhone() {
-    final data = MediaQueryData.fromWindow(WidgetsBinding.instance.window);
+    final data = MediaQueryData.fromView(WidgetsBinding.instance.window);
     return data.size.shortestSide < 600;
   }
 
@@ -18,8 +18,8 @@ class PlatformUtil {
   }
 
   static Brightness platformBrightness() {
-    final data = MediaQueryData.fromWindow(WidgetsBinding.instance.window);
-    return data.platformBrightness ?? Brightness.light;
+    final data = MediaQueryData.fromView(WidgetsBinding.instance.window);
+    return data.platformBrightness;
   }
 
   static Future<void> initializePortraitLandscapeMode() async {

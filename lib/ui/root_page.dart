@@ -16,7 +16,7 @@ import 'package:property_change_notifier/property_change_notifier.dart';
 class RootPage extends StatefulWidget {
   final RootViewModel rootViewModel;
 
-  const RootPage({Key key, this.rootViewModel}) : super(key: key);
+  const RootPage({Key? key, required this.rootViewModel}) : super(key: key);
 
   @override
   _RootPageState createState() => _RootPageState(rootViewModel);
@@ -35,12 +35,17 @@ class _RootPageState extends State<RootPage> {
   @override
   Widget build(BuildContext context) {
     return PropertyChangeProvider<RootViewModel, String>(
-      child: PropertyChangeConsumer(
+      child: PropertyChangeConsumer<RootViewModel, String>(
         properties: const ["appTheme", "isOnboarding"],
-        builder: (BuildContext context, RootViewModel model, Set properties) =>
-            MaterialApp(
+        builder: (
+          BuildContext context,
+          RootViewModel? model,
+          Set<String>? properties,
+        ) {
+          if (model == null) return Container();
+          return MaterialApp(
           theme: ColorPalettes.buildTheme(model.appTheme),
-          initialRoute: rootViewModel.isOnboarding ? "onboarding" : "main",
+          initialRoute: model.isOnboarding ? "onboarding" : "main",
           navigatorKey: NavigatorKey.rootKey,
           navigatorObservers: [rootNavigationObserver],
           localizationsDelegates: [
@@ -55,7 +60,8 @@ class _RootPageState extends State<RootPage> {
             Locale('de'),
           ],
           onGenerateRoute: generateRoute,
-        ),
+        );
+        },
       ),
       value: rootViewModel,
     );
