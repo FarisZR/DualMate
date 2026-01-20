@@ -4,13 +4,12 @@ This document provides guidelines for AI coding agents working on this Flutter/D
 
 ## Project Overview
 
-- **Project**: DHBW Student Information App - Mobile app for DHBW Stuttgart students
+- **Project**: DHBW Student Information App - Mobile app for DHBW students
 - **Language**: Dart
 - **Framework**: Flutter (cross-platform mobile)
 - **Dart SDK**: `>=2.10.0 <3.0.0`
 - **App Version**: See `lib/common/application_constants.dart`
-- **Status**: Unmaintained (original developer no longer a DHBW student)
-- **Goal**: Modernize the app and resolve platform-specific issues with fully correct fixes (e.g., request required permissions instead of only applying workarounds).
+- **Target Platform**: Android, IOS is to be ignored.
 
 ## Build Commands
 
@@ -19,18 +18,12 @@ flutter pub get              # Install dependencies
 flutter run                  # Run the app (debug mode)
 flutter build apk            # Build Android APK
 flutter build appbundle      # Build Android App Bundle (for Play Store)
-flutter clean ios && flutter build ios  # Build iOS
-flutter clean                # Clean project
 ```
 
 ## Test Commands
 
 ```bash
 flutter test                 # Run all tests
-flutter test test/common/util/string_utils_test.dart  # Run single test file
-flutter test test/dualis/    # Run tests in a directory
-flutter test --verbose       # Run with verbose output
-flutter test --coverage      # Run with coverage
 ```
 
 ## Project Structure
@@ -73,6 +66,9 @@ Use triple-slash `///` doc comments:
 ///
 class DualisAuthentication {
 ```
+
+For each new feature there should be a file with detailed documentation regarding the implementation details of the feature, the tests and issues faced.
+That documentation is meant as a complete overview.
 
 ## Architecture Patterns
 
@@ -163,7 +159,6 @@ var htmlContent = await File(
 
 1. Update `lib/common/application_constants.dart`: `ApplicationVersion`
 2. Update `android/app/build.gradle`: `flutterVersionCode` and `flutterVersionName`
-3. Update iOS: Runner project version in Xcode
 
 ## Important Notes
 
@@ -171,31 +166,18 @@ var htmlContent = await File(
 - Native code: Android (Kotlin), iOS (Swift) with widget extensions
 - Background tasks use `workmanager` package
 
-## Recent Stabilization Changes (Jan 2026)
-
-These changes were made to unblock runtime crashes and improve reliability.
-
-### Schedule Feature
-- Providers for `WeeklyScheduleViewModel` and `DailyScheduleViewModel` are now scoped in `SchedulePage` builders. This prevents `ProviderNotFoundException` in `WeeklySchedulePage`.
-- `PagerWidget` no longer injects providers. It only switches pages; feature pages now own their provider scope.
-- `WeeklyScheduleViewModel` guards access to its date range until initialization is complete.
-- Schedule DB updates build the row map only after `entry.id` is set, avoiding null ID update errors.
-
-### Date Management
-- `DateManagementViewModel` now initializes `_currentSelectedYear` and `_currentDateDatabase` synchronously to prevent `LateInitializationError` and dropdown value assertions when preferences load asynchronously.
-
-### Dualis Login
-- `LoginForm` guards async `setState()` calls with `mounted` checks to avoid lifecycle crashes after disposal.
-
-### Theme
-- Theme construction now derives from `ThemeData.light()` / `ThemeData.dark()` with explicit dark surfaces and input decoration styles for hint/label contrast.
 
 ## Debugging Notes
 
 - Device runs are stable across schedule/date management screens, but Android device connections can drop during long sessions. Re-run `flutter run -d <deviceId>` if the device disconnects.
 - See [docs/modernizing.md](docs/modernizing.md) for a full change rationale and debugging trail.
-
-## Agent Expectations
-
-- Fix issues completely by implementing the true platform requirements (e.g., request required permissions via the correct OS flow instead of relying on fallbacks alone).
+- Fix issues completely by fixing the root cause and by implementing the modern fix (e.g., request required permissions via the correct OS flow instead of relying on fallbacks alone).
 - Always use the debugger to test changes on an actual Android phone.
+
+
+## Adding new features
+
+- Test driven development, write tests first with full coverage
+- Document the entire feature under docs
+- test your changes using the debugger and the connected android device by reading the logs and checking for issues.
+- You should continue till the feature is implemented correctly with no errors.
