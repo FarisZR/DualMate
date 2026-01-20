@@ -37,4 +37,20 @@ class AndroidWidgetHelper implements WidgetHelper {
       return false;
     }
   }
+
+  @override
+  Future<bool> canScheduleExactAlarms() async {
+    try {
+      return await platform.invokeMethod('canScheduleExactAlarms');
+    } on Exception catch (_) {
+      return false;
+    }
+  }
+
+  @override
+  Future<void> requestExactAlarmPermission() async {
+    try {
+      await platform.invokeMethod('requestExactAlarmPermission');
+    } on PlatformException catch (_) {}
+  }
 }

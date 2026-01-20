@@ -58,6 +58,22 @@ class WidgetHelper {
     _instance ??= _createInstance();
     return _instance!.disableWidget();
   }
+
+  ///
+  /// Checks if exact alarms can be scheduled on the device.
+  ///
+  Future<bool> canScheduleExactAlarms() {
+    _instance ??= _createInstance();
+    return _instance!.canScheduleExactAlarms();
+  }
+
+  ///
+  /// Requests the exact alarm permission on Android 12+.
+  ///
+  Future<void> requestExactAlarmPermission() {
+    _instance ??= _createInstance();
+    return _instance!.requestExactAlarmPermission();
+  }
 }
 
 ///
@@ -82,5 +98,15 @@ class VoidWidgetHelper implements WidgetHelper {
   @override
   Future<bool> areWidgetsSupported() {
     return Future.value(false);
+  }
+
+  @override
+  Future<bool> canScheduleExactAlarms() {
+    return Future.value(true);
+  }
+
+  @override
+  Future<void> requestExactAlarmPermission() {
+    return Future.value();
   }
 }

@@ -80,12 +80,7 @@ class NowScheduleEntryViewsFactory(private val context: Context) : RemoteViewsSe
     }
 
     private fun loadScheduleForToday() {
-        val midnight = LocalDate
-                .now()
-                .plusDays(1)
-                .atStartOfDay()
-
         entries = ScheduleProvider(context)
-                .queryScheduleEntriesBetween(LocalDateTime.now(), midnight)
+            .queryScheduleEntriesForDay(LocalDate.now())
     }
 }

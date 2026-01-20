@@ -1,6 +1,7 @@
 {
     "chat.tools.terminal.autoApprove": {
-        "docker build": true
+        "docker build": true,
+        "flutter": true
     },
     "java.configuration.updateBuildConfiguration": "automatic"
 }

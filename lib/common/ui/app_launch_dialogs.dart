@@ -1,4 +1,5 @@
 import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
+import 'package:dhbwstudentapp/common/ui/exact_alarm_permission_dialog.dart';
 import 'package:dhbwstudentapp/common/ui/rate_in_store_dialog.dart';
 import 'package:dhbwstudentapp/common/ui/widget_help_dialog.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +23,8 @@ class AppLaunchDialog {
 
     WidgetHelpDialog(_preferencesProvider, appLaunchCounter)
         .showIfNeeded(context);
+
+    ExactAlarmPermissionDialog().showIfNeeded(context);
 
   }
 }

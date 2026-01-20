@@ -35,7 +35,9 @@ Future<void> initializeApp(bool isBackground) async {
   tz.initializeTimeZones();
 
   if (isBackground) {
-    await LocalizationInitialize.fromPreferences(KiwiContainer().resolve())
+    await LocalizationInitialize.fromPreferences(
+      KiwiContainer().resolve<PreferencesProvider>(),
+    )
         .setupLocalizations();
   } else {
     await LocalizationInitialize.fromLanguageCode(Platform.localeName)

@@ -370,6 +370,18 @@ class L {
 
   String get widgetHelpDialogTitle => _getValue("widgetHelpDialogTitle");
 
+  String get exactAlarmPermissionTitle =>
+      _getValue("exactAlarmPermissionTitle");
+
+  String get exactAlarmPermissionMessage =>
+      _getValue("exactAlarmPermissionMessage");
+
+  String get exactAlarmPermissionAllow =>
+      _getValue("exactAlarmPermissionAllow");
+
+  String get exactAlarmPermissionLater =>
+      _getValue("exactAlarmPermissionLater");
+
   String get donateButtonTitle => _getValue("donateButtonTitle");
 
   String get donateButtonSubtitle => _getValue("donateButtonSubtitle");

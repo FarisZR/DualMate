@@ -164,6 +164,11 @@ final de = {
   "widgetHelpDialogMessage":
       "Platziere ein Widget auf deinen Startbildschirm um einen schnellen Blick auf deinen täglichen Vorlesungsplan zu bekommen.",
   "widgetHelpDialogTitle": "Schon gewusst?",
+  "exactAlarmPermissionTitle": "Genaue Alarme erlauben",
+  "exactAlarmPermissionMessage":
+      "Damit die Vorlesungs-Widgets aktuell bleiben, erlaube bitte genaue Alarme für diese App.",
+  "exactAlarmPermissionAllow": "Erlauben",
+  "exactAlarmPermissionLater": "Später",
   "donateButtonTitle": "Spendiere dem Entwickler einen Kaffee",
   "donateButtonSubtitle": "Hier kannst du die Entwicklung der App unterstützen",
   "donateDialogMessage":

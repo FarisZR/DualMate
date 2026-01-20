@@ -87,20 +87,28 @@ class ScheduleProvider(private val context: Context) {
     }
 
     private fun openDatabase(): SQLiteDatabase? {
-        val path = PathUtils.getDataDirectory(context) + "/Database.db"
+        val dataDir = PathUtils.getDataDirectory(context)
+        val candidatePaths = listOf(
+                "$dataDir/app_flutter/Database.db",
+                "$dataDir/Database.db",
+                "$dataDir/databases/Database.db"
+        )
 
-        if (!File(path).exists()) {
-            return null
+        for (path in candidatePaths) {
+            if (!File(path).exists()) {
+                continue
+            }
+
+            try {
+                return SQLiteDatabase
+                        .openDatabase(path,
+                                null,
+                                0)
+            } catch (e: Exception) {
+            }
         }
 
-        return try {
-            SQLiteDatabase
-                    .openDatabase(path,
-                            null,
-                            0)
-        } catch (e: Exception) {
-            null
-        }
+        return null
     }
 
     private fun readScheduleEntries(result: Cursor): ArrayList<ScheduleEntry> {

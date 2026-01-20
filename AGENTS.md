@@ -10,6 +10,7 @@ This document provides guidelines for AI coding agents working on this Flutter/D
 - **Dart SDK**: `>=2.10.0 <3.0.0`
 - **App Version**: See `lib/common/application_constants.dart`
 - **Status**: Unmaintained (original developer no longer a DHBW student)
+- **Goal**: Modernize the app and resolve platform-specific issues with fully correct fixes (e.g., request required permissions instead of only applying workarounds).
 
 ## Build Commands
 
@@ -169,3 +170,32 @@ var htmlContent = await File(
 - No `analysis_options.yaml` - no custom lint rules enforced
 - Native code: Android (Kotlin), iOS (Swift) with widget extensions
 - Background tasks use `workmanager` package
+
+## Recent Stabilization Changes (Jan 2026)
+
+These changes were made to unblock runtime crashes and improve reliability.
+
+### Schedule Feature
+- Providers for `WeeklyScheduleViewModel` and `DailyScheduleViewModel` are now scoped in `SchedulePage` builders. This prevents `ProviderNotFoundException` in `WeeklySchedulePage`.
+- `PagerWidget` no longer injects providers. It only switches pages; feature pages now own their provider scope.
+- `WeeklyScheduleViewModel` guards access to its date range until initialization is complete.
+- Schedule DB updates build the row map only after `entry.id` is set, avoiding null ID update errors.
+
+### Date Management
+- `DateManagementViewModel` now initializes `_currentSelectedYear` and `_currentDateDatabase` synchronously to prevent `LateInitializationError` and dropdown value assertions when preferences load asynchronously.
+
+### Dualis Login
+- `LoginForm` guards async `setState()` calls with `mounted` checks to avoid lifecycle crashes after disposal.
+
+### Theme
+- Theme construction now derives from `ThemeData.light()` / `ThemeData.dark()` with explicit dark surfaces and input decoration styles for hint/label contrast.
+
+## Debugging Notes
+
+- Device runs are stable across schedule/date management screens, but Android device connections can drop during long sessions. Re-run `flutter run -d <deviceId>` if the device disconnects.
+- See [docs/modernizing.md](docs/modernizing.md) for a full change rationale and debugging trail.
+
+## Agent Expectations
+
+- Fix issues completely by implementing the true platform requirements (e.g., request required permissions via the correct OS flow instead of relying on fallbacks alone).
+- Always use the debugger to test changes on an actual Android phone.

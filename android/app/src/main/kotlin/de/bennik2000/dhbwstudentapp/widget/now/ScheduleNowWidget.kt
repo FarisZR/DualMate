@@ -21,14 +21,14 @@ import org.threeten.bp.LocalDateTime
  */
 class ScheduleNowWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        val pendingEntries = ScheduleProvider(context).queryPendingForDay(LocalDateTime.now())
+        val entriesForDay = ScheduleProvider(context).queryScheduleEntriesForDay(LocalDate.now())
 
         // There may be multiple widgets active, so update all of them
         for (appWidgetId in appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId, pendingEntries)
+            updateAppWidget(context, appWidgetManager, appWidgetId, entriesForDay)
         }
 
-        scheduleWidgetUpdate(context, pendingEntries)
+        scheduleWidgetUpdate(context, entriesForDay)
     }
 
     override fun onEnabled(context: Context) {

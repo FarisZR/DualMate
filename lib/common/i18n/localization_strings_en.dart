@@ -154,6 +154,11 @@ final en = {
   "widgetHelpDialogMessage":
       "Place a widget on your home screen to get a quick view on your daily schedule.",
   "widgetHelpDialogTitle": "Did you know?",
+  "exactAlarmPermissionTitle": "Allow exact alarms",
+  "exactAlarmPermissionMessage":
+      "To keep the schedule widgets up to date, please allow exact alarms for this app.",
+  "exactAlarmPermissionAllow": "Allow",
+  "exactAlarmPermissionLater": "Later",
   "donateButtonTitle": "Give the developer a cup of coffee",
   "donateButtonSubtitle": "Here you can support the development of the app",
   "donateDialogMessage":

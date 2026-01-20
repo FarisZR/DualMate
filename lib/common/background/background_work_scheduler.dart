@@ -103,6 +103,7 @@ class BackgroundWorkScheduler extends WorkSchedulerService {
   ///
   /// Entry point for when a background task is executed
   ///
+  @pragma('vm:entry-point')
   static Future<bool> backgroundTaskMain(taskId, inputData) async {
     try {
       print("Background task started: $taskId with data: $inputData");
@@ -139,6 +140,7 @@ class BackgroundWorkScheduler extends WorkSchedulerService {
   }
 }
 
+@pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask(BackgroundWorkScheduler.backgroundTaskMain);
 }

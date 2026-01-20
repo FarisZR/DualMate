@@ -39,4 +39,14 @@ class IOSWidgetHelper implements WidgetHelper {
       return false;
     }
   }
+  
+  @override
+  Future<bool> canScheduleExactAlarms() async {
+    return true;
+  }
+  
+  @override
+  Future<void> requestExactAlarmPermission() async {
+    return;
+  }
 }
