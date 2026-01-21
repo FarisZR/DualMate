@@ -1,5 +1,4 @@
 import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
 import 'package:dhbwstudentapp/date_management/ui/calendar_export_page.dart';
 import 'package:dhbwstudentapp/date_management/ui/date_management_page.dart';
 import 'package:dhbwstudentapp/date_management/ui/viewmodels/date_management_view_model.dart';
@@ -29,6 +28,7 @@ class DateManagementNavigationEntry
     _viewModel ??= DateManagementViewModel(
       KiwiContainer().resolve(),
       KiwiContainer().resolve(),
+      KiwiContainer().resolve(),
     );
     return _viewModel!;
   }
@@ -54,7 +54,7 @@ class DateManagementNavigationEntry
                   onSelected: (i) async {
                     await NavigatorKey.rootKey.currentState?.push(MaterialPageRoute(
                         builder: (BuildContext context) => CalendarExportPage(
-                              entriesToExport: viewModel.allDates,
+                              entriesToExport: viewModel.exportEntries,
                             ),
                         settings: RouteSettings(name: "settings")));
                   },

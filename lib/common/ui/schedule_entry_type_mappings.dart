@@ -11,6 +11,7 @@ final Map<ScheduleEntryType, ColorDelegate> scheduleEntryTypeColorMapping = {
   ScheduleEntryType.Class: colorScheduleEntryClass,
   ScheduleEntryType.Exam: colorScheduleEntryExam,
   ScheduleEntryType.Online: colorScheduleEntryOnline,
+  ScheduleEntryType.SpecialEvent: colorScheduleEntrySpecialEvent,
   ScheduleEntryType.Unknown: colorScheduleEntryUnknown,
 };
 
@@ -20,6 +21,7 @@ final Map<ScheduleEntryType, TextDelegate> scheduleEntryTypeTextMapping = {
   ScheduleEntryType.Class: (c) => L.of(c).scheduleEntryTypeClass,
   ScheduleEntryType.Exam: (c) => L.of(c).scheduleEntryTypeExam,
   ScheduleEntryType.Online: (c) => L.of(c).scheduleEntryTypeOnline,
+  ScheduleEntryType.SpecialEvent: (c) => L.of(c).scheduleEntryTypeSpecialEvent,
   ScheduleEntryType.Unknown: (c) => L.of(c).scheduleEntryTypeUnknown,
 };
 

@@ -82,6 +82,46 @@ class _DateFilterOptionsState extends State<DateFilterOptions> {
   Widget _buildCollapsedChips() {
     var chips = <Widget>[];
 
+    if (!viewModel.useDhMineForDates) {
+      if (viewModel.showPassedDates && viewModel.showFutureDates) {
+        chips.add(Chip(
+          label: Text(L.of(context).dateManagementChipFutureAndPast),
+          visualDensity: VisualDensity.compact,
+        ));
+      } else if (viewModel.showFutureDates) {
+        chips.add(Chip(
+          label: Text(L.of(context).dateManagementChipOnlyFuture),
+          visualDensity: VisualDensity.compact,
+        ));
+      } else if (viewModel.showPassedDates) {
+        chips.add(Chip(
+          label: Text(L.of(context).dateManagementChipOnlyPassed),
+          visualDensity: VisualDensity.compact,
+        ));
+      }
+
+      if (viewModel.showOutOfStudyEvents) {
+        chips.add(Chip(
+          label: Text(L.of(context).dateManagementChipOutsideStudy),
+          visualDensity: VisualDensity.compact,
+        ));
+      }
+
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+        child: Wrap(
+          spacing: 8,
+          children: [
+            Chip(
+              label: Text(L.of(context).scheduleSourceTypeRapla),
+              visualDensity: VisualDensity.compact,
+            ),
+            ...chips,
+          ],
+        ),
+      );
+    }
+
     if (viewModel.showPassedDates && viewModel.showFutureDates) {
       chips.add(Chip(
         label: Text(L.of(context).dateManagementChipFutureAndPast),
@@ -122,6 +162,70 @@ class _DateFilterOptionsState extends State<DateFilterOptions> {
   }
 
   Widget _buildExpanded() {
+    if (!viewModel.useDhMineForDates) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                CheckboxListTile(
+                  title: Text(L.of(context).dateManagementCheckBoxFutureDates),
+                  value: viewModel.showFutureDates,
+                  dense: true,
+                  onChanged: (bool? value) {
+                    if (value != null) {
+                      viewModel.setShowFutureDates(value);
+                    }
+                  },
+                ),
+                CheckboxListTile(
+                  title: Text(L.of(context).dateManagementCheckBoxPassedDates),
+                  value: viewModel.showPassedDates,
+                  dense: true,
+                  onChanged: (bool? value) {
+                    if (value != null) {
+                      viewModel.setShowPassedDates(value);
+                    }
+                  },
+                ),
+                CheckboxListTile(
+                  title: Text(L.of(context).dateManagementCheckBoxOutsideStudy),
+                  value: viewModel.showOutOfStudyEvents,
+                  dense: true,
+                  onChanged: (bool? value) {
+                    if (value != null) {
+                      viewModel.setShowOutOfStudyEvents(value);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 0, 16, 8),
+            child: ButtonTheme(
+              minWidth: 36,
+              height: 36,
+              child: IconButton(
+                icon: const Icon(Icons.check),
+                onPressed: () {
+                  setState(() {
+                    _isExpanded = false;
+                  });
+
+                  viewModel.updateDates();
+                },
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.end,

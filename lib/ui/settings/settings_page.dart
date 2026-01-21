@@ -117,6 +117,23 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       PropertyChangeConsumer<SettingsViewModel, String>(
         properties: const [
+          "useDhMineForDates",
+        ],
+        builder: (
+          BuildContext context,
+          SettingsViewModel? model,
+          Set<String>? properties,
+        ) {
+          if (model == null) return Container();
+          return SwitchListTile(
+            title: Text(L.of(context).settingsUseDhMineDates),
+            onChanged: model.setUseDhMineForDates,
+            value: model.useDhMineForDates,
+          );
+        },
+      ),
+      PropertyChangeConsumer<SettingsViewModel, String>(
+        properties: const [
           "prettifySchedule",
         ],
         builder: (

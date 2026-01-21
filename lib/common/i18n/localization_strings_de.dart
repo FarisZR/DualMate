@@ -23,6 +23,7 @@ final de = {
   "scheduleEntryTypeClass": "Vorlesung",
   "scheduleEntryTypeExam": "Klausur / Prüfung",
   "scheduleEntryTypeOnline": "Online Vorlesung",
+  "scheduleEntryTypeSpecialEvent": "Sondertermin",
   "scheduleEntryTypeUnknown": "",
   "notificationNextClassNoNextClassMessage":
       "Es sind keine weiteren Vorlesungen in Sicht!",
@@ -106,11 +107,13 @@ final de = {
   "pageDateManagementTitle": "Terminverwaltung",
   "dateManagementCheckBoxPassedDates": "Vergangene",
   "dateManagementCheckBoxFutureDates": "Zukünftige",
+  "dateManagementCheckBoxOutsideStudy": "Termine außerhalb der Theoriephasen anzeigen",
   "dateManagementDropDownYear": "Jahrgang",
   "dateManagementDropDownDatabase": "Termindatenbank",
   "dateManagementChipOnlyPassed": "Nur Vergangene",
   "dateManagementChipOnlyFuture": "Nur Zukünftige",
   "dateManagementChipFutureAndPast": "Zukünftige und vergangene",
+  "dateManagementChipOutsideStudy": "Außerhalb der Theoriephasen",
   "dialogOk": "Ok",
   "dialogCancel": "Cancel",
   "dialogSetRaplaUrlTitle": "Rapla Url festlegen",
@@ -130,13 +133,16 @@ final de = {
           "\n\nFalls Du dich nicht anmelden kannst, prüfe die Internetverbindung und Zugangsdaten.",
   "dualisHelpDialogTitle": "Dualis Anmeldung",
   "dateManagementHelpDialogContent":
-      "Über die Terminverwaltung siehst Du alle Termine, die im Laufe Deines Studiums wichtig sind. "
-          "\nDie Termine werden von https://it.dhbw-stuttgart.de/DHermine/ abgerufen und sind nur für die DHBW Stuttgart verfügbar.",
+      "In der Terminverwaltung siehst Du wichtige Rapla-Termine wie Klausuren, Klausurwochen und Feiertage. "
+          "\nIn den Einstellungen kannst Du auf DHmine umschalten. DHmine ist nur für die DHBW Stuttgart verfügbar.",
   "dateManagementHelpDialogTitle": "Terminverwaltung",
   "dateManagementExportToCalendar": "In Kalender übertragen",
   "dateManagementExportToCalendarConfirm": "Übertragen",
   "dateManagementExportToCalendarDescription":
       "Wähle den Kalender aus, in den die Termine übertragen werden sollen:",
+  "dateManagementRaplaMissing":
+      "Keine Rapla-URL konfiguriert. Richte eine Vorlesungsplan-Quelle ein, um Rapla-Termine zu sehen.",
+  "dateManagementRaplaEmpty": "Keine Rapla-Termine für diesen Zeitraum gefunden.",
   "scheduleQueryFailedMessage":
       "Ups, da ist etwas schief gelaufen. Möglicherweise wird nicht der gesamte Plan angezeigt. Schaue Dir daher den Plan im Browser an um sicher zu gehen, dass Du nichts verpasst.",
   "scheduleQueryFailedOpenInBrowser": "Im Browser öffnen",
@@ -147,6 +153,7 @@ final de = {
   "scheduleSourceTypeDualis": "Dualis",
   "scheduleSourceTypeNone": "Keinen Vorlesungsplan",
   "settingsSetupScheduleSource": "Vorlesungsplan konfigurieren",
+  "settingsUseDhMineDates": "DHmine für Termine verwenden",
   "onboardingDualisSourceDescription":
       "Um den Vorlesungsplan aus Dualis anzuzeigen kannst Du hier deine Dualis Anmeldedaten eingeben:",
   "onboardingIcalPageDescription":

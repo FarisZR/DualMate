@@ -119,7 +119,7 @@ Future<void> main() async {
     expect(schedule.entries[2].title, "Tag der Deutschen Einheit");
     expect(schedule.entries[2].start, DateTime(2021, 10, 03, 08, 00));
     expect(schedule.entries[2].end, DateTime(2021, 10, 03, 18, 00));
-    expect(schedule.entries[2].type, ScheduleEntryType.Unknown);
+    expect(schedule.entries[2].type, ScheduleEntryType.PublicHoliday);
 
     expect(schedule.entries[8].title, "Ausgewählte Themen der Informatik");
     expect(schedule.entries[8].start, DateTime(2021, 10, 06, 13, 45));
@@ -129,7 +129,7 @@ Future<void> main() async {
     expect(schedule.entries[84].title, "Silvester");
     expect(schedule.entries[84].start, DateTime(2021, 12, 31, 08, 00));
     expect(schedule.entries[84].end, DateTime(2021, 12, 31, 18, 00));
-    expect(schedule.entries[84].type, ScheduleEntryType.Unknown);
+    expect(schedule.entries[84].type, ScheduleEntryType.PublicHoliday);
 
     expect(schedule.entries.length, 85);
   });
@@ -160,7 +160,7 @@ Future<void> main() async {
     expect(schedule.entries[17].title, "Silvester");
     expect(schedule.entries[17].start, DateTime(2021, 12, 31, 08, 00));
     expect(schedule.entries[17].end, DateTime(2021, 12, 31, 18, 00));
-    expect(schedule.entries[17].type, ScheduleEntryType.Unknown);
+    expect(schedule.entries[17].type, ScheduleEntryType.PublicHoliday);
 
     expect(schedule.entries.length, 20);
   });

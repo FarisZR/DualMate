@@ -25,6 +25,10 @@ class SettingsViewModel extends BaseViewModel {
 
   bool get prettifySchedule => _prettifySchedule;
 
+  bool _useDhMineForDates = false;
+
+  bool get useDhMineForDates => _useDhMineForDates;
+
   bool _isCalendarSyncEnabled = false;
 
   bool get isCalendarSyncEnabled => _isCalendarSyncEnabled;
@@ -80,14 +84,24 @@ class SettingsViewModel extends BaseViewModel {
       await _nextDayInformationNotification.cancel();
   }
 
+  Future<void> setUseDhMineForDates(bool value) async {
+    _useDhMineForDates = value;
+
+    notifyListeners("useDhMineForDates");
+
+    await _preferencesProvider.setUseDhMineForDates(value);
+  }
+
   Future<void> _loadPreferences() async {
     _notifyAboutNextDay = await _preferencesProvider.getNotifyAboutNextDay();
     _notifyAboutScheduleChanges =
         await _preferencesProvider.getNotifyAboutScheduleChanges();
 
     _prettifySchedule = await _preferencesProvider.getPrettifySchedule();
+    _useDhMineForDates = await _preferencesProvider.getUseDhMineForDates();
     notifyListeners("notifyAboutNextDay");
     notifyListeners("notifyAboutScheduleChanges");
     notifyListeners("prettifySchedule");
+    notifyListeners("useDhMineForDates");
   }
 }

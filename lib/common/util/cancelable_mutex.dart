@@ -5,6 +5,7 @@ class CancelableMutex {
   final Mutex _mutex = Mutex();
   CancellationToken _token = CancellationToken();
   CancellationToken get token => _token;
+  bool get isLocked => _mutex.isLocked;
 
   void cancel() {
     _token.cancel();

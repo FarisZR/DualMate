@@ -28,8 +28,8 @@ Bisher verfügbare Funktionen:
 - Benachrichtigung am Vorabend zum nächsten Tag
 - Benachrichtigung, wenn sich etwas im Plan geändert hat
 - Integration der [Termindatenbank](https://it.dhbw-stuttgart.de/DHermine/) der DHBW Stuttgart
+- Rapla-Termine (Klausuren, Klausurwochen, Feiertage) auf der Terminseite
 - Helles und dunkles Design 👻
-
 
 
 Diese App ist optimiert für die DHBW Stuttgart und manche Funktionen werden  an anderen Standorten möglicherweise nicht unterstützt. Dies ist kein offizielles Angebot der DHBW Stuttgart und wurde von Studenten in Eigeninitiative entwickelt!
@@ -52,4 +52,3 @@ Hier gibt es ein paar Screenshots aus der App:
 <img src="https://raw.githubusercontent.com/Bennik2000/DHBWStudentInformationApp/master/screenshots/screenshot_dualis_modules.png" alt="screenshot" width="300" /> 
 <img src="https://raw.githubusercontent.com/Bennik2000/DHBWStudentInformationApp/master/screenshots/screenshot_dualis_exams.png" alt="screenshot" width="300" /> 
 </p>
-

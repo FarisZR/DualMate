@@ -60,6 +60,9 @@ class L {
 
   String get scheduleEntryTypeOnline => _getValue("scheduleEntryTypeOnline");
 
+  String get scheduleEntryTypeSpecialEvent =>
+      _getValue("scheduleEntryTypeSpecialEvent");
+
   String get scheduleEntryTypeUnknown => _getValue("scheduleEntryTypeUnknown");
 
   String get notificationNextClassNoNextClassMessage =>
@@ -262,6 +265,9 @@ class L {
   String get dateManagementCheckBoxFutureDates =>
       _getValue("dateManagementCheckBoxFutureDates");
 
+  String get dateManagementCheckBoxOutsideStudy =>
+      _getValue("dateManagementCheckBoxOutsideStudy");
+
   String get dateManagementDropDownYear =>
       _getValue("dateManagementDropDownYear");
 
@@ -276,6 +282,9 @@ class L {
 
   String get dateManagementChipFutureAndPast =>
       _getValue("dateManagementChipFutureAndPast");
+
+  String get dateManagementChipOutsideStudy =>
+      _getValue("dateManagementChipOutsideStudy");
 
   String get dialogOk => _getValue("dialogOk");
 
@@ -320,6 +329,12 @@ class L {
   String get dateManagementExportToCalendarDescription =>
       _getValue("dateManagementExportToCalendarDescription");
 
+  String get dateManagementRaplaMissing =>
+      _getValue("dateManagementRaplaMissing");
+
+  String get dateManagementRaplaEmpty =>
+      _getValue("dateManagementRaplaEmpty");
+
   String get scheduleQueryFailedMessage =>
       _getValue("scheduleQueryFailedMessage");
 
@@ -340,6 +355,8 @@ class L {
 
   String get settingsSetupScheduleSource =>
       _getValue("settingsSetupScheduleSource");
+
+  String get settingsUseDhMineDates => _getValue("settingsUseDhMineDates");
 
   String get onboardingDualisSourceDescription =>
       _getValue("onboardingDualisSourceDescription");

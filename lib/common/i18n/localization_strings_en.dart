@@ -18,6 +18,7 @@ final en = {
   "scheduleEntryTypeClass": "Class",
   "scheduleEntryTypeExam": "Exam",
   "scheduleEntryTypeOnline": "Online class",
+  "scheduleEntryTypeSpecialEvent": "Special event",
   "scheduleEntryTypeUnknown": "",
   "notificationNextClassNoNextClassMessage": "There are no further classes!",
   "notificationNextClassNextClassAtMessage": "The next class is %0 at %1!",
@@ -100,11 +101,13 @@ final en = {
   "pageDateManagementTitle": "Dates",
   "dateManagementCheckBoxPassedDates": "Show passed",
   "dateManagementCheckBoxFutureDates": "Show future",
+  "dateManagementCheckBoxOutsideStudy": "Show events outside study phases",
   "dateManagementDropDownYear": "Year",
   "dateManagementDropDownDatabase": "Database",
   "dateManagementChipOnlyPassed": "Only passed",
   "dateManagementChipOnlyFuture": "Only future",
   "dateManagementChipFutureAndPast": "Future and past",
+  "dateManagementChipOutsideStudy": "Outside study phases",
   "dialogOk": "Ok",
   "dialogCancel": "Cancel",
   "dialogSetRaplaUrlTitle": "Set Rapla url",
@@ -122,13 +125,16 @@ final en = {
       "\n\nIf you cannot login check your internet connection and login credentials",
   "dualisHelpDialogTitle": "Dualis Login",
   "dateManagementHelpDialogContent": ""
-      "The dates page provides all important dates for your study. "
-      "\nThe dates are retrieved from https://it.dhbw-stuttgart.de/DHermine/ and are only available for the DHBW Stuttgart",
+      "The dates page shows important Rapla events like exams, test weeks, and holidays. "
+      "\nYou can switch to DHmine dates in Settings. DHmine is only available for DHBW Stuttgart.",
   "dateManagementHelpDialogTitle": "Dates",
   "dateManagementExportToCalendar": "Export to calendar",
   "dateManagementExportToCalendarConfirm": "Export",
   "dateManagementExportToCalendarDescription":
       "Choose the calendar to export the dates to:",
+  "dateManagementRaplaMissing":
+      "No Rapla URL configured. Configure a schedule source to see Rapla events.",
+  "dateManagementRaplaEmpty": "No Rapla events found for this period.",
   "scheduleQueryFailedMessage":
       "Oops, something went wrong. It is possible that the schedule is incomplete. To ensure that you do not miss something, view the schedule in the browser.",
   "scheduleQueryFailedOpenInBrowser": "View in browser",
@@ -139,6 +145,7 @@ final en = {
   "scheduleSourceTypeDualis": "Dualis",
   "scheduleSourceTypeNone": "No schedule",
   "settingsSetupScheduleSource": "Configure the schedule source",
+  "settingsUseDhMineDates": "Use DHmine for dates",
   "onboardingDualisSourceDescription":
       "To view the schedule from Dualis you have to log in using your account:",
   "onboardingIcalPageDescription": ""

@@ -4,15 +4,24 @@ import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart
 import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
 import 'package:dhbwstudentapp/common/util/cancelable_mutex.dart';
 import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
+import 'package:dhbwstudentapp/common/util/date_utils.dart';
 import 'package:dhbwstudentapp/date_management/business/date_entry_provider.dart';
+import 'package:dhbwstudentapp/date_management/business/important_event_organizer.dart';
+import 'package:dhbwstudentapp/date_management/business/rapla_important_events_provider.dart';
 import 'package:dhbwstudentapp/date_management/model/date_database.dart';
 import 'package:dhbwstudentapp/date_management/model/date_entry.dart';
 import 'package:dhbwstudentapp/date_management/model/date_search_parameters.dart';
+import 'package:dhbwstudentapp/date_management/model/important_event.dart';
+import 'package:dhbwstudentapp/date_management/model/important_event_section.dart';
+import 'package:dhbwstudentapp/schedule/service/rapla/rapla_schedule_source.dart';
 import 'package:dhbwstudentapp/schedule/service/schedule_source.dart';
 
 class DateManagementViewModel extends BaseViewModel {
   final DateEntryProvider _dateEntryProvider;
   final PreferencesProvider _preferencesProvider;
+  final RaplaImportantEventsProvider _raplaImportantEventsProvider;
+  final ImportantEventOrganizer _importantEventOrganizer =
+      ImportantEventOrganizer();
 
   final List<DateDatabase> _allDateDatabases = [
     DateDatabase("BWL-Bank", "Termine_BWL_Bank"),
@@ -44,14 +53,67 @@ class DateManagementViewModel extends BaseViewModel {
   List<DateEntry> _allDates = <DateEntry>[];
   List<DateEntry> get allDates => _allDates;
 
+  List<DateEntry> get exportEntries {
+    if (_useDhMineForDates) {
+      return _allDates;
+    }
+
+    return _visibleImportantEvents
+        .map((event) => DateEntry(
+              description: event.title,
+              year: event.start.year.toString(),
+              comment: '',
+              databaseName: 'Rapla',
+              start: event.start,
+              end: event.end,
+              room: '',
+            ))
+        .toList(growable: false);
+  }
+
+  List<ImportantEvent> get _visibleImportantEvents {
+    var events = <ImportantEvent>[];
+    var seenKeys = <String>{};
+
+    for (var section in _importantEventSections) {
+      if (section.header != null) {
+        _addEvent(events, seenKeys, section.header!);
+      }
+      for (var event in section.events) {
+        _addEvent(events, seenKeys, event);
+      }
+    }
+
+    return events;
+  }
+
+  List<ImportantEvent> _importantEvents = <ImportantEvent>[];
+  List<ImportantEvent> get importantEvents => _importantEvents;
+
+  List<ImportantEventSection> _importantEventSections =
+      <ImportantEventSection>[];
+  List<ImportantEventSection> get importantEventSections =>
+      _importantEventSections;
+
   bool _showPassedDates = false;
   bool get showPassedDates => _showPassedDates;
 
   bool _showFutureDates = true;
   bool get showFutureDates => _showFutureDates;
 
+  bool _showOutOfStudyEvents = false;
+  bool get showOutOfStudyEvents => _showOutOfStudyEvents;
+
   bool _isLoading = false;
   bool get isLoading => _isLoading;
+
+  bool _isReloadingPreferences = false;
+
+  bool _useDhMineForDates = false;
+  bool get useDhMineForDates => _useDhMineForDates;
+
+  bool _raplaUrlValid = true;
+  bool get raplaUrlValid => _raplaUrlValid;
 
   late DateDatabase _currentDateDatabase;
   DateDatabase get currentDateDatabase => _currentDateDatabase;
@@ -69,7 +131,11 @@ class DateManagementViewModel extends BaseViewModel {
         currentDateDatabase.id,
       );
 
-  DateManagementViewModel(this._dateEntryProvider, this._preferencesProvider) {
+  DateManagementViewModel(
+    this._dateEntryProvider,
+    this._preferencesProvider,
+    this._raplaImportantEventsProvider,
+  ) {
     _buildYearsArray();
     _currentSelectedYear = DateTime.now().year.toString();
     _currentDateDatabase = _allDateDatabases.first;
@@ -89,11 +155,32 @@ class DateManagementViewModel extends BaseViewModel {
       _isLoading = true;
       notifyListeners("isLoading");
 
-      await _doUpdateDates();
-    } catch (_) {} finally {
+      if (_useDhMineForDates) {
+        await _doUpdateDates();
+      } else {
+        await _doUpdateRaplaEvents();
+      }
+    } catch (_) {
+    } finally {
       _isLoading = false;
       _updateMutex.release();
       notifyListeners("isLoading");
+    }
+  }
+
+  Future<void> reloadUseDhMineSetting() async {
+    if (_isReloadingPreferences) return;
+    _isReloadingPreferences = true;
+
+    try {
+      var storedValue = await _preferencesProvider.getUseDhMineForDates();
+      if (storedValue != _useDhMineForDates) {
+        _useDhMineForDates = storedValue;
+        notifyListeners("useDhMineForDates");
+        await updateDates();
+      }
+    } finally {
+      _isReloadingPreferences = false;
     }
   }
 
@@ -117,6 +204,91 @@ class DateManagementViewModel extends BaseViewModel {
     notifyListeners("updateFailed");
   }
 
+  Future<void> _doUpdateRaplaEvents() async {
+    var raplaEvents = await _readRaplaImportantEvents();
+    _updateMutex.token.throwIfCancelled();
+
+    if (raplaEvents != null) {
+      _setImportantEvents(raplaEvents);
+    }
+
+    _updateFailed = raplaEvents == null;
+    if (updateFailed) {
+      _cancelErrorInFuture();
+    }
+
+    notifyListeners("updateFailed");
+
+    if (raplaEvents != null) {
+      _refreshRaplaEventsInBackground();
+    }
+  }
+
+  Future<List<ImportantEvent>?> _readRaplaImportantEvents() async {
+    var raplaUrl = await _preferencesProvider.getRaplaUrl();
+    _raplaUrlValid = RaplaScheduleSource.isValidUrl(raplaUrl);
+    notifyListeners("raplaUrlValid");
+
+    if (!_raplaUrlValid) {
+      return null;
+    }
+
+    var now = DateTime.now();
+    var start =
+        _showPassedDates ? DateTime(now.year - 3, now.month, now.day) : now;
+    var end =
+        _showFutureDates ? DateTime(now.year + 3, now.month, now.day) : now;
+
+    if (start.isAfter(end)) {
+      return [];
+    }
+
+    try {
+      var events = await _raplaImportantEventsProvider.getImportantEvents(
+        toStartOfDay(start),
+        toStartOfDay(end).add(const Duration(days: 1)),
+        _updateMutex.token,
+      );
+
+      return events;
+    } on OperationCancelledException {
+    } on ScheduleQueryFailedException {}
+
+    return null;
+  }
+
+  Future<void> _refreshRaplaEventsInBackground() async {
+    try {
+      if (_updateMutex.isLocked) {
+        return;
+      }
+
+      var raplaUrl = await _preferencesProvider.getRaplaUrl();
+      if (!RaplaScheduleSource.isValidUrl(raplaUrl)) {
+        return;
+      }
+
+      var now = DateTime.now();
+      var start =
+          _showPassedDates ? DateTime(now.year - 3, now.month, now.day) : now;
+      var end =
+          _showFutureDates ? DateTime(now.year + 3, now.month, now.day) : now;
+
+      if (start.isAfter(end)) {
+        return;
+      }
+
+      var events = await _raplaImportantEventsProvider.getImportantEvents(
+        toStartOfDay(start),
+        toStartOfDay(end).add(const Duration(days: 1)),
+        CancellationToken(),
+        forceRefresh: true,
+      );
+
+      _setImportantEvents(events);
+    } catch (_) {}
+  }
+
   Future<List<DateEntry>?> _readUpdatedDateEntries() async {
     try {
       var loadedDateEntries = await _dateEntryProvider.getDateEntries(
@@ -124,7 +296,8 @@ class DateManagementViewModel extends BaseViewModel {
         _updateMutex.token,
       );
       return loadedDateEntries;
-    } on OperationCancelledException {} on ServiceRequestFailed {}
+    } on OperationCancelledException {
+    } on ServiceRequestFailed {}
 
     return null;
   }
@@ -143,14 +316,56 @@ class DateManagementViewModel extends BaseViewModel {
     notifyListeners("allDates");
   }
 
+  void _setImportantEvents(List<ImportantEvent> events) {
+    _importantEvents = events;
+    _setImportantEventSections();
+    notifyListeners("importantEvents");
+  }
+
+  void _setImportantEventSections() {
+    _importantEventSections = _importantEventOrganizer.buildSections(
+      _importantEvents,
+      includeOutsideStudy: _showOutOfStudyEvents,
+    );
+    notifyListeners("importantEventSections");
+  }
+
+  void _addEvent(
+    List<ImportantEvent> events,
+    Set<String> seenKeys,
+    ImportantEvent event,
+  ) {
+    var key =
+        '${event.title}-${event.type}-${event.start.toIso8601String()}-${event.end.toIso8601String()}';
+    if (seenKeys.add(key)) {
+      events.add(event);
+    }
+  }
+
   void setShowPassedDates(bool value) {
     _showPassedDates = value;
     notifyListeners("showPassedDates");
+
+    if (!_useDhMineForDates) {
+      updateDates();
+    }
   }
 
   void setShowFutureDates(bool value) {
     _showFutureDates = value;
     notifyListeners("showFutureDates");
+
+    if (!_useDhMineForDates) {
+      updateDates();
+    }
+  }
+
+  void setShowOutOfStudyEvents(bool value) {
+    _showOutOfStudyEvents = value;
+    notifyListeners("showOutOfStudyEvents");
+    if (!_useDhMineForDates) {
+      _setImportantEventSections();
+    }
   }
 
   void setCurrentDateDatabase(DateDatabase database) {
@@ -168,6 +383,9 @@ class DateManagementViewModel extends BaseViewModel {
   }
 
   void _loadDefaultSelection() async {
+    _useDhMineForDates = await _preferencesProvider.getUseDhMineForDates();
+    notifyListeners("useDhMineForDates");
+
     var database = await _preferencesProvider.getLastViewedDateEntryDatabase();
 
     bool didSetDatabase = false;
@@ -183,12 +401,12 @@ class DateManagementViewModel extends BaseViewModel {
     }
 
     var year = await _preferencesProvider.getLastViewedDateEntryYear();
-    if (year != null && years.contains(year)) {
+    if (years.contains(year)) {
       setCurrentSelectedYear(year);
     } else {
       setCurrentSelectedYear(_currentSelectedYear);
     }
-  
+
     await updateDates();
   }
 

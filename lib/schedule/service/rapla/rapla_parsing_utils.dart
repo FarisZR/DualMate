@@ -11,6 +11,7 @@ class RaplaParsingUtils {
   static const String RESOURCE_CLASS = "resource";
   static const String LABEL_CLASS = "label";
   static const String VALUE_CLASS = "value";
+  static const String STYLE_ATTRIBUTE = "style";
   static const String CLASS_NAME_LABEL = "Veranstaltungsname:";
   static const String CLASS_NAME_LABEL_ALTERNATIVE = "Name:";
   static const String CLASS_TITLE_LABEL = "Titel:";
@@ -18,13 +19,21 @@ class RaplaParsingUtils {
   static const String DETAILS_LABEL = "Bemerkung:";
   static const String RESOURCES_LABEL = "Ressourcen:";
 
+  static const String colorExam = "#ff0000";
+  static const String colorExamAlt = "#e2001a";
+  static const String colorSpecialEvent = "#c0e2ff";
+  static const String colorSpecialEventAlt = "#a3ddff";
+  static const String colorPublicHoliday = "#cccccc";
+  static const String colorPublicHolidayAlt = "#ee61ff";
+
   static const Map<String, ScheduleEntryType> entryTypeMapping = {
     "Feiertag": ScheduleEntryType.PublicHoliday,
     "Online-Format (ohne Raumbelegung)": ScheduleEntryType.Online,
     "Vorlesung / Lehrbetrieb": ScheduleEntryType.Class,
     "Lehrveranstaltung": ScheduleEntryType.Class,
     "Klausur / Prüfung": ScheduleEntryType.Exam,
-    "Prüfung": ScheduleEntryType.Exam
+    "Prüfung": ScheduleEntryType.Exam,
+    "Pruefung": ScheduleEntryType.Exam
   };
 
   static ScheduleEntry extractScheduleEntryOrThrow(
@@ -91,7 +100,7 @@ class RaplaParsingUtils {
     }
 
     Map<String, String> properties = _parsePropertiesTable(infotable[0]);
-    var type = _extractEntryType(tooltip);
+    var type = _extractEntryType(tooltip, value);
     var title = properties[CLASS_NAME_LABEL] ??
         properties[CLASS_TITLE_LABEL] ??
         properties[CLASS_NAME_LABEL_ALTERNATIVE] ??
@@ -142,15 +151,80 @@ class RaplaParsingUtils {
     return scheduleEntry;
   }
 
-  static ScheduleEntryType _extractEntryType(List<Element> tooltip) {
+  static ScheduleEntryType _extractEntryType(
+    List<Element> tooltip,
+    Element value,
+  ) {
     if (tooltip.isEmpty) return ScheduleEntryType.Unknown;
 
     var strongTag = tooltip[0].getElementsByTagName("strong");
     if (strongTag.isEmpty) return ScheduleEntryType.Unknown;
 
     var typeString = strongTag[0].innerHtml;
+    if (typeString == "Sonstiger Termin") {
+      return _mapSpecialEventType(value.attributes[STYLE_ATTRIBUTE]);
+    }
+
+    if (typeString == "Lehrveranstaltung" ||
+        typeString == "Vorlesung / Lehrbetrieb") {
+      return _mapClassType(value.attributes[STYLE_ATTRIBUTE], typeString);
+    }
 
     return entryTypeMapping[typeString] ?? ScheduleEntryType.Unknown;
+  }
+
+  static ScheduleEntryType _mapSpecialEventType(String? style) {
+    var backgroundColor = _extractBackgroundColor(style);
+    if (backgroundColor == null) return ScheduleEntryType.Unknown;
+
+    switch (backgroundColor) {
+      case colorExam:
+      case colorExamAlt:
+        return ScheduleEntryType.Exam;
+      case colorSpecialEvent:
+      case colorSpecialEventAlt:
+        return ScheduleEntryType.SpecialEvent;
+      case colorPublicHoliday:
+      case colorPublicHolidayAlt:
+        return ScheduleEntryType.PublicHoliday;
+      default:
+        return ScheduleEntryType.Unknown;
+    }
+  }
+
+  static ScheduleEntryType _mapClassType(String? style, String fallbackType) {
+    var backgroundColor = _extractBackgroundColor(style);
+    if (backgroundColor == null) {
+      return entryTypeMapping[fallbackType] ?? ScheduleEntryType.Class;
+    }
+
+    switch (backgroundColor) {
+      case colorExam:
+      case colorExamAlt:
+        return ScheduleEntryType.Exam;
+      case colorPublicHoliday:
+      case colorPublicHolidayAlt:
+        return ScheduleEntryType.PublicHoliday;
+      default:
+        return entryTypeMapping[fallbackType] ?? ScheduleEntryType.Class;
+    }
+  }
+
+  static String? _extractBackgroundColor(String? style) {
+    if (style == null || style.isEmpty) return null;
+
+    var styleParts = style.split(";");
+    for (var part in styleParts) {
+      var trimmed = part.trim();
+      if (!trimmed.startsWith("background-color")) continue;
+
+      var colorParts = trimmed.split(":");
+      if (colorParts.length < 2) continue;
+
+      return colorParts[1].trim().toLowerCase();
+    }
+
+    return null;
   }
 
   static Map<String, String> _parsePropertiesTable(Element infotable) {

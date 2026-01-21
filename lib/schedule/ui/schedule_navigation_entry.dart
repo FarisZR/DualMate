@@ -1,5 +1,4 @@
 import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
 import 'package:dhbwstudentapp/schedule/ui/schedule_page.dart';
 import 'package:dhbwstudentapp/schedule/ui/viewmodels/schedule_view_model.dart';
 import 'package:dhbwstudentapp/schedule/ui/weeklyschedule/filter/schedule_filter_page.dart';

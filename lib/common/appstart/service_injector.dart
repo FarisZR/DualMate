@@ -3,6 +3,7 @@ import 'package:dhbwstudentapp/common/data/preferences/preferences_access.dart';
 import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
 import 'package:dhbwstudentapp/common/data/preferences/secure_storage_access.dart';
 import 'package:dhbwstudentapp/date_management/business/date_entry_provider.dart';
+import 'package:dhbwstudentapp/date_management/business/rapla_important_events_provider.dart';
 import 'package:dhbwstudentapp/date_management/data/date_entry_repository.dart';
 import 'package:dhbwstudentapp/date_management/model/date_entry.dart';
 import 'package:dhbwstudentapp/date_management/service/date_management_service.dart';
@@ -67,6 +68,9 @@ void injectServices(bool isBackground) {
   c.registerInstance(DateEntryProvider(
     DateManagementService(),
     DateEntryRepository(c.resolve()),
+  ));
+  c.registerInstance(RaplaImportantEventsProvider(
+    c.resolve(),
   ));
   c.registerInstance(WidgetHelper());
   c.registerInstance(ListDateEntries30d(List<DateEntry>.empty(growable: true)));

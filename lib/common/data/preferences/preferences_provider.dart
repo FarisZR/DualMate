@@ -29,6 +29,8 @@ class PreferencesProvider {
   static const String DidShowWidgetHelpDialog = "DidShowWidgetHelpDialog";
   static const String SynchronizeScheduleWithCalendar =
       "SynchronizeScheduleWithCalendar";
+  static const String UseDhMineForDates = "UseDhMineForDates";
+  static const String RaplaImportantEventsCache = "RaplaImportantEventsCache";
 
   final PreferencesAccess _preferencesAccess;
   final SecureStorageAccess _secureStorageAccess;
@@ -236,6 +238,22 @@ class PreferencesProvider {
 
   Future<void> setDidShowWidgetHelpDialog(bool value) {
     return _preferencesAccess.set<bool>(DidShowWidgetHelpDialog, value);
+  }
+
+  Future<bool> getUseDhMineForDates() async {
+    return await _preferencesAccess.get<bool>(UseDhMineForDates) ?? false;
+  }
+
+  Future<void> setUseDhMineForDates(bool value) async {
+    return _preferencesAccess.set<bool>(UseDhMineForDates, value);
+  }
+
+  Future<String?> getRaplaImportantEventsCache() async {
+    return await _preferencesAccess.get<String>(RaplaImportantEventsCache);
+  }
+
+  Future<void> setRaplaImportantEventsCache(String value) async {
+    return _preferencesAccess.set<String>(RaplaImportantEventsCache, value);
   }
 
   Future<void> set<T>(String key, T value) async {
