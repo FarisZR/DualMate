@@ -67,9 +67,6 @@ Use triple-slash `///` doc comments:
 class DualisAuthentication {
 ```
 
-For each new feature there should be a file with detailed documentation regarding the implementation details of the feature, the tests and issues faced.
-That documentation is meant as a complete overview.
-
 ## Architecture Patterns
 
 ### MVVM Pattern
@@ -166,7 +163,6 @@ var htmlContent = await File(
 - Native code: Android (Kotlin), iOS (Swift) with widget extensions
 - Background tasks use `workmanager` package
 
-
 ## Debugging Notes
 
 - Device runs are stable across schedule/date management screens, but Android device connections can drop during long sessions. Re-run `flutter run -d <deviceId>` if the device disconnects.
@@ -177,7 +173,9 @@ var htmlContent = await File(
 
 ## Adding new features
 
-- Test driven development, write tests first with full coverage
-- Document the entire feature under docs
-- test your changes using the debugger and the connected android device by reading the logs and checking for issues.
+- Test driven development, write automated tests first with full coverage.
 - You should continue till the feature is implemented correctly with no errors.
+- App is multilingual, make sure to support English and German.
+- Test your final changes using the debugger and the connected android device by reading the logs and checking for issues.
+- Document the entire feature under docs
+- update the readme to include it.
