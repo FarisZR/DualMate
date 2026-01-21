@@ -179,3 +179,4 @@ var htmlContent = await File(
 - Test your final changes using the debugger and the connected android device by reading the logs and checking for issues.
 - Document the entire feature under docs
 - update the readme to include it.
+- target Material you (Material 3) design language (https://m3.material.io/develop/flutter, https://m3.material.io/foundations/content-design/overview)
