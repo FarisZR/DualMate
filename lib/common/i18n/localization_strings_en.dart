@@ -45,6 +45,7 @@ final en = {
   "settingsNotificationsNextDay": "Notify in the evening",
   "settingsNotificationsScheduleChange": "Notify when the schedule changed",
   "screenScheduleTitle": "Schedule",
+  "screenCanteenTitle": "Canteen",
   "screenUsefulLinks": "Useful links",
   "dualisExamResultsExamColumnHeader": "Exam",
   "dualisExamResultsCreditsColumnHeader": "Credits",
@@ -185,4 +186,15 @@ final en = {
   "filterDescription":
       "Select the classes which sould be displayed. Be careful not to accidentally miss a hidden lecture",
   "filterTitle": "Filter",
+  "canteenFilterAll": "All meals",
+  "canteenFilterNoPork": "Without pork",
+  "canteenFilterVegetarian": "Vegetarian",
+  "canteenFilterVegan": "Vegan",
+  "canteenBackToToday": "Back to today",
+  "canteenNoMenuToday": "No menu available for this day",
+  "canteenLoadError": "Could not load the canteen menu",
+  "canteenCategoryWahlessen": "Choice %0",
+  "canteenHelpDialogTitle": "Canteen Menu",
+  "canteenHelpDialogContent":
+      "View the daily menu of the DHBW Karlsruhe canteen (Menseria Erzbergerstraße). Data is from Studierendenwerk Karlsruhe.",
 };

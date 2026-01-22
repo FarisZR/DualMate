@@ -5,7 +5,8 @@ final de = {
   "settingsViewSourceCode": "Source code auf GitHub ansehen",
   "settingsCalendarSync": "Kalendersynchronisation",
   "calendarSyncPageTitle": "Kalender synchronisieren",
-  "calendarSyncPageSubtitle": "Wähle den Kalender aus, in den der Vorlesungsplan übertragen werden soll:",
+  "calendarSyncPageSubtitle":
+      "Wähle den Kalender aus, in den der Vorlesungsplan übertragen werden soll:",
   "calendarSyncPageEndSync": "Synchronisation beenden",
   "calendarSyncPageBeginSync": "Kalender synchronisieren",
   "applicationName": "DHBW Studenten App",
@@ -52,6 +53,7 @@ final de = {
   "settingsNotificationsScheduleChange":
       "Benachrichtigung bei einer Planänderung",
   "screenScheduleTitle": "Vorlesungsplan",
+  "screenCanteenTitle": "Mensa",
   "screenUsefulLinks": "Nützliche Links",
   "dualisExamResultsExamColumnHeader": "Klausur",
   "dualisExamResultsCreditsColumnHeader": "Credits",
@@ -107,7 +109,8 @@ final de = {
   "pageDateManagementTitle": "Terminverwaltung",
   "dateManagementCheckBoxPassedDates": "Vergangene",
   "dateManagementCheckBoxFutureDates": "Zukünftige",
-  "dateManagementCheckBoxOutsideStudy": "Termine außerhalb der Theoriephasen anzeigen",
+  "dateManagementCheckBoxOutsideStudy":
+      "Termine außerhalb der Theoriephasen anzeigen",
   "dateManagementDropDownYear": "Jahrgang",
   "dateManagementDropDownDatabase": "Termindatenbank",
   "dateManagementChipOnlyPassed": "Nur Vergangene",
@@ -117,7 +120,8 @@ final de = {
   "dialogOk": "Ok",
   "dialogCancel": "Cancel",
   "dialogSetRaplaUrlTitle": "Rapla Url festlegen",
-  "dialogCalendarAccessNotGranted": "Wenn du den Vorlesungsplan mit deinem nativen Kalender synchronisieren möchtest, musst du in den Einstellungen den Kalenderzugriff erlauben.",
+  "dialogCalendarAccessNotGranted":
+      "Wenn du den Vorlesungsplan mit deinem nativen Kalender synchronisieren möchtest, musst du in den Einstellungen den Kalenderzugriff erlauben.",
   "dialogTitleCalendarAccessNotGranted": "Keine Zugriffsrechte",
   "scheduleEmptyStateSetUrl": "Konfigurieren",
   "scheduleEmptyStateBannerMessage":
@@ -142,7 +146,8 @@ final de = {
       "Wähle den Kalender aus, in den die Termine übertragen werden sollen:",
   "dateManagementRaplaMissing":
       "Keine Rapla-URL konfiguriert. Richte eine Vorlesungsplan-Quelle ein, um Rapla-Termine zu sehen.",
-  "dateManagementRaplaEmpty": "Keine Rapla-Termine für diesen Zeitraum gefunden.",
+  "dateManagementRaplaEmpty":
+      "Keine Rapla-Termine für diesen Zeitraum gefunden.",
   "scheduleQueryFailedMessage":
       "Ups, da ist etwas schief gelaufen. Möglicherweise wird nicht der gesamte Plan angezeigt. Schaue Dir daher den Plan im Browser an um sicher zu gehen, dass Du nichts verpasst.",
   "scheduleQueryFailedOpenInBrowser": "Im Browser öffnen",
@@ -195,4 +200,15 @@ final de = {
   "filterDescription":
       "Wähle hier die Vorlesungen, die angezeigt werden sollen. Pass auf, dass Du keine ausgeblendete Vorlesung versehentlich verpasst.",
   "filterTitle": "Filter",
+  "canteenFilterAll": "Alle Gerichte",
+  "canteenFilterNoPork": "Ohne Schwein",
+  "canteenFilterVegetarian": "Vegetarisch",
+  "canteenFilterVegan": "Vegan",
+  "canteenBackToToday": "Zurück zu heute",
+  "canteenNoMenuToday": "Kein Speiseplan für diesen Tag verfügbar",
+  "canteenLoadError": "Speiseplan konnte nicht geladen werden",
+  "canteenCategoryWahlessen": "Wahlessen %0",
+  "canteenHelpDialogTitle": "Mensaspeiseplan",
+  "canteenHelpDialogContent":
+      "Zeigt den täglichen Speiseplan der DHBW Karlsruhe Mensa (Menseria Erzbergerstraße). Daten vom Studierendenwerk Karlsruhe.",
 };

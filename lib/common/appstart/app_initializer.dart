@@ -5,13 +5,13 @@ import 'package:dhbwstudentapp/common/appstart/localization_initialize.dart';
 import 'package:dhbwstudentapp/common/appstart/notification_schedule_changed_initialize.dart';
 import 'package:dhbwstudentapp/common/appstart/notifications_initialize.dart';
 import 'package:dhbwstudentapp/common/appstart/service_injector.dart';
+import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
 import 'package:dhbwstudentapp/common/util/rapla_tls_override.dart';
 import 'package:dhbwstudentapp/native/widget/widget_update_callback.dart';
 import 'package:dhbwstudentapp/schedule/background/calendar_synchronizer.dart';
+import 'package:dhbwstudentapp/schedule/business/schedule_provider.dart';
 import 'package:dhbwstudentapp/schedule/business/schedule_source_provider.dart';
 import 'package:kiwi/kiwi.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_provider.dart';
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
 bool isInitialized = false;
@@ -37,15 +37,15 @@ Future<void> initializeApp(bool isBackground) async {
   if (isBackground) {
     await LocalizationInitialize.fromPreferences(
       KiwiContainer().resolve<PreferencesProvider>(),
-    )
-        .setupLocalizations();
+    ).setupLocalizations();
   } else {
     await LocalizationInitialize.fromLanguageCode(Platform.localeName)
         .setupLocalizations();
   }
 
-  WidgetUpdateCallback(KiwiContainer().resolve())
-      .registerCallback(KiwiContainer().resolve());
+  var widgetUpdateCallback = WidgetUpdateCallback(KiwiContainer().resolve());
+  widgetUpdateCallback.registerScheduleCallback(KiwiContainer().resolve());
+  widgetUpdateCallback.registerCanteenCallback(KiwiContainer().resolve());
 
   NotificationsInitialize().setupNotifications();
   BackgroundInitialize().setupBackgroundScheduling();

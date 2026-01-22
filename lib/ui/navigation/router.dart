@@ -1,3 +1,4 @@
+import 'package:dhbwstudentapp/canteen/ui/canteen_navigation_entry.dart';
 import 'package:dhbwstudentapp/date_management/ui/date_management_navigation_entry.dart';
 import 'package:dhbwstudentapp/dualis/ui/dualis_navigation_entry.dart';
 import 'package:dhbwstudentapp/information/ui/useful_information_navigation_entry.dart';
@@ -10,6 +11,7 @@ import 'package:flutter/material.dart';
 
 final List<NavigationEntry> navigationEntries = [
   ScheduleNavigationEntry(),
+  CanteenNavigationEntry(),
   DualisNavigationEntry(),
   DateManagementNavigationEntry(),
   UsefulInformationNavigationEntry(),

@@ -1,3 +1,6 @@
+import 'package:dhbwstudentapp/canteen/business/canteen_provider.dart';
+import 'package:dhbwstudentapp/canteen/data/canteen_meal_repository.dart';
+import 'package:dhbwstudentapp/canteen/service/canteen_scraper.dart';
 import 'package:dhbwstudentapp/common/data/database_access.dart';
 import 'package:dhbwstudentapp/common/data/preferences/preferences_access.dart';
 import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
@@ -35,6 +38,14 @@ void injectServices(bool isBackground) {
     SecureStorageAccess(),
   ));
   c.registerInstance(DatabaseAccess());
+  c.registerInstance(CanteenMealRepository(
+    c.resolve(),
+  ));
+  c.registerInstance(CanteenScraper());
+  c.registerInstance(CanteenProvider(
+    c.resolve(),
+    c.resolve(),
+  ));
   c.registerInstance(ScheduleEntryRepository(
     c.resolve(),
   ));

@@ -6,7 +6,7 @@ import 'package:flutter/widgets.dart';
 
 class L {
   final Locale locale;
-    late String _language;
+  late String _language;
 
   L(this.locale) {
     _language = locale.languageCode.substring(0, 2);
@@ -87,7 +87,8 @@ class L {
 
   String get calendarSyncPageEndSync => _getValue("calendarSyncPageEndSync");
 
-  String get calendarSyncPageBeginSync => _getValue("calendarSyncPageBeginSync");
+  String get calendarSyncPageBeginSync =>
+      _getValue("calendarSyncPageBeginSync");
 
   String get notificationScheduleChangedNewClass =>
       _getValue("notificationScheduleChangedNewClass");
@@ -135,6 +136,8 @@ class L {
       _getValue("settingsNotificationsScheduleChange");
 
   String get screenScheduleTitle => _getValue("screenScheduleTitle");
+
+  String get screenCanteenTitle => _getValue("screenCanteenTitle");
 
   String get screenUsefulLinks => _getValue("screenUsefulLinks");
 
@@ -292,9 +295,11 @@ class L {
 
   String get dialogSetRaplaUrlTitle => _getValue("dialogSetRaplaUrlTitle");
 
-  String get dialogCalendarAccessNotGranted => _getValue("dialogCalendarAccessNotGranted");
+  String get dialogCalendarAccessNotGranted =>
+      _getValue("dialogCalendarAccessNotGranted");
 
-  String get dialogTitleCalendarAccessNotGranted => _getValue("dialogTitleCalendarAccessNotGranted");
+  String get dialogTitleCalendarAccessNotGranted =>
+      _getValue("dialogTitleCalendarAccessNotGranted");
 
   String get scheduleEmptyStateSetUrl => _getValue("scheduleEmptyStateSetUrl");
 
@@ -332,8 +337,7 @@ class L {
   String get dateManagementRaplaMissing =>
       _getValue("dateManagementRaplaMissing");
 
-  String get dateManagementRaplaEmpty =>
-      _getValue("dateManagementRaplaEmpty");
+  String get dateManagementRaplaEmpty => _getValue("dateManagementRaplaEmpty");
 
   String get scheduleQueryFailedMessage =>
       _getValue("scheduleQueryFailedMessage");
@@ -431,8 +435,19 @@ class L {
   String get filterDescription => _getValue("filterDescription");
   String get filterTitle => _getValue("filterTitle");
 
+  String get canteenFilterAll => _getValue("canteenFilterAll");
+  String get canteenFilterNoPork => _getValue("canteenFilterNoPork");
+  String get canteenFilterVegetarian => _getValue("canteenFilterVegetarian");
+  String get canteenFilterVegan => _getValue("canteenFilterVegan");
+  String get canteenBackToToday => _getValue("canteenBackToToday");
+  String get canteenNoMenuToday => _getValue("canteenNoMenuToday");
+  String get canteenLoadError => _getValue("canteenLoadError");
+  String get canteenCategoryWahlessen => _getValue("canteenCategoryWahlessen");
+  String get canteenHelpDialogTitle => _getValue("canteenHelpDialogTitle");
+  String get canteenHelpDialogContent => _getValue("canteenHelpDialogContent");
+
   static L of(BuildContext context) {
-        return Localizations.of<L>(context, L)!;
+    return Localizations.of<L>(context, L)!;
   }
 
   static final Map<String, Map<String, String>> _localizedValues = {
@@ -441,7 +456,7 @@ class L {
   };
 
   String _getValue(String key) {
-        return _localizedValues[_language]?[key] ?? "";
+    return _localizedValues[_language]?[key] ?? "";
   }
 
   String getValue(String key) => _getValue(key);

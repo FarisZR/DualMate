@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS ScheduleEntries
 );
 
 ''',
-      '''      
+      '''
 CREATE TABLE IF NOT EXISTS ScheduleQueryInformation
 (
   start INTEGER,
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS ScheduleQueryInformation
 
     // Version 2 - Add DateEntries table
     [
-      '''      
+      '''
 CREATE TABLE IF NOT EXISTS DateEntries
 (
   date INTEGER,
@@ -49,6 +49,22 @@ CREATE TABLE IF NOT EXISTS DateEntries
 CREATE TABLE IF NOT EXISTS ScheduleEntryFilters
 (
   title TEXT
+);
+'''
+    ],
+
+    // Version 4 - Add Canteen meals table
+    [
+      '''
+CREATE TABLE IF NOT EXISTS canteen_meals
+(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date INTEGER,
+  name TEXT,
+  category TEXT,
+  price REAL,
+  notes TEXT,
+  meal_types TEXT
 );
 '''
     ],

@@ -21,6 +21,7 @@
         android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="DHBW Studenten App"
+        android:enableOnBackInvokedCallback="true"
         tools:replace="android:label">
         <receiver
 			android:name=".widget.now.ScheduleNowWidget"
@@ -33,8 +34,9 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/schedule_now_widget_info" />
         </receiver>
-        <receiver 
-			android:name=".widget.today.ScheduleTodayWidget"
+
+        <receiver
+            android:name=".widget.canteen.CanteenTodayWidget"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -42,15 +44,15 @@
 
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/schedule_today_widget_info" />
+                android:resource="@xml/canteen_today_widget_info" />
         </receiver>
 
         <service
-            android:name=".widget.today.TodayScheduleEntryRemoteViewsService"
+            android:name=".widget.now.NowScheduleEntryRemoteViewsService"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
 
         <service
-            android:name=".widget.now.NowScheduleEntryRemoteViewsService"
+            android:name=".widget.canteen.CanteenRemoteViewsService"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
 
         <activity

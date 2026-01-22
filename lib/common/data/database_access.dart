@@ -46,6 +46,20 @@ class DatabaseAccess {
     return await db.insert(table, row);
   }
 
+  Future<void> insertBatch(
+      String table, List<Map<String, dynamic>> rows) async {
+    if (rows.isEmpty) return;
+
+    Database db = await _database;
+    Batch batch = db.batch();
+
+    for (var row in rows) {
+      batch.insert(table, row);
+    }
+
+    await batch.commit(noResult: true);
+  }
+
   Future<List<Map<String, dynamic>>> queryAllRows(String table) async {
     Database db = await _database;
     return await db.query(table);
@@ -92,7 +106,8 @@ class DatabaseAccess {
   Future<int> queryRowCount(String table) async {
     Database db = await _database;
     return Sqflite.firstIntValue(
-        await db.rawQuery('SELECT COUNT(*) FROM $table')) ?? 0;
+            await db.rawQuery('SELECT COUNT(*) FROM $table')) ??
+        0;
   }
 
   Future<int> queryAggregator(String query, List<dynamic> arguments) async {

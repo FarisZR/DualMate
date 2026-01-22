@@ -8,8 +8,8 @@ import android.os.Build
 import android.provider.Settings
 import androidx.annotation.NonNull
 import de.bennik2000.dhbwstudentapp.widget.WidgetHelper
-import de.bennik2000.dhbwstudentapp.widget.today.ScheduleTodayWidget
 import de.bennik2000.dhbwstudentapp.widget.now.ScheduleNowWidget
+import de.bennik2000.dhbwstudentapp.widget.canteen.CanteenTodayWidget
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -67,8 +67,8 @@ class AndroidScheduleTodayWidget(private val context: Context) : MethodChannel.M
     }
 
     private fun updateWidget() {
-        ScheduleTodayWidget.requestWidgetRefresh(context)
         ScheduleNowWidget.requestWidgetRefresh(context)
+        CanteenTodayWidget.requestWidgetRefresh(context)
     }
 
 
