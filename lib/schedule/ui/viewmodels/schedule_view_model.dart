@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
 import 'package:dhbwstudentapp/schedule/business/schedule_source_provider.dart';
 import 'package:dhbwstudentapp/schedule/service/schedule_source.dart';
 
 class ScheduleViewModel extends BaseViewModel {
   final ScheduleSourceProvider _scheduleSourceProvider;
+  Timer? _initialSetupTimer;
+  bool _isDisposed = false;
 
   bool _didSetupProperly = false;
 
@@ -17,13 +21,25 @@ class ScheduleViewModel extends BaseViewModel {
   }
 
   void _scheduleInitialSetup() {
-    Future.delayed(const Duration(seconds: 1), () {
+    _initialSetupTimer?.cancel();
+    _initialSetupTimer = Timer(const Duration(seconds: 1), () {
+      if (_isDisposed) return;
       _scheduleSourceProvider.setupScheduleSource();
     });
   }
 
   void onDidChangeScheduleSource(ScheduleSource scheduleSource, bool valid) {
+    if (_isDisposed) return;
     _didSetupProperly = valid;
     notifyListeners("didSetupProperly");
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _initialSetupTimer?.cancel();
+    _scheduleSourceProvider
+        .removeDidChangeScheduleSourceCallback(onDidChangeScheduleSource);
+    super.dispose();
   }
 }

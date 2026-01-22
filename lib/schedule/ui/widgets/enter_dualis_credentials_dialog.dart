@@ -42,6 +42,8 @@ class EnterDualisCredentialsDialog {
     }
 
     return AlertDialog(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      surfaceTintColor: Colors.transparent,
       title: Text(L.of(context).onboardingDualisPageTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,

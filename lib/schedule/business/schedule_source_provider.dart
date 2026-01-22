@@ -193,6 +193,11 @@ class ScheduleSourceProvider {
     _onDidChangeScheduleSourceCallbacks.add(callback);
   }
 
+  void removeDidChangeScheduleSourceCallback(
+      OnDidChangeScheduleSource callback) {
+    _onDidChangeScheduleSourceCallbacks.remove(callback);
+  }
+
   Future<void> _clearEntryCache() async {
     var scheduleEntries = _scheduleEntryRepository.deleteAllScheduleEntries();
     var queryInformation =
