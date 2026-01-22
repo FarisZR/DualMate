@@ -21,6 +21,7 @@ class ScheduleEntryWidget extends StatelessWidget {
 
     return Card(
       color: color,
+      surfaceTintColor: Colors.transparent,
       elevation: 5,
       margin: const EdgeInsets.fromLTRB(1, 0, 1, 0),
       child: InkWell(

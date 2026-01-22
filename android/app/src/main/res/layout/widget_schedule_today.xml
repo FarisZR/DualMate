@@ -1,4 +1,5 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="@dimen/widget_margin"
@@ -63,4 +64,12 @@
         android:layout_alignParentBottom="true"
         android:visibility="gone"
         android:text="@string/widget_schedule_not_purchased"/>
+
+    <FrameLayout
+        android:id="@+id/widget_click_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent"
+        android:clickable="true"
+        android:focusable="true" />
 </RelativeLayout>

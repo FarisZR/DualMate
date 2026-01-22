@@ -107,10 +107,12 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
                     children: <Widget>[
                       Padding(
                         padding: const EdgeInsets.all(8.0),
-                        child: PropertyChangeConsumer<WeeklyScheduleViewModel, String>(
+                        child: PropertyChangeConsumer<WeeklyScheduleViewModel,
+                            String>(
                           properties: const ["weekSchedule", "now"],
                           builder: (BuildContext context,
-                              WeeklyScheduleViewModel? model, Set<String>? properties) {
+                              WeeklyScheduleViewModel? model,
+                              Set<String>? properties) {
                             if (model == null) return Container();
                             return PageTransitionSwitcher(
                               reverse: !model.didUpdateScheduleIntoFuture,
@@ -148,7 +150,8 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
                       PropertyChangeConsumer<WeeklyScheduleViewModel, String>(
                         properties: const ["isUpdating"],
                         builder: (BuildContext context,
-                            WeeklyScheduleViewModel? model, Set<String>? properties) {
+                            WeeklyScheduleViewModel? model,
+                            Set<String>? properties) {
                           if (model == null) return Container();
                           return model.isUpdating
                               ? const LinearProgressIndicator()

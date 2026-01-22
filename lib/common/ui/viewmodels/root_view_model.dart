@@ -11,7 +11,10 @@ class RootViewModel extends BaseViewModel {
   late bool _isOnboarding;
   bool get isOnboarding => _isOnboarding;
 
-  RootViewModel(this._preferencesProvider);
+  RootViewModel(this._preferencesProvider) {
+    _appTheme = AppTheme.System;
+    _isOnboarding = false;
+  }
 
   Future<void> loadFromPreferences() async {
     var darkMode = await _preferencesProvider.appTheme();

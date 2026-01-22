@@ -9,6 +9,7 @@ import android.provider.Settings
 import androidx.annotation.NonNull
 import de.bennik2000.dhbwstudentapp.widget.WidgetHelper
 import de.bennik2000.dhbwstudentapp.widget.now.ScheduleNowWidget
+import de.bennik2000.dhbwstudentapp.widget.today.ScheduleTodayWidget
 import de.bennik2000.dhbwstudentapp.widget.canteen.CanteenTodayWidget
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
@@ -27,6 +28,10 @@ class AndroidScheduleTodayWidget(private val context: Context) : MethodChannel.M
         when (call.method) {
             "requestWidgetRefresh" -> {
                 updateWidget()
+                result.success(null)
+            }
+            "requestWidgetLaunchIntent" -> {
+                updateWidgetLaunchIntent()
                 result.success(null)
             }
             "disableWidget" -> {
@@ -69,6 +74,12 @@ class AndroidScheduleTodayWidget(private val context: Context) : MethodChannel.M
     private fun updateWidget() {
         ScheduleNowWidget.requestWidgetRefresh(context)
         CanteenTodayWidget.requestWidgetRefresh(context)
+    }
+
+    private fun updateWidgetLaunchIntent() {
+        ScheduleNowWidget.requestWidgetLaunchIntent(context)
+        ScheduleTodayWidget.requestWidgetLaunchIntent(context)
+        CanteenTodayWidget.requestWidgetLaunchIntent(context)
     }
 
 

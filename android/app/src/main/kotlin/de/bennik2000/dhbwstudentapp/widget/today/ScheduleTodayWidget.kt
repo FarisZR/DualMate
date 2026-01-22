@@ -36,11 +36,15 @@ class ScheduleTodayWidget : AppWidgetProvider() {
 
         val views = RemoteViews(context.packageName, R.layout.widget_schedule_today)
 
-        val pendingIntent = PendingIntent.getActivity(context,
-                0,
-                Intent(context, MainActivity::class.java),
-                0)
-        views.setOnClickPendingIntent(R.id.widget_title, pendingIntent)
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            Intent(context, MainActivity::class.java).apply {
+                action = "de.bennik2000.dhbwstudentapp.OPEN_SCHEDULE"
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        views.setOnClickPendingIntent(R.id.widget_click_overlay, pendingIntent)
 
         if(WidgetHelper(context).isWidgetEnabled()) {
             views.setViewVisibility(R.id.layout_purchase, View.INVISIBLE)
@@ -91,6 +95,27 @@ class ScheduleTodayWidget : AppWidgetProvider() {
 
             intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
             context.sendBroadcast(intent)
+        }
+
+        fun requestWidgetLaunchIntent(context: Context) {
+            val ids: IntArray = AppWidgetManager
+                    .getInstance(context.applicationContext)
+                    .getAppWidgetIds(ComponentName(context, ScheduleTodayWidget::class.java))
+
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                0,
+                Intent(context, MainActivity::class.java).apply {
+                    action = "de.bennik2000.dhbwstudentapp.OPEN_SCHEDULE"
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+
+            for (id in ids) {
+                val views = RemoteViews(context.packageName, R.layout.widget_schedule_today)
+                views.setOnClickPendingIntent(R.id.widget_click_overlay, pendingIntent)
+                AppWidgetManager.getInstance(context).updateAppWidget(id, views)
+            }
         }
     }
 }

@@ -67,7 +67,13 @@ Route<dynamic> generateRoute(RouteSettings settings) {
       target = const OnboardingPage();
       break;
     case "main":
-      target = MainPage();
+      target = const MainPage();
+      break;
+    case "schedule":
+      target = const MainPage(initialRoute: "schedule");
+      break;
+    case "canteen":
+      target = const MainPage(initialRoute: "canteen");
       break;
     case "settings":
       target = SettingsPage();

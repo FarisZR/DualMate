@@ -31,6 +31,7 @@ Bisher verfügbare Funktionen:
 - Rapla-Termine (Klausuren, Klausurwochen, Feiertage) auf der Terminseite
 - Mensa-Speiseplan für die DHBW Karlsruhe inklusive Home-Screen-Widget
 - Helles und dunkles Design 👻
+- Landscape support on phones and tablets
 
 
 Diese App ist optimiert für die DHBW Stuttgart und manche Funktionen werden  an anderen Standorten möglicherweise nicht unterstützt. Dies ist kein offizielles Angebot der DHBW Stuttgart und wurde von Studenten in Eigeninitiative entwickelt!

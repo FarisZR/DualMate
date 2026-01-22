@@ -34,13 +34,13 @@ Color colorScheduleEntryUnknown(BuildContext context) =>
 
 Color colorScheduleGridGridLines(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
-        ? const Color(0xffe0e0e0)
-        : const Color(0xff515151);
+        ? const Color(0xffd8d8d8)
+        : const Color(0xff3c3c3c);
 
 Color colorScheduleInPastOverlay(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
-        ? const Color(0x1F000000)
-        : const Color(0x3F000000);
+        ? const Color(0x14000000)
+        : const Color(0x2B000000);
 
 Color colorCurrentTimeIndicator(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light

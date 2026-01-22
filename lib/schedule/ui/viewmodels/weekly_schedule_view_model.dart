@@ -40,6 +40,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   bool updateFailed = false;
 
   bool isUpdating = false;
+  DateTime? _lastUpdateRequest;
   Schedule? weekSchedule;
 
   String? scheduleUrl;
@@ -48,6 +49,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   Timer? _errorResetTimer;
   Timer? _updateNowTimer;
+
+  bool _isDisposed = false;
 
   final CancelableMutex _updateMutex = CancelableMutex();
 
@@ -62,24 +65,36 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   Future<void> _initViewModel() async {
-    _setSchedule(
-      null,
-      toDayOfWeek(DateTime.now(), DateTime.monday),
-      toDayOfWeek(DateTime.now(), DateTime.friday),
-    );
-
-    await goToToday();
+    currentDateStart =
+        toStartOfDay(toDayOfWeek(DateTime.now(), DateTime.monday));
+    currentDateEnd = toNextWeek(currentDateStart);
+    var cachedSchedule = await scheduleProvider.getCachedSchedule(
+        currentDateStart, currentDateEnd);
+    _setSchedule(cachedSchedule, currentDateStart, currentDateEnd);
+    _scheduleInitialRefresh();
     ensureUpdateNowTimerRunning();
 
     scheduleSourceProvider
         .addDidChangeScheduleSourceCallback(_onDidChangeScheduleSource);
   }
 
+  void _scheduleInitialRefresh() {
+    Future.delayed(const Duration(seconds: 1), () {
+      if (_isDisposed) return;
+      updateSchedule(currentDateStart, currentDateEnd);
+    });
+  }
+
   Future<void> _onDidChangeScheduleSource(
     ScheduleSource newSource,
     bool setupSuccess,
   ) async {
-    if (setupSuccess) await updateSchedule(currentDateStart, currentDateEnd);
+    if (setupSuccess) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (_isDisposed) return;
+        updateSchedule(currentDateStart, currentDateEnd);
+      });
+    }
   }
 
   void _setSchedule(Schedule? schedule, DateTime start, DateTime end) {
@@ -145,6 +160,13 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   Future updateSchedule(DateTime start, DateTime end) async {
+    var now = DateTime.now();
+    if (_lastUpdateRequest != null &&
+        now.difference(_lastUpdateRequest!).inSeconds < 2) {
+      return;
+    }
+    _lastUpdateRequest = now;
+
     lastRequestedEnd = end;
     lastRequestedStart = start;
 
@@ -160,7 +182,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       notifyListeners("isUpdating");
 
       await _doUpdateSchedule(start, end);
-    } catch (_) {} finally {
+    } catch (_) {
+    } finally {
       isUpdating = false;
       _updateMutex.release();
       notifyListeners("isUpdating");
@@ -251,6 +274,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   @override
   void dispose() {
     super.dispose();
+
+    _isDisposed = true;
 
     _updateNowTimer?.cancel();
 

@@ -72,9 +72,10 @@ class ExamResultsPage extends StatelessWidget {
                 BuildContext context,
                 StudyGradesViewModel? model,
                 Set<String>? properties,
-              ) => model == null
-                  ? Container()
-                  : buildModulesColumn(context, model),
+              ) =>
+                  model == null
+                      ? Container()
+                      : buildModulesColumn(context, model),
             ),
           ],
         ),
@@ -168,15 +169,13 @@ class ExamResultsPage extends StatelessWidget {
       case ExamGradeState.Failed:
         return Text(L.of(context).examNotPassed);
     }
-
   }
 
   List<DataColumn> buildModuleColumns(BuildContext context, var module,
       {var displayGradeHeader = false}) {
     var displayWidth = MediaQuery.of(context).size.width;
 
-    if (!PlatformUtil.isPortrait(context) && PlatformUtil.isTablet()) {
-      print("isTablet");
+    if (PlatformUtil.isTablet()) {
       displayWidth -= 250;
     }
 

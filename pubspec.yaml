@@ -39,7 +39,6 @@ dependencies:
   in_app_review: ^2.0.9
   flutter_secure_storage: ^8.1.0
   animations: ^2.0.7
-  flutter_native_splash: ^2.2.18
   mutex: ^3.1.0
   device_calendar: ^4.3.3
   flutter_widgetkit: ^1.0.3
@@ -74,7 +73,6 @@ flutter:
   assets:
     - assets/empty_state.png
     - assets/app_icon.png
-    - assets/splash.png
     - assets/onboarding_bottom_background.png
     - assets/onboarding_bottom_foreground.png
     - assets/onboarding_bottom_background_dark.png

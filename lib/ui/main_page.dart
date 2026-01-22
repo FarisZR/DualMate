@@ -14,12 +14,18 @@ import 'package:provider/provider.dart';
 /// To navigate to a new route inside this widget use the [NavigatorKey.mainKey]
 ///
 class MainPage extends StatefulWidget {
+  final String? initialRoute;
+
+  const MainPage({Key? key, this.initialRoute}) : super(key: key);
+
   @override
   _MainPageState createState() => _MainPageState();
 }
 
 class _MainPageState extends State<MainPage> {
   bool _appLaunchDialogsShown = false;
+
+  String? _initialRoute;
 
   final ValueNotifier<int> _currentEntryIndex = ValueNotifier<int>(0);
 
@@ -29,16 +35,21 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
+
+    _initialRoute = widget.initialRoute;
+    _syncCurrentEntryIndex();
   }
 
   @override
   Widget build(BuildContext context) {
     _showAppLaunchDialogsIfNeeded(context);
 
+    _syncCurrentEntryIndex();
+
     var navigator = Navigator(
       key: NavigatorKey.mainKey,
       onGenerateRoute: generateDrawerRoute,
-      initialRoute: "schedule",
+      initialRoute: _initialRoute ?? "schedule",
     );
 
     return ChangeNotifierProvider.value(
@@ -47,10 +58,10 @@ class _MainPageState extends State<MainPage> {
         builder: (BuildContext context, value, Widget? child) {
           Widget content;
 
-          if (PlatformUtil.isPhone() || PlatformUtil.isPortrait(context)) {
-            content = buildPhoneLayout(context, navigator);
-          } else {
+          if (PlatformUtil.isTablet()) {
             content = buildTabletLayout(context, navigator);
+          } else {
+            content = buildPhoneLayout(context, navigator);
           }
 
           return content;
@@ -150,6 +161,17 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
+  void _syncCurrentEntryIndex() {
+    if (_initialRoute == null) return;
+
+    var index = navigationEntries.indexWhere(
+      (entry) => entry.route == _initialRoute,
+    );
+    if (index >= 0 && _currentEntryIndex.value != index) {
+      _currentEntryIndex.value = index;
+    }
+  }
+
   void _showAppLaunchDialogsIfNeeded(BuildContext context) {
     if (!_appLaunchDialogsShown) {
       AppLaunchDialog(KiwiContainer().resolve()).showAppLaunchDialogs(context);
@@ -157,5 +179,4 @@ class _MainPageState extends State<MainPage> {
       _appLaunchDialogsShown = true;
     }
   }
-
 }

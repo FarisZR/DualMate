@@ -1,5 +1,6 @@
 package de.bennik2000.dhbwstudentapp.widget.now
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
@@ -9,6 +10,7 @@ import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 import de.bennik2000.dhbwstudentapp.AlarmManagerUtils
+import de.bennik2000.dhbwstudentapp.MainActivity
 import de.bennik2000.dhbwstudentapp.R
 import de.bennik2000.dhbwstudentapp.database.ScheduleProvider
 import de.bennik2000.dhbwstudentapp.model.ScheduleEntry
@@ -47,6 +49,17 @@ class ScheduleNowWidget : AppWidgetProvider() {
         if(WidgetHelper(context).isWidgetEnabled()) {
             views.setViewVisibility(R.id.layout_purchase, View.INVISIBLE)
             views.setViewVisibility(R.id.schedule_entries_list_view, View.VISIBLE)
+            views.setOnClickPendingIntent(
+                R.id.widget_click_overlay,
+                PendingIntent.getActivity(
+                    context,
+                    0,
+                    Intent(context, MainActivity::class.java).apply {
+                        action = "de.bennik2000.dhbwstudentapp.OPEN_SCHEDULE"
+                    },
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                )
+            )
             updateScheduleEntryList(context, views, appWidgetManager, appWidgetId)
             updateScheduleListEmptyState(views, pendingEntries.isNotEmpty())
         }
@@ -80,6 +93,27 @@ class ScheduleNowWidget : AppWidgetProvider() {
         fun requestWidgetRefresh(context: Context) {
             val intent = getWidgetUpdateIntent(context)
             context.sendBroadcast(intent)
+        }
+
+        fun requestWidgetLaunchIntent(context: Context) {
+            val ids: IntArray = AppWidgetManager
+                    .getInstance(context.applicationContext)
+                    .getAppWidgetIds(ComponentName(context, ScheduleNowWidget::class.java))
+
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                0,
+                Intent(context, MainActivity::class.java).apply {
+                    action = "de.bennik2000.dhbwstudentapp.OPEN_SCHEDULE"
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+
+            for (id in ids) {
+                val views = RemoteViews(context.packageName, R.layout.widget_schedule_now)
+                views.setOnClickPendingIntent(R.id.widget_click_overlay, pendingIntent)
+                AppWidgetManager.getInstance(context).updateAppWidget(id, views)
+            }
         }
 
         private fun getWidgetUpdateIntent(context: Context): Intent {

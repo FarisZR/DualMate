@@ -13,8 +13,13 @@ class ScheduleViewModel extends BaseViewModel {
     _scheduleSourceProvider
         .addDidChangeScheduleSourceCallback(onDidChangeScheduleSource);
     _didSetupProperly = _scheduleSourceProvider.didSetupCorrectly();
+    _scheduleInitialSetup();
+  }
 
-    _scheduleSourceProvider.setupScheduleSource();
+  void _scheduleInitialSetup() {
+    Future.delayed(const Duration(seconds: 1), () {
+      _scheduleSourceProvider.setupScheduleSource();
+    });
   }
 
   void onDidChangeScheduleSource(ScheduleSource scheduleSource, bool valid) {

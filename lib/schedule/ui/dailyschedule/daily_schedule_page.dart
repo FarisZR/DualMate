@@ -2,6 +2,7 @@ import 'package:dhbwstudentapp/common/i18n/localizations.dart';
 import 'package:dhbwstudentapp/common/ui/text_styles.dart';
 import 'package:dhbwstudentapp/schedule/ui/dailyschedule/widgets/current_time_indicator_widget.dart';
 import 'package:dhbwstudentapp/schedule/ui/dailyschedule/widgets/daily_schedule_entry_widget.dart';
+import 'package:dhbwstudentapp/schedule/ui/widgets/schedule_empty_state_placeholder.dart';
 import 'package:dhbwstudentapp/schedule/ui/viewmodels/daily_schedule_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
@@ -33,8 +34,8 @@ class _DailySchedulePageState extends State<DailySchedulePage> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
                 child: PropertyChangeConsumer<DailyScheduleViewModel, String>(
-                  builder: (BuildContext context,
-                      DailyScheduleViewModel? model, Set<String>? properties) {
+                  builder: (BuildContext context, DailyScheduleViewModel? model,
+                      Set<String>? properties) {
                     if (model == null) return const SizedBox();
                     var dateFormat = DateFormat.yMMMMEEEEd(
                         L.of(context).locale.languageCode);
@@ -69,10 +70,10 @@ class _DailySchedulePageState extends State<DailySchedulePage> {
                             ],
                           ),
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(32, 64, 32, 32),
-                            child: Opacity(
-                              child: Image.asset("assets/empty_state.png"),
-                              opacity: 0.9,
+                            padding: const EdgeInsets.fromLTRB(32, 32, 32, 32),
+                            child: ScheduleEmptyStatePlaceholder(
+                              columns: 1,
+                              rows: 6,
                             ),
                           )
                         ],
