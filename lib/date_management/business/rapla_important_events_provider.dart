@@ -46,12 +46,13 @@ class RaplaImportantEventsProvider {
       return cached ?? [];
     }
 
-    if (scheduleResult.hasError) {
+    var importantEntries = filterImportantEntries(scheduleResult.schedule);
+    var mergedEntries = mergeImportantEntries(importantEntries);
+
+    if (scheduleResult.hasError && mergedEntries.isEmpty) {
       return cached ?? [];
     }
 
-    var importantEntries = filterImportantEntries(scheduleResult.schedule);
-    var mergedEntries = mergeImportantEntries(importantEntries);
     await _writeCache(start, end, raplaUrl, mergedEntries);
     return mergedEntries;
   }

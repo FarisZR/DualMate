@@ -40,6 +40,13 @@ Diese App ist optimiert für die DHBW Stuttgart und manche Funktionen werden  an
 Fehlt Dir eine Funktion oder hast Du einen Fehler gefunden? Dann trage ein [Issue](https://github.com/Bennik2000/DHBWStudentInformationApp/issues) dazu ein!
 
 
+## Problemlösung
+
+- Rapla lädt im Browser, aber nicht in der App: Prüfe, ob die gespeicherte
+	Rapla-URL ein gültiges Schema enthält. Falls kein Schema angegeben ist,
+	verwendet die App automatisch HTTPS und überschreibt nur die Datum-Parameter.
+
+
 
 ## Screenshots
 

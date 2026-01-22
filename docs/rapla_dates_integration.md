@@ -83,5 +83,15 @@ Run on a device with USB debugging enabled:
 5. Disable network and confirm error handling.
 
 ## Issues and Debugging Notes
-- None encountered yet. Update this section if any issues appear during
-  integration testing.
+- If Rapla loads in the browser but fails in-app, verify the stored Rapla URL
+  includes a valid scheme. The app defaults to HTTPS when no scheme is
+  provided, and preserves all query parameters while overwriting only the
+  date fields.
+- Rapla hosts that require HARICA root certificates are handled via
+  `RaplaHttpOverrides`. The override is applied in both the main isolate and
+  the schedule isolate so HTTPS handshakes succeed on devices missing that
+  root.
+- If the calendar loads but the Dates page shows no Rapla events, partial
+  schedule parsing errors no longer discard all data. The Dates view now uses
+  any successfully parsed events and only falls back to cache when no
+  important events were extracted.

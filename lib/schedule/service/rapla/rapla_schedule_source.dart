@@ -68,7 +68,7 @@ class RaplaScheduleSource extends ScheduleSource {
     DateTime date,
     CancellationToken cancellationToken,
   ) async {
-    var requestUri = _buildRequestUri(date);
+    var requestUri = buildRequestUri(date);
 
     var response = await _makeRequest(requestUri, cancellationToken);
 
@@ -93,63 +93,25 @@ class RaplaScheduleSource extends ScheduleSource {
   /// - <rapla_url>?key=XXXXXXXXXX&salt=XXXXX&allocatable_id=XXXXXX
   /// - <rapla_url>?user=XXXXXXXXXX&file=XXXXX&page=XXXXXX
   ///
-  Uri _buildRequestUri(DateTime date) {
-    if (!raplaUrl.startsWith("http://") && !raplaUrl.startsWith("https://")) {
-      raplaUrl = "http://$raplaUrl";
+  Uri buildRequestUri(DateTime date) {
+    var normalizedUrl = raplaUrl;
+
+    if (!normalizedUrl.startsWith("http://") &&
+        !normalizedUrl.startsWith("https://")) {
+      normalizedUrl = "https://$normalizedUrl";
     }
 
-    var uri = Uri.parse(raplaUrl);
+    var uri = Uri.parse(normalizedUrl);
 
-    bool hasKeyParameter = uri.queryParameters.containsKey("key");
-    bool hasUserParameter = uri.queryParameters.containsKey("user");
-    bool hasFileParameter = uri.queryParameters.containsKey("file");
-    bool hasPageParameter = uri.queryParameters.containsKey("page");
-
-    bool hasAllocatableId = uri.queryParameters.containsKey("allocatable_id");
-    bool hasSalt = uri.queryParameters.containsKey("salt");
-
-    Map<String, String> parameters = {};
-
-    if (hasKeyParameter) {
-      var key = uri.queryParameters["key"];
-      if (key != null) {
-        parameters["key"] = key;
-      }
-
-      if (hasAllocatableId) {
-        var alloc = uri.queryParameters["allocatable_id"];
-        if (alloc != null) {
-          parameters["allocatable_id"] = alloc;
-        }
-      }
-      if (hasSalt) {
-        var salt = uri.queryParameters["salt"];
-        if (salt != null) parameters["salt"] = salt;
-      }
-    } else {
-      if (hasUserParameter) {
-        var user = uri.queryParameters["user"];
-        if (user != null) parameters["user"] = user;
-      }
-      if (hasFileParameter) {
-        var file = uri.queryParameters["file"];
-        if (file != null) parameters["file"] = file;
-      }
-      if (hasPageParameter) {
-        var page = uri.queryParameters["page"];
-        if (page != null) parameters["page"] = page;
-      }
-    }
+    Map<String, String> parameters = Map<String, String>.from(
+      uri.queryParameters,
+    );
 
     parameters["day"] = date.day.toString();
     parameters["month"] = date.month.toString();
     parameters["year"] = date.year.toString();
 
-    if (raplaUrl.startsWith("https")) {
-      return Uri.https(uri.authority, uri.path, parameters);
-    } else {
-      return Uri.http(uri.authority, uri.path, parameters);
-    }
+    return uri.replace(queryParameters: parameters);
   }
 
   Future<Response> _makeRequest(
@@ -165,8 +127,21 @@ class RaplaScheduleSource extends ScheduleSource {
       var response = await http.HttpClientHelper.get(uri,
           cancelToken: requestCancellationToken);
 
+      if (response == null &&
+          !requestCancellationToken.isCanceled &&
+          uri.scheme == "http") {
+        var httpsUri = uri.replace(scheme: "https");
+        response = await http.HttpClientHelper.get(httpsUri,
+            cancelToken: requestCancellationToken);
+
+        if (response == null && !requestCancellationToken.isCanceled) {
+          throw ServiceRequestFailed(
+              "Http request failed for $uri (https fallback $httpsUri)");
+        }
+      }
+
       if (response == null && !requestCancellationToken.isCanceled) {
-        throw ServiceRequestFailed("Http request failed!");
+        throw ServiceRequestFailed("Http request failed for $uri");
       }
 
       if (response == null) {

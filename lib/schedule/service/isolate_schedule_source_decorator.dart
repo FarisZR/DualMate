@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:isolate';
+import 'dart:io';
 
 import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
+import 'package:dhbwstudentapp/common/util/rapla_tls_override.dart';
 import 'package:dhbwstudentapp/schedule/model/schedule_query_result.dart';
 import 'package:dhbwstudentapp/schedule/service/schedule_source.dart';
 
@@ -83,6 +85,8 @@ class IsolateScheduleSourceDecorator extends ScheduleSource {
 }
 
 void scheduleSourceIsolateEntryPoint(SendPort sendPort) async {
+  HttpOverrides.global = RaplaHttpOverrides();
+
   // Using the given send port, send back a send port for two way communication
   var port = ReceivePort();
   sendPort.send(port.sendPort);
