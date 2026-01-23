@@ -16,4 +16,7 @@
     <color name="widget_schedule_entry_online_color">#2659A6</color>
     <color name="widget_schedule_entry_unknown_color">#676767</color>
 
+    <color name="widget_date_header_background">#2A2A2A</color>
+    <color name="widget_date_header_text_color">#B8B8B8</color>
+
 </resources>

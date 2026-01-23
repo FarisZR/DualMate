@@ -9,16 +9,22 @@ import de.bennik2000.dhbwstudentapp.database.ScheduleProvider
 import de.bennik2000.dhbwstudentapp.model.ScheduleEntry
 import org.threeten.bp.LocalDate
 import org.threeten.bp.format.DateTimeFormatter
+import java.util.Locale
 
 
-class ScheduleEntryViewsFactory(private val context: Context) : RemoteViewsService.RemoteViewsFactory {
+class ScheduleEntryViewsFactory(private val context: Context, private val numDays: Int = 1) : RemoteViewsService.RemoteViewsFactory {
 
-    private var entries: ArrayList<ScheduleEntry> = ArrayList()
-    private val formatter = DateTimeFormatter.ofPattern("HH:mm")
+    private var items: ArrayList<WidgetListItem> = ArrayList()
+    private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    private val dateFormatter = DateTimeFormatter.ofPattern("EEEE, dd.MM.yyyy", Locale.getDefault())
 
+    companion object {
+        private const val VIEW_TYPE_DATE_HEADER = 0
+        private const val VIEW_TYPE_SCHEDULE_ENTRY = 1
+    }
 
     override fun onCreate() {
-        loadScheduleForToday()
+        loadScheduleEntries()
     }
 
     override fun getLoadingView(): RemoteViews? {
@@ -26,11 +32,11 @@ class ScheduleEntryViewsFactory(private val context: Context) : RemoteViewsServi
     }
 
     override fun getItemId(position: Int): Long {
-        return entries[position].id.toLong()
+        return position.toLong()
     }
 
     override fun onDataSetChanged() {
-        loadScheduleForToday()
+        loadScheduleEntries()
     }
 
     override fun hasStableIds(): Boolean {
@@ -38,17 +44,30 @@ class ScheduleEntryViewsFactory(private val context: Context) : RemoteViewsServi
     }
 
     override fun getViewAt(position: Int): RemoteViews? {
-        if (position == AdapterView.INVALID_POSITION || position >= entries.size) {
+        if (position == AdapterView.INVALID_POSITION || position >= items.size) {
             return null
         }
 
+        val item = items[position]
+
+        return when (item) {
+            is WidgetListItem.DateHeader -> createDateHeaderView(item.date)
+            is WidgetListItem.ScheduleEntryItem -> createScheduleEntryView(item.entry)
+        }
+    }
+
+    private fun createDateHeaderView(date: LocalDate): RemoteViews {
+        val rv = RemoteViews(context.packageName, R.layout.widget_date_header)
+        rv.setTextViewText(R.id.text_view_date_header, date.format(dateFormatter))
+        return rv
+    }
+
+    private fun createScheduleEntryView(entry: ScheduleEntry): RemoteViews {
         val rv = RemoteViews(context.packageName, R.layout.widget_schedule_entry_list_item)
 
-        val entry = entries[position]
-
         rv.setTextViewText(R.id.text_view_entry_title, entry.title)
-        rv.setTextViewText(R.id.text_view_time_start, entry.start.format(formatter))
-        rv.setTextViewText(R.id.text_view_time_end, entry.end.format(formatter))
+        rv.setTextViewText(R.id.text_view_time_start, entry.start.format(timeFormatter))
+        rv.setTextViewText(R.id.text_view_time_end, entry.end.format(timeFormatter))
         rv.setTextViewText(R.id.text_view_entry_professor, entry.professor)
         rv.setTextViewText(R.id.text_view_entry_room, entry.room)
 
@@ -68,17 +87,41 @@ class ScheduleEntryViewsFactory(private val context: Context) : RemoteViewsServi
     }
 
     override fun getCount(): Int {
-        return entries.size
+        return items.size
     }
 
     override fun getViewTypeCount(): Int {
-        return 1
+        return 2  // Date header and schedule entry
     }
 
     override fun onDestroy() {
     }
 
-    private fun loadScheduleForToday() {
-        entries = ScheduleProvider(context).queryScheduleEntriesForDay(LocalDate.now())
+    private fun loadScheduleEntries() {
+        items.clear()
+        val provider = ScheduleProvider(context)
+        
+        // Load entries for multiple days
+        val startDate = LocalDate.now()
+        val entries = provider.queryScheduleEntriesForDays(startDate, numDays)
+        
+        // Group entries by date
+        val entriesByDate = entries.groupBy { it.start.toLocalDate() }
+        
+        // Build items list with date headers
+        for (dayOffset in 0 until numDays) {
+            val date = startDate.plusDays(dayOffset.toLong())
+            val dayEntries = entriesByDate[date] ?: emptyList()
+            
+            // Only add date header if we have multiple days
+            if (numDays > 1) {
+                items.add(WidgetListItem.DateHeader(date))
+            }
+            
+            // Add entries for this day
+            for (entry in dayEntries) {
+                items.add(WidgetListItem.ScheduleEntryItem(entry))
+            }
+        }
     }
 }

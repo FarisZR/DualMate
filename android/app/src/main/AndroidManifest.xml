@@ -55,6 +55,22 @@
             android:name=".widget.canteen.CanteenRemoteViewsService"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
 
+        <receiver
+            android:name=".widget.today.ScheduleTodayWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/schedule_today_widget_info" />
+        </receiver>
+
+        <service
+            android:name=".widget.today.TodayScheduleEntryRemoteViewsService"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"

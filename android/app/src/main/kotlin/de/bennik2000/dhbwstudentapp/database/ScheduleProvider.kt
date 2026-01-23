@@ -58,6 +58,24 @@ class ScheduleProvider(private val context: Context) {
         return ArrayList()
     }
 
+    fun queryScheduleEntriesForDays(startDate: LocalDate, numDays: Int): ArrayList<ScheduleEntry> {
+        try {
+            openDatabase()?.use { database ->
+                val startMillis = startDate.atStartOfDay().toEpochSecond(zoneOffset) * 1000
+                val endMillis = startDate.plusDays(numDays.toLong()).atStartOfDay().toEpochSecond(zoneOffset) * 1000
+
+                database.rawQuery(
+                        SCHEDULE_ENTRIES_BETWEEN_SQL,
+                        arrayOf(startMillis.toString(), endMillis.toString())).use { result ->
+                    return readScheduleEntries(result)
+                }
+            }
+        }
+        catch(ex: Exception) {
+        }
+        return ArrayList()
+    }
+
     fun queryPendingForDay(now: LocalDateTime): List<ScheduleEntry> {
         val midnight = LocalDate
                 .now()

@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
@@ -14,6 +15,7 @@ import de.bennik2000.dhbwstudentapp.R
 import de.bennik2000.dhbwstudentapp.database.ScheduleProvider
 import de.bennik2000.dhbwstudentapp.widget.WidgetHelper
 import org.threeten.bp.LocalDate
+import kotlin.math.max
 
 class ScheduleTodayWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
@@ -21,6 +23,16 @@ class ScheduleTodayWidget : AppWidgetProvider() {
         for (appWidgetId in appWidgetIds) {
             updateAppWidget(context, appWidgetManager, appWidgetId)
         }
+    }
+
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle?
+    ) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
+        updateAppWidget(context, appWidgetManager, appWidgetId)
     }
 
     override fun onEnabled(context: Context) {
@@ -50,9 +62,13 @@ class ScheduleTodayWidget : AppWidgetProvider() {
             views.setViewVisibility(R.id.layout_purchase, View.INVISIBLE)
             views.setViewVisibility(R.id.schedule_entries_list_view, View.VISIBLE)
 
-            val hasEntries = ScheduleProvider(context).hasScheduleEntriesForDay(LocalDate.now())
+            // Calculate number of days based on widget height
+            val numDays = calculateNumDaysFromHeight(appWidgetManager, appWidgetId)
+            Log.d("ScheduleTodayWidget", "Showing $numDays days")
 
-            updateScheduleEntryList(context, views, appWidgetManager, appWidgetId)
+            val hasEntries = hasScheduleEntriesForDays(context, numDays)
+
+            updateScheduleEntryList(context, views, appWidgetManager, appWidgetId, numDays)
             updateScheduleListEmptyState(views, hasEntries)
         }
         else {
@@ -65,8 +81,49 @@ class ScheduleTodayWidget : AppWidgetProvider() {
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 
-    private fun updateScheduleEntryList(context: Context, views: RemoteViews, appWidgetManager: AppWidgetManager, id: Int) {
+    private fun calculateNumDaysFromHeight(appWidgetManager: AppWidgetManager, appWidgetId: Int): Int {
+        val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
+        val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
+        
+        // Calculate number of days based on height
+        // Each day roughly needs 120dp (title bar 48dp + minimum space for entries ~70dp + date header if multiple days)
+        // Single day: 40-200dp -> 1 day
+        // Two days: 200-320dp -> 2 days  
+        // Three days: 320-440dp -> 3 days
+        // More: 440+ -> up to 7 days
+        return when {
+            minHeight < 200 -> 1
+            minHeight < 320 -> 2
+            minHeight < 440 -> 3
+            minHeight < 560 -> 4
+            minHeight < 680 -> 5
+            minHeight < 800 -> 6
+            else -> 7  // Maximum 7 days (one week)
+        }.also { 
+            Log.d("ScheduleTodayWidget", "Widget height: ${minHeight}dp, showing $it days")
+        }
+    }
+
+    private fun hasScheduleEntriesForDays(context: Context, numDays: Int): Boolean {
+        val provider = ScheduleProvider(context)
+        for (i in 0 until numDays) {
+            if (provider.hasScheduleEntriesForDay(LocalDate.now().plusDays(i.toLong()))) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun updateScheduleEntryList(
+        context: Context, 
+        views: RemoteViews, 
+        appWidgetManager: AppWidgetManager, 
+        id: Int,
+        numDays: Int
+    ) {
         val intent = Intent(context, TodayScheduleEntryRemoteViewsService::class.java)
+        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+        intent.putExtra("numDays", numDays)
         views.setRemoteAdapter(R.id.schedule_entries_list_view, intent)
 
         appWidgetManager.notifyAppWidgetViewDataChanged(id, R.id.schedule_entries_list_view)

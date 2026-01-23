@@ -15,4 +15,7 @@
     <color name="widget_schedule_entry_holiday_color">#B5B5B5</color>
     <color name="widget_schedule_entry_online_color">#ffAFC7EA</color>
     <color name="widget_schedule_entry_unknown_color">#B5B5B5</color>
+
+    <color name="widget_date_header_background">#F5F5F5</color>
+    <color name="widget_date_header_text_color">#5C5C5C</color>
 </resources>
