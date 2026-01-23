@@ -69,12 +69,6 @@ Route<dynamic> generateRoute(RouteSettings settings) {
     case "main":
       target = const MainPage();
       break;
-    case "schedule":
-      target = const MainPage(initialRoute: "schedule");
-      break;
-    case "canteen":
-      target = const MainPage(initialRoute: "canteen");
-      break;
     case "settings":
       target = SettingsPage();
       break;

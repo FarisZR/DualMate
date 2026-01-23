@@ -6,6 +6,7 @@ import 'package:dhbwstudentapp/common/appstart/app_initializer.dart';
 import 'package:dhbwstudentapp/common/util/launch_intent.dart';
 import 'package:dhbwstudentapp/main.dart';
 import 'package:kiwi/kiwi.dart';
+import 'package:flutter/services.dart';
 import 'package:dhbwstudentapp/ui/navigation/navigator_key.dart';
 import 'package:dhbwstudentapp/ui/navigation/router.dart';
 import 'package:flutter/cupertino.dart';
@@ -27,11 +28,37 @@ class RootPage extends StatefulWidget {
 class _RootPageState extends State<RootPage> {
   RootViewModel? _rootViewModel;
   bool _isInitializing = true;
+  static const MethodChannel _navigationChannel =
+      MethodChannel('de.bennik2000.dhbwstudentapp/navigation');
+  String? _pendingRoute;
 
   @override
   void initState() {
     super.initState();
+    _navigationChannel.setMethodCallHandler(_handleNavigationCall);
+    _fetchLaunchRoute();
     _initializeApp();
+  }
+
+  Future<void> _fetchLaunchRoute() async {
+    try {
+      final route = await _navigationChannel.invokeMethod<String>(
+        'getLaunchRoute',
+      );
+      if (route != null && route.isNotEmpty) {
+        _pendingRoute = route;
+        _applyPendingRoute();
+        await _navigationChannel.invokeMethod('clearLaunchRoute');
+      }
+    } on PlatformException {}
+  }
+
+  Future<void> _handleNavigationCall(MethodCall call) async {
+    if (call.method != 'openRoute') return;
+    final route = call.arguments as String?;
+    if (route == null || route.isEmpty) return;
+    _pendingRoute = route;
+    _applyPendingRoute();
   }
 
   Future<void> _initializeApp() async {
@@ -49,12 +76,30 @@ class _RootPageState extends State<RootPage> {
 
     WidgetsBinding.instance.allowFirstFrame();
 
+    _applyPendingRoute();
+
     print("Root init: allow first frame ${stopwatch.elapsedMilliseconds}ms");
 
     if (!mounted) return;
     setState(() {
       _isInitializing = false;
     });
+  }
+
+  void _applyPendingRoute() {
+    if (_pendingRoute == null) return;
+    final navigator = NavigatorKey.mainKey.currentState;
+    if (navigator == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _applyPendingRoute();
+      });
+      return;
+    }
+
+    navigator.pushNamedAndRemoveUntil(_pendingRoute!, (route) {
+      return route.settings.name == "schedule";
+    });
+    _pendingRoute = null;
   }
 
   @override
@@ -103,11 +148,11 @@ class _RootPageState extends State<RootPage> {
     var defaultRoute = "main";
     if (WidgetsBinding.instance.platformDispatcher.defaultRouteName ==
         LaunchIntent.canteen) {
-      return "canteen";
+      return "main";
     }
     if (WidgetsBinding.instance.platformDispatcher.defaultRouteName ==
         LaunchIntent.schedule) {
-      return "schedule";
+      return "main";
     }
     return defaultRoute;
   }

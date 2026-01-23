@@ -26,6 +26,7 @@ class _MainPageState extends State<MainPage> {
   bool _appLaunchDialogsShown = false;
 
   String? _initialRoute;
+  bool _didApplyInitialRoute = false;
 
   final ValueNotifier<int> _currentEntryIndex = ValueNotifier<int>(0);
 
@@ -37,6 +38,7 @@ class _MainPageState extends State<MainPage> {
     super.initState();
 
     _initialRoute = widget.initialRoute;
+
     _syncCurrentEntryIndex();
   }
 
@@ -49,7 +51,7 @@ class _MainPageState extends State<MainPage> {
     var navigator = Navigator(
       key: NavigatorKey.mainKey,
       onGenerateRoute: generateDrawerRoute,
-      initialRoute: _initialRoute ?? "schedule",
+      initialRoute: "schedule",
     );
 
     return ChangeNotifierProvider.value(
@@ -162,7 +164,7 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _syncCurrentEntryIndex() {
-    if (_initialRoute == null) return;
+    if (_initialRoute == null || _didApplyInitialRoute) return;
 
     var index = navigationEntries.indexWhere(
       (entry) => entry.route == _initialRoute,
@@ -170,6 +172,15 @@ class _MainPageState extends State<MainPage> {
     if (index >= 0 && _currentEntryIndex.value != index) {
       _currentEntryIndex.value = index;
     }
+
+    _didApplyInitialRoute = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_initialRoute == null) return;
+      NavigatorKey.mainKey.currentState?.pushNamedAndRemoveUntil(_initialRoute!,
+          (route) {
+        return route.settings.name == navigationEntries[0].route;
+      });
+    });
   }
 
   void _showAppLaunchDialogsIfNeeded(BuildContext context) {
