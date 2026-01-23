@@ -21,6 +21,7 @@ class ScheduleEntryViewsFactory(private val context: Context, private val numDay
     companion object {
         private const val VIEW_TYPE_DATE_HEADER = 0
         private const val VIEW_TYPE_SCHEDULE_ENTRY = 1
+        private const val ENTRY_ID_OFFSET = 10000000L  // Offset to prevent ID collision between headers and entries
     }
 
     override fun onCreate() {
@@ -41,7 +42,7 @@ class ScheduleEntryViewsFactory(private val context: Context, private val numDay
             is WidgetListItem.ScheduleEntryItem -> {
                 // Use entry ID plus an offset to avoid collision with date headers
                 // Date headers use epoch days (small numbers), entries use large IDs
-                10000000L + item.entry.id.toLong()
+                ENTRY_ID_OFFSET + item.entry.id.toLong()
             }
         }
     }

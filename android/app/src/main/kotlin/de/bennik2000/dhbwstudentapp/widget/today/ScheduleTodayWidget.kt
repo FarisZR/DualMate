@@ -18,6 +18,7 @@ import org.threeten.bp.LocalDate
 import kotlin.math.max
 
 class ScheduleTodayWidget : AppWidgetProvider() {
+    
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         // There may be multiple widgets active, so update all of them
         for (appWidgetId in appWidgetIds) {
@@ -87,17 +88,13 @@ class ScheduleTodayWidget : AppWidgetProvider() {
         
         // Calculate number of days based on height
         // Each day roughly needs 120dp (title bar 48dp + minimum space for entries ~70dp + date header if multiple days)
-        // Single day: 40-200dp -> 1 day
-        // Two days: 200-320dp -> 2 days  
-        // Three days: 320-440dp -> 3 days
-        // More: 440+ -> up to 7 days
         return when {
-            minHeight < 200 -> 1
-            minHeight < 320 -> 2
-            minHeight < 440 -> 3
-            minHeight < 560 -> 4
-            minHeight < 680 -> 5
-            minHeight < 800 -> 6
+            minHeight < HEIGHT_THRESHOLD_2_DAYS -> 1
+            minHeight < HEIGHT_THRESHOLD_3_DAYS -> 2
+            minHeight < HEIGHT_THRESHOLD_4_DAYS -> 3
+            minHeight < HEIGHT_THRESHOLD_5_DAYS -> 4
+            minHeight < HEIGHT_THRESHOLD_6_DAYS -> 5
+            minHeight < HEIGHT_THRESHOLD_7_DAYS -> 6
             else -> 7  // Maximum 7 days (one week)
         }.also { 
             Log.d("ScheduleTodayWidget", "Widget height: ${minHeight}dp, showing $it days")
@@ -141,6 +138,14 @@ class ScheduleTodayWidget : AppWidgetProvider() {
 
 
     companion object {
+        // Height thresholds in dp for determining number of days to display
+        private const val HEIGHT_THRESHOLD_2_DAYS = 200
+        private const val HEIGHT_THRESHOLD_3_DAYS = 320
+        private const val HEIGHT_THRESHOLD_4_DAYS = 440
+        private const val HEIGHT_THRESHOLD_5_DAYS = 560
+        private const val HEIGHT_THRESHOLD_6_DAYS = 680
+        private const val HEIGHT_THRESHOLD_7_DAYS = 800
+        
         fun requestWidgetRefresh(context: Context) {
             val intent = Intent(context, ScheduleTodayWidget::class.java)
 
