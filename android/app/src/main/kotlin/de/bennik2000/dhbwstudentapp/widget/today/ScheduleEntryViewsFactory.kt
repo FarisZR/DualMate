@@ -32,7 +32,18 @@ class ScheduleEntryViewsFactory(private val context: Context, private val numDay
     }
 
     override fun getItemId(position: Int): Long {
-        return position.toLong()
+        val item = items.getOrNull(position) ?: return position.toLong()
+        return when (item) {
+            is WidgetListItem.DateHeader -> {
+                // Use date's epoch day as a unique ID for date headers
+                item.date.toEpochDay()
+            }
+            is WidgetListItem.ScheduleEntryItem -> {
+                // Use entry ID plus an offset to avoid collision with date headers
+                // Date headers use epoch days (small numbers), entries use large IDs
+                10000000L + item.entry.id.toLong()
+            }
+        }
     }
 
     override fun onDataSetChanged() {
