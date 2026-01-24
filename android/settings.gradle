@@ -1,4 +1,18 @@
 pluginManagement {
+    // Ensure Gradle prefers JAVA_HOME (e.g., Java installed from dnf) if it's set and valid.
+    // Keep this inside pluginManagement so the settings script obeys Gradle's ordering rules.
+    def javaHomeEnv = System.getenv("JAVA_HOME")
+    if (javaHomeEnv) {
+        def javaHomeFile = file(javaHomeEnv)
+        if (javaHomeFile.exists()) {
+            gradle.startParameter.javaHome = javaHomeFile
+        } else {
+            println "WARNING: JAVA_HOME is set to ${javaHomeEnv} but path does not exist. Gradle will fallback to system defaults."
+        }
+    } else {
+        // No JAVA_HOME: Gradle will use the system-installed Java (e.g., provided by dnf) or the java on PATH.
+    }
+
     def flutterSdkPath = {
         def properties = new Properties()
         file("local.properties").withInputStream { properties.load(it) }
