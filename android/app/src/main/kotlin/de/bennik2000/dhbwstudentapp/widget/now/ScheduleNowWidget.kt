@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
@@ -27,7 +28,7 @@ class ScheduleNowWidget : AppWidgetProvider() {
 
         // There may be multiple widgets active, so update all of them
         for (appWidgetId in appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId, entriesForDay)
+            updateAppWidget(context, appWidgetManager, appWidgetId)
         }
 
         scheduleWidgetUpdate(context, entriesForDay)
@@ -41,12 +42,13 @@ class ScheduleNowWidget : AppWidgetProvider() {
         cancelWidgetUpdate(context)
     }
 
-    private fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, pendingEntries: List<ScheduleEntry>) {
+    private fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
         Log.d("ScheduleNowWidget", "Updating widget with id $appWidgetId")
 
         val views = RemoteViews(context.packageName, R.layout.widget_schedule_now)
 
-        if(WidgetHelper(context).isWidgetEnabled()) {
+
+        if (WidgetHelper(context).isWidgetEnabled()) {
             views.setViewVisibility(R.id.layout_purchase, View.INVISIBLE)
             views.setViewVisibility(R.id.schedule_entries_list_view, View.VISIBLE)
             views.setOnClickPendingIntent(
@@ -61,9 +63,8 @@ class ScheduleNowWidget : AppWidgetProvider() {
                 )
             )
             updateScheduleEntryList(context, views, appWidgetManager, appWidgetId)
-            updateScheduleListEmptyState(views, pendingEntries.isNotEmpty())
-        }
-        else {
+            views.setViewVisibility(R.id.layout_empty_state, View.INVISIBLE)
+        } else {
             views.setViewVisibility(R.id.layout_empty_state, View.INVISIBLE)
             views.setViewVisibility(R.id.schedule_entries_list_view, View.INVISIBLE)
             views.setViewVisibility(R.id.layout_purchase, View.VISIBLE)
@@ -73,21 +74,15 @@ class ScheduleNowWidget : AppWidgetProvider() {
     }
 
     private fun updateScheduleEntryList(context: Context, views: RemoteViews, appWidgetManager: AppWidgetManager, id: Int) {
-        val intent = Intent(context, NowScheduleEntryRemoteViewsService::class.java)
+        val intent = Intent(context, NowScheduleEntryRemoteViewsService::class.java).apply {
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+            data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
+        }
         views.setRemoteAdapter(R.id.schedule_entries_list_view, intent)
 
         appWidgetManager.notifyAppWidgetViewDataChanged(id, R.id.schedule_entries_list_view)
     }
 
-    private fun updateScheduleListEmptyState(views: RemoteViews, hasEntries: Boolean) {
-        var visibility = View.VISIBLE
-
-        if (hasEntries) {
-            visibility = View.INVISIBLE
-        }
-
-        views.setViewVisibility(R.id.layout_empty_state, visibility)
-    }
 
     companion object {
         fun requestWidgetRefresh(context: Context) {

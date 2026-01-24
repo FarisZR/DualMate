@@ -51,7 +51,31 @@ class CanteenProvider {
 
     await _notifyCallbacks(normalizedMenus, weekStart, weekEnd);
 
+    await _prefetchNextWeek(weekStart, cancellationToken);
+
     return normalizedMenus;
+  }
+
+  Future<void> _prefetchNextWeek(
+    DateTime weekStart,
+    CancellationToken? cancellationToken,
+  ) async {
+    var nextWeekStart = toStartOfDay(weekStart.add(const Duration(days: 7)));
+    var nextWeekEnd = nextWeekStart.add(const Duration(days: 5));
+
+    try {
+      var nextMenus = await _scraper.loadWeek(nextWeekStart, cancellationToken);
+      var normalizedNextMenus = _normalizeMenus(nextWeekStart, nextMenus);
+
+      await _repository.deleteMealsBetween(nextWeekStart, nextWeekEnd);
+      await _repository.saveMeals(
+        normalizedNextMenus.expand((menu) => menu.meals).toList(),
+      );
+
+      await _notifyCallbacks(normalizedNextMenus, nextWeekStart, nextWeekEnd);
+    } catch (_) {
+      // Prefetch failures should not affect the current week.
+    }
   }
 
   Future<void> _notifyCallbacks(

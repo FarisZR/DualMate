@@ -27,6 +27,23 @@ subprojects {
 subprojects {
     project.evaluationDependsOn(':app')
 
+    configurations.configureEach {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == "org.robolectric" && details.requested.name == "robolectric") {
+                details.useVersion("4.12.2")
+            }
+            if (details.requested.group == "org.ow2.asm") {
+                details.useVersion("9.6")
+            }
+            if (details.requested.group == "net.bytebuddy" && details.requested.name == "byte-buddy") {
+                details.useVersion("1.15.11")
+            }
+            if (details.requested.group == "net.bytebuddy" && details.requested.name == "byte-buddy-agent") {
+                details.useVersion("1.15.11")
+            }
+        }
+    }
+
     plugins.withId('com.android.library') {
         if (android.namespace == null) {
             def manifestFile = file('src/main/AndroidManifest.xml')

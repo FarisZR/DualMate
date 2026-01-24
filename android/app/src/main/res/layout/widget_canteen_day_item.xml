@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingVertical="4dp"
+    android:layout_marginBottom="4dp">
+
+    <ImageView
+        android:id="@+id/view_meal_accent"
+        android:layout_width="4dp"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="10dp"
+        android:background="@drawable/widget_schedule_item_accent_future" />
+
+    <TextView
+        android:id="@+id/text_view_meal_emoji"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="15sp" />
+
+    <TextView
+        android:id="@+id/text_view_meal_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="6dp"
+        android:textSize="15sp"
+        android:textColor="@color/widget_canteen_item_text_color"
+        android:ellipsize="end"
+        android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/text_view_meal_price"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="13sp"
+        android:textColor="@color/widget_canteen_item_text_secondary" />
+</LinearLayout>

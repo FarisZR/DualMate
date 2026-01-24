@@ -103,11 +103,10 @@ class ScheduleProvider(private val context: Context) {
                 return SQLiteDatabase
                         .openDatabase(path,
                                 null,
-                                0)
+                                SQLiteDatabase.OPEN_READONLY)
             } catch (e: Exception) {
             }
         }
-
         return null
     }
 

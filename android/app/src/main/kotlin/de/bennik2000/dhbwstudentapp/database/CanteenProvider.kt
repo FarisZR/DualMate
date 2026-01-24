@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase
 import de.bennik2000.dhbwstudentapp.model.CanteenEntry
 import io.flutter.util.PathUtils
 import org.threeten.bp.LocalDate
+import org.threeten.bp.LocalDateTime
 import org.threeten.bp.OffsetDateTime
 import java.io.File
 
@@ -23,6 +24,13 @@ class CanteenProvider(private val context: Context) {
     fun queryMealsForDay(date: LocalDate): ArrayList<CanteenEntry> {
         val startMillis = date.atStartOfDay().toEpochSecond(zoneOffset) * 1000
         val endMillis = date.plusDays(1).atStartOfDay().toEpochSecond(zoneOffset) * 1000
+
+        return queryMealsBetween(startMillis, endMillis)
+    }
+
+    fun queryMealsForWeek(startDate: LocalDate, endDate: LocalDate): ArrayList<CanteenEntry> {
+        val startMillis = startDate.atStartOfDay().toEpochSecond(zoneOffset) * 1000
+        val endMillis = endDate.plusDays(1).atStartOfDay().toEpochSecond(zoneOffset) * 1000
 
         return queryMealsBetween(startMillis, endMillis)
     }
@@ -74,7 +82,7 @@ class CanteenProvider(private val context: Context) {
 
             try {
                 return SQLiteDatabase
-                    .openDatabase(path, null, 0)
+                    .openDatabase(path, null, SQLiteDatabase.OPEN_READONLY)
             } catch (e: Exception) {
             }
         }
@@ -93,6 +101,8 @@ class CanteenProvider(private val context: Context) {
     }
 
     private fun readMeal(result: Cursor): CanteenEntry {
+        val dateMillis = result.getLong(result.getColumnIndex("date"))
+        val date = LocalDateTime.ofEpochSecond(dateMillis / 1000, 0, zoneOffset).toLocalDate()
         val types = result.getString(result.getColumnIndex("meal_types"))
         val mealTypes = types
             ?.split(",")
@@ -102,6 +112,7 @@ class CanteenProvider(private val context: Context) {
 
         return CanteenEntry(
             result.getInt(result.getColumnIndex("id")),
+            date,
             result.getString(result.getColumnIndex("name")),
             result.getString(result.getColumnIndex("category")),
             result.getDouble(result.getColumnIndex("price")),

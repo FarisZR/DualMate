@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dhbwstudentapp/canteen/background/background_canteen_update.dart';
 import 'package:dhbwstudentapp/common/background/background_work_scheduler.dart';
 import 'package:dhbwstudentapp/common/background/void_background_work_scheduler.dart';
 import 'package:dhbwstudentapp/common/background/work_scheduler_service.dart';
@@ -23,6 +24,10 @@ class BackgroundInitialize {
     KiwiContainer().registerInstance<WorkSchedulerService>(scheduler);
 
     var tasks = [
+      BackgroundCanteenUpdate(
+        KiwiContainer().resolve(),
+        KiwiContainer().resolve(),
+      ),
       BackgroundScheduleUpdate(
         KiwiContainer().resolve(),
         KiwiContainer().resolve(),

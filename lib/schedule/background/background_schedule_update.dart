@@ -4,6 +4,7 @@ import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
 import 'package:dhbwstudentapp/common/util/date_utils.dart';
 import 'package:dhbwstudentapp/schedule/business/schedule_provider.dart';
 import 'package:dhbwstudentapp/schedule/business/schedule_source_provider.dart';
+import 'package:dhbwstudentapp/schedule/service/schedule_source.dart';
 
 class BackgroundScheduleUpdate extends TaskCallback {
   final ScheduleProvider scheduleProvider;
@@ -27,11 +28,18 @@ class BackgroundScheduleUpdate extends TaskCallback {
 
     var cancellationToken = CancellationToken();
 
-    await scheduleProvider.getUpdatedSchedule(
-      today,
-      end,
-      cancellationToken,
-    );
+    try {
+      await scheduleProvider.getUpdatedSchedule(
+        today,
+        end,
+        cancellationToken,
+      );
+    } on ScheduleQueryFailedException catch (e, trace) {
+      print("Background schedule update failed");
+      print(e.innerException.toString());
+      print(trace);
+      return;
+    }
 
     print("Finished updating schedule");
   }

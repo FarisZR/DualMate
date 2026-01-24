@@ -6,14 +6,13 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 import de.bennik2000.dhbwstudentapp.MainActivity
 import de.bennik2000.dhbwstudentapp.R
-import de.bennik2000.dhbwstudentapp.database.ScheduleProvider
 import de.bennik2000.dhbwstudentapp.widget.WidgetHelper
-import org.threeten.bp.LocalDate
 
 class ScheduleTodayWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
@@ -46,16 +45,12 @@ class ScheduleTodayWidget : AppWidgetProvider() {
         )
         views.setOnClickPendingIntent(R.id.widget_click_overlay, pendingIntent)
 
-        if(WidgetHelper(context).isWidgetEnabled()) {
+        if (WidgetHelper(context).isWidgetEnabled()) {
             views.setViewVisibility(R.id.layout_purchase, View.INVISIBLE)
             views.setViewVisibility(R.id.schedule_entries_list_view, View.VISIBLE)
-
-            val hasEntries = ScheduleProvider(context).hasScheduleEntriesForDay(LocalDate.now())
-
             updateScheduleEntryList(context, views, appWidgetManager, appWidgetId)
-            updateScheduleListEmptyState(views, hasEntries)
-        }
-        else {
+            views.setViewVisibility(R.id.layout_empty_state, View.INVISIBLE)
+        } else {
             views.setViewVisibility(R.id.layout_empty_state, View.INVISIBLE)
             views.setViewVisibility(R.id.schedule_entries_list_view, View.INVISIBLE)
             views.setViewVisibility(R.id.layout_purchase, View.VISIBLE)
@@ -66,20 +61,13 @@ class ScheduleTodayWidget : AppWidgetProvider() {
     }
 
     private fun updateScheduleEntryList(context: Context, views: RemoteViews, appWidgetManager: AppWidgetManager, id: Int) {
-        val intent = Intent(context, TodayScheduleEntryRemoteViewsService::class.java)
+        val intent = Intent(context, TodayScheduleEntryRemoteViewsService::class.java).apply {
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+            data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
+        }
         views.setRemoteAdapter(R.id.schedule_entries_list_view, intent)
 
         appWidgetManager.notifyAppWidgetViewDataChanged(id, R.id.schedule_entries_list_view)
-    }
-
-    private fun updateScheduleListEmptyState(views: RemoteViews, hasEntries: Boolean) {
-        var visibility = View.VISIBLE
-
-        if (hasEntries) {
-            visibility = View.INVISIBLE
-        }
-
-        views.setViewVisibility(R.id.layout_empty_state, visibility)
     }
 
 

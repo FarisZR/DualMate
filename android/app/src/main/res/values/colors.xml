@@ -2,13 +2,28 @@
 <resources>
     <color name="splash_color">#FFFFFF</color>
 
-    <color name="widget_title_background">#FFC91A1A</color>
-    <color name="widget_title_text_color">#FFFFFF</color>
-    <color name="widget_background">#FFFFFF</color>
+    <color name="widget_title_background">#2B2A33</color>
+    <color name="widget_title_text_color">#F5EFF7</color>
+    <color name="widget_background">#1C1B1F</color>
 
-    <color name="widget_schedule_entry_time_text_color">#8C8C8C</color>
-    <color name="widget_schedule_entry_text_color">#FFFFFF</color>
-    <color name="widget_schedule_empty_state_text_color">#C8C8C8</color>
+    <color name="widget_schedule_entry_time_text_color">#CAC4D0</color>
+    <color name="widget_schedule_entry_text_color">#F5EFF7</color>
+    <color name="widget_schedule_empty_state_text_color">#9A95A5</color>
+
+    <color name="widget_day_label_text_color">#CAC4D0</color>
+    <color name="widget_day_divider_color">#3D3B44</color>
+    <color name="widget_day_message_text_color">#9A95A5</color>
+
+    <color name="widget_schedule_item_past_background">#2B2A33</color>
+    <color name="widget_schedule_item_current_background">#353441</color>
+    <color name="widget_schedule_item_text_past">#B0A8B8</color>
+    <color name="widget_schedule_item_text_current">#F5EFF7</color>
+    <color name="widget_schedule_item_accent_future">#E85C5C</color>
+    <color name="widget_schedule_item_accent_current">#F27D7D</color>
+    <color name="widget_schedule_item_accent_past">#B94A4A</color>
+
+    <color name="widget_canteen_item_text_color">#F5EFF7</color>
+    <color name="widget_canteen_item_text_secondary">#B0A8B8</color>
 
     <color name="widget_schedule_entry_class_color">#FFC91A1A</color>
     <color name="widget_schedule_entry_exam_color">#fffdb531</color>

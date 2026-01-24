@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/day_message_text"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="10dp"
+    android:paddingVertical="4dp"
+    android:textSize="14sp"
+    android:textColor="@color/widget_day_message_text_color"
+    android:ellipsize="end"
+    android:maxLines="1" />

@@ -1,86 +1,111 @@
 package de.bennik2000.dhbwstudentapp.widget.now
 
 import android.content.Context
-import android.widget.AdapterView
 import android.widget.RemoteViews
-import android.widget.RemoteViewsService
+import androidx.core.content.ContextCompat
 import de.bennik2000.dhbwstudentapp.R
 import de.bennik2000.dhbwstudentapp.database.ScheduleProvider
 import de.bennik2000.dhbwstudentapp.model.ScheduleEntry
+import de.bennik2000.dhbwstudentapp.widget.MultiDayViewsFactory
+import de.bennik2000.dhbwstudentapp.widget.MultiDayWidgetHelper
+import de.bennik2000.dhbwstudentapp.widget.WidgetItemState
 import org.threeten.bp.LocalDate
 import org.threeten.bp.LocalDateTime
-import org.threeten.bp.OffsetDateTime
 import org.threeten.bp.format.DateTimeFormatter
+import java.util.Locale
 
+class NowScheduleEntryViewsFactory(
+    context: Context,
+    appWidgetId: Int
+) : MultiDayViewsFactory<ScheduleEntry>(context, appWidgetId, ROW_METRICS) {
 
-class NowScheduleEntryViewsFactory(private val context: Context) : RemoteViewsService.RemoteViewsFactory {
+    private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+    private val dayFormatter = DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
+    private val dateFormatter = DateTimeFormatter.ofPattern("d", Locale.getDefault())
 
-    private var entries: ArrayList<ScheduleEntry> = ArrayList()
-    private val formatter = DateTimeFormatter.ofPattern("HH:mm")
-
-
-    override fun onCreate() {
-        loadScheduleForToday()
+    override fun getRowLayoutId(): Int {
+        return R.layout.widget_day_row
     }
 
-    override fun getLoadingView(): RemoteViews? {
-        return null
+    override fun getRowItemsContainerId(): Int {
+        return R.id.day_items_container
     }
 
-    override fun getItemId(position: Int): Long {
-        return entries[position].id.toLong()
+    override fun bindDayHeader(views: RemoteViews, date: LocalDate, isToday: Boolean) {
+        views.setTextViewText(R.id.day_label, dayFormatter.format(date))
+        views.setTextViewText(R.id.date_label, dateFormatter.format(date))
     }
 
-    override fun onDataSetChanged() {
-        loadScheduleForToday()
-    }
+    override fun buildItemView(item: ScheduleEntry, state: WidgetItemState): RemoteViews {
+        val views = RemoteViews(context.packageName, R.layout.widget_schedule_day_item)
+        views.setTextViewText(R.id.text_view_item_title, item.title)
 
-    override fun hasStableIds(): Boolean {
-        return true
-    }
+        val timeRange = "${item.start.format(timeFormatter)} - ${item.end.format(timeFormatter)}"
+        val subtitle = if (item.room.isBlank()) timeRange else "$timeRange • ${item.room}"
+        views.setTextViewText(R.id.text_view_item_subtitle, subtitle)
 
-    override fun getViewAt(position: Int): RemoteViews? {
-        if (position == AdapterView.INVALID_POSITION || position >= entries.size) {
-            return null
+        val textColor = when (state) {
+            WidgetItemState.PAST -> ContextCompat.getColor(context, R.color.widget_schedule_item_text_past)
+            WidgetItemState.CURRENT -> ContextCompat.getColor(context, R.color.widget_schedule_item_text_current)
+            WidgetItemState.FUTURE -> ContextCompat.getColor(context, R.color.widget_schedule_entry_text_color)
         }
 
-        val rv = RemoteViews(context.packageName, R.layout.widget_schedule_entry_list_item1)
+        val accent = when (state) {
+            WidgetItemState.PAST -> R.drawable.widget_schedule_item_accent_past
+            WidgetItemState.CURRENT -> R.drawable.widget_schedule_item_accent_current
+            WidgetItemState.FUTURE -> R.drawable.widget_schedule_item_accent_future
+        }
+        val background = when (state) {
+            WidgetItemState.CURRENT -> R.drawable.widget_schedule_item_current_background
+            else -> R.drawable.widget_schedule_item_past_background
+        }
 
-        val entry = entries[position]
+        views.setInt(R.id.layout_schedule_item, "setBackgroundResource", background)
+        views.setInt(R.id.view_item_accent, "setBackgroundResource", accent)
+        views.setTextColor(R.id.text_view_item_title, textColor)
+        views.setTextColor(R.id.text_view_item_subtitle, textColor)
 
-        rv.setTextViewText(R.id.text_view_entry_title, entry.title)
-        rv.setTextViewText(R.id.text_view_time_start, entry.start.format(formatter))
-        rv.setTextViewText(R.id.text_view_time_end, entry.end.format(formatter))
-        rv.setTextViewText(R.id.text_view_entry_room, entry.room)
+        return views
+    }
 
-        val background = arrayOf(
-                R.drawable.schedule_now_entry_unknown_background,
-                R.drawable.schedule_now_entry_class_background,
-                R.drawable.schedule_now_entry_online_background,
-                R.drawable.schedule_now_entry_holiday_background,
-                R.drawable.schedule_now_entry_exam_background
+    override fun buildOverflowView(overflowCount: Int): RemoteViews {
+        val views = RemoteViews(context.packageName, R.layout.widget_day_message_item)
+        views.setTextViewText(
+            R.id.day_message_text,
+            context.getString(R.string.widget_schedule_overflow, overflowCount)
+        )
+        return views
+    }
+
+    override fun buildEmptyView(isToday: Boolean): RemoteViews {
+        val views = RemoteViews(context.packageName, R.layout.widget_day_message_item)
+        views.setTextViewText(R.id.day_message_text, context.getString(R.string.widget_schedule_empty_state))
+        return views
+    }
+
+    override fun getItemState(item: ScheduleEntry, now: LocalDateTime): WidgetItemState {
+        return MultiDayWidgetHelper.resolveItemState(item.start, item.end, now)
+    }
+
+    override fun loadItemsForWeek(
+        startDate: LocalDate,
+        endDate: LocalDate
+    ): Map<LocalDate, List<ScheduleEntry>> {
+        val entries = ScheduleProvider(context).queryScheduleEntriesBetween(
+            startDate.atStartOfDay(),
+            endDate.plusDays(1).atStartOfDay()
         )
 
-        if (entry.type >= 0 && entry.type < background.size) {
-            rv.setInt(R.id.layout_schedule_entry, "setBackgroundResource", background[entry.type])
-        }
-
-        return rv
+        return entries.groupBy { entry -> entry.start.toLocalDate() }
     }
 
-    override fun getCount(): Int {
-        return entries.size
-    }
-
-    override fun getViewTypeCount(): Int {
-        return 1
-    }
-
-    override fun onDestroy() {
-    }
-
-    private fun loadScheduleForToday() {
-        entries = ScheduleProvider(context)
-            .queryScheduleEntriesForDay(LocalDate.now())
+    companion object {
+        private val ROW_METRICS = MultiDayWidgetHelper.RowMetrics(
+            headerHeightDp = 0,
+            rowVerticalPaddingDp = 12,
+            dateColumnMinHeightDp = 36,
+            itemHeightDp = 20,
+            maxItemsPerRow = 4
+        )
     }
 }

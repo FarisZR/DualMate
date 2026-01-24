@@ -27,7 +27,10 @@ class _CanteenPageState extends State<CanteenPage> {
     baseDate = _normalizeToWeekday(DateTime.now());
     pageController = PageController(initialPage: _basePage);
     pageNotifier = ValueNotifier<int>(_basePage);
-    _loadWeekForDate(baseDate);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadWeekForDate(baseDate);
+    });
   }
 
   @override

@@ -4,6 +4,7 @@ import 'package:dhbwstudentapp/canteen/model/daily_menu.dart';
 import 'package:dhbwstudentapp/canteen/model/meal.dart';
 import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
 import 'package:dhbwstudentapp/common/util/date_utils.dart';
+import 'package:flutter/widgets.dart';
 
 class CanteenViewModel extends BaseViewModel {
   final CanteenProvider _provider;
@@ -18,7 +19,6 @@ class CanteenViewModel extends BaseViewModel {
   CanteenViewModel(this._provider)
       : todayWeekStart = toStartOfDay(toMonday(DateTime.now())) {
     _provider.addMenuUpdatedCallback(_onMenusUpdated);
-    loadWeek(todayWeekStart);
   }
 
   List<DailyMenu> weeklyMenusFor(DateTime weekStart) {
@@ -100,7 +100,9 @@ class CanteenViewModel extends BaseViewModel {
   ) async {
     var weekStart = toStartOfDay(toMonday(start));
     _weeklyMenus[weekStart] = menus;
-    notifyListeners("weeklyMenus");
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners("weeklyMenus");
+    });
   }
 
   @override

@@ -6,14 +6,13 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 import de.bennik2000.dhbwstudentapp.MainActivity
 import de.bennik2000.dhbwstudentapp.R
-import de.bennik2000.dhbwstudentapp.database.CanteenProvider
 import de.bennik2000.dhbwstudentapp.widget.WidgetHelper
-import org.threeten.bp.LocalDate
 
 class CanteenTodayWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
@@ -41,10 +40,8 @@ class CanteenTodayWidget : AppWidgetProvider() {
             views.setViewVisibility(R.id.layout_purchase, View.INVISIBLE)
             views.setViewVisibility(R.id.canteen_entries_list_view, View.VISIBLE)
 
-            val hasEntries = CanteenProvider(context).hasMealsForDay(LocalDate.now())
-
             updateCanteenEntryList(context, views, appWidgetManager, appWidgetId)
-            updateCanteenListEmptyState(views, hasEntries)
+            views.setViewVisibility(R.id.layout_empty_state, View.INVISIBLE)
         } else {
             views.setViewVisibility(R.id.layout_empty_state, View.INVISIBLE)
             views.setViewVisibility(R.id.canteen_entries_list_view, View.INVISIBLE)
@@ -60,16 +57,15 @@ class CanteenTodayWidget : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         id: Int
     ) {
-        val intent = Intent(context, CanteenRemoteViewsService::class.java)
+        val intent = Intent(context, CanteenRemoteViewsService::class.java).apply {
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+            data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
+        }
         views.setRemoteAdapter(R.id.canteen_entries_list_view, intent)
 
         appWidgetManager.notifyAppWidgetViewDataChanged(id, R.id.canteen_entries_list_view)
     }
 
-    private fun updateCanteenListEmptyState(views: RemoteViews, hasEntries: Boolean) {
-        val visibility = if (hasEntries) View.INVISIBLE else View.VISIBLE
-        views.setViewVisibility(R.id.layout_empty_state, visibility)
-    }
 
     companion object {
         fun requestWidgetRefresh(context: Context) {

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dhbwstudentapp/canteen/business/canteen_provider.dart';
 import 'package:dhbwstudentapp/common/appstart/background_initialize.dart';
 import 'package:dhbwstudentapp/common/appstart/localization_initialize.dart';
 import 'package:dhbwstudentapp/common/appstart/notification_schedule_changed_initialize.dart';
@@ -68,6 +69,20 @@ Future<void> initializeAppBackground(bool isBackground) async {
   print("Background init: workmanager ${stopwatch.elapsedMilliseconds}ms");
   NotificationScheduleChangedInitialize().setupNotification();
   print("Background init: schedule notify ${stopwatch.elapsedMilliseconds}ms");
+
+  if (!isBackground) {
+    try {
+      await KiwiContainer()
+          .resolve<CanteenProvider>()
+          .refreshWeek(DateTime.now());
+      print(
+          "Background init: canteen refresh ${stopwatch.elapsedMilliseconds}ms");
+    } catch (exception, trace) {
+      print("Background init: canteen refresh failed");
+      print(exception);
+      print(trace);
+    }
+  }
 
   if (isBackground) {
     var setup = KiwiContainer().resolve<ScheduleSourceProvider>();

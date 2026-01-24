@@ -72,6 +72,7 @@ class AndroidScheduleTodayWidget(private val context: Context) : MethodChannel.M
     }
 
     private fun updateWidget() {
+        ScheduleTodayWidget.requestWidgetRefresh(context)
         ScheduleNowWidget.requestWidgetRefresh(context)
         CanteenTodayWidget.requestWidgetRefresh(context)
     }

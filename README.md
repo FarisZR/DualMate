@@ -30,6 +30,7 @@ Bisher verfügbare Funktionen:
 - Integration der [Termindatenbank](https://it.dhbw-stuttgart.de/DHermine/) der DHBW Stuttgart
 - Rapla-Termine (Klausuren, Klausurwochen, Feiertage) auf der Terminseite
 - Mensa-Speiseplan für die DHBW Karlsruhe inklusive Home-Screen-Widget
+- Mehrtägige Home-Screen-Widgets für Vorlesungsplan und Mensa (adaptive Höhe)
 - Helles und dunkles Design 👻
 - Landscape support on phones and tablets
 
