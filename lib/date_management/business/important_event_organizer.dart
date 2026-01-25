@@ -1,8 +1,8 @@
-import 'package:dhbwstudentapp/common/util/date_utils.dart';
-import 'package:dhbwstudentapp/date_management/model/date_range.dart';
-import 'package:dhbwstudentapp/date_management/model/important_event.dart';
-import 'package:dhbwstudentapp/date_management/model/important_event_section.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_entry.dart';
+import 'package:dualmate/common/util/date_utils.dart';
+import 'package:dualmate/date_management/model/date_range.dart';
+import 'package:dualmate/date_management/model/important_event.dart';
+import 'package:dualmate/date_management/model/important_event_section.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
 
 class ImportantEventOrganizer {
   static const String _klausurwocheKeyword = 'klausurwoche';

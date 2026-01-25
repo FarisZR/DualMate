@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_source_provider.dart';
-import 'package:dhbwstudentapp/schedule/service/schedule_source.dart';
+import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 
 class ScheduleViewModel extends BaseViewModel {
   final ScheduleSourceProvider _scheduleSourceProvider;

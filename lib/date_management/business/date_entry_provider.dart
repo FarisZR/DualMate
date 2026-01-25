@@ -1,8 +1,8 @@
-import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
-import 'package:dhbwstudentapp/date_management/data/date_entry_repository.dart';
-import 'package:dhbwstudentapp/date_management/model/date_entry.dart';
-import 'package:dhbwstudentapp/date_management/model/date_search_parameters.dart';
-import 'package:dhbwstudentapp/date_management/service/date_management_service.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/date_management/data/date_entry_repository.dart';
+import 'package:dualmate/date_management/model/date_entry.dart';
+import 'package:dualmate/date_management/model/date_search_parameters.dart';
+import 'package:dualmate/date_management/service/date_management_service.dart';
 
 class DateEntryProvider {
   final DateManagementService _dateEntryService;

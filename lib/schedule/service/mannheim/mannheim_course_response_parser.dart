@@ -1,5 +1,5 @@
-import 'package:dhbwstudentapp/dualis/service/parsing/parsing_utils.dart';
-import 'package:dhbwstudentapp/schedule/service/mannheim/mannheim_course_scraper.dart';
+import 'package:dualmate/dualis/service/parsing/parsing_utils.dart';
+import 'package:dualmate/schedule/service/mannheim/mannheim_course_scraper.dart';
 import 'package:html/parser.dart';
 
 class MannheimCourseResponseParser {

@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import 'package:dhbwstudentapp/canteen/model/meal.dart';
-import 'package:dhbwstudentapp/canteen/model/meal_type.dart';
-import 'package:dhbwstudentapp/common/data/database_entity.dart';
+import 'package:dualmate/canteen/model/meal.dart';
+import 'package:dualmate/canteen/model/meal_type.dart';
+import 'package:dualmate/common/data/database_entity.dart';
 
 class CanteenMealEntity extends DatabaseEntity {
   late Meal _meal;

@@ -1,8 +1,8 @@
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/common/ui/colors.dart';
-import 'package:dhbwstudentapp/common/ui/schedule_entry_type_mappings.dart';
-import 'package:dhbwstudentapp/common/ui/text_styles.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_entry.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/ui/colors.dart';
+import 'package:dualmate/common/ui/schedule_entry_type_mappings.dart';
+import 'package:dualmate/common/ui/text_styles.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 

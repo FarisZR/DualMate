@@ -1,8 +1,8 @@
 import 'package:device_calendar/device_calendar.dart';
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
-import 'package:dhbwstudentapp/date_management/data/calendar_access.dart';
-import 'package:dhbwstudentapp/date_management/model/date_entry.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
+import 'package:dualmate/date_management/data/calendar_access.dart';
+import 'package:dualmate/date_management/model/date_entry.dart';
 
 typedef OnPermissionDenied = void Function();
 

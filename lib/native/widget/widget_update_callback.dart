@@ -1,8 +1,8 @@
-import 'package:dhbwstudentapp/canteen/business/canteen_provider.dart';
-import 'package:dhbwstudentapp/canteen/model/daily_menu.dart';
-import 'package:dhbwstudentapp/native/widget/widget_helper.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_provider.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule.dart';
+import 'package:dualmate/canteen/business/canteen_provider.dart';
+import 'package:dualmate/canteen/model/daily_menu.dart';
+import 'package:dualmate/native/widget/widget_helper.dart';
+import 'package:dualmate/schedule/business/schedule_provider.dart';
+import 'package:dualmate/schedule/model/schedule.dart';
 
 ///
 /// This class registers a callback to update the widgets when the schedule

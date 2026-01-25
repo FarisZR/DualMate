@@ -1,7 +1,7 @@
 import 'package:device_calendar/device_calendar.dart';
-import 'package:dhbwstudentapp/common/logging/crash_reporting.dart';
-import 'package:dhbwstudentapp/common/util/date_utils.dart';
-import 'package:dhbwstudentapp/date_management/model/date_entry.dart';
+import 'package:dualmate/common/logging/crash_reporting.dart';
+import 'package:dualmate/common/util/date_utils.dart';
+import 'package:dualmate/date_management/model/date_entry.dart';
 import 'package:flutter/services.dart';
 import 'package:timezone/timezone.dart' as tz;
 

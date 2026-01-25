@@ -1,5 +1,5 @@
-import 'package:dhbwstudentapp/common/background/task_callback.dart';
-import 'package:dhbwstudentapp/common/background/work_scheduler_service.dart';
+import 'package:dualmate/common/background/task_callback.dart';
+import 'package:dualmate/common/background/work_scheduler_service.dart';
 
 ///
 /// BackgroundScheduler implementation which does not do anything.

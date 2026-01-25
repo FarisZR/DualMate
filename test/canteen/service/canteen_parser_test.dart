@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:dhbwstudentapp/canteen/model/meal_type.dart';
-import 'package:dhbwstudentapp/canteen/service/canteen_parser.dart';
+import 'package:dualmate/canteen/model/meal_type.dart';
+import 'package:dualmate/canteen/service/canteen_parser.dart';
 import 'package:test/test.dart';
 
 Future<void> main() async {

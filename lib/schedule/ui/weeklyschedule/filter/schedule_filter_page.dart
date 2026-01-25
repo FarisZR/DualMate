@@ -1,5 +1,5 @@
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';

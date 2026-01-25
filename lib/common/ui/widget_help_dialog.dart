@@ -1,7 +1,7 @@
-import 'package:dhbwstudentapp/common/application_constants.dart';
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/common/util/platform_util.dart';
+import 'package:dualmate/common/application_constants.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/util/platform_util.dart';
 import 'package:flutter/material.dart';
 
 ///

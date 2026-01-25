@@ -1,5 +1,5 @@
-import 'package:dhbwstudentapp/dualis/model/exam.dart';
-import 'package:dhbwstudentapp/dualis/model/exam_grade.dart';
+import 'package:dualmate/dualis/model/exam.dart';
+import 'package:dualmate/dualis/model/exam_grade.dart';
 
 const String dualisEndpoint = "https://dualis.dhbw.de";
 

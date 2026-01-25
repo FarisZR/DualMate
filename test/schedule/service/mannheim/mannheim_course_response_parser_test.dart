@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:dhbwstudentapp/schedule/service/mannheim/mannheim_course_response_parser.dart';
+import 'package:dualmate/schedule/service/mannheim/mannheim_course_response_parser.dart';
 import 'package:test/test.dart';
 
 Future<void> main() async {

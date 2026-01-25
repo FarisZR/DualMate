@@ -1,7 +1,7 @@
-import 'package:dhbwstudentapp/common/logging/crash_reporting.dart';
-import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_query_result.dart';
-import 'package:dhbwstudentapp/schedule/service/schedule_source.dart';
+import 'package:dualmate/common/logging/crash_reporting.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/schedule/model/schedule_query_result.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 
 class ErrorReportScheduleSourceDecorator extends ScheduleSource {
   final ScheduleSource _scheduleSource;

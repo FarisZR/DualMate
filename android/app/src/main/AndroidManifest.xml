@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="de.bennik2000.dhbwstudentapp">
+    package="com.fariszr.dualmate">
 
     <!--
      io.flutter.app.FlutterApplication is an android.app.Application that
@@ -20,7 +20,7 @@
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="DHBW Studenten App"
+        android:label="DualMate"
         android:enableOnBackInvokedCallback="true"
         tools:replace="android:label">
         <receiver

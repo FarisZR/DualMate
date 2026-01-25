@@ -1,7 +1,7 @@
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_diff_calculator.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_provider.dart';
-import 'package:dhbwstudentapp/schedule/ui/notification/schedule_changed_notification.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/schedule/business/schedule_diff_calculator.dart';
+import 'package:dualmate/schedule/business/schedule_provider.dart';
+import 'package:dualmate/schedule/ui/notification/schedule_changed_notification.dart';
 import 'package:kiwi/kiwi.dart';
 
 ///

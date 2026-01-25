@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/common/data/database_access.dart';
+import 'package:dualmate/common/data/database_access.dart';
 
 class ScheduleFilterRepository {
   final DatabaseAccess _database;

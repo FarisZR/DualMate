@@ -1,11 +1,11 @@
-import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
-import 'package:dhbwstudentapp/dualis/model/exam.dart';
-import 'package:dhbwstudentapp/dualis/model/exam_grade.dart';
-import 'package:dhbwstudentapp/dualis/model/study_grades.dart';
-import 'package:dhbwstudentapp/dualis/service/dualis_scraper.dart';
-import 'package:dhbwstudentapp/dualis/service/dualis_service.dart';
-import 'package:dhbwstudentapp/dualis/service/dualis_website_model.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/dualis/model/exam.dart';
+import 'package:dualmate/dualis/model/exam_grade.dart';
+import 'package:dualmate/dualis/model/study_grades.dart';
+import 'package:dualmate/dualis/service/dualis_scraper.dart';
+import 'package:dualmate/dualis/service/dualis_service.dart';
+import 'package:dualmate/dualis/service/dualis_website_model.dart';
+import 'package:dualmate/schedule/model/schedule.dart';
 
 ///
 /// DualisScraper implementation which returns fake data

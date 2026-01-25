@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/common/background/task_callback.dart';
+import 'package:dualmate/common/background/task_callback.dart';
 
 abstract class WorkSchedulerService {
   Future<void> scheduleOneShotTaskIn(Duration delay, String id, String name);

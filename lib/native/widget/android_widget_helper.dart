@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/native/widget/widget_helper.dart';
+import 'package:dualmate/native/widget/widget_helper.dart';
 import 'package:flutter/services.dart';
 
 ///

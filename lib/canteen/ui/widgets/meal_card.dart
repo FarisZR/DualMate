@@ -1,6 +1,6 @@
-import 'package:dhbwstudentapp/canteen/model/meal.dart';
-import 'package:dhbwstudentapp/canteen/ui/widgets/meal_type_badge.dart';
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
+import 'package:dualmate/canteen/model/meal.dart';
+import 'package:dualmate/canteen/ui/widgets/meal_type_badge.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 

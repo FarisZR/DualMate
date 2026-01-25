@@ -1,5 +1,5 @@
-import 'package:dhbwstudentapp/common/data/database_entity.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_entry.dart';
+import 'package:dualmate/common/data/database_entity.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
 
 class ScheduleEntryEntity extends DatabaseEntity {
   late ScheduleEntry _scheduleEntry;

@@ -1,7 +1,7 @@
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_source_provider.dart';
-import 'package:dhbwstudentapp/schedule/service/rapla/rapla_schedule_source.dart';
-import 'package:dhbwstudentapp/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/schedule/service/rapla/rapla_schedule_source.dart';
+import 'package:dualmate/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
 import 'package:flutter/services.dart';
 
 class RaplaUrlViewModel extends OnboardingStepViewModel {

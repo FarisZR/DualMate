@@ -1,5 +1,5 @@
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/common/ui/colors.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/ui/colors.dart';
 import 'package:flutter/material.dart';
 
 class ErrorDisplay extends StatelessWidget {

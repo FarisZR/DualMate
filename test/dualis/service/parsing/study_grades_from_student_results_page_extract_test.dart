@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:dhbwstudentapp/dualis/service/parsing/parsing_utils.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/study_grades_from_student_results_page_extract.dart';
+import 'package:dualmate/dualis/service/parsing/parsing_utils.dart';
+import 'package:dualmate/dualis/service/parsing/study_grades_from_student_results_page_extract.dart';
 import 'package:test/test.dart';
 
 Future<void> main() async {

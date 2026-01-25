@@ -1,16 +1,16 @@
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/logging/analytics.dart';
-import 'package:dhbwstudentapp/schedule/data/schedule_entry_repository.dart';
-import 'package:dhbwstudentapp/schedule/data/schedule_query_information_repository.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_source_type.dart';
-import 'package:dhbwstudentapp/schedule/service/dualis/dualis_schedule_source.dart';
-import 'package:dhbwstudentapp/schedule/service/error_report_schedule_source_decorator.dart';
-import 'package:dhbwstudentapp/schedule/service/ical/ical_schedule_source.dart';
-import 'package:dhbwstudentapp/schedule/service/invalid_schedule_source.dart';
-import 'package:dhbwstudentapp/schedule/service/isolate_schedule_source_decorator.dart';
-import 'package:dhbwstudentapp/schedule/service/mannheim/mannheim_course_scraper.dart';
-import 'package:dhbwstudentapp/schedule/service/rapla/rapla_schedule_source.dart';
-import 'package:dhbwstudentapp/schedule/service/schedule_source.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/logging/analytics.dart';
+import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
+import 'package:dualmate/schedule/data/schedule_query_information_repository.dart';
+import 'package:dualmate/schedule/model/schedule_source_type.dart';
+import 'package:dualmate/schedule/service/dualis/dualis_schedule_source.dart';
+import 'package:dualmate/schedule/service/error_report_schedule_source_decorator.dart';
+import 'package:dualmate/schedule/service/ical/ical_schedule_source.dart';
+import 'package:dualmate/schedule/service/invalid_schedule_source.dart';
+import 'package:dualmate/schedule/service/isolate_schedule_source_decorator.dart';
+import 'package:dualmate/schedule/service/mannheim/mannheim_course_scraper.dart';
+import 'package:dualmate/schedule/service/rapla/rapla_schedule_source.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:kiwi/kiwi.dart';
 
 typedef OnDidChangeScheduleSource = void Function(

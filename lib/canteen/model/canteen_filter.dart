@@ -1,5 +1,5 @@
-import 'package:dhbwstudentapp/canteen/model/meal.dart';
-import 'package:dhbwstudentapp/canteen/model/meal_type.dart';
+import 'package:dualmate/canteen/model/meal.dart';
+import 'package:dualmate/canteen/model/meal_type.dart';
 
 enum CanteenFilter {
   all,

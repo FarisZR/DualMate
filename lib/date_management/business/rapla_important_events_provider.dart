@@ -1,13 +1,13 @@
 import 'dart:convert';
 
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
-import 'package:dhbwstudentapp/common/util/date_utils.dart';
-import 'package:dhbwstudentapp/date_management/model/important_event.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_query_result.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_entry.dart';
-import 'package:dhbwstudentapp/schedule/service/rapla/rapla_schedule_source.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/common/util/date_utils.dart';
+import 'package:dualmate/date_management/model/important_event.dart';
+import 'package:dualmate/schedule/model/schedule.dart';
+import 'package:dualmate/schedule/model/schedule_query_result.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
+import 'package:dualmate/schedule/service/rapla/rapla_schedule_source.dart';
 
 class RaplaImportantEventsProvider {
   final PreferencesProvider _preferencesProvider;

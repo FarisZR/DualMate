@@ -1,6 +1,6 @@
-import 'package:dhbwstudentapp/schedule/business/schedule_diff_calculator.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_entry.dart';
+import 'package:dualmate/schedule/business/schedule_diff_calculator.dart';
+import 'package:dualmate/schedule/model/schedule.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:test/test.dart';
 
 void main() {

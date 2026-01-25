@@ -1,5 +1,5 @@
-import 'package:dhbwstudentapp/date_management/model/date_entry.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/parsing_utils.dart';
+import 'package:dualmate/date_management/model/date_entry.dart';
+import 'package:dualmate/dualis/service/parsing/parsing_utils.dart';
 import 'package:html/parser.dart';
 import 'package:intl/intl.dart';
 // TODO: Parse exception to common module

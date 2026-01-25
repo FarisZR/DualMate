@@ -1,8 +1,8 @@
-import 'package:dhbwstudentapp/dualis/service/parsing/parsing_utils.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_entry.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_query_result.dart';
-import 'package:dhbwstudentapp/schedule/service/rapla/rapla_parsing_utils.dart';
+import 'package:dualmate/dualis/service/parsing/parsing_utils.dart';
+import 'package:dualmate/schedule/model/schedule.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
+import 'package:dualmate/schedule/model/schedule_query_result.dart';
+import 'package:dualmate/schedule/service/rapla/rapla_parsing_utils.dart';
 import 'package:html/dom.dart';
 import 'package:intl/intl.dart';
 

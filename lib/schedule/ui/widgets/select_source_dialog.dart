@@ -1,11 +1,11 @@
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_source_provider.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_source_type.dart';
-import 'package:dhbwstudentapp/schedule/ui/widgets/enter_dualis_credentials_dialog.dart';
-import 'package:dhbwstudentapp/schedule/ui/widgets/enter_ical_url.dart';
-import 'package:dhbwstudentapp/schedule/ui/widgets/enter_rapla_url_dialog.dart';
-import 'package:dhbwstudentapp/schedule/ui/widgets/select_mannheim_course_dialog.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/schedule/model/schedule_source_type.dart';
+import 'package:dualmate/schedule/ui/widgets/enter_dualis_credentials_dialog.dart';
+import 'package:dualmate/schedule/ui/widgets/enter_ical_url.dart';
+import 'package:dualmate/schedule/ui/widgets/enter_rapla_url_dialog.dart';
+import 'package:dualmate/schedule/ui/widgets/select_mannheim_course_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 

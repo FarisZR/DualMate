@@ -1,10 +1,10 @@
-import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
-import 'package:dhbwstudentapp/dualis/model/study_grades.dart';
-import 'package:dhbwstudentapp/dualis/service/dualis_scraper.dart';
-import 'package:dhbwstudentapp/dualis/service/dualis_service.dart';
-import 'package:dhbwstudentapp/dualis/service/dualis_website_model.dart';
-import 'package:dhbwstudentapp/dualis/service/fake_data_dualis_scraper.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/dualis/model/study_grades.dart';
+import 'package:dualmate/dualis/service/dualis_scraper.dart';
+import 'package:dualmate/dualis/service/dualis_service.dart';
+import 'package:dualmate/dualis/service/dualis_website_model.dart';
+import 'package:dualmate/dualis/service/fake_data_dualis_scraper.dart';
+import 'package:dualmate/schedule/model/schedule.dart';
 
 ///
 /// This DualisScraper decorator allows to enter specific fake account

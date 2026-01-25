@@ -1,9 +1,9 @@
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/common/ui/text_styles.dart';
-import 'package:dhbwstudentapp/schedule/ui/dailyschedule/widgets/current_time_indicator_widget.dart';
-import 'package:dhbwstudentapp/schedule/ui/dailyschedule/widgets/daily_schedule_entry_widget.dart';
-import 'package:dhbwstudentapp/schedule/ui/widgets/schedule_empty_state_placeholder.dart';
-import 'package:dhbwstudentapp/schedule/ui/viewmodels/daily_schedule_view_model.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/ui/text_styles.dart';
+import 'package:dualmate/schedule/ui/dailyschedule/widgets/current_time_indicator_widget.dart';
+import 'package:dualmate/schedule/ui/dailyschedule/widgets/daily_schedule_entry_widget.dart';
+import 'package:dualmate/schedule/ui/widgets/schedule_empty_state_placeholder.dart';
+import 'package:dualmate/schedule/ui/viewmodels/daily_schedule_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';

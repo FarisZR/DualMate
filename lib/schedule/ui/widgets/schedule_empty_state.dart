@@ -1,7 +1,7 @@
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/schedule/ui/widgets/select_source_dialog.dart';
-import 'package:dhbwstudentapp/schedule/ui/widgets/schedule_empty_state_placeholder.dart';
-import 'package:dhbwstudentapp/ui/banner_widget.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/schedule/ui/widgets/select_source_dialog.dart';
+import 'package:dualmate/schedule/ui/widgets/schedule_empty_state_placeholder.dart';
+import 'package:dualmate/ui/banner_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 

@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/canteen/service/allergen_legend.dart';
+import 'package:dualmate/canteen/service/allergen_legend.dart';
 import 'package:test/test.dart';
 
 void main() {

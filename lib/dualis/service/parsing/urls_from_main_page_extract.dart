@@ -1,5 +1,5 @@
-import 'package:dhbwstudentapp/dualis/service/dualis_website_model.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/parsing_utils.dart';
+import 'package:dualmate/dualis/service/dualis_website_model.dart';
+import 'package:dualmate/dualis/service/parsing/parsing_utils.dart';
 import 'package:html/parser.dart';
 
 class UrlsFromMainPageExtract {

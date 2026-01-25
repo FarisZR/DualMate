@@ -1,8 +1,8 @@
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/dualis/model/credentials.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_source_provider.dart';
-import 'package:dhbwstudentapp/ui/login_credentials_widget.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/dualis/model/credentials.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/ui/login_credentials_widget.dart';
 import 'package:flutter/material.dart';
 
 class EnterDualisCredentialsDialog {

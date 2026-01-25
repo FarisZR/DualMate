@@ -1,15 +1,15 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
-import 'package:dhbwstudentapp/common/util/cancelable_mutex.dart';
-import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
-import 'package:dhbwstudentapp/common/util/date_utils.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_provider.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_source_provider.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_query_result.dart';
-import 'package:dhbwstudentapp/schedule/service/schedule_source.dart';
+import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
+import 'package:dualmate/common/util/cancelable_mutex.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/common/util/date_utils.dart';
+import 'package:dualmate/schedule/business/schedule_provider.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/schedule/model/schedule.dart';
+import 'package:dualmate/schedule/model/schedule_query_result.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:flutter/foundation.dart';
 
 class WeeklyScheduleViewModel extends BaseViewModel {

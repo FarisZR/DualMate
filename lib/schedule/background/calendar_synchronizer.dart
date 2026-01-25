@@ -1,10 +1,10 @@
 import 'package:device_calendar/device_calendar.dart';
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
-import 'package:dhbwstudentapp/date_management/data/calendar_access.dart';
-import 'package:dhbwstudentapp/date_management/model/date_entry.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_provider.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/date_management/data/calendar_access.dart';
+import 'package:dualmate/date_management/model/date_entry.dart';
+import 'package:dualmate/schedule/business/schedule_provider.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:kiwi/kiwi.dart';
 
 class CalendarSynchronizer {

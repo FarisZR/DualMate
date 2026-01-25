@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/canteen/model/meal.dart';
+import 'package:dualmate/canteen/model/meal.dart';
 
 class DailyMenu {
   final DateTime date;

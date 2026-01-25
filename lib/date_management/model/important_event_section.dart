@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/date_management/model/important_event.dart';
+import 'package:dualmate/date_management/model/important_event.dart';
 
 class ImportantEventSection {
   final ImportantEvent? header;

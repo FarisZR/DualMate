@@ -1,8 +1,8 @@
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_source_provider.dart';
-import 'package:dhbwstudentapp/ui/onboarding/viewmodels/mannheim_view_model.dart';
-import 'package:dhbwstudentapp/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
-import 'package:dhbwstudentapp/ui/onboarding/widgets/mannheim_page.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/ui/onboarding/viewmodels/mannheim_view_model.dart';
+import 'package:dualmate/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
+import 'package:dualmate/ui/onboarding/widgets/mannheim_page.dart';
 import 'package:flutter/material.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 

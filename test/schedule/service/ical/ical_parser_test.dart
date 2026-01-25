@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:dhbwstudentapp/schedule/model/schedule_entry.dart';
-import 'package:dhbwstudentapp/schedule/service/ical/ical_parser.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
+import 'package:dualmate/schedule/service/ical/ical_parser.dart';
 import 'package:test/test.dart';
 
 Future<void> main() async {

@@ -1,17 +1,17 @@
 import 'dart:io';
 
-import 'package:dhbwstudentapp/canteen/business/canteen_provider.dart';
-import 'package:dhbwstudentapp/common/appstart/background_initialize.dart';
-import 'package:dhbwstudentapp/common/appstart/localization_initialize.dart';
-import 'package:dhbwstudentapp/common/appstart/notification_schedule_changed_initialize.dart';
-import 'package:dhbwstudentapp/common/appstart/notifications_initialize.dart';
-import 'package:dhbwstudentapp/common/appstart/service_injector.dart';
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/util/rapla_tls_override.dart';
-import 'package:dhbwstudentapp/native/widget/widget_update_callback.dart';
-import 'package:dhbwstudentapp/schedule/background/calendar_synchronizer.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_provider.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/canteen/business/canteen_provider.dart';
+import 'package:dualmate/common/appstart/background_initialize.dart';
+import 'package:dualmate/common/appstart/localization_initialize.dart';
+import 'package:dualmate/common/appstart/notification_schedule_changed_initialize.dart';
+import 'package:dualmate/common/appstart/notifications_initialize.dart';
+import 'package:dualmate/common/appstart/service_injector.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/util/rapla_tls_override.dart';
+import 'package:dualmate/native/widget/widget_update_callback.dart';
+import 'package:dualmate/schedule/background/calendar_synchronizer.dart';
+import 'package:dualmate/schedule/business/schedule_provider.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:timezone/data/latest.dart' as tz;
 

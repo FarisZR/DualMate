@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/dualis/model/exam_grade.dart';
+import 'package:dualmate/dualis/model/exam_grade.dart';
 
 enum ExamState {
   Passed,

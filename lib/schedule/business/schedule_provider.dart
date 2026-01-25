@@ -1,17 +1,17 @@
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_diff_calculator.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_filter.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_source_provider.dart';
-import 'package:dhbwstudentapp/schedule/data/schedule_entry_repository.dart';
-import 'package:dhbwstudentapp/schedule/data/schedule_filter_repository.dart';
-import 'package:dhbwstudentapp/schedule/data/schedule_query_information_repository.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_entry.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_query_information.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_query_result.dart';
-import 'package:dhbwstudentapp/schedule/service/schedule_prettifier.dart';
-import 'package:dhbwstudentapp/schedule/service/schedule_source.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/schedule/business/schedule_diff_calculator.dart';
+import 'package:dualmate/schedule/business/schedule_filter.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
+import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
+import 'package:dualmate/schedule/data/schedule_query_information_repository.dart';
+import 'package:dualmate/schedule/model/schedule.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
+import 'package:dualmate/schedule/model/schedule_query_information.dart';
+import 'package:dualmate/schedule/model/schedule_query_result.dart';
+import 'package:dualmate/schedule/service/schedule_prettifier.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:intl/intl.dart';
 
 typedef ScheduleUpdatedCallback = Future<void> Function(

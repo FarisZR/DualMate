@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:dhbwstudentapp/ui/root_page.dart';
-import 'package:dhbwstudentapp/common/logging/crash_reporting.dart';
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/ui/root_page.dart';
+import 'package:dualmate/common/logging/crash_reporting.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:flutter/material.dart';
 

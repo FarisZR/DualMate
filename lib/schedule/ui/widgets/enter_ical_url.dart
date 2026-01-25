@@ -1,8 +1,8 @@
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/schedule/business/schedule_source_provider.dart';
-import 'package:dhbwstudentapp/schedule/service/ical/ical_schedule_source.dart';
-import 'package:dhbwstudentapp/schedule/ui/widgets/enter_url_dialog.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/schedule/service/ical/ical_schedule_source.dart';
+import 'package:dualmate/schedule/ui/widgets/enter_url_dialog.dart';
 import 'package:flutter/widgets.dart';
 
 class EnterIcalDialog extends EnterUrlDialog {

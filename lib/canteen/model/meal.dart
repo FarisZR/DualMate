@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/canteen/model/meal_type.dart';
+import 'package:dualmate/canteen/model/meal_type.dart';
 
 class Meal {
   int? id;

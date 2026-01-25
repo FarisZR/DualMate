@@ -1,11 +1,11 @@
-import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
-import 'package:dhbwstudentapp/common/util/date_utils.dart';
-import 'package:dhbwstudentapp/dualis/model/credentials.dart';
-import 'package:dhbwstudentapp/dualis/service/dualis_scraper.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/parsing_utils.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_query_result.dart';
-import 'package:dhbwstudentapp/schedule/service/schedule_source.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/common/util/date_utils.dart';
+import 'package:dualmate/dualis/model/credentials.dart';
+import 'package:dualmate/dualis/service/dualis_scraper.dart';
+import 'package:dualmate/dualis/service/parsing/parsing_utils.dart';
+import 'package:dualmate/schedule/model/schedule.dart';
+import 'package:dualmate/schedule/model/schedule_query_result.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 
 class DualisScheduleSource extends ScheduleSource {
   final DualisScraper _dualisScraper;

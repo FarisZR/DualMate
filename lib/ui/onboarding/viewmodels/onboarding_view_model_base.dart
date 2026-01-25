@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
+import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 
 abstract class OnboardingStepViewModel extends BaseViewModel {
   bool _isValid = false;

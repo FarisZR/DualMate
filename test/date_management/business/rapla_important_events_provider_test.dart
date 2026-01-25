@@ -1,9 +1,9 @@
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/data/preferences/preferences_access.dart';
-import 'package:dhbwstudentapp/common/data/preferences/secure_storage_access.dart';
-import 'package:dhbwstudentapp/date_management/business/rapla_important_events_provider.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_entry.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/data/preferences/preferences_access.dart';
+import 'package:dualmate/common/data/preferences/secure_storage_access.dart';
+import 'package:dualmate/date_management/business/rapla_important_events_provider.dart';
+import 'package:dualmate/schedule/model/schedule.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:test/test.dart';
 
 class FakePreferencesAccess extends PreferencesAccess {

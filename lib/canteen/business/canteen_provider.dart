@@ -1,9 +1,9 @@
-import 'package:dhbwstudentapp/canteen/data/canteen_meal_repository.dart';
-import 'package:dhbwstudentapp/canteen/model/daily_menu.dart';
-import 'package:dhbwstudentapp/canteen/model/meal.dart';
-import 'package:dhbwstudentapp/canteen/service/canteen_scraper.dart';
-import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
-import 'package:dhbwstudentapp/common/util/date_utils.dart';
+import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
+import 'package:dualmate/canteen/model/daily_menu.dart';
+import 'package:dualmate/canteen/model/meal.dart';
+import 'package:dualmate/canteen/service/canteen_scraper.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/common/util/date_utils.dart';
 
 typedef CanteenMenuUpdatedCallback = Future<void> Function(
   List<DailyMenu> menus,

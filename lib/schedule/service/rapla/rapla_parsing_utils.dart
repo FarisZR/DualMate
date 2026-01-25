@@ -1,6 +1,6 @@
-import 'package:dhbwstudentapp/common/util/string_utils.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/parsing_utils.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_entry.dart';
+import 'package:dualmate/common/util/string_utils.dart';
+import 'package:dualmate/dualis/service/parsing/parsing_utils.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:html/dom.dart';
 import 'package:intl/intl.dart';
 
