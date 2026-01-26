@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:dhbwstudentapp/dualis/service/parsing/exams_from_module_details_extract.dart';
-import 'package:dhbwstudentapp/dualis/model/exam_grade.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/parsing_utils.dart';
+import 'package:dualmate/dualis/service/parsing/exams_from_module_details_extract.dart';
+import 'package:dualmate/dualis/model/exam_grade.dart';
+import 'package:dualmate/dualis/service/parsing/parsing_utils.dart';
 import 'package:test/test.dart';
 
 Future<void> main() async {
@@ -38,5 +38,33 @@ Future<void> main() async {
     }
 
     fail("Exception not thrown!");
+  });
+
+  test('ExamsFromModuleDetailsExtract handles missing tbody gracefully',
+      () async {
+    var extract = ExamsFromModuleDetailsExtract();
+
+    final html = """
+      <html><body>
+        <table>
+          <tr><td class='level01'>Versuch  1</td></tr>
+          <tr><td class='level02'>Module A</td></tr>
+          <tr>
+            <td class='tbdata'>WiSe xx/yy</td>
+            <td class='tbdata'>Exam X</td>
+            <td class='tbdata'>ignored</td>
+            <td class='tbdata'>4,0</td>
+          </tr>
+        </table>
+      </body></html>
+    """;
+
+    final exams = extract.extractExamsFromModuleDetails(html);
+
+    expect(exams.length, 1);
+    expect(exams.first.name, "Exam X");
+    expect(exams.first.semester, "WiSe xx/yy");
+    expect(exams.first.moduleName, "Module A");
+    expect(exams.first.tryNr, "Versuch  1");
   });
 }

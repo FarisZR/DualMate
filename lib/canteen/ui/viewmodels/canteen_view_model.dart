@@ -1,9 +1,9 @@
-import 'package:dhbwstudentapp/canteen/business/canteen_provider.dart';
-import 'package:dhbwstudentapp/canteen/model/canteen_filter.dart';
-import 'package:dhbwstudentapp/canteen/model/daily_menu.dart';
-import 'package:dhbwstudentapp/canteen/model/meal.dart';
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
-import 'package:dhbwstudentapp/common/util/date_utils.dart';
+import 'package:dualmate/canteen/business/canteen_provider.dart';
+import 'package:dualmate/canteen/model/canteen_filter.dart';
+import 'package:dualmate/canteen/model/daily_menu.dart';
+import 'package:dualmate/canteen/model/meal.dart';
+import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
+import 'package:dualmate/common/util/date_utils.dart';
 import 'package:flutter/widgets.dart';
 
 class CanteenViewModel extends BaseViewModel {

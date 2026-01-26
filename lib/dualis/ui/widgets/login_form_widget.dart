@@ -1,5 +1,5 @@
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/dualis/model/credentials.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/dualis/model/credentials.dart';
 import 'package:flutter/material.dart';
 
 typedef OnLogin = Future<bool> Function(Credentials credentials);

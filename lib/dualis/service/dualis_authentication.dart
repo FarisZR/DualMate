@@ -1,12 +1,12 @@
-import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
-import 'package:dhbwstudentapp/dualis/service/dualis_service.dart';
-import 'package:dhbwstudentapp/dualis/service/dualis_website_model.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/access_denied_extract.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/login_redirect_url_extract.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/timeout_extract.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/urls_from_main_page_extract.dart';
-import 'package:dhbwstudentapp/dualis/service/session.dart';
-import 'package:dhbwstudentapp/schedule/service/schedule_source.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/dualis/service/dualis_service.dart';
+import 'package:dualmate/dualis/service/dualis_website_model.dart';
+import 'package:dualmate/dualis/service/parsing/access_denied_extract.dart';
+import 'package:dualmate/dualis/service/parsing/login_redirect_url_extract.dart';
+import 'package:dualmate/dualis/service/parsing/timeout_extract.dart';
+import 'package:dualmate/dualis/service/parsing/urls_from_main_page_extract.dart';
+import 'package:dualmate/dualis/service/session.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:http/http.dart';
 
 ///

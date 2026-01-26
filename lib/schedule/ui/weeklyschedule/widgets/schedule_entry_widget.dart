@@ -1,6 +1,6 @@
-import 'package:dhbwstudentapp/common/ui/schedule_entry_type_mappings.dart';
-import 'package:dhbwstudentapp/common/ui/text_styles.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_entry.dart';
+import 'package:dualmate/common/ui/schedule_entry_type_mappings.dart';
+import 'package:dualmate/common/ui/text_styles.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:flutter/material.dart';
 
 typedef ScheduleEntryTapCallback = Function(ScheduleEntry entry);

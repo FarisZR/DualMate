@@ -1,7 +1,7 @@
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/dualis/model/credentials.dart';
-import 'package:dhbwstudentapp/dualis/service/dualis_service.dart';
-import 'package:dhbwstudentapp/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/dualis/model/credentials.dart';
+import 'package:dualmate/dualis/service/dualis_service.dart';
+import 'package:dualmate/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
 
 class DualisLoginViewModel extends OnboardingStepViewModel {
   final PreferencesProvider preferencesProvider;

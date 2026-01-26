@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:dhbwstudentapp/common/ui/notification_api.dart';
+import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:kiwi/kiwi.dart';
 
 ///

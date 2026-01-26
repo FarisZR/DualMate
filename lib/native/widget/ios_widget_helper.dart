@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/native/widget/widget_helper.dart';
+import 'package:dualmate/native/widget/widget_helper.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_widgetkit/flutter_widgetkit.dart';
 
@@ -6,8 +6,7 @@ import 'package:flutter_widgetkit/flutter_widgetkit.dart';
 /// WidgetHelper which calls native code to control the widget on iOS
 ///
 class IOSWidgetHelper implements WidgetHelper {
-  static const platform =
-      const MethodChannel('de.bennik2000.dhbwstudentapp/widget');
+  static const platform = const MethodChannel('com.fariszr.dualmate/widget');
 
   @override
   Future<void> disableWidget() async {
@@ -39,12 +38,12 @@ class IOSWidgetHelper implements WidgetHelper {
       return false;
     }
   }
-  
+
   @override
   Future<bool> canScheduleExactAlarms() async {
     return true;
   }
-  
+
   @override
   Future<void> requestExactAlarmPermission() async {
     return;

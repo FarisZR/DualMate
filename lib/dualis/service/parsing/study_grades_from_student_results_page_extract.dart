@@ -1,5 +1,5 @@
-import 'package:dhbwstudentapp/dualis/model/study_grades.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/parsing_utils.dart';
+import 'package:dualmate/dualis/model/study_grades.dart';
+import 'package:dualmate/dualis/service/parsing/parsing_utils.dart';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart';
 

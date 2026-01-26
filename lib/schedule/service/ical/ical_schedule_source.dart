@@ -1,10 +1,10 @@
 import 'dart:convert';
 
-import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/parsing_utils.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_query_result.dart';
-import 'package:dhbwstudentapp/schedule/service/ical/ical_parser.dart';
-import 'package:dhbwstudentapp/schedule/service/schedule_source.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/dualis/service/parsing/parsing_utils.dart';
+import 'package:dualmate/schedule/model/schedule_query_result.dart';
+import 'package:dualmate/schedule/service/ical/ical_parser.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:http/http.dart';
 import 'package:http_client_helper/http_client_helper.dart' as http;
 

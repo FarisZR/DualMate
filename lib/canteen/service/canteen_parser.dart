@@ -1,8 +1,8 @@
-import 'package:dhbwstudentapp/canteen/model/daily_menu.dart';
-import 'package:dhbwstudentapp/canteen/model/meal.dart';
-import 'package:dhbwstudentapp/canteen/model/meal_type.dart';
-import 'package:dhbwstudentapp/canteen/service/allergen_legend.dart';
-import 'package:dhbwstudentapp/common/util/date_utils.dart';
+import 'package:dualmate/canteen/model/daily_menu.dart';
+import 'package:dualmate/canteen/model/meal.dart';
+import 'package:dualmate/canteen/model/meal_type.dart';
+import 'package:dualmate/canteen/service/allergen_legend.dart';
+import 'package:dualmate/common/util/date_utils.dart';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart' show parse;
 

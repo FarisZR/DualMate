@@ -61,7 +61,7 @@ views.setOnClickPendingIntent(
         context,
         0,
         Intent(context, MainActivity::class.java).apply {
-            action = "de.bennik2000.dhbwstudentapp.OPEN_SCHEDULE"
+            action = "com.fariszr.dualmate.OPEN_SCHEDULE"
         },
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     )
@@ -81,7 +81,7 @@ override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
 
     navigationChannel = MethodChannel(
         flutterEngine.dartExecutor.binaryMessenger,
-        "de.bennik2000.dhbwstudentapp/navigation"
+        "com.fariszr.dualmate/navigation"
     )
 
     navigationChannel?.setMethodCallHandler { call, result ->
@@ -105,7 +105,7 @@ override fun onNewIntent(intent: android.content.Intent) {
 ```dart
 // lib/ui/root_page.dart
 static const MethodChannel _navigationChannel =
-    MethodChannel('de.bennik2000.dhbwstudentapp/navigation');
+    MethodChannel('com.fariszr.dualmate/navigation');
 
 void _applyPendingRoute() {
   if (_pendingRoute == null) return;

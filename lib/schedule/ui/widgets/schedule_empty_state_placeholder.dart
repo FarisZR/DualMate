@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/common/ui/colors.dart';
+import 'package:dualmate/common/ui/colors.dart';
 import 'package:flutter/material.dart';
 
 class ScheduleEmptyStatePlaceholder extends StatelessWidget {

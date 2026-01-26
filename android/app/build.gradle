@@ -28,7 +28,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace "de.bennik2000.dhbwstudentapp"
+    namespace "com.fariszr.dualmate"
     compileSdkVersion 36
 
     sourceSets {
@@ -40,7 +40,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "de.bennik2000.dhbwstudentapp"
+        applicationId "com.fariszr.dualmate"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion 31
         versionCode flutterVersionCode.toInteger()

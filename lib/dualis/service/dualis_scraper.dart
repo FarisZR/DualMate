@@ -1,15 +1,15 @@
-import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
-import 'package:dhbwstudentapp/dualis/model/study_grades.dart';
-import 'package:dhbwstudentapp/dualis/service/dualis_authentication.dart';
-import 'package:dhbwstudentapp/dualis/service/dualis_service.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/monthly_schedule_extract.dart';
-import 'package:dhbwstudentapp/dualis/service/dualis_website_model.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/all_modules_extract.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/exams_from_module_details_extract.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/modules_from_course_result_page_extract.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/semesters_from_course_result_page_extract.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/study_grades_from_student_results_page_extract.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/dualis/model/study_grades.dart';
+import 'package:dualmate/dualis/service/dualis_authentication.dart';
+import 'package:dualmate/dualis/service/dualis_service.dart';
+import 'package:dualmate/dualis/service/parsing/monthly_schedule_extract.dart';
+import 'package:dualmate/dualis/service/dualis_website_model.dart';
+import 'package:dualmate/dualis/service/parsing/all_modules_extract.dart';
+import 'package:dualmate/dualis/service/parsing/exams_from_module_details_extract.dart';
+import 'package:dualmate/dualis/service/parsing/modules_from_course_result_page_extract.dart';
+import 'package:dualmate/dualis/service/parsing/semesters_from_course_result_page_extract.dart';
+import 'package:dualmate/dualis/service/parsing/study_grades_from_student_results_page_extract.dart';
+import 'package:dualmate/schedule/model/schedule.dart';
 
 ///
 /// Provides one single class to access the dualis api.

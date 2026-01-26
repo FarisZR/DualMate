@@ -1,6 +1,6 @@
-import 'package:dhbwstudentapp/schedule/business/schedule_source_provider.dart';
-import 'package:dhbwstudentapp/schedule/service/mannheim/mannheim_course_scraper.dart';
-import 'package:dhbwstudentapp/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/schedule/service/mannheim/mannheim_course_scraper.dart';
+import 'package:dualmate/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
 
 enum LoadCoursesState {
   Loading,

@@ -1,7 +1,7 @@
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/common/ui/colors.dart';
-import 'package:dhbwstudentapp/common/util/date_utils.dart';
-import 'package:dhbwstudentapp/date_management/model/date_entry.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/ui/colors.dart';
+import 'package:dualmate/common/util/date_utils.dart';
+import 'package:dualmate/date_management/model/date_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 

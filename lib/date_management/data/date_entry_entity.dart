@@ -1,5 +1,5 @@
-import 'package:dhbwstudentapp/common/data/database_entity.dart';
-import 'package:dhbwstudentapp/date_management/model/date_entry.dart';
+import 'package:dualmate/common/data/database_entity.dart';
+import 'package:dualmate/date_management/model/date_entry.dart';
 
 class DateEntryEntity extends DatabaseEntity {
   late DateEntry _dateEntry;

@@ -301,7 +301,7 @@ fun queryMealsForDateRange(start: LocalDate, end: LocalDate): List<Meal>
 ### MultiDayViewsFactory.kt
 
 ```kotlin
-package de.bennik2000.dhbwstudentapp.widget
+package com.fariszr.dualmate.widget
 
 import android.content.Context
 import android.widget.RemoteViews

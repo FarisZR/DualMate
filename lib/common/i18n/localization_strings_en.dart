@@ -3,7 +3,7 @@ final en = {
   "pageWeekOverviewTitle": "Weekly schedule",
   "noConnectionMessage": "No connection!",
   "settingsViewSourceCode": "View the source code on GitHub",
-  "applicationName": "DHBW Student App",
+  "applicationName": "DualMate",
   "applicationLegalese":
       "Developed by Benedikt Kolb. This is not an official app of the DHBW Stuttgart.",
   "settingsAbout": "About this app",

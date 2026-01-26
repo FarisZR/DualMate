@@ -1,12 +1,12 @@
-import 'package:dhbwstudentapp/canteen/ui/canteen_navigation_entry.dart';
-import 'package:dhbwstudentapp/date_management/ui/date_management_navigation_entry.dart';
-import 'package:dhbwstudentapp/dualis/ui/dualis_navigation_entry.dart';
-import 'package:dhbwstudentapp/information/ui/useful_information_navigation_entry.dart';
-import 'package:dhbwstudentapp/schedule/ui/schedule_navigation_entry.dart';
-import 'package:dhbwstudentapp/ui/main_page.dart';
-import 'package:dhbwstudentapp/ui/navigation/navigation_entry.dart';
-import 'package:dhbwstudentapp/ui/onboarding/onboarding_page.dart';
-import 'package:dhbwstudentapp/ui/settings/settings_page.dart';
+import 'package:dualmate/canteen/ui/canteen_navigation_entry.dart';
+import 'package:dualmate/date_management/ui/date_management_navigation_entry.dart';
+import 'package:dualmate/dualis/ui/dualis_navigation_entry.dart';
+import 'package:dualmate/information/ui/useful_information_navigation_entry.dart';
+import 'package:dualmate/schedule/ui/schedule_navigation_entry.dart';
+import 'package:dualmate/ui/main_page.dart';
+import 'package:dualmate/ui/navigation/navigation_entry.dart';
+import 'package:dualmate/ui/onboarding/onboarding_page.dart';
+import 'package:dualmate/ui/settings/settings_page.dart';
 import 'package:flutter/material.dart';
 
 final List<NavigationEntry> navigationEntries = [

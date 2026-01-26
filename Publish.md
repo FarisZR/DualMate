@@ -40,7 +40,7 @@
 
 - In Android Studio select the root folder and click Build -> Flutter -> Build App Bundle: 
 
-  ![image-20200706093154007](https://raw.githubusercontent.com/Bennik2000/DHBWStudentInformationApp/develop/screenshots/AndroidStudioBuildAppBundle.png)
+  ![image-20200706093154007](https://raw.githubusercontent.com/FarisZR/DualMate/develop/screenshots/AndroidStudioBuildAppBundle.png)
 
 
 - In the app developer console create a new release

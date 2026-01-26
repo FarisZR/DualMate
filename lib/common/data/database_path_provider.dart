@@ -26,7 +26,7 @@ Future<String> _getiOSDatabasePathAndMigrate(
   // copied to the new path
 
   var groupDirectory = await FlutterAppGroupDirectory.getAppGroupDirectory(
-    'group.de.bennik2000.dhbwstudentapp',
+    'group.com.fariszr.dualmate',
   );
 
   if (groupDirectory == null) {

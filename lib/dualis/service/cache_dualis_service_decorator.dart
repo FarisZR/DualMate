@@ -1,8 +1,8 @@
-import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
-import 'package:dhbwstudentapp/dualis/model/module.dart';
-import 'package:dhbwstudentapp/dualis/model/semester.dart';
-import 'package:dhbwstudentapp/dualis/model/study_grades.dart';
-import 'package:dhbwstudentapp/dualis/service/dualis_service.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/dualis/model/module.dart';
+import 'package:dualmate/dualis/model/semester.dart';
+import 'package:dualmate/dualis/model/study_grades.dart';
+import 'package:dualmate/dualis/service/dualis_service.dart';
 
 ///
 /// Decorator class to cache the responses of a dualis service

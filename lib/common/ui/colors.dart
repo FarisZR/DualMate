@@ -1,5 +1,5 @@
-import 'package:dhbwstudentapp/common/data/preferences/app_theme_enum.dart';
-import 'package:dhbwstudentapp/common/util/platform_util.dart';
+import 'package:dualmate/common/data/preferences/app_theme_enum.dart';
+import 'package:dualmate/common/util/platform_util.dart';
 import 'package:flutter/material.dart';
 
 Color colorScheduleEntryPublicHoliday(BuildContext context) =>

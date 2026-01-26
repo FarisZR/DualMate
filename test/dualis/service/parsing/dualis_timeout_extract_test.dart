@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:dhbwstudentapp/dualis/service/parsing/timeout_extract.dart';
+import 'package:dualmate/dualis/service/parsing/timeout_extract.dart';
 import 'package:test/test.dart';
 
 Future<void> main() async {

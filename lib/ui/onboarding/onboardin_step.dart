@@ -1,14 +1,14 @@
-import 'package:dhbwstudentapp/ui/onboarding/viewmodels/dualis_login_view_model.dart';
-import 'package:dhbwstudentapp/ui/onboarding/viewmodels/ical_url_view_model.dart';
-import 'package:dhbwstudentapp/ui/onboarding/viewmodels/mannheim_view_model.dart';
-import 'package:dhbwstudentapp/ui/onboarding/viewmodels/rapla_url_view_model.dart';
-import 'package:dhbwstudentapp/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
-import 'package:dhbwstudentapp/ui/onboarding/viewmodels/select_source_view_model.dart';
-import 'package:dhbwstudentapp/ui/onboarding/widgets/dualis_login_page.dart';
-import 'package:dhbwstudentapp/ui/onboarding/widgets/ical_url_page.dart';
-import 'package:dhbwstudentapp/ui/onboarding/widgets/mannheim_page.dart';
-import 'package:dhbwstudentapp/ui/onboarding/widgets/rapla_url_page.dart';
-import 'package:dhbwstudentapp/ui/onboarding/widgets/select_source_page.dart';
+import 'package:dualmate/ui/onboarding/viewmodels/dualis_login_view_model.dart';
+import 'package:dualmate/ui/onboarding/viewmodels/ical_url_view_model.dart';
+import 'package:dualmate/ui/onboarding/viewmodels/mannheim_view_model.dart';
+import 'package:dualmate/ui/onboarding/viewmodels/rapla_url_view_model.dart';
+import 'package:dualmate/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
+import 'package:dualmate/ui/onboarding/viewmodels/select_source_view_model.dart';
+import 'package:dualmate/ui/onboarding/widgets/dualis_login_page.dart';
+import 'package:dualmate/ui/onboarding/widgets/ical_url_page.dart';
+import 'package:dualmate/ui/onboarding/widgets/mannheim_page.dart';
+import 'package:dualmate/ui/onboarding/widgets/rapla_url_page.dart';
+import 'package:dualmate/ui/onboarding/widgets/select_source_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:kiwi/kiwi.dart';
 

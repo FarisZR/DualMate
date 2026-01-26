@@ -1,9 +1,9 @@
-import 'package:dhbwstudentapp/common/ui/app_launch_dialogs.dart';
-import 'package:dhbwstudentapp/common/util/platform_util.dart';
-import 'package:dhbwstudentapp/ui/navigation/navigation_entry.dart';
-import 'package:dhbwstudentapp/ui/navigation/navigator_key.dart';
-import 'package:dhbwstudentapp/ui/navigation/router.dart';
-import 'package:dhbwstudentapp/ui/navigation_drawer.dart';
+import 'package:dualmate/common/ui/app_launch_dialogs.dart';
+import 'package:dualmate/common/util/platform_util.dart';
+import 'package:dualmate/ui/navigation/navigation_entry.dart';
+import 'package:dualmate/ui/navigation/navigator_key.dart';
+import 'package:dualmate/ui/navigation/router.dart';
+import 'package:dualmate/ui/navigation_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:provider/provider.dart';

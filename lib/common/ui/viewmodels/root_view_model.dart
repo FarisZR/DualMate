@@ -1,6 +1,6 @@
-import 'package:dhbwstudentapp/common/data/preferences/app_theme_enum.dart';
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
+import 'package:dualmate/common/data/preferences/app_theme_enum.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 
 class RootViewModel extends BaseViewModel {
   final PreferencesProvider _preferencesProvider;

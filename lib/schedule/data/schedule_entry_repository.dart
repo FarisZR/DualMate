@@ -1,7 +1,7 @@
-import 'package:dhbwstudentapp/common/data/database_access.dart';
-import 'package:dhbwstudentapp/schedule/data/schedule_entry_entity.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_entry.dart';
+import 'package:dualmate/common/data/database_access.dart';
+import 'package:dualmate/schedule/data/schedule_entry_entity.dart';
+import 'package:dualmate/schedule/model/schedule.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
 
 class ScheduleEntryRepository {
   final DatabaseAccess _database;

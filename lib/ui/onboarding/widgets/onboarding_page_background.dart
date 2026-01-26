@@ -1,6 +1,6 @@
-import 'package:dhbwstudentapp/common/math/math.dart';
-import 'package:dhbwstudentapp/common/ui/colors.dart';
-import 'package:dhbwstudentapp/common/util/platform_util.dart';
+import 'package:dualmate/common/math/math.dart';
+import 'package:dualmate/common/ui/colors.dart';
+import 'package:dualmate/common/util/platform_util.dart';
 import 'package:flutter/material.dart';
 
 class OnboardingPageBackground extends StatelessWidget {

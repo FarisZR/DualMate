@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/schedule/model/schedule_entry.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
 
 class ImportantEvent {
   final String title;

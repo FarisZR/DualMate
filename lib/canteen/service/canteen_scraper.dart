@@ -1,8 +1,8 @@
 import 'dart:isolate';
 
-import 'package:dhbwstudentapp/canteen/model/daily_menu.dart';
-import 'package:dhbwstudentapp/canteen/service/canteen_parser.dart';
-import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
+import 'package:dualmate/canteen/model/daily_menu.dart';
+import 'package:dualmate/canteen/service/canteen_parser.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:http/http.dart';
 import 'package:http_client_helper/http_client_helper.dart' as http;
 

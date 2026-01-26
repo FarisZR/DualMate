@@ -1,10 +1,10 @@
 import 'package:device_calendar/device_calendar.dart';
-import 'package:dhbwstudentapp/common/application_constants.dart';
-import 'package:dhbwstudentapp/common/data/preferences/app_theme_enum.dart';
-import 'package:dhbwstudentapp/common/data/preferences/preferences_access.dart';
-import 'package:dhbwstudentapp/common/data/preferences/secure_storage_access.dart';
-import 'package:dhbwstudentapp/date_management/data/calendar_access.dart';
-import 'package:dhbwstudentapp/dualis/model/credentials.dart';
+import 'package:dualmate/common/application_constants.dart';
+import 'package:dualmate/common/data/preferences/app_theme_enum.dart';
+import 'package:dualmate/common/data/preferences/preferences_access.dart';
+import 'package:dualmate/common/data/preferences/secure_storage_access.dart';
+import 'package:dualmate/date_management/data/calendar_access.dart';
+import 'package:dualmate/dualis/model/credentials.dart';
 
 class PreferencesProvider {
   static const String AppThemeKey = "AppTheme";

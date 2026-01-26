@@ -1,5 +1,5 @@
-import 'package:dhbwstudentapp/canteen/model/canteen_filter.dart';
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
+import 'package:dualmate/canteen/model/canteen_filter.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:flutter/material.dart';
 
 class FilterDropdown extends StatelessWidget {

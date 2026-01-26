@@ -1,11 +1,14 @@
 pluginManagement {
-    // Ensure Gradle prefers JAVA_HOME (e.g., Java installed from dnf) if it's set and valid.
-    // Keep this inside pluginManagement so the settings script obeys Gradle's ordering rules.
+    // Respect JAVA_HOME if set, but avoid accessing javaHome on StartParameter when not supported (Gradle 8+).
     def javaHomeEnv = System.getenv("JAVA_HOME")
     if (javaHomeEnv) {
         def javaHomeFile = file(javaHomeEnv)
         if (javaHomeFile.exists()) {
-            gradle.startParameter.javaHome = javaHomeFile
+            if (gradle.startParameter.metaClass.hasProperty(gradle.startParameter, 'javaHome')) {
+                gradle.startParameter.javaHome = javaHomeFile
+            } else {
+                System.setProperty('java.home', javaHomeFile.absolutePath)
+            }
         } else {
             println "WARNING: JAVA_HOME is set to ${javaHomeEnv} but path does not exist. Gradle will fallback to system defaults."
         }

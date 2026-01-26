@@ -1,6 +1,6 @@
-import 'package:dhbwstudentapp/schedule/model/schedule.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_entry.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_query_result.dart';
+import 'package:dualmate/schedule/model/schedule.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
+import 'package:dualmate/schedule/model/schedule_query_result.dart';
 
 ///
 /// Parses an ICAL file extracts all schedule entries

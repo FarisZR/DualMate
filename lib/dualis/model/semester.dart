@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/dualis/model/module.dart';
+import 'package:dualmate/dualis/model/module.dart';
 
 class Semester {
   final String name;

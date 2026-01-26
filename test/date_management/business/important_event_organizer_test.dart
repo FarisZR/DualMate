@@ -1,6 +1,6 @@
-import 'package:dhbwstudentapp/date_management/business/important_event_organizer.dart';
-import 'package:dhbwstudentapp/date_management/model/important_event.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_entry.dart';
+import 'package:dualmate/date_management/business/important_event_organizer.dart';
+import 'package:dualmate/date_management/model/important_event.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:test/test.dart';
 
 void main() {

@@ -1,10 +1,10 @@
 import 'package:device_calendar/device_calendar.dart';
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/common/ui/colors.dart';
-import 'package:dhbwstudentapp/date_management/data/calendar_access.dart';
-import 'package:dhbwstudentapp/date_management/model/date_entry.dart';
-import 'package:dhbwstudentapp/date_management/ui/viewmodels/calendar_export_view_model.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/ui/colors.dart';
+import 'package:dualmate/date_management/data/calendar_access.dart';
+import 'package:dualmate/date_management/model/date_entry.dart';
+import 'package:dualmate/date_management/ui/viewmodels/calendar_export_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';

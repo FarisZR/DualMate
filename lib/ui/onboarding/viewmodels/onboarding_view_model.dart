@@ -1,7 +1,7 @@
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/logging/analytics.dart';
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
-import 'package:dhbwstudentapp/ui/onboarding/onboardin_step.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/logging/analytics.dart';
+import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
+import 'package:dualmate/ui/onboarding/onboardin_step.dart';
 
 typedef OnboardingFinished = void Function();
 

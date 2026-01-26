@@ -1,6 +1,6 @@
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
-import 'package:dhbwstudentapp/schedule/ui/notification/next_day_information_notification.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
+import 'package:dualmate/schedule/ui/notification/next_day_information_notification.dart';
 import 'package:kiwi/kiwi.dart';
 
 import '../../../common/util/cancellation_token.dart';

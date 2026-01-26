@@ -1,12 +1,11 @@
-import 'package:dhbwstudentapp/native/widget/widget_helper.dart';
+import 'package:dualmate/native/widget/widget_helper.dart';
 import 'package:flutter/services.dart';
 
 ///
 /// WidgetHelper which calls native code to control the widget on android
 ///
 class AndroidWidgetHelper implements WidgetHelper {
-  static const platform =
-      const MethodChannel('de.bennik2000.dhbwstudentapp/widget');
+  static const platform = const MethodChannel('com.fariszr.dualmate/widget');
 
   @override
   Future<void> disableWidget() async {

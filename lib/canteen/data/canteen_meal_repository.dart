@@ -1,7 +1,7 @@
-import 'package:dhbwstudentapp/canteen/data/canteen_meal_entity.dart';
-import 'package:dhbwstudentapp/canteen/model/meal.dart';
-import 'package:dhbwstudentapp/common/data/database_access.dart';
-import 'package:dhbwstudentapp/common/util/date_utils.dart';
+import 'package:dualmate/canteen/data/canteen_meal_entity.dart';
+import 'package:dualmate/canteen/model/meal.dart';
+import 'package:dualmate/common/data/database_access.dart';
+import 'package:dualmate/common/util/date_utils.dart';
 
 class CanteenMealRepository {
   final DatabaseAccess _database;

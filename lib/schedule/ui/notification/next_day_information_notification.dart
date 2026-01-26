@@ -1,12 +1,12 @@
-import 'package:dhbwstudentapp/common/background/task_callback.dart';
-import 'package:dhbwstudentapp/common/background/work_scheduler_service.dart';
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/common/ui/notification_api.dart';
-import 'package:dhbwstudentapp/common/util/date_utils.dart';
-import 'package:dhbwstudentapp/common/util/string_utils.dart';
-import 'package:dhbwstudentapp/schedule/data/schedule_entry_repository.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_entry.dart';
+import 'package:dualmate/common/background/task_callback.dart';
+import 'package:dualmate/common/background/work_scheduler_service.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/ui/notification_api.dart';
+import 'package:dualmate/common/util/date_utils.dart';
+import 'package:dualmate/common/util/string_utils.dart';
+import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:intl/intl.dart';
 
 class NextDayInformationNotification extends TaskCallback {

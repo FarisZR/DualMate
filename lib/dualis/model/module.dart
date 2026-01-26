@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/dualis/model/exam.dart';
+import 'package:dualmate/dualis/model/exam.dart';
 
 class Module {
   final List<Exam> exams;

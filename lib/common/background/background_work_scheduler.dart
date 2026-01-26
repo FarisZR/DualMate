@@ -1,6 +1,6 @@
-import 'package:dhbwstudentapp/common/appstart/app_initializer.dart';
-import 'package:dhbwstudentapp/common/background/task_callback.dart';
-import 'package:dhbwstudentapp/common/background/work_scheduler_service.dart';
+import 'package:dualmate/common/appstart/app_initializer.dart';
+import 'package:dualmate/common/background/task_callback.dart';
+import 'package:dualmate/common/background/work_scheduler_service.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:workmanager/workmanager.dart';
 

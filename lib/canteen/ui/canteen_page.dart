@@ -1,7 +1,7 @@
-import 'package:dhbwstudentapp/canteen/ui/viewmodels/canteen_view_model.dart';
-import 'package:dhbwstudentapp/canteen/ui/widgets/filter_dropdown.dart';
-import 'package:dhbwstudentapp/canteen/ui/widgets/meal_card.dart';
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
+import 'package:dualmate/canteen/ui/viewmodels/canteen_view_model.dart';
+import 'package:dualmate/canteen/ui/widgets/filter_dropdown.dart';
+import 'package:dualmate/canteen/ui/widgets/meal_card.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';

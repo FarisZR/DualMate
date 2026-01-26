@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/schedule/model/schedule.dart';
+import 'package:dualmate/schedule/model/schedule.dart';
 
 class ScheduleQueryResult {
   final Schedule schedule;

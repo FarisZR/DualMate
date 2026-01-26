@@ -9,10 +9,10 @@ final de = {
       "Wähle den Kalender aus, in den der Vorlesungsplan übertragen werden soll:",
   "calendarSyncPageEndSync": "Synchronisation beenden",
   "calendarSyncPageBeginSync": "Kalender synchronisieren",
-  "applicationName": "DHBW Studenten App",
+  "applicationName": "DualMate",
   "applicationLegalese":
       "Entwickelt von Benedikt Kolb. Dies ist keine offizielle App der DHBW Stuttgart und wird in Eigeninitiative entwickelt.",
-  "settingsAbout": "Über die DHBW Studenten App",
+  "settingsAbout": "Über DualMate",
   "settingsAboutTitle": "Über",
   "settingsDarkMode": "Dark mode",
   "settingsDesign": "Aussehen",

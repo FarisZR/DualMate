@@ -1,9 +1,9 @@
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/schedule/ui/schedule_page.dart';
-import 'package:dhbwstudentapp/schedule/ui/viewmodels/schedule_view_model.dart';
-import 'package:dhbwstudentapp/schedule/ui/weeklyschedule/filter/schedule_filter_page.dart';
-import 'package:dhbwstudentapp/schedule/ui/widgets/schedule_help_dialog.dart';
-import 'package:dhbwstudentapp/ui/navigation/navigation_entry.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/schedule/ui/schedule_page.dart';
+import 'package:dualmate/schedule/ui/viewmodels/schedule_view_model.dart';
+import 'package:dualmate/schedule/ui/weeklyschedule/filter/schedule_filter_page.dart';
+import 'package:dualmate/schedule/ui/widgets/schedule_help_dialog.dart';
+import 'package:dualmate/ui/navigation/navigation_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';

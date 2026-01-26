@@ -1,6 +1,6 @@
-import 'package:dhbwstudentapp/dualis/model/exam_grade.dart';
-import 'package:dhbwstudentapp/dualis/service/dualis_website_model.dart';
-import 'package:dhbwstudentapp/dualis/service/parsing/parsing_utils.dart';
+import 'package:dualmate/dualis/model/exam_grade.dart';
+import 'package:dualmate/dualis/service/dualis_website_model.dart';
+import 'package:dualmate/dualis/service/parsing/parsing_utils.dart';
 import 'package:html/parser.dart';
 
 class ExamsFromModuleDetailsExtract {
@@ -16,8 +16,20 @@ class ExamsFromModuleDetailsExtract {
   List<DualisExam> _extractExamsFromModuleDetails(String body) {
     var document = parse(body);
 
-    var tableExams = getElementByTagName(document, "tbody");
-    var tableExamsRows = tableExams.getElementsByTagName("tr");
+    // Dualis sometimes omits <tbody>; fall back to the first table if needed
+    var tbodyElements = document.getElementsByTagName("tbody");
+    var tableExamsRows = tbodyElements.isNotEmpty
+        ? tbodyElements.first.getElementsByTagName("tr")
+        : (() {
+            var tableElements = document.getElementsByTagName("table");
+            if (tableElements.isEmpty) {
+              throw ElementNotFoundParseException("tbody");
+            }
+            // Use rows directly under the table when tbody is missing
+            var rows = tableElements.first.getElementsByTagName("tr");
+            if (rows.isEmpty) throw ElementNotFoundParseException("tr");
+            return rows;
+          })();
 
     var currentTry = "";
     var currentModule = "";
@@ -25,17 +37,21 @@ class ExamsFromModuleDetailsExtract {
     var exams = <DualisExam>[];
 
     for (var row in tableExamsRows) {
-      // Save the try for all following exams
+      // Save the try for all following exams (cell has the class)
       var level01s = row.getElementsByClassName("level01");
       if (level01s.isNotEmpty) {
-        currentTry = level01s[0].innerHtml;
+        final cell = level01s.first;
+        currentTry = trimAndEscapeString(
+            cell.text.isNotEmpty ? cell.text : cell.innerHtml);
         continue;
       }
 
-      // Save the module for all following exams
+      // Save the module for all following exams (cell has the class)
       var level02s = row.getElementsByClassName("level02");
       if (level02s.isNotEmpty) {
-        currentModule = level02s[0].innerHtml;
+        final cell = level02s.first;
+        currentModule = trimAndEscapeString(
+            cell.text.isNotEmpty ? cell.text : cell.innerHtml);
         continue;
       }
 

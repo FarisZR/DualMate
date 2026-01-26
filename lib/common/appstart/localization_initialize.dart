@@ -1,7 +1,7 @@
 import 'dart:ui';
 
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:kiwi/kiwi.dart';
 
 ///

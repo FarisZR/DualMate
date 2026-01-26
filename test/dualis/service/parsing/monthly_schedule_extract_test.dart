@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:dhbwstudentapp/dualis/service/parsing/monthly_schedule_extract.dart';
+import 'package:dualmate/dualis/service/parsing/monthly_schedule_extract.dart';
 import 'package:test/test.dart';
 
 Future<void> main() async {

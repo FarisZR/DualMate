@@ -1,6 +1,6 @@
-import 'package:dhbwstudentapp/common/data/database_access.dart';
-import 'package:dhbwstudentapp/date_management/data/date_entry_entity.dart';
-import 'package:dhbwstudentapp/date_management/model/date_entry.dart';
+import 'package:dualmate/common/data/database_access.dart';
+import 'package:dualmate/date_management/data/date_entry_entity.dart';
+import 'package:dualmate/date_management/model/date_entry.dart';
 
 class DateEntryRepository {
   final DatabaseAccess _database;

@@ -1,7 +1,7 @@
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/common/util/platform_util.dart';
-import 'package:dhbwstudentapp/dualis/model/exam_grade.dart';
-import 'package:dhbwstudentapp/dualis/ui/viewmodels/study_grades_view_model.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/util/platform_util.dart';
+import 'package:dualmate/dualis/model/exam_grade.dart';
+import 'package:dualmate/dualis/ui/viewmodels/study_grades_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 

@@ -1,10 +1,10 @@
-# AGENTS.md - AI Agent Guidelines for DHBW Student App
+# AGENTS.md - AI Agent Guidelines for DualMate
 
 This document provides guidelines for AI coding agents working on this Flutter/Dart codebase.
 
 ## Project Overview
 
-- **Project**: DHBW Student Information App - Mobile app for DHBW students
+- **Project**: DualMate - Mobile app for DHBW students
 - **Language**: Dart
 - **Framework**: Flutter (cross-platform mobile)
 - **Dart SDK**: `>=2.10.0 <3.0.0`

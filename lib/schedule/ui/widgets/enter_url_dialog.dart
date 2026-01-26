@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';

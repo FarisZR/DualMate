@@ -1,4 +1,4 @@
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 

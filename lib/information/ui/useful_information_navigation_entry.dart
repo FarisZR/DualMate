@@ -1,7 +1,7 @@
-import 'package:dhbwstudentapp/common/i18n/localizations.dart';
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
-import 'package:dhbwstudentapp/information/ui/usefulinformation/useful_information_page.dart';
-import 'package:dhbwstudentapp/ui/navigation/navigation_entry.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
+import 'package:dualmate/information/ui/usefulinformation/useful_information_page.dart';
+import 'package:dualmate/ui/navigation/navigation_entry.dart';
 import 'package:flutter/material.dart';
 
 class UsefulInformationNavigationEntry extends NavigationEntry<BaseViewModel> {

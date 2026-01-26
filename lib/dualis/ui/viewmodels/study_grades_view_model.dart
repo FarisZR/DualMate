@@ -1,13 +1,13 @@
-import 'package:dhbwstudentapp/common/data/preferences/preferences_provider.dart';
-import 'package:dhbwstudentapp/common/ui/viewmodels/base_view_model.dart';
-import 'package:dhbwstudentapp/common/util/cancelable_mutex.dart';
-import 'package:dhbwstudentapp/common/util/cancellation_token.dart';
-import 'package:dhbwstudentapp/dualis/model/credentials.dart';
-import 'package:dhbwstudentapp/dualis/model/module.dart';
-import 'package:dhbwstudentapp/dualis/model/semester.dart';
-import 'package:dhbwstudentapp/dualis/model/study_grades.dart';
-import 'package:dhbwstudentapp/dualis/service/dualis_service.dart';
-import 'package:dhbwstudentapp/schedule/model/schedule_source_type.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
+import 'package:dualmate/common/util/cancelable_mutex.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/dualis/model/credentials.dart';
+import 'package:dualmate/dualis/model/module.dart';
+import 'package:dualmate/dualis/model/semester.dart';
+import 'package:dualmate/dualis/model/study_grades.dart';
+import 'package:dualmate/dualis/service/dualis_service.dart';
+import 'package:dualmate/schedule/model/schedule_source_type.dart';
 
 enum LoginState {
   LoggedOut,

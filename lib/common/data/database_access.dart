@@ -1,5 +1,5 @@
-import 'package:dhbwstudentapp/common/data/database_path_provider.dart';
-import 'package:dhbwstudentapp/common/data/sql_scripts.dart';
+import 'package:dualmate/common/data/database_path_provider.dart';
+import 'package:dualmate/common/data/sql_scripts.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseAccess {
