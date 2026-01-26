@@ -160,6 +160,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   Future updateSchedule(DateTime start, DateTime end) async {
+    if (_isDisposed) return;
+
     var now = DateTime.now();
     if (_lastUpdateRequest != null &&
         now.difference(_lastUpdateRequest!).inSeconds < 2) {
@@ -172,6 +174,11 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
     await _updateMutex.acquireAndCancelOther();
 
+    if (_isDisposed) {
+      _updateMutex.release();
+      return;
+    }
+
     if (lastRequestedStart != start || lastRequestedEnd != end) {
       _updateMutex.release();
       return;
@@ -179,14 +186,18 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
     try {
       isUpdating = true;
-      notifyListeners("isUpdating");
+      if (!_isDisposed) {
+        notifyListeners("isUpdating");
+      }
 
       await _doUpdateSchedule(start, end);
     } catch (_) {
     } finally {
       isUpdating = false;
       _updateMutex.release();
-      notifyListeners("isUpdating");
+      if (!_isDisposed) {
+        notifyListeners("isUpdating");
+      }
     }
   }
 
@@ -199,6 +210,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
     var cachedSchedule = await scheduleProvider.getCachedSchedule(start, end);
     cancellationToken.throwIfCancelled();
+    if (_isDisposed) return;
+
     _setSchedule(cachedSchedule, start, end);
 
     var updatedSchedule = await _readScheduleFromService(
@@ -207,6 +220,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       cancellationToken,
     );
     cancellationToken.throwIfCancelled();
+
+    if (_isDisposed) return;
 
     if (updatedSchedule != null) {
       var schedule = updatedSchedule.schedule;
@@ -224,7 +239,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
 
     updateFailed = (updatedSchedule == null);
-    notifyListeners("updateFailed");
+    if (!_isDisposed) {
+      notifyListeners("updateFailed");
+    }
 
     if (updateFailed) {
       _cancelErrorInFuture();
@@ -257,6 +274,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _errorResetTimer = Timer(
       const Duration(seconds: 5),
       () {
+        if (_isDisposed) return;
         updateFailed = false;
         notifyListeners("updateFailed");
       },
@@ -266,6 +284,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   void ensureUpdateNowTimerRunning() {
     if (_updateNowTimer == null || !_updateNowTimer!.isActive) {
       _updateNowTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+        if (_isDisposed) return;
         notifyListeners("now");
       });
     }
@@ -273,13 +292,15 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   @override
   void dispose() {
-    super.dispose();
-
     _isDisposed = true;
+
+    _updateMutex.cancel();
 
     _updateNowTimer?.cancel();
 
     _errorResetTimer?.cancel();
+
+    super.dispose();
   }
 
   void setQueryFailedCallback(VoidCallback callback) {
