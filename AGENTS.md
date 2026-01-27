@@ -4,7 +4,7 @@ This document provides guidelines for AI coding agents working on this Flutter/D
 
 ## Project Overview
 
-- **Project**: DualMate - Mobile app for DHBW students
+- **Project**: DualMate - Mobile app for DHBW (ka) students
 - **Language**: Dart
 - **Framework**: Flutter (cross-platform mobile)
 - **Dart SDK**: `>=2.10.0 <3.0.0`
@@ -24,6 +24,9 @@ flutter build appbundle      # Build Android App Bundle (for Play Store)
 
 ```bash
 flutter test                 # Run all tests
+```
+```bash
+flutter run -d <DEVICE_ID> #run the app on a real device to see the logs
 ```
 
 ## Project Structure
@@ -66,6 +69,8 @@ Use triple-slash `///` doc comments:
 ///
 class DualisAuthentication {
 ```
+
+New features and fixes are to be documented under the `docs` directory.
 
 ## Architecture Patterns
 
@@ -175,8 +180,5 @@ var htmlContent = await File(
 
 - Test driven development, write automated tests first with full coverage.
 - You should continue till the feature is implemented correctly with no errors.
-- App is multilingual, make sure to support English and German.
 - Test your final changes using the debugger and the connected android device by reading the logs and checking for issues.
-- Document the entire feature under docs
-- update the readme to include it.
 - target Material you (Material 3) design language (https://m3.material.io/develop/flutter, https://m3.material.io/foundations/content-design/overview)
