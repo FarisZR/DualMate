@@ -23,6 +23,7 @@ Bisher verfügbare Funktionen:
 
 - Vorlesungsplan aus Rapla und Dualis anzeigen
 - Komplette Übersicht über deine Woche
+- Wischen zwischen Wochen im Wochenplan
 - Simple Tagesübersicht
 - Noten aus Dualis abrufen
 - Offline modus: Du kannst auf deinen Vorlesungsplan zugreifen, auch wenn du keine Internetverbindung hast

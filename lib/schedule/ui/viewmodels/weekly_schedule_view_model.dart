@@ -10,6 +10,8 @@ import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
+import 'package:dualmate/schedule/ui/viewmodels/schedule_freshness_gate.dart';
+import 'package:dualmate/schedule/ui/viewmodels/schedule_update_request_gate.dart';
 import 'package:flutter/foundation.dart';
 
 class WeeklyScheduleViewModel extends BaseViewModel {
@@ -40,8 +42,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   bool updateFailed = false;
 
   bool isUpdating = false;
-  DateTime? _lastUpdateRequest;
-  DateTime? _lastUpdatedAt;
+  final ScheduleUpdateRequestGate _updateRequestGate =
+      ScheduleUpdateRequestGate();
+  final ScheduleFreshnessGate _freshnessGate = ScheduleFreshnessGate();
   Schedule? weekSchedule;
 
   String? scheduleUrl;
@@ -53,12 +56,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   bool _isDisposed = false;
 
-  static const Duration _staleAfter = Duration(minutes: 30);
-
   final CancelableMutex _updateMutex = CancelableMutex();
 
-  late DateTime lastRequestedStart;
-  late DateTime lastRequestedEnd;
+  DateTime? lastRequestedStart;
+  DateTime? lastRequestedEnd;
 
   WeeklyScheduleViewModel(
     this.scheduleProvider,
@@ -166,11 +167,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     if (_isDisposed) return;
 
     var now = DateTime.now();
-    if (_lastUpdateRequest != null &&
-        now.difference(_lastUpdateRequest!).inSeconds < 2) {
+    if (!_updateRequestGate.shouldAllow(start, end, now)) {
       return;
     }
-    _lastUpdateRequest = now;
 
     lastRequestedEnd = end;
     lastRequestedStart = start;
@@ -218,9 +217,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _setSchedule(cachedSchedule, start, end);
 
     final now = DateTime.now();
-    final isStale = _lastUpdatedAt == null
-        ? true
-        : now.difference(_lastUpdatedAt!).abs() > _staleAfter;
+    final isStale = _freshnessGate.isStale(start, end, now);
 
     if (!isStale) {
       print("Schedule fresh; skip network fetch");
@@ -234,7 +231,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         end,
         cancellationToken,
       );
-      _lastUpdatedAt = DateTime.now();
+      _freshnessGate.markFetched(start, end, DateTime.now());
     } catch (e) {
       print("Schedule update failed: $e");
     }
