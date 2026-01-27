@@ -98,5 +98,5 @@ object MultiDayWidgetHelper {
         }
     }
 
-    private const val WEEK_WINDOW_DAYS = 7
+    private const val WEEK_WINDOW_DAYS = 14
 }

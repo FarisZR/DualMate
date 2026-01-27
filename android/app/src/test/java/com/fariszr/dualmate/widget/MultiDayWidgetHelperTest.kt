@@ -16,13 +16,13 @@ class MultiDayWidgetHelperTest {
     )
 
     @Test
-    fun weekDates_returnsSevenDayWindow() {
+    fun weekDates_returnsFourteenDayWindow() {
         val today = LocalDate.of(2026, 1, 21)
 
         val dates = MultiDayWidgetHelper.weekDates(today)
 
-        assertEquals(7, dates.size)
-        assertEquals(today.plusDays(6), dates.last())
+        assertEquals(14, dates.size)
+        assertEquals(today.plusDays(13), dates.last())
     }
 
     @Test
@@ -68,6 +68,21 @@ class MultiDayWidgetHelperTest {
 
         assertEquals(3, visible.items.size)
         assertEquals(3, visible.overflowCount)
+    }
+
+    @Test
+    fun calculateVisibleDayCount_scalesWithHeight() {
+        val today = LocalDate.of(2026, 1, 21)
+        val rows = listOf(
+            MultiDayWidgetHelper.DayRow(today, listOf("item"), true),
+            MultiDayWidgetHelper.DayRow(today.plusDays(1), listOf("item"), false)
+        )
+
+        val minCount = MultiDayWidgetHelper.calculateVisibleDayCount(40, rows, metrics)
+        val maxCount = MultiDayWidgetHelper.calculateVisibleDayCount(400, rows, metrics)
+
+        assertTrue(maxCount >= minCount)
+        assertTrue(maxCount >= 2)
     }
 
     @Test

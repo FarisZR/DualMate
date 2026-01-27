@@ -36,6 +36,8 @@
         android:layout_height="match_parent"
         android:dividerHeight="0dp"
         android:divider="#00000000"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
         android:layout_below="@id/widget_title"/>
 
     <TextView

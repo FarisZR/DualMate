@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
@@ -23,6 +24,16 @@ import org.threeten.bp.LocalDateTime
  * Implementation of App Widget functionality.
  */
 class ScheduleNowWidget : AppWidgetProvider() {
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle
+    ) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
+        appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.schedule_entries_list_view)
+    }
+
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         val entriesForDay = ScheduleProvider(context).queryScheduleEntriesForDay(LocalDate.now())
 

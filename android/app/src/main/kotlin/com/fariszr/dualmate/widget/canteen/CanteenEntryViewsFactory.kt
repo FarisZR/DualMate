@@ -75,7 +75,9 @@ class CanteenEntryViewsFactory(
         endDate: LocalDate
     ): Map<LocalDate, List<CanteenEntry>> {
         val entries = CanteenProvider(context).queryMealsForWeek(startDate, endDate)
-        return entries.groupBy { entry -> entry.date }
+        val distinctEntries = deduplicateEntries(entries)
+
+        return distinctEntries.groupBy { entry -> entry.date }
     }
 
     private fun mapEmojis(mealTypes: List<String>): String {
@@ -104,5 +106,16 @@ class CanteenEntryViewsFactory(
             itemHeightDp = 20,
             maxItemsPerRow = 4
         )
+
+        internal fun deduplicateEntries(entries: List<CanteenEntry>): List<CanteenEntry> {
+            return entries.distinctBy { entry ->
+                listOf(
+                    entry.date,
+                    entry.category.trim().lowercase(Locale.getDefault()),
+                    entry.name.trim().lowercase(Locale.getDefault()),
+                    entry.price
+                )
+            }
+        }
     }
 }
