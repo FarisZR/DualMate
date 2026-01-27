@@ -6,6 +6,7 @@ import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/ui/viewmodels/weekly_schedule_view_model.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/schedule_entry_detail_bottom_sheet.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_widget.dart';
+import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:flutter/material.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:provider/provider.dart';
@@ -19,12 +20,24 @@ class WeeklySchedulePage extends StatefulWidget {
 class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
   late WeeklyScheduleViewModel viewModel;
   double _dragDelta = 0;
+  bool _isApplyingWidgetPayload = false;
 
   _WeeklySchedulePageState();
 
   @override
   void initState() {
     super.initState();
+    WidgetNavigationPayloadStore.instance.addListener(_handleWidgetPayload);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _handleWidgetPayload();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetNavigationPayloadStore.instance.removeListener(_handleWidgetPayload);
+    super.dispose();
   }
 
   void _showQueryFailedSnackBar() {
@@ -186,6 +199,41 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
         ),
       ),
     );
+  }
+
+  void _handleWidgetPayload() {
+    if (WidgetNavigationPayloadStore.instance.peekSchedulePayload() == null) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _applyWidgetPayload();
+    });
+  }
+
+  Future<void> _applyWidgetPayload() async {
+    if (_isApplyingWidgetPayload) return;
+    final payload = WidgetNavigationPayloadStore.instance.takeSchedulePayload();
+    if (payload == null) return;
+    _isApplyingWidgetPayload = true;
+
+    try {
+      final targetDate = payload.start ?? payload.dayStart ?? DateTime.now();
+      print("Widget schedule target date: $targetDate");
+      await viewModel.openWeekContainingFromWidget(targetDate);
+      if (!mounted) return;
+
+      if (payload.hasEntry) {
+        final entry = viewModel.resolveEntryFromPayload(payload);
+        if (entry != null) {
+          print("Widget schedule entry resolved: ${entry.title}");
+          _onScheduleEntryTap(context, entry);
+        } else {
+          print("Widget schedule entry not resolved");
+        }
+      }
+    } finally {
+      _isApplyingWidgetPayload = false;
+    }
   }
 
   Row _buildNavigationButtonBar() {

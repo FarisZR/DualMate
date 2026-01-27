@@ -5,6 +5,7 @@ import 'package:dualmate/common/ui/colors.dart';
 import 'package:dualmate/common/ui/viewmodels/root_view_model.dart';
 import 'package:dualmate/common/appstart/app_initializer.dart';
 import 'package:dualmate/common/util/launch_intent.dart';
+import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:dualmate/main.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:flutter/services.dart';
@@ -27,7 +28,7 @@ class RootPage extends StatefulWidget {
   _RootPageState createState() => _RootPageState();
 }
 
-class _RootPageState extends State<RootPage> {
+class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   RootViewModel? _rootViewModel;
   bool _isInitializing = true;
   bool _perfOverlayEnabled = kDebugMode || kProfileMode;
@@ -39,9 +40,25 @@ class _RootPageState extends State<RootPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _navigationChannel.setMethodCallHandler(_handleNavigationCall);
     _fetchLaunchRoute();
+    _fetchLaunchPayload();
     _initializeApp();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _fetchLaunchRoute();
+      _fetchLaunchPayload();
+    }
   }
 
   Future<void> _fetchLaunchRoute() async {
@@ -58,11 +75,62 @@ class _RootPageState extends State<RootPage> {
   }
 
   Future<void> _handleNavigationCall(MethodCall call) async {
-    if (call.method != 'openRoute') return;
-    final route = call.arguments as String?;
-    if (route == null || route.isEmpty) return;
-    _pendingRoute = route;
-    _applyPendingRoute();
+    if (call.method == 'openRoute') {
+      if (call.arguments is Map) {
+        final arguments = call.arguments as Map<dynamic, dynamic>;
+        final route = arguments["route"] as String?;
+        _storeWidgetPayload(arguments["payload"]);
+        if (route == null || route.isEmpty) return;
+        _pendingRoute = route;
+        _clearPendingLaunchIntent();
+        _applyPendingRoute();
+        return;
+      }
+      final route = call.arguments as String?;
+      if (route == null || route.isEmpty) return;
+      _pendingRoute = route;
+      _clearPendingLaunchIntent();
+      _applyPendingRoute();
+      return;
+    }
+
+    if (call.method == 'openWidgetPayload') {
+      _storeWidgetPayload(call.arguments);
+      return;
+    }
+  }
+
+  Future<void> _fetchLaunchPayload() async {
+    try {
+      final payload = await _navigationChannel.invokeMethod('getLaunchPayload');
+      _storeWidgetPayload(payload);
+      if (payload != null) {
+        await _navigationChannel.invokeMethod('clearLaunchPayload');
+      }
+    } on PlatformException {}
+  }
+
+  Future<void> _clearPendingLaunchIntent() async {
+    try {
+      await _navigationChannel.invokeMethod('clearLaunchRoute');
+      await _navigationChannel.invokeMethod('clearLaunchPayload');
+    } on PlatformException {}
+  }
+
+  void _storeWidgetPayload(dynamic payload) {
+    if (payload is! Map) return;
+    final schedulePayload = WidgetScheduleEntryPayload.fromMap(payload);
+    if (!schedulePayload.isEmpty) {
+      print(
+          "Widget schedule payload: ${schedulePayload.dayStart} id=${schedulePayload.id}");
+      WidgetNavigationPayloadStore.instance.setSchedulePayload(schedulePayload);
+    }
+
+    final canteenPayload = WidgetCanteenDayPayload.fromMap(payload);
+    if (!canteenPayload.isEmpty) {
+      print("Widget canteen payload: ${canteenPayload.dayStart}");
+      WidgetNavigationPayloadStore.instance.setCanteenPayload(canteenPayload);
+    }
   }
 
   Future<void> _initializeApp() async {
@@ -115,9 +183,18 @@ class _RootPageState extends State<RootPage> {
       return;
     }
 
-    navigator.pushNamedAndRemoveUntil(_pendingRoute!, (route) {
-      return route.settings.name == "schedule";
+    var found = false;
+    navigator.popUntil((route) {
+      if (route.settings.name == _pendingRoute) {
+        found = true;
+        return true;
+      }
+      return route.isFirst;
     });
+
+    if (!found) {
+      navigator.pushNamed(_pendingRoute!);
+    }
     _pendingRoute = null;
   }
 

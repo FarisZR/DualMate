@@ -14,9 +14,14 @@ import 'package:kiwi/kiwi.dart';
 class PagerWidget extends StatefulWidget {
   final List<PageDefinition> pages;
   final String? pagesId;
+  final ValueNotifier<int?>? forcedPage;
 
-  const PagerWidget({Key? key, required this.pages, this.pagesId})
-      : super(key: key);
+  const PagerWidget({
+    Key? key,
+    required this.pages,
+    this.pagesId,
+    this.forcedPage,
+  }) : super(key: key);
 
   @override
   _PagerWidgetState createState() => _PagerWidgetState(pages, pagesId);
@@ -36,6 +41,14 @@ class _PagerWidgetState extends State<PagerWidget> {
     super.initState();
 
     loadActivePage();
+    widget.forcedPage?.addListener(_handleForcedPage);
+    _handleForcedPage();
+  }
+
+  @override
+  void dispose() {
+    widget.forcedPage?.removeListener(_handleForcedPage);
+    super.dispose();
   }
 
   @override
@@ -103,6 +116,13 @@ class _PagerWidgetState extends State<PagerWidget> {
         _currentPage = selectedPage;
       });
     }
+  }
+
+  void _handleForcedPage() {
+    final forced = widget.forcedPage?.value;
+    if (forced == null) return;
+    setActivePage(forced);
+    widget.forcedPage?.value = null;
   }
 }
 

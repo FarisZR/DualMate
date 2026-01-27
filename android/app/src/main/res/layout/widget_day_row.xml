@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/day_row_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
@@ -9,10 +10,13 @@
     android:paddingBottom="2dp">
 
     <LinearLayout
+        android:id="@+id/day_header_container"
         android:layout_width="48dp"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:clickable="true"
+        android:focusable="true">
 
         <TextView
             android:id="@+id/day_label"
@@ -41,5 +45,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
+        android:clickable="true"
+        android:focusable="true"
         android:orientation="vertical" />
 </LinearLayout>

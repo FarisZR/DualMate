@@ -8,10 +8,12 @@ import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_freshness_gate.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_update_request_gate.dart';
+import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:flutter/foundation.dart';
 
 class WeeklyScheduleViewModel extends BaseViewModel {
@@ -57,6 +59,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   bool _isDisposed = false;
 
   final CancelableMutex _updateMutex = CancelableMutex();
+
+  DateTime? _widgetLockedStart;
+  DateTime? _widgetLockedEnd;
+  DateTime? _widgetLockExpiresAt;
 
   DateTime? lastRequestedStart;
   DateTime? lastRequestedEnd;
@@ -163,11 +169,37 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     await updateSchedule(currentDateStart, currentDateEnd);
   }
 
-  Future updateSchedule(DateTime start, DateTime end) async {
+  Future openWeekContaining(DateTime date) async {
+    final weekStart = toStartOfDay(toDayOfWeek(date, DateTime.monday));
+    final weekEnd = toNextWeek(weekStart);
+    await updateSchedule(weekStart, weekEnd);
+  }
+
+  Future openWeekContainingFromWidget(DateTime date) async {
+    final weekStart = toStartOfDay(toDayOfWeek(date, DateTime.monday));
+    final weekEnd = toNextWeek(weekStart);
+    _lockWidgetWeek(weekStart, weekEnd);
+    _updateMutex.cancel();
+
+    final cachedSchedule = await scheduleProvider.getCachedSchedule(
+      weekStart,
+      weekEnd,
+    );
+    if (_isDisposed) return;
+    _setSchedule(cachedSchedule, weekStart, weekEnd);
+    await updateSchedule(weekStart, weekEnd, force: true);
+  }
+
+  Future updateSchedule(DateTime start, DateTime end,
+      {bool force = false}) async {
     if (_isDisposed) return;
 
+    if (_shouldSkipUpdate(start, end)) {
+      return;
+    }
+
     var now = DateTime.now();
-    if (!_updateRequestGate.shouldAllow(start, end, now)) {
+    if (!force && !_updateRequestGate.shouldAllow(start, end, now)) {
       return;
     }
 
@@ -321,5 +353,30 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   void setQueryFailedCallback(VoidCallback callback) {
     _queryFailedCallback = callback;
+  }
+
+  ScheduleEntry? resolveEntryFromPayload(WidgetScheduleEntryPayload payload) {
+    final schedule = weekSchedule;
+    if (schedule == null) return null;
+    return resolveScheduleEntry(schedule.entries, payload);
+  }
+
+  void _lockWidgetWeek(DateTime start, DateTime end) {
+    _widgetLockedStart = start;
+    _widgetLockedEnd = end;
+    _widgetLockExpiresAt = DateTime.now().add(const Duration(seconds: 6));
+  }
+
+  bool _shouldSkipUpdate(DateTime start, DateTime end) {
+    final expiresAt = _widgetLockExpiresAt;
+    if (expiresAt == null) return false;
+    if (DateTime.now().isAfter(expiresAt)) {
+      _widgetLockedStart = null;
+      _widgetLockedEnd = null;
+      _widgetLockExpiresAt = null;
+      return false;
+    }
+    if (_widgetLockedStart == null || _widgetLockedEnd == null) return false;
+    return _widgetLockedStart != start || _widgetLockedEnd != end;
   }
 }

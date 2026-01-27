@@ -5,6 +5,7 @@ import 'package:dualmate/schedule/ui/viewmodels/schedule_view_model.dart';
 import 'package:dualmate/schedule/ui/viewmodels/weekly_schedule_view_model.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/weekly_schedule_page.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_empty_state.dart';
+import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:dualmate/ui/pager_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
@@ -26,8 +27,19 @@ class _SchedulePageState extends State<SchedulePage> {
     KiwiContainer().resolve(),
   );
 
+  final ValueNotifier<int?> _forcedPage = ValueNotifier<int?>(null);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetNavigationPayloadStore.instance.addListener(_handleWidgetPayload);
+    _handleWidgetPayload();
+  }
+
   @override
   void dispose() {
+    WidgetNavigationPayloadStore.instance.removeListener(_handleWidgetPayload);
+    _forcedPage.dispose();
     weeklyScheduleViewModel.dispose();
     dailyScheduleViewModel.dispose();
     super.dispose();
@@ -41,11 +53,13 @@ class _SchedulePageState extends State<SchedulePage> {
       return ScheduleEmptyState();
     } else {
       return PagerWidget(
+        forcedPage: _forcedPage,
         pages: <PageDefinition>[
           PageDefinition(
             icon: Icon(Icons.view_week),
             text: L.of(context).pageWeekOverviewTitle,
-            builder: (_) => ChangeNotifierProvider<WeeklyScheduleViewModel>.value(
+            builder: (_) =>
+                ChangeNotifierProvider<WeeklyScheduleViewModel>.value(
               value: weeklyScheduleViewModel,
               child: WeeklySchedulePage(),
             ),
@@ -53,7 +67,8 @@ class _SchedulePageState extends State<SchedulePage> {
           PageDefinition(
             icon: Icon(Icons.view_day),
             text: L.of(context).pageDayOverviewTitle,
-            builder: (_) => ChangeNotifierProvider<DailyScheduleViewModel>.value(
+            builder: (_) =>
+                ChangeNotifierProvider<DailyScheduleViewModel>.value(
               value: dailyScheduleViewModel,
               child: DailySchedulePage(),
             ),
@@ -61,5 +76,12 @@ class _SchedulePageState extends State<SchedulePage> {
         ],
       );
     }
+  }
+
+  void _handleWidgetPayload() {
+    if (WidgetNavigationPayloadStore.instance.peekSchedulePayload() == null) {
+      return;
+    }
+    _forcedPage.value = 0;
   }
 }

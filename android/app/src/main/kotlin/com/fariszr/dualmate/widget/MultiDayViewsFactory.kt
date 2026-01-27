@@ -1,13 +1,11 @@
 package com.fariszr.dualmate.widget
 
-import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.widget.AdapterView
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import org.threeten.bp.LocalDate
 import org.threeten.bp.LocalDateTime
-import kotlin.math.max
 
 abstract class MultiDayViewsFactory<T>(
     protected val context: Context,
@@ -15,7 +13,6 @@ abstract class MultiDayViewsFactory<T>(
     private val rowMetrics: MultiDayWidgetHelper.RowMetrics
 ) : RemoteViewsService.RemoteViewsFactory {
 
-    private val appWidgetManager = AppWidgetManager.getInstance(context)
     private var visibleRows: List<MultiDayWidgetHelper.DayRow<T>> = emptyList()
 
     override fun onCreate() {
@@ -44,20 +41,19 @@ abstract class MultiDayViewsFactory<T>(
 
         views.removeAllViews(getRowItemsContainerId())
 
-        if (row.items.isEmpty()) {
+        val visibleItems = prepareVisibleItems(row.items)
+        if (visibleItems.items.isEmpty() && visibleItems.overflowCount == 0) {
             views.addView(getRowItemsContainerId(), buildEmptyView(row.isToday))
             return views
         }
 
         val now = LocalDateTime.now()
-        val visibleItems = MultiDayWidgetHelper.limitItems(row.items, rowMetrics.maxItemsPerRow)
-
         visibleItems.items.forEach { item ->
             views.addView(getRowItemsContainerId(), buildItemView(item, getItemState(item, now)))
         }
 
         if (visibleItems.overflowCount > 0) {
-            views.addView(getRowItemsContainerId(), buildOverflowView(visibleItems.overflowCount))
+            views.addView(getRowItemsContainerId(), buildOverflowView(row.date, visibleItems.overflowCount))
         }
 
         return views
@@ -83,10 +79,14 @@ abstract class MultiDayViewsFactory<T>(
     protected abstract fun getRowItemsContainerId(): Int
     protected abstract fun bindDayHeader(views: RemoteViews, date: LocalDate, isToday: Boolean)
     protected abstract fun buildItemView(item: T, state: WidgetItemState): RemoteViews
-    protected abstract fun buildOverflowView(overflowCount: Int): RemoteViews
+    protected abstract fun buildOverflowView(date: LocalDate, overflowCount: Int): RemoteViews
     protected abstract fun buildEmptyView(isToday: Boolean): RemoteViews
     protected abstract fun getItemState(item: T, now: LocalDateTime): WidgetItemState
     protected abstract fun loadItemsForWeek(startDate: LocalDate, endDate: LocalDate): Map<LocalDate, List<T>>
+
+    protected open fun prepareVisibleItems(items: List<T>): MultiDayWidgetHelper.VisibleItems<T> {
+        return MultiDayWidgetHelper.VisibleItems(items, 0)
+    }
 
     private fun reloadRows() {
         val today = LocalDate.now()
@@ -100,26 +100,6 @@ abstract class MultiDayViewsFactory<T>(
         }
 
         val filteredRows = MultiDayWidgetHelper.filterWeekRows(allRows)
-        val widgetHeight = getWidgetHeightDp()
-        val visibleCount = MultiDayWidgetHelper.calculateVisibleDayCount(
-            widgetHeight,
-            filteredRows,
-            rowMetrics
-        )
-
-        visibleRows = filteredRows.take(visibleCount).ifEmpty { filteredRows.take(1) }
-    }
-
-    private fun getWidgetHeightDp(): Int {
-        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
-            return rowMetrics.headerHeightDp + rowMetrics.dateColumnMinHeightDp
-        }
-        val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
-        val minHeight = options.getInt(
-            AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,
-            rowMetrics.headerHeightDp
-        )
-        val maxHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, minHeight)
-        return max(minHeight, maxHeight)
+        visibleRows = filteredRows.ifEmpty { filteredRows.take(1) }
     }
 }

@@ -5,6 +5,6 @@
     <string name="widget_schedule_title">Schedule</string>
     <string name="widget_canteen_title">Canteen</string>
     <string name="widget_canteen_empty_state">No meals for today</string>
-    <string name="widget_canteen_overflow">+%1$d more</string>
+    <string name="widget_canteen_overflow">+%1$d click for more details</string>
     <string name="widget_canteen_not_purchased">Widgets are available from your home screen</string>
 </resources>

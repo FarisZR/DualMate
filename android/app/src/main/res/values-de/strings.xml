@@ -5,6 +5,6 @@
     <string name="widget_schedule_not_purchased">Widgets sind über den Homescreen verfügbar</string>
     <string name="widget_canteen_title">Mensa</string>
     <string name="widget_canteen_empty_state">Keine Speisen für heute</string>
-    <string name="widget_canteen_overflow">+%1$d weitere</string>
+    <string name="widget_canteen_overflow">+%1$d weitere - tippen fuer Details</string>
     <string name="widget_canteen_not_purchased">Widgets sind über den Homescreen verfügbar</string>
 </resources>

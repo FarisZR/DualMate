@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
@@ -62,18 +63,15 @@ class ScheduleNowWidget : AppWidgetProvider() {
         if (WidgetHelper(context).isWidgetEnabled()) {
             views.setViewVisibility(R.id.layout_purchase, View.INVISIBLE)
             views.setViewVisibility(R.id.schedule_entries_list_view, View.VISIBLE)
-            views.setOnClickPendingIntent(
-                R.id.widget_click_overlay,
-                PendingIntent.getActivity(
-                    context,
-                    0,
-                    Intent(context, MainActivity::class.java).apply {
-                        action = "com.fariszr.dualmate.OPEN_SCHEDULE"
-                    },
-                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                )
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                0,
+                Intent(context, MainActivity::class.java).apply {
+                    action = "com.fariszr.dualmate.OPEN_SCHEDULE"
+                },
+                pendingIntentFlags()
             )
-            updateScheduleEntryList(context, views, appWidgetManager, appWidgetId)
+            updateScheduleEntryList(context, views, appWidgetManager, appWidgetId, pendingIntent)
             views.setViewVisibility(R.id.layout_empty_state, View.INVISIBLE)
         } else {
             views.setViewVisibility(R.id.layout_empty_state, View.INVISIBLE)
@@ -84,18 +82,32 @@ class ScheduleNowWidget : AppWidgetProvider() {
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 
-    private fun updateScheduleEntryList(context: Context, views: RemoteViews, appWidgetManager: AppWidgetManager, id: Int) {
+    private fun updateScheduleEntryList(
+        context: Context,
+        views: RemoteViews,
+        appWidgetManager: AppWidgetManager,
+        id: Int,
+        pendingIntent: PendingIntent
+    ) {
         val intent = Intent(context, NowScheduleEntryRemoteViewsService::class.java).apply {
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
             data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
         }
         views.setRemoteAdapter(R.id.schedule_entries_list_view, intent)
+        views.setPendingIntentTemplate(R.id.schedule_entries_list_view, pendingIntent)
 
         appWidgetManager.notifyAppWidgetViewDataChanged(id, R.id.schedule_entries_list_view)
     }
 
 
     companion object {
+        private fun pendingIntentFlags(): Int {
+            var flags = PendingIntent.FLAG_UPDATE_CURRENT
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                flags = flags or PendingIntent.FLAG_MUTABLE
+            }
+            return flags
+        }
         fun requestWidgetRefresh(context: Context) {
             val intent = getWidgetUpdateIntent(context)
             context.sendBroadcast(intent)
@@ -112,12 +124,12 @@ class ScheduleNowWidget : AppWidgetProvider() {
                 Intent(context, MainActivity::class.java).apply {
                     action = "com.fariszr.dualmate.OPEN_SCHEDULE"
                 },
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                pendingIntentFlags()
             )
 
             for (id in ids) {
                 val views = RemoteViews(context.packageName, R.layout.widget_schedule_now)
-                views.setOnClickPendingIntent(R.id.widget_click_overlay, pendingIntent)
+                views.setPendingIntentTemplate(R.id.schedule_entries_list_view, pendingIntent)
                 AppWidgetManager.getInstance(context).updateAppWidget(id, views)
             }
         }

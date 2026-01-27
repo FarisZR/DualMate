@@ -2,6 +2,7 @@ import 'package:dualmate/canteen/ui/viewmodels/canteen_view_model.dart';
 import 'package:dualmate/canteen/ui/widgets/filter_dropdown.dart';
 import 'package:dualmate/canteen/ui/widgets/meal_card.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
@@ -19,6 +20,7 @@ class _CanteenPageState extends State<CanteenPage> {
   late PageController pageController;
   late ValueNotifier<int> pageNotifier;
   late DateTime baseDate;
+  bool _isApplyingWidgetPayload = false;
 
   @override
   void initState() {
@@ -27,14 +29,17 @@ class _CanteenPageState extends State<CanteenPage> {
     baseDate = _normalizeToWeekday(DateTime.now());
     pageController = PageController(initialPage: _basePage);
     pageNotifier = ValueNotifier<int>(_basePage);
+    WidgetNavigationPayloadStore.instance.addListener(_handleWidgetPayload);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _loadWeekForDate(baseDate);
+      _applyWidgetPayload();
     });
   }
 
   @override
   void dispose() {
+    WidgetNavigationPayloadStore.instance.removeListener(_handleWidgetPayload);
     pageController.dispose();
     pageNotifier.dispose();
     super.dispose();
@@ -196,6 +201,17 @@ class _CanteenPageState extends State<CanteenPage> {
     return normalized;
   }
 
+  int _pageForDate(DateTime date) {
+    final normalized = _normalizeToWeekday(date);
+    final baseWeekStart = _toMonday(baseDate);
+    final targetWeekStart = _toMonday(normalized);
+    final weekOffset = targetWeekStart.difference(baseWeekStart).inDays ~/ 7;
+    final baseIndex = baseDate.weekday - 1;
+    final dayIndex = normalized.weekday - 1;
+    final totalIndex = weekOffset * 5 + dayIndex;
+    return _basePage + (totalIndex - baseIndex);
+  }
+
   DateTime _toMonday(DateTime date) {
     return date.subtract(Duration(days: date.weekday - 1));
   }
@@ -207,6 +223,38 @@ class _CanteenPageState extends State<CanteenPage> {
 
   void _loadWeekForDate(DateTime date) {
     viewModel.ensureWeekLoaded(viewModel.weekStartFor(date));
+  }
+
+  void _handleWidgetPayload() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _applyWidgetPayload();
+    });
+  }
+
+  void _applyWidgetPayload() {
+    if (_isApplyingWidgetPayload) return;
+    final payload = WidgetNavigationPayloadStore.instance.peekCanteenPayload();
+    if (payload == null || payload.dayStart == null) return;
+
+    final targetDate = _normalizeToWeekday(payload.dayStart!);
+    print("Widget canteen target date: $targetDate");
+    final targetPage = _pageForDate(targetDate);
+
+    if (!pageController.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _applyWidgetPayload();
+      });
+      return;
+    }
+
+    _isApplyingWidgetPayload = true;
+    WidgetNavigationPayloadStore.instance.takeCanteenPayload();
+    pageController.jumpToPage(targetPage);
+    pageNotifier.value = targetPage;
+    _loadWeekForDate(targetDate);
+    _isApplyingWidgetPayload = false;
   }
 
   bool _isBaseDate(DateTime date) {
