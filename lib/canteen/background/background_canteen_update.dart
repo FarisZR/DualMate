@@ -25,6 +25,11 @@ class BackgroundCanteenUpdate extends TaskCallback {
       print(exception);
       print(trace);
       return;
+    } catch (exception, trace) {
+      print("Background canteen update unexpected failure");
+      print(exception);
+      print(trace);
+      return;
     }
 
     print("Finished updating canteen data");

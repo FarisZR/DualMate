@@ -18,6 +18,7 @@ class WeeklySchedulePage extends StatefulWidget {
 
 class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
   late WeeklyScheduleViewModel viewModel;
+  double _dragDelta = 0;
 
   _WeeklySchedulePageState();
 
@@ -86,12 +87,26 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
     return PropertyChangeProvider<WeeklyScheduleViewModel, String>(
       value: viewModel,
       child: GestureDetector(
-        onPanEnd: (details) {
-          if (details.velocity.pixelsPerSecond.dx > 10) {
-            _previousWeek();
-          } else if (details.velocity.pixelsPerSecond.dx < -10) {
-            _nextWeek();
+        onHorizontalDragStart: (_) {
+          _dragDelta = 0;
+        },
+        onHorizontalDragUpdate: (details) {
+          _dragDelta += details.delta.dx;
+        },
+        onHorizontalDragEnd: (details) {
+          final velocity = details.velocity.pixelsPerSecond.dx;
+          const velocityThreshold = 180;
+          const distanceThreshold = 12;
+
+          if (velocity.abs() > velocityThreshold ||
+              _dragDelta.abs() > distanceThreshold) {
+            if (velocity > 0 || _dragDelta > 0) {
+              _previousWeek();
+            } else {
+              _nextWeek();
+            }
           }
+          _dragDelta = 0;
         },
         behavior: HitTestBehavior.translucent,
         child: Stack(
@@ -116,7 +131,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
                             if (model == null) return Container();
                             return PageTransitionSwitcher(
                               reverse: !model.didUpdateScheduleIntoFuture,
-                              duration: const Duration(milliseconds: 300),
+                              duration: const Duration(milliseconds: 180),
                               transitionBuilder: (Widget child,
                                       Animation<double> animation,
                                       Animation<double> secondaryAnimation) =>
@@ -154,7 +169,10 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
                             Set<String>? properties) {
                           if (model == null) return Container();
                           return model.isUpdating
-                              ? const LinearProgressIndicator()
+                              ? const IgnorePointer(
+                                  ignoring: true,
+                                  child: LinearProgressIndicator(),
+                                )
                               : Container();
                         },
                       ),

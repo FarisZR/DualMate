@@ -1,5 +1,6 @@
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/schedule/business/schedule_diff_calculator.dart';
 import 'package:dualmate/schedule/business/schedule_filter.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
@@ -91,7 +92,7 @@ class ScheduleProvider {
       schedule = await _scheduleFilter.filter(schedule);
 
       print("Filtered schedule has ${schedule.entries.length} entries");
-    
+
       for (var c in _scheduleUpdatedCallbacks) {
         await c(schedule, start, end);
       }

@@ -19,6 +19,10 @@ class CanteenViewModel extends BaseViewModel {
   CanteenViewModel(this._provider)
       : todayWeekStart = toStartOfDay(toMonday(DateTime.now())) {
     _provider.addMenuUpdatedCallback(_onMenusUpdated);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_weeklyMenus.containsKey(todayWeekStart)) return;
+      loadWeek(todayWeekStart);
+    });
   }
 
   List<DailyMenu> weeklyMenusFor(DateTime weekStart) {
@@ -69,6 +73,7 @@ class CanteenViewModel extends BaseViewModel {
       _weeklyMenus[weekStart] = menus;
       _weekErrors[weekStart] = null;
     } catch (exception) {
+      // keep cached data visible
       _weekErrors[weekStart] = exception.toString();
     }
 

@@ -29,7 +29,13 @@ class CanteenScraper {
   }
 
   Future<List<DailyMenu>> _parseInIsolate(String html) async {
-    return Isolate.run(() => CanteenParser().parseWeeklyMenu(html));
+    try {
+      return Isolate.run(() => CanteenParser().parseWeeklyMenu(html));
+    } catch (e, st) {
+      // Fallback to main thread parse if isolate spawn fails; surface last-good cache upstream.
+      print("Canteen parse isolate failed: $e\n$st");
+      return CanteenParser().parseWeeklyMenu(html);
+    }
   }
 
   Uri _buildUri(int weekOfYear) {

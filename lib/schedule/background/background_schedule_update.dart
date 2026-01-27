@@ -39,6 +39,11 @@ class BackgroundScheduleUpdate extends TaskCallback {
       print(e.innerException.toString());
       print(trace);
       return;
+    } catch (e, trace) {
+      print("Background schedule update unexpected failure");
+      print(e);
+      print(trace);
+      return;
     }
 
     print("Finished updating schedule");
@@ -59,6 +64,7 @@ class BackgroundScheduleUpdate extends TaskCallback {
     await scheduler.schedulePeriodic(
       const Duration(hours: 4),
       getName(),
+      true,
     );
   }
 

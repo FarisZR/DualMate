@@ -41,6 +41,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   bool isUpdating = false;
   DateTime? _lastUpdateRequest;
+  DateTime? _lastUpdatedAt;
   Schedule? weekSchedule;
 
   String? scheduleUrl;
@@ -51,6 +52,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   Timer? _updateNowTimer;
 
   bool _isDisposed = false;
+
+  static const Duration _staleAfter = Duration(minutes: 30);
 
   final CancelableMutex _updateMutex = CancelableMutex();
 
@@ -79,7 +82,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   void _scheduleInitialRefresh() {
-    Future.delayed(const Duration(seconds: 1), () {
+    Future.microtask(() {
       if (_isDisposed) return;
       updateSchedule(currentDateStart, currentDateEnd);
     });
@@ -214,11 +217,27 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
     _setSchedule(cachedSchedule, start, end);
 
-    var updatedSchedule = await _readScheduleFromService(
-      start,
-      end,
-      cancellationToken,
-    );
+    final now = DateTime.now();
+    final isStale = _lastUpdatedAt == null
+        ? true
+        : now.difference(_lastUpdatedAt!).abs() > _staleAfter;
+
+    if (!isStale) {
+      print("Schedule fresh; skip network fetch");
+      return;
+    }
+
+    ScheduleQueryResult? updatedSchedule;
+    try {
+      updatedSchedule = await _readScheduleFromService(
+        start,
+        end,
+        cancellationToken,
+      );
+      _lastUpdatedAt = DateTime.now();
+    } catch (e) {
+      print("Schedule update failed: $e");
+    }
     cancellationToken.throwIfCancelled();
 
     if (_isDisposed) return;
