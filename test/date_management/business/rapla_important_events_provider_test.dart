@@ -1,38 +1,7 @@
-import 'package:dualmate/common/data/preferences/preferences_provider.dart';
-import 'package:dualmate/common/data/preferences/preferences_access.dart';
-import 'package:dualmate/common/data/preferences/secure_storage_access.dart';
 import 'package:dualmate/date_management/business/rapla_important_events_provider.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:test/test.dart';
-
-class FakePreferencesAccess extends PreferencesAccess {
-  final Map<String, Object?> _values = {};
-
-  @override
-  Future<void> set<T>(String key, T value) async {
-    _values[key] = value;
-  }
-
-  @override
-  Future<T?> get<T>(String key) async {
-    return _values[key] as T?;
-  }
-}
-
-class FakeSecureStorageAccess extends SecureStorageAccess {
-  final Map<String, String> _values = {};
-
-  @override
-  Future<String?> get(String key) async {
-    return _values[key];
-  }
-
-  @override
-  Future<void> set(String key, String value) async {
-    _values[key] = value;
-  }
-}
 
 void main() {
   test('Filters only important entry types', () {
@@ -204,9 +173,4 @@ void main() {
 
     expect(filtered.length, 1);
   });
-}
-
-PreferencesProvider _buildPreferencesProvider() {
-  return PreferencesProvider(
-      FakePreferencesAccess(), FakeSecureStorageAccess());
 }

@@ -576,7 +576,8 @@ class DateManagementViewModel extends BaseViewModel {
         notifyListeners("nextRaplaPageFailed");
       } else {
         var afterCount = importantEvents.length;
-        if (afterCount == beforeCount) {
+        if (afterCount == beforeCount &&
+            !windowToLoad.end.isBefore(_maxRaplaEndDate())) {
           _hasMoreRaplaPages = false;
           notifyListeners("hasMoreRaplaPages");
         }
@@ -706,7 +707,7 @@ class DateManagementViewModel extends BaseViewModel {
     }
     var windowStart = start;
 
-    while (windowStart.isBefore(end) || windowStart.isAtSameMomentAs(end)) {
+    while (windowStart.isBefore(end)) {
       var window =
           DateRange(start: windowStart, end: _addMonths(windowStart, 3));
       await _refreshRaplaWindow(window, CancellationToken());
@@ -736,7 +737,7 @@ class DateManagementViewModel extends BaseViewModel {
 
     var windowStart = start;
     var lastWindowEnd = start;
-    while (windowStart.isBefore(end) || windowStart.isAtSameMomentAs(end)) {
+    while (windowStart.isBefore(end)) {
       var window =
           DateRange(start: windowStart, end: _addMonths(windowStart, 3));
       await _loadRaplaWindow(
