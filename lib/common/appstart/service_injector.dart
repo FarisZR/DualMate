@@ -82,6 +82,8 @@ void injectServices(bool isBackground) {
   ));
   c.registerInstance(RaplaImportantEventsProvider(
     c.resolve(),
+    c.resolve(),
+    c.resolve(),
   ));
   c.registerInstance(WidgetHelper());
   c.registerInstance(ListDateEntries30d(List<DateEntry>.empty(growable: true)));

@@ -1,128 +1,83 @@
-import 'dart:convert';
-
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/date_management/model/important_event.dart';
+import 'package:dualmate/schedule/business/schedule_provider.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/service/rapla/rapla_schedule_source.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 
 class RaplaImportantEventsProvider {
   final PreferencesProvider _preferencesProvider;
-  final RaplaScheduleSource _scheduleSource;
+  final ScheduleProvider _scheduleProvider;
+  final ScheduleSourceProvider _scheduleSourceProvider;
 
   RaplaImportantEventsProvider(
-    this._preferencesProvider, {
-    RaplaScheduleSource? scheduleSource,
-  }) : _scheduleSource = scheduleSource ?? RaplaScheduleSource();
+    this._preferencesProvider,
+    this._scheduleProvider,
+    this._scheduleSourceProvider,
+  );
 
-  Future<List<ImportantEvent>> getImportantEvents(
+  Future<List<ImportantEvent>> getCachedImportantEvents(
     DateTime start,
     DateTime end,
-    CancellationToken cancellationToken, {
-    bool forceRefresh = false,
-  }) async {
-    var raplaUrl = await _preferencesProvider.getRaplaUrl();
-    if (!RaplaScheduleSource.isValidUrl(raplaUrl)) {
-      return [];
-    }
-
-    var cached = await _readCache(start, end, raplaUrl);
-    if (cached != null && !forceRefresh) {
-      return cached;
-    }
-
-    _scheduleSource.setEndpointUrl(raplaUrl);
-    ScheduleQueryResult scheduleResult;
-    try {
-      scheduleResult =
-          await _scheduleSource.querySchedule(start, end, cancellationToken);
-    } catch (error, trace) {
-      print("Failed to query Rapla schedule");
-      print(error);
-      print(trace);
-      return cached ?? [];
-    }
-
-    var importantEntries = filterImportantEntries(scheduleResult.schedule);
-    var mergedEntries = mergeImportantEntries(importantEntries);
-
-    if (scheduleResult.hasError && mergedEntries.isEmpty) {
-      return cached ?? [];
-    }
-
-    await _writeCache(start, end, raplaUrl, mergedEntries);
-    return mergedEntries;
+  ) async {
+    var schedule = await _scheduleProvider.getCachedSchedule(start, end);
+    return _buildImportantEvents(schedule);
   }
 
-  List<ScheduleEntry> filterImportantEntries(Schedule schedule) {
+  Future<ScheduleQueryResult?> refreshImportantEvents(
+    DateTime start,
+    DateTime end,
+    CancellationToken cancellationToken,
+  ) async {
+    if (!await _ensureRaplaSource()) {
+      return null;
+    }
+
+    try {
+      var updatedSchedule = await _scheduleProvider.getUpdatedSchedule(
+        start,
+        end,
+        cancellationToken,
+      );
+      return updatedSchedule;
+    } on OperationCancelledException {
+      return null;
+    } on ScheduleQueryFailedException {
+      return null;
+    }
+  }
+
+  Future<bool> _ensureRaplaSource() async {
+    var raplaUrl = await _preferencesProvider.getRaplaUrl();
+    if (!RaplaScheduleSource.isValidUrl(raplaUrl)) {
+      return false;
+    }
+
+    if (!_scheduleSourceProvider.didSetupCorrectly()) {
+      await _scheduleSourceProvider.setupScheduleSource();
+    }
+    return _scheduleSourceProvider.didSetupCorrectly();
+  }
+
+  static List<ScheduleEntry> filterImportantEntries(Schedule schedule) {
     var filteredEntries = schedule.entries
         .where((entry) => _isImportantEntry(entry))
         .toList(growable: false);
     return _dedupeEntries(filteredEntries);
   }
 
-  bool _isImportantEntry(ScheduleEntry entry) {
+  static bool _isImportantEntry(ScheduleEntry entry) {
     return entry.type == ScheduleEntryType.Exam ||
         entry.type == ScheduleEntryType.PublicHoliday ||
         entry.type == ScheduleEntryType.SpecialEvent;
   }
 
-  Future<List<ImportantEvent>?> _readCache(
-    DateTime start,
-    DateTime end,
-    String raplaUrl,
-  ) async {
-    try {
-      var cacheJson = await _preferencesProvider.getRaplaImportantEventsCache();
-      if (cacheJson == null || cacheJson.isEmpty) return null;
-
-      var decoded = jsonDecode(cacheJson) as Map<String, dynamic>;
-      var cacheStart = DateTime.parse(decoded['start'] as String);
-      var cacheEnd = DateTime.parse(decoded['end'] as String);
-      var cacheUrl = decoded['raplaUrl'] as String?;
-      if (cacheUrl == null || cacheUrl != raplaUrl) {
-        return null;
-      }
-      if (!_isSameMoment(cacheStart, start) || !_isSameMoment(cacheEnd, end)) {
-        return null;
-      }
-
-      var events = (decoded['events'] as List<dynamic>)
-          .map(
-              (event) => ImportantEvent.fromJson(event as Map<String, dynamic>))
-          .toList(growable: false);
-      return events;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> _writeCache(
-    DateTime start,
-    DateTime end,
-    String raplaUrl,
-    List<ImportantEvent> events,
-  ) async {
-    var payload = {
-      'start': start.toIso8601String(),
-      'end': end.toIso8601String(),
-      'raplaUrl': raplaUrl,
-      'storedAt': DateTime.now().toIso8601String(),
-      'events': events.map((event) => event.toJson()).toList(growable: false),
-    };
-
-    await _preferencesProvider
-        .setRaplaImportantEventsCache(jsonEncode(payload));
-  }
-
-  bool _isSameMoment(DateTime first, DateTime second) {
-    return first.isAtSameMomentAs(second);
-  }
-
-  List<ScheduleEntry> _dedupeEntries(List<ScheduleEntry> entries) {
+  static List<ScheduleEntry> _dedupeEntries(List<ScheduleEntry> entries) {
     var seenKeys = <String>{};
     var result = <ScheduleEntry>[];
 
@@ -137,7 +92,8 @@ class RaplaImportantEventsProvider {
     return result;
   }
 
-  List<ImportantEvent> mergeImportantEntries(List<ScheduleEntry> entries) {
+  static List<ImportantEvent> mergeImportantEntries(
+      List<ScheduleEntry> entries) {
     if (entries.isEmpty) return [];
 
     var grouped = <String, List<ScheduleEntry>>{};
@@ -203,7 +159,7 @@ class RaplaImportantEventsProvider {
     return mergedEntries;
   }
 
-  bool _shouldMerge(
+  static bool _shouldMerge(
     ScheduleEntry entry,
     String currentTitle,
     ScheduleEntryType currentType,
@@ -215,5 +171,10 @@ class RaplaImportantEventsProvider {
 
     var entryDate = toStartOfDay(entry.start);
     return isAtSameDay(entryDate, addDays(currentEnd, 1));
+  }
+
+  List<ImportantEvent> _buildImportantEvents(Schedule schedule) {
+    var importantEntries = filterImportantEntries(schedule);
+    return mergeImportantEntries(importantEntries);
   }
 }

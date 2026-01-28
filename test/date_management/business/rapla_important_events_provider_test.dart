@@ -36,7 +36,6 @@ class FakeSecureStorageAccess extends SecureStorageAccess {
 
 void main() {
   test('Filters only important entry types', () {
-    var provider = RaplaImportantEventsProvider(_buildPreferencesProvider());
     var schedule = Schedule.fromList([
       ScheduleEntry(
         start: DateTime(2026, 7, 27, 8),
@@ -76,7 +75,8 @@ void main() {
       ),
     ]);
 
-    var filtered = provider.filterImportantEntries(schedule);
+    var filtered =
+        RaplaImportantEventsProvider.filterImportantEntries(schedule);
 
     expect(filtered.length, 3);
     expect(
@@ -86,7 +86,6 @@ void main() {
   });
 
   test('Merges consecutive same-title events', () {
-    var provider = RaplaImportantEventsProvider(_buildPreferencesProvider());
     var entries = [
       ScheduleEntry(
         start: DateTime(2026, 7, 27, 7),
@@ -117,7 +116,7 @@ void main() {
       ),
     ];
 
-    var merged = provider.mergeImportantEntries(entries);
+    var merged = RaplaImportantEventsProvider.mergeImportantEntries(entries);
 
     expect(merged.length, 1);
     expect(merged.first.start, DateTime(2026, 7, 27, 7));
@@ -125,7 +124,6 @@ void main() {
   });
 
   test('Keeps separate events when there is a gap', () {
-    var provider = RaplaImportantEventsProvider(_buildPreferencesProvider());
     var entries = [
       ScheduleEntry(
         start: DateTime(2026, 7, 27, 7),
@@ -147,13 +145,12 @@ void main() {
       ),
     ];
 
-    var merged = provider.mergeImportantEntries(entries);
+    var merged = RaplaImportantEventsProvider.mergeImportantEntries(entries);
 
     expect(merged.length, 2);
   });
 
   test('Does not merge exams across days', () {
-    var provider = RaplaImportantEventsProvider(_buildPreferencesProvider());
     var entries = [
       ScheduleEntry(
         start: DateTime(2026, 7, 27, 7),
@@ -175,13 +172,12 @@ void main() {
       ),
     ];
 
-    var merged = provider.mergeImportantEntries(entries);
+    var merged = RaplaImportantEventsProvider.mergeImportantEntries(entries);
 
     expect(merged.length, 2);
   });
 
   test('Deduplicates identical entries', () {
-    var provider = RaplaImportantEventsProvider(_buildPreferencesProvider());
     var schedule = Schedule.fromList([
       ScheduleEntry(
         start: DateTime(2026, 7, 27, 9),
@@ -203,12 +199,14 @@ void main() {
       ),
     ]);
 
-    var filtered = provider.filterImportantEntries(schedule);
+    var filtered =
+        RaplaImportantEventsProvider.filterImportantEntries(schedule);
 
     expect(filtered.length, 1);
   });
 }
 
 PreferencesProvider _buildPreferencesProvider() {
-  return PreferencesProvider(FakePreferencesAccess(), FakeSecureStorageAccess());
+  return PreferencesProvider(
+      FakePreferencesAccess(), FakeSecureStorageAccess());
 }
