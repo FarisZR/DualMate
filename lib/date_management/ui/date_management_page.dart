@@ -273,16 +273,16 @@ class _DateManagementPageState extends State<DateManagementPage> {
         child: Center(
           child: TextButton(
             onPressed: model.loadNextRaplaPage,
-            child: const Text("Retry"),
+            child: Text(L.of(context).retry),
           ),
         ),
       );
     }
 
     if (!model.hasMoreRaplaPages) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Center(child: Text("No more events")),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Center(child: Text(L.of(context).noMoreEvents)),
       );
     }
 

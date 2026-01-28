@@ -342,6 +342,10 @@ class L {
   String get scheduleQueryFailedMessage =>
       _getValue("scheduleQueryFailedMessage");
 
+  String get retry => _getValue("retry");
+
+  String get noMoreEvents => _getValue("noMoreEvents");
+
   String get scheduleQueryFailedOpenInBrowser =>
       _getValue("scheduleQueryFailedOpenInBrowser");
 
