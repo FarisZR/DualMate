@@ -761,10 +761,22 @@ class DateManagementViewModel extends BaseViewModel {
   }
 
   DateTime _addMonths(DateTime dateTime, int monthsToAdd) {
+    var monthIndex = dateTime.month - 1 + monthsToAdd;
+    var targetYear = dateTime.year + (monthIndex ~/ 12);
+    var targetMonth = (monthIndex % 12) + 1;
+    if (targetMonth <= 0) {
+      targetYear -= 1;
+      targetMonth += 12;
+    }
+    var lastDayOfTargetMonth = DateTime(targetYear, targetMonth + 1, 0).day;
+    var targetDay = dateTime.day < lastDayOfTargetMonth
+        ? dateTime.day
+        : lastDayOfTargetMonth;
+
     return DateTime(
-      dateTime.year,
-      dateTime.month + monthsToAdd,
-      dateTime.day,
+      targetYear,
+      targetMonth,
+      targetDay,
       dateTime.hour,
       dateTime.minute,
       dateTime.second,
