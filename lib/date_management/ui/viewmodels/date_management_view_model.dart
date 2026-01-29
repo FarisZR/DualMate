@@ -335,7 +335,14 @@ class DateManagementViewModel extends BaseViewModel {
 
   void _replaceImportantEvents(DateRange window, List<ImportantEvent> events) {
     _trackRaplaWindow(window);
-    _importantEvents = _mergeImportantEvents(_importantEvents, events);
+    var trimmed = _importantEvents.where((event) {
+      var endsBefore = event.end.isBefore(window.start) ||
+          event.end.isAtSameMomentAs(window.start);
+      var startsAfter = event.start.isAfter(window.end) ||
+          event.start.isAtSameMomentAs(window.end);
+      return endsBefore || startsAfter;
+    }).toList(growable: false);
+    _importantEvents = _mergeImportantEvents(trimmed, events);
     _updateLastNonHolidayEventEnd(_importantEvents);
     _setImportantEventSections();
     notifyListeners("importantEvents");
