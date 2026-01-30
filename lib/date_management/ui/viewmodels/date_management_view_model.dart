@@ -287,7 +287,7 @@ class DateManagementViewModel extends BaseViewModel {
       if (!_hasMoreRaplaPages) return;
       if (importantEventSections.isNotEmpty) return;
 
-      await loadNextRaplaPage();
+      await loadNextRaplaPage(bypassCooldown: true);
     }
   }
 
@@ -540,13 +540,14 @@ class DateManagementViewModel extends BaseViewModel {
     notifyListeners("hasMoreRaplaPages");
   }
 
-  Future<void> loadNextRaplaPage() async {
+  Future<void> loadNextRaplaPage({bool bypassCooldown = false}) async {
     if (_useDhMineForDates) return;
     if (_isLoadingNextRaplaPage) return;
     if (!_hasMoreRaplaPages) return;
 
     var now = DateTime.now();
-    if (_lastRaplaPageRequestAt != null &&
+    if (!bypassCooldown &&
+        _lastRaplaPageRequestAt != null &&
         now.difference(_lastRaplaPageRequestAt!) < _raplaPageCooldown) {
       return;
     }
@@ -580,6 +581,9 @@ class DateManagementViewModel extends BaseViewModel {
       );
       if (loaded == null) {
         _nextRaplaPageFailed = true;
+        if (bypassCooldown) {
+          _lastRaplaPageRequestAt = null;
+        }
         notifyListeners("nextRaplaPageFailed");
       } else {
         var afterCount = importantEvents.length;
