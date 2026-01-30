@@ -24,7 +24,7 @@ class BackgroundScheduleUpdate extends TaskCallback {
     }
 
     var today = toDayOfWeek(toStartOfDay(DateTime.now()), DateTime.monday);
-    var end = addDays(today, 7 * 3);
+    var end = addDays(today, 14);
 
     var cancellationToken = CancellationToken();
 

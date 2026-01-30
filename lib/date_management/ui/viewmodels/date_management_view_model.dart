@@ -8,13 +8,16 @@ import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/date_management/business/date_entry_provider.dart';
 import 'package:dualmate/date_management/business/important_event_organizer.dart';
 import 'package:dualmate/date_management/business/rapla_important_events_provider.dart';
+import 'package:dualmate/date_management/model/date_range.dart';
 import 'package:dualmate/date_management/model/date_database.dart';
 import 'package:dualmate/date_management/model/date_entry.dart';
 import 'package:dualmate/date_management/model/date_search_parameters.dart';
 import 'package:dualmate/date_management/model/important_event.dart';
 import 'package:dualmate/date_management/model/important_event_section.dart';
+import 'package:dualmate/schedule/ui/viewmodels/schedule_freshness_gate.dart';
 import 'package:dualmate/schedule/service/rapla/rapla_schedule_source.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
 
 class DateManagementViewModel extends BaseViewModel {
   final DateEntryProvider _dateEntryProvider;
@@ -115,6 +118,20 @@ class DateManagementViewModel extends BaseViewModel {
   bool _raplaUrlValid = true;
   bool get raplaUrlValid => _raplaUrlValid;
 
+  final Map<String, ScheduleFreshnessGate> _raplaFreshnessGates = {};
+  final List<DateRange> _loadedRaplaWindows = <DateRange>[];
+  DateRange? _nextRaplaWindow;
+  DateRange? _cachedRaplaWindowEnd;
+  bool _hasMoreRaplaPages = true;
+  bool get hasMoreRaplaPages => _hasMoreRaplaPages;
+  DateTime? _lastRaplaPageRequestAt;
+  final Duration _raplaPageCooldown = const Duration(seconds: 30);
+  DateTime? _lastNonHolidayEventEnd;
+  bool _isLoadingNextRaplaPage = false;
+  bool get isLoadingNextRaplaPage => _isLoadingNextRaplaPage;
+  bool _nextRaplaPageFailed = false;
+  bool get nextRaplaPageFailed => _nextRaplaPageFailed;
+
   late DateDatabase _currentDateDatabase;
   DateDatabase get currentDateDatabase => _currentDateDatabase;
 
@@ -205,12 +222,16 @@ class DateManagementViewModel extends BaseViewModel {
   }
 
   Future<void> _doUpdateRaplaEvents() async {
-    var raplaEvents = await _readRaplaImportantEvents();
+    _resetRaplaPaging();
+    await _applyCachedRaplaWindows();
+    var raplaEvents = await _readRaplaImportantEventsPage();
     _updateMutex.token.throwIfCancelled();
 
     if (raplaEvents != null) {
       _setImportantEvents(raplaEvents);
     }
+
+    await _prefetchRaplaUntilFilled();
 
     _updateFailed = raplaEvents == null;
     if (updateFailed) {
@@ -224,7 +245,7 @@ class DateManagementViewModel extends BaseViewModel {
     }
   }
 
-  Future<List<ImportantEvent>?> _readRaplaImportantEvents() async {
+  Future<List<ImportantEvent>?> _readRaplaImportantEventsPage() async {
     var raplaUrl = await _preferencesProvider.getRaplaUrl();
     _raplaUrlValid = RaplaScheduleSource.isValidUrl(raplaUrl);
     notifyListeners("raplaUrlValid");
@@ -233,28 +254,17 @@ class DateManagementViewModel extends BaseViewModel {
       return null;
     }
 
-    var now = DateTime.now();
-    var start =
-        _showPassedDates ? DateTime(now.year - 3, now.month, now.day) : now;
-    var end =
-        _showFutureDates ? DateTime(now.year + 3, now.month, now.day) : now;
+    _nextRaplaWindow ??= _buildInitialRaplaWindow();
+    var window = _nextRaplaWindow!;
 
-    if (start.isAfter(end)) {
-      return [];
-    }
-
-    try {
-      var events = await _raplaImportantEventsProvider.getImportantEvents(
-        toStartOfDay(start),
-        toStartOfDay(end).add(const Duration(days: 1)),
-        _updateMutex.token,
-      );
-
-      return events;
-    } on OperationCancelledException {
-    } on ScheduleQueryFailedException {}
-
-    return null;
+    var loaded = await _loadRaplaWindow(
+      window,
+      _updateMutex.token,
+      advanceWindow: true,
+      refresh: false,
+    );
+    _refreshRaplaWindowInBackground(window);
+    return loaded;
   }
 
   Future<void> _refreshRaplaEventsInBackground() async {
@@ -268,25 +278,17 @@ class DateManagementViewModel extends BaseViewModel {
         return;
       }
 
-      var now = DateTime.now();
-      var start =
-          _showPassedDates ? DateTime(now.year - 3, now.month, now.day) : now;
-      var end =
-          _showFutureDates ? DateTime(now.year + 3, now.month, now.day) : now;
-
-      if (start.isAfter(end)) {
-        return;
-      }
-
-      var events = await _raplaImportantEventsProvider.getImportantEvents(
-        toStartOfDay(start),
-        toStartOfDay(end).add(const Duration(days: 1)),
-        CancellationToken(),
-        forceRefresh: true,
-      );
-
-      _setImportantEvents(events);
+      await _refreshRaplaWindowsInBackground();
     } catch (_) {}
+  }
+
+  Future<void> _prefetchRaplaUntilFilled() async {
+    for (var i = 0; i < 3; i++) {
+      if (!_hasMoreRaplaPages) return;
+      if (importantEventSections.isNotEmpty) return;
+
+      await loadNextRaplaPage(bypassCooldown: true);
+    }
   }
 
   Future<List<DateEntry>?> _readUpdatedDateEntries() async {
@@ -318,8 +320,60 @@ class DateManagementViewModel extends BaseViewModel {
 
   void _setImportantEvents(List<ImportantEvent> events) {
     _importantEvents = events;
+    _updateLastNonHolidayEventEnd(events);
     _setImportantEventSections();
     notifyListeners("importantEvents");
+  }
+
+  void _appendImportantEvents(DateRange window, List<ImportantEvent> events) {
+    _trackRaplaWindow(window);
+    _importantEvents = _mergeImportantEvents(_importantEvents, events);
+    _updateLastNonHolidayEventEnd(_importantEvents);
+    _setImportantEventSections();
+    notifyListeners("importantEvents");
+  }
+
+  void _replaceImportantEvents(DateRange window, List<ImportantEvent> events) {
+    _trackRaplaWindow(window);
+    var trimmed = _importantEvents.where((event) {
+      var endsBefore = event.end.isBefore(window.start) ||
+          event.end.isAtSameMomentAs(window.start);
+      var startsAfter = event.start.isAfter(window.end) ||
+          event.start.isAtSameMomentAs(window.end);
+      return endsBefore || startsAfter;
+    }).toList(growable: false);
+    _importantEvents = _mergeImportantEvents(trimmed, events);
+    _updateLastNonHolidayEventEnd(_importantEvents);
+    _setImportantEventSections();
+    notifyListeners("importantEvents");
+  }
+
+  void _trackRaplaWindow(DateRange window) {
+    if (_loadedRaplaWindows.any((existing) =>
+        existing.start == window.start && existing.end == window.end)) {
+      return;
+    }
+    _loadedRaplaWindows.add(window);
+  }
+
+  List<ImportantEvent> _mergeImportantEvents(
+    List<ImportantEvent> existing,
+    List<ImportantEvent> incoming,
+  ) {
+    var combined = <ImportantEvent>[...existing, ...incoming];
+    var seenKeys = <String>{};
+    var deduped = <ImportantEvent>[];
+
+    for (var event in combined) {
+      var key =
+          '${event.title}-${event.type}-${event.start.toIso8601String()}-${event.end.toIso8601String()}';
+      if (seenKeys.add(key)) {
+        deduped.add(event);
+      }
+    }
+
+    deduped.sort((a, b) => a.start.compareTo(b.start));
+    return deduped;
   }
 
   void _setImportantEventSections() {
@@ -347,8 +401,10 @@ class DateManagementViewModel extends BaseViewModel {
     notifyListeners("showPassedDates");
 
     if (!_useDhMineForDates) {
-      updateDates();
+      return;
     }
+
+    updateDates();
   }
 
   void setShowFutureDates(bool value) {
@@ -356,16 +412,20 @@ class DateManagementViewModel extends BaseViewModel {
     notifyListeners("showFutureDates");
 
     if (!_useDhMineForDates) {
-      updateDates();
+      return;
     }
+
+    updateDates();
   }
 
   void setShowOutOfStudyEvents(bool value) {
     _showOutOfStudyEvents = value;
     notifyListeners("showOutOfStudyEvents");
-    if (!_useDhMineForDates) {
-      _setImportantEventSections();
+    if (_useDhMineForDates) {
+      return;
     }
+
+    _setImportantEventSections();
   }
 
   void setCurrentDateDatabase(DateDatabase database) {
@@ -408,6 +468,335 @@ class DateManagementViewModel extends BaseViewModel {
     }
 
     await updateDates();
+  }
+
+  DateRange _buildInitialRaplaWindow() {
+    var start = toStartOfDay(DateTime.now());
+    return DateRange(start: start, end: _addMonths(start, 3));
+  }
+
+  DateRange _nextRaplaWindowFrom(DateRange current) {
+    var nextStart = current.end;
+    return DateRange(start: nextStart, end: _addMonths(nextStart, 3));
+  }
+
+  DateTime _maxRaplaEndDate() {
+    var now = DateTime.now();
+    var maxEnd = DateTime(
+      now.year + 3,
+      now.month,
+      now.day,
+      now.hour,
+      now.minute,
+      now.second,
+    );
+
+    if (_lastNonHolidayEventEnd == null) {
+      return maxEnd;
+    }
+
+    var nonHolidayCutoff = addDays(
+      toStartOfDay(_lastNonHolidayEventEnd!),
+      365,
+    );
+
+    return nonHolidayCutoff.isBefore(maxEnd) ? nonHolidayCutoff : maxEnd;
+  }
+
+  void _updateLastNonHolidayEventEnd(List<ImportantEvent> events) {
+    DateTime? lastEnd;
+    for (var event in events) {
+      if (event.type == ScheduleEntryType.PublicHoliday) {
+        continue;
+      }
+      if (lastEnd == null || event.end.isAfter(lastEnd)) {
+        lastEnd = event.end;
+      }
+    }
+
+    _lastNonHolidayEventEnd = lastEnd;
+    _syncRaplaPagingLimit();
+  }
+
+  void _syncRaplaPagingLimit() {
+    if (!_hasMoreRaplaPages) return;
+    if (_nextRaplaWindow == null) return;
+    if (!_nextRaplaWindow!.start.isBefore(_maxRaplaEndDate())) {
+      _hasMoreRaplaPages = false;
+      notifyListeners("hasMoreRaplaPages");
+    }
+  }
+
+  void _resetRaplaPaging() {
+    _loadedRaplaWindows.clear();
+    _nextRaplaWindow = _buildInitialRaplaWindow();
+    _nextRaplaPageFailed = false;
+    _isLoadingNextRaplaPage = false;
+    _cachedRaplaWindowEnd = null;
+    _raplaFreshnessGates.clear();
+    _hasMoreRaplaPages = true;
+    _lastRaplaPageRequestAt = null;
+    _lastNonHolidayEventEnd = null;
+    notifyListeners("hasMoreRaplaPages");
+  }
+
+  Future<void> loadNextRaplaPage({bool bypassCooldown = false}) async {
+    if (_useDhMineForDates) return;
+    if (_isLoadingNextRaplaPage) return;
+    if (!_hasMoreRaplaPages) return;
+
+    var now = DateTime.now();
+    if (!bypassCooldown &&
+        _lastRaplaPageRequestAt != null &&
+        now.difference(_lastRaplaPageRequestAt!) < _raplaPageCooldown) {
+      return;
+    }
+    _lastRaplaPageRequestAt = now;
+    _nextRaplaWindow ??= _buildInitialRaplaWindow();
+    var maxEnd = _maxRaplaEndDate();
+    if (!_nextRaplaWindow!.start.isBefore(maxEnd)) {
+      _hasMoreRaplaPages = false;
+      notifyListeners("hasMoreRaplaPages");
+      return;
+    }
+
+    _isLoadingNextRaplaPage = true;
+    _nextRaplaPageFailed = false;
+    notifyListeners("isLoadingNextRaplaPage");
+    notifyListeners("nextRaplaPageFailed");
+
+    var window = _nextRaplaWindow!;
+
+    try {
+      var beforeCount = importantEvents.length;
+      var windowToLoad = window;
+      if (windowToLoad.end.isAfter(maxEnd)) {
+        windowToLoad = DateRange(start: windowToLoad.start, end: maxEnd);
+      }
+      var loaded = await _loadRaplaWindow(
+        windowToLoad,
+        CancellationToken(),
+        advanceWindow: true,
+        refresh: true,
+      );
+      if (loaded == null) {
+        _nextRaplaPageFailed = true;
+        if (bypassCooldown) {
+          _lastRaplaPageRequestAt = null;
+        }
+        notifyListeners("nextRaplaPageFailed");
+      } else {
+        var afterCount = importantEvents.length;
+        if (afterCount == beforeCount &&
+            !windowToLoad.end.isBefore(_maxRaplaEndDate())) {
+          _hasMoreRaplaPages = false;
+          notifyListeners("hasMoreRaplaPages");
+        }
+      }
+    } finally {
+      _isLoadingNextRaplaPage = false;
+      notifyListeners("isLoadingNextRaplaPage");
+    }
+  }
+
+  Future<List<ImportantEvent>?> _loadRaplaWindow(
+    DateRange window,
+    CancellationToken token, {
+    required bool advanceWindow,
+    required bool refresh,
+  }) async {
+    try {
+      var cached = await _raplaImportantEventsProvider.getCachedImportantEvents(
+        toStartOfDay(window.start),
+        toStartOfDay(window.end).add(const Duration(days: 1)),
+      );
+
+      if (cached.isNotEmpty) {
+        _appendImportantEvents(window, cached);
+      }
+
+      if (refresh) {
+        await _refreshRaplaWindow(window, token);
+      }
+
+      if (advanceWindow) {
+        var next = _nextRaplaWindowFrom(window);
+        var maxEnd = _maxRaplaEndDate();
+        if (!next.start.isBefore(maxEnd)) {
+          _hasMoreRaplaPages = false;
+          notifyListeners("hasMoreRaplaPages");
+        } else {
+          _nextRaplaWindow = next;
+        }
+      }
+
+      await _recordRaplaWindowEnd(window);
+
+      return importantEvents;
+    } on OperationCancelledException {
+      return null;
+    } on ScheduleQueryFailedException {
+      return null;
+    }
+  }
+
+  Future<void> _refreshRaplaWindow(
+    DateRange window,
+    CancellationToken token,
+  ) async {
+    if (!_isRaplaWindowStale(window, DateTime.now())) {
+      return;
+    }
+
+    var updated = await _raplaImportantEventsProvider.refreshImportantEvents(
+      toStartOfDay(window.start),
+      toStartOfDay(window.end).add(const Duration(days: 1)),
+      token,
+    );
+
+    if (updated != null) {
+      _markRaplaWindowFetched(window, DateTime.now());
+      var refreshed =
+          await _raplaImportantEventsProvider.getCachedImportantEvents(
+        toStartOfDay(window.start),
+        toStartOfDay(window.end).add(const Duration(days: 1)),
+      );
+      _replaceImportantEvents(window, refreshed);
+    }
+  }
+
+  Future<void> _recordRaplaWindowEnd(DateRange window) async {
+    var cachedEnd =
+        await _preferencesProvider.getRaplaImportantEventsWindowEnd();
+    var currentEnd = cachedEnd == null || cachedEnd.isEmpty
+        ? null
+        : DateTime.tryParse(cachedEnd);
+
+    var maxEnd = _maxRaplaEndDate();
+    var clampedEnd = window.end.isAfter(maxEnd) ? maxEnd : window.end;
+
+    if (currentEnd == null || clampedEnd.isAfter(currentEnd)) {
+      await _preferencesProvider
+          .setRaplaImportantEventsWindowEnd(clampedEnd.toIso8601String());
+      _cachedRaplaWindowEnd = DateRange(
+        start: _buildInitialRaplaWindow().start,
+        end: clampedEnd,
+      );
+    }
+  }
+
+  void _refreshRaplaWindowInBackground(DateRange window) {
+    Future.microtask(() async {
+      try {
+        await _refreshRaplaWindow(window, CancellationToken());
+      } catch (error, trace) {
+        print(error);
+        print(trace);
+      }
+    });
+  }
+
+  bool _isRaplaWindowStale(DateRange window, DateTime now) {
+    var gate = _raplaFreshnessGates[_raplaWindowKey(window)];
+    return gate == null || gate.isStale(window.start, window.end, now);
+  }
+
+  void _markRaplaWindowFetched(DateRange window, DateTime now) {
+    var key = _raplaWindowKey(window);
+    var gate = _raplaFreshnessGates[key] ??= ScheduleFreshnessGate();
+    gate.markFetched(window.start, window.end, now);
+  }
+
+  String _raplaWindowKey(DateRange window) {
+    return '${window.start.toIso8601String()}_${window.end.toIso8601String()}';
+  }
+
+  Future<void> _refreshRaplaWindowsInBackground() async {
+    var start = _buildInitialRaplaWindow().start;
+    var end = _cachedRaplaWindowEnd?.end ?? start;
+    var maxEnd = _maxRaplaEndDate();
+    if (end.isAfter(maxEnd)) {
+      end = maxEnd;
+    }
+    if (end.isBefore(start)) {
+      end = start;
+    }
+    var windowStart = start;
+
+    while (windowStart.isBefore(end)) {
+      var window =
+          DateRange(start: windowStart, end: _addMonths(windowStart, 3));
+      await _refreshRaplaWindow(window, CancellationToken());
+      windowStart = window.end;
+    }
+  }
+
+  Future<void> _applyCachedRaplaWindows() async {
+    var cachedEnd =
+        await _preferencesProvider.getRaplaImportantEventsWindowEnd();
+    if (cachedEnd == null || cachedEnd.isEmpty) {
+      return;
+    }
+
+    var parsed = DateTime.tryParse(cachedEnd);
+    if (parsed == null) {
+      return;
+    }
+
+    var start = _buildInitialRaplaWindow().start;
+    var maxEnd = _maxRaplaEndDate();
+    var end = parsed.isAfter(start) ? parsed : start;
+    if (end.isAfter(maxEnd)) {
+      end = maxEnd;
+    }
+    _cachedRaplaWindowEnd = DateRange(start: start, end: end);
+
+    var windowStart = start;
+    var lastWindowEnd = start;
+    while (windowStart.isBefore(end)) {
+      var window =
+          DateRange(start: windowStart, end: _addMonths(windowStart, 3));
+      await _loadRaplaWindow(
+        window,
+        _updateMutex.token,
+        advanceWindow: false,
+        refresh: false,
+      );
+      lastWindowEnd = window.end;
+      windowStart = window.end;
+    }
+
+    _nextRaplaWindow = DateRange(
+      start: lastWindowEnd,
+      end: _addMonths(lastWindowEnd, 3),
+    );
+    if (!_nextRaplaWindow!.start.isBefore(maxEnd)) {
+      _hasMoreRaplaPages = false;
+      notifyListeners("hasMoreRaplaPages");
+    }
+  }
+
+  DateTime _addMonths(DateTime dateTime, int monthsToAdd) {
+    var monthIndex = dateTime.month - 1 + monthsToAdd;
+    var targetYear = dateTime.year + (monthIndex ~/ 12);
+    var targetMonth = (monthIndex % 12) + 1;
+    if (targetMonth <= 0) {
+      targetYear -= 1;
+      targetMonth += 12;
+    }
+    var lastDayOfTargetMonth = DateTime(targetYear, targetMonth + 1, 0).day;
+    var targetDay = dateTime.day < lastDayOfTargetMonth
+        ? dateTime.day
+        : lastDayOfTargetMonth;
+
+    return DateTime(
+      targetYear,
+      targetMonth,
+      targetDay,
+      dateTime.hour,
+      dateTime.minute,
+      dateTime.second,
+    );
   }
 
   void _cancelErrorInFuture() async {

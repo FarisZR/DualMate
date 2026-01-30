@@ -150,6 +150,8 @@ final de = {
       "Keine Rapla-Termine für diesen Zeitraum gefunden.",
   "scheduleQueryFailedMessage":
       "Ups, da ist etwas schief gelaufen. Möglicherweise wird nicht der gesamte Plan angezeigt. Schaue Dir daher den Plan im Browser an um sicher zu gehen, dass Du nichts verpasst.",
+  "retry": "Erneut versuchen",
+  "noMoreEvents": "Keine weiteren Termine",
   "scheduleQueryFailedOpenInBrowser": "Im Browser öffnen",
   "onboardingScheduleSourceTitle": "Vorlesungsplan",
   "onboardingScheduleSourceDescription":

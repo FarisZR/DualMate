@@ -22,6 +22,8 @@ class DateManagementPage extends StatefulWidget {
 }
 
 class _DateManagementPageState extends State<DateManagementPage> {
+  final ScrollController _raplaScrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -30,6 +32,12 @@ class _DateManagementPageState extends State<DateManagementPage> {
           Provider.of<DateManagementViewModel>(context, listen: false);
       viewModel.reloadUseDhMineSetting();
     });
+  }
+
+  @override
+  void dispose() {
+    _raplaScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -42,15 +50,20 @@ class _DateManagementPageState extends State<DateManagementPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          DateFilterOptions(viewModel: viewModel),
+          if (viewModel.useDhMineForDates)
+            DateFilterOptions(viewModel: viewModel),
           Stack(
             children: <Widget>[
               const Divider(),
               AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: viewModel.isLoading
-                      ? const LinearProgressIndicator()
-                      : Container()),
+                duration: const Duration(milliseconds: 200),
+                child: (viewModel.isLoading ||
+                        (!viewModel.useDhMineForDates &&
+                            viewModel.isLoadingNextRaplaPage &&
+                            viewModel.importantEventSections.isEmpty))
+                    ? const LinearProgressIndicator()
+                    : Container(),
+              ),
             ],
           ),
           _buildBody(viewModel, context),
@@ -63,27 +76,18 @@ class _DateManagementPageState extends State<DateManagementPage> {
     return Expanded(
       child: Stack(
         children: <Widget>[
-          SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            child: PropertyChangeConsumer<DateManagementViewModel, String>(
-              builder: (
-                BuildContext context,
-                DateManagementViewModel? model,
-                Set<String>? properties,
-              ) {
-                if (model == null) return Container();
-                return AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: Column(
-                    key: ValueKey(viewModel.dateSearchParameters.toString()),
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      _buildContent(model, context),
-                    ],
-                  ),
-                );
-              },
-            ),
+          PropertyChangeConsumer<DateManagementViewModel, String>(
+            builder: (
+              BuildContext context,
+              DateManagementViewModel? model,
+              Set<String>? properties,
+            ) {
+              if (model == null) return Container();
+              return AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: _buildContent(model, context),
+              );
+            },
           ),
           Align(
             child: buildErrorDisplay(context),
@@ -184,39 +188,105 @@ class _DateManagementPageState extends State<DateManagementPage> {
       );
     }
 
-    return _buildImportantEventsList(model.importantEventSections, context);
+    return _buildImportantEventsList(model, context);
   }
 
   Widget _buildImportantEventsList(
-    List<ImportantEventSection> sections,
+    DateManagementViewModel model,
     BuildContext context,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (sections.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Center(
+    var sections = model.importantEventSections;
+    if (sections.isEmpty) {
+      _scheduleRaplaAutoload(model);
+      return ListView(
+        controller: _raplaScrollController,
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (!model.isLoading && !model.isLoadingNextRaplaPage)
+            Center(
               child: Text(
                 L.of(context).dateManagementRaplaEmpty,
               ),
             ),
-          )
-        else
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            itemBuilder: (context, index) {
-              var section = sections[index];
-              return _buildSectionCard(section, context);
-            },
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemCount: sections.length,
-          ),
-      ],
+          _buildRaplaFooter(model, context),
+        ],
+      );
+    }
+
+    var itemCount = sections.length + 1;
+    _scheduleRaplaAutoload(model);
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification.metrics.pixels >=
+            notification.metrics.maxScrollExtent - 200) {
+          model.loadNextRaplaPage();
+        }
+        return false;
+      },
+      child: ListView.separated(
+        controller: _raplaScrollController,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        itemBuilder: (context, index) {
+          if (index < sections.length) {
+            return _buildSectionCard(sections[index], context);
+          }
+          return _buildRaplaFooter(model, context);
+        },
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemCount: itemCount,
+      ),
     );
+  }
+
+  void _scheduleRaplaAutoload(DateManagementViewModel model) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_raplaScrollController.hasClients) return;
+      if (model.isLoadingNextRaplaPage ||
+          model.nextRaplaPageFailed ||
+          !model.hasMoreRaplaPages) {
+        return;
+      }
+
+      final position = _raplaScrollController.position;
+      if (position.maxScrollExtent <= 0 ||
+          position.pixels >= position.maxScrollExtent - 200) {
+        model.loadNextRaplaPage();
+      }
+    });
+  }
+
+  Widget _buildRaplaFooter(
+    DateManagementViewModel model,
+    BuildContext context,
+  ) {
+    if (model.isLoadingNextRaplaPage) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (model.nextRaplaPageFailed) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: TextButton(
+            onPressed: model.loadNextRaplaPage,
+            child: Text(L.of(context).retry),
+          ),
+        ),
+      );
+    }
+
+    if (!model.hasMoreRaplaPages) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Center(child: Text(L.of(context).noMoreEvents)),
+      );
+    }
+
+    return const SizedBox(height: 12);
   }
 
   Widget _buildSectionCard(

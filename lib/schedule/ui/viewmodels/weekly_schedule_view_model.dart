@@ -48,6 +48,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       ScheduleUpdateRequestGate();
   final ScheduleFreshnessGate _freshnessGate = ScheduleFreshnessGate();
   Schedule? weekSchedule;
+  final Map<String, ScheduleFreshnessGate> _windowFreshnessGates = {};
+  Timer? _windowRefreshTimer;
 
   String? scheduleUrl;
 
@@ -83,6 +85,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _setSchedule(cachedSchedule, currentDateStart, currentDateEnd);
     _scheduleInitialRefresh();
     ensureUpdateNowTimerRunning();
+    _ensureWindowRefreshTimer();
 
     scheduleSourceProvider
         .addDidChangeScheduleSourceCallback(_onDidChangeScheduleSource);
@@ -93,6 +96,19 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       if (_isDisposed) return;
       updateSchedule(currentDateStart, currentDateEnd);
     });
+  }
+
+  void _ensureWindowRefreshTimer() {
+    _windowRefreshTimer?.cancel();
+    _windowRefreshTimer = Timer.periodic(
+        const Duration(minutes: 15), (_) => _refreshWidgetRange());
+  }
+
+  Future<void> _refreshWidgetRange() async {
+    if (_isDisposed) return;
+    var start = toStartOfDay(DateTime.now());
+    var end = addDays(start, 14);
+    await updateSchedule(start, end, force: true);
   }
 
   Future<void> _onDidChangeScheduleSource(
@@ -249,7 +265,11 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _setSchedule(cachedSchedule, start, end);
 
     final now = DateTime.now();
-    final isStale = _freshnessGate.isStale(start, end, now);
+    final shouldForceFetch = cachedSchedule.entries.isEmpty &&
+        scheduleSourceProvider.currentScheduleSource.canQuery();
+    final isStale = shouldForceFetch ||
+        _freshnessGate.isStale(start, end, now) ||
+        _isWindowStale(start, end, now);
 
     if (!isStale) {
       print("Schedule fresh; skip network fetch");
@@ -264,6 +284,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         cancellationToken,
       );
       _freshnessGate.markFetched(start, end, DateTime.now());
+      _markWindowFetched(start, end, DateTime.now());
     } catch (e) {
       print("Schedule update failed: $e");
     }
@@ -338,6 +359,21 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
   }
 
+  bool _isWindowStale(DateTime start, DateTime end, DateTime now) {
+    var gate = _windowFreshnessGates[_windowKey(start, end)];
+    return gate == null || gate.isStale(start, end, now);
+  }
+
+  void _markWindowFetched(DateTime start, DateTime end, DateTime now) {
+    var key = _windowKey(start, end);
+    var gate = _windowFreshnessGates[key] ??= ScheduleFreshnessGate();
+    gate.markFetched(start, end, now);
+  }
+
+  String _windowKey(DateTime start, DateTime end) {
+    return '${start.toIso8601String()}_${end.toIso8601String()}';
+  }
+
   @override
   void dispose() {
     _isDisposed = true;
@@ -345,6 +381,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _updateMutex.cancel();
 
     _updateNowTimer?.cancel();
+    _windowRefreshTimer?.cancel();
 
     _errorResetTimer?.cancel();
 

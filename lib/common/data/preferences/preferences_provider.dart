@@ -31,6 +31,8 @@ class PreferencesProvider {
       "SynchronizeScheduleWithCalendar";
   static const String UseDhMineForDates = "UseDhMineForDates";
   static const String RaplaImportantEventsCache = "RaplaImportantEventsCache";
+  static const String RaplaImportantEventsWindowEnd =
+      "RaplaImportantEventsWindowEnd";
 
   final PreferencesAccess _preferencesAccess;
   final SecureStorageAccess _secureStorageAccess;
@@ -65,14 +67,13 @@ class PreferencesProvider {
   }
 
   Future<bool> isCalendarSyncEnabled() async {
-    return await _preferencesAccess.get<bool>('isCalendarSyncEnabled') ??
-        false;
+    return await _preferencesAccess.get<bool>('isCalendarSyncEnabled') ?? false;
   }
 
   Future<void> setSelectedCalendar(Calendar? selectedCalendar) async {
     String? selectedCalendarId = selectedCalendar?.id;
     await _preferencesAccess.set<String>(
-      'SelectedCalendarId', selectedCalendarId ?? '');
+        'SelectedCalendarId', selectedCalendarId ?? '');
   }
 
   Future<Calendar?> getSelectedCalendar() async {
@@ -222,18 +223,16 @@ class PreferencesProvider {
 
   Future<bool> getSynchronizeScheduleWithCalendar() async {
     return await _preferencesAccess
-        .get<bool>(SynchronizeScheduleWithCalendar) ??
-      true;
+            .get<bool>(SynchronizeScheduleWithCalendar) ??
+        true;
   }
 
   Future<void> setSynchronizeScheduleWithCalendar(bool value) {
-    return _preferencesAccess.set<bool>(
-        SynchronizeScheduleWithCalendar, value);
+    return _preferencesAccess.set<bool>(SynchronizeScheduleWithCalendar, value);
   }
 
   Future<bool> getDidShowWidgetHelpDialog() async {
-    return await _preferencesAccess.get<bool>(DidShowWidgetHelpDialog) ??
-        false;
+    return await _preferencesAccess.get<bool>(DidShowWidgetHelpDialog) ?? false;
   }
 
   Future<void> setDidShowWidgetHelpDialog(bool value) {
@@ -256,6 +255,14 @@ class PreferencesProvider {
     return _preferencesAccess.set<String>(RaplaImportantEventsCache, value);
   }
 
+  Future<String?> getRaplaImportantEventsWindowEnd() async {
+    return await _preferencesAccess.get<String>(RaplaImportantEventsWindowEnd);
+  }
+
+  Future<void> setRaplaImportantEventsWindowEnd(String value) async {
+    return _preferencesAccess.set<String>(RaplaImportantEventsWindowEnd, value);
+  }
+
   Future<void> set<T>(String key, T value) async {
     return _preferencesAccess.set<T>(key, value);
   }
@@ -273,14 +280,13 @@ class PreferencesProvider {
   }
 
   Future<int> getNextRateInStoreLaunchCount() async {
-    return await _preferencesAccess
-        .get<int>("NextRateInStoreLaunchCount") ??
-      RateInStoreLaunchAfter;
+    return await _preferencesAccess.get<int>("NextRateInStoreLaunchCount") ??
+        RateInStoreLaunchAfter;
   }
 
   Future<void> setNextRateInStoreLaunchCount(int value) async {
-    return await _preferencesAccess
-        .set<int>("NextRateInStoreLaunchCount", value);
+    return await _preferencesAccess.set<int>(
+        "NextRateInStoreLaunchCount", value);
   }
 
   Future<bool> getDidShowDonateDialog() async {
