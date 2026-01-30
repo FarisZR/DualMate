@@ -421,7 +421,7 @@ class DateManagementViewModel extends BaseViewModel {
   void setShowOutOfStudyEvents(bool value) {
     _showOutOfStudyEvents = value;
     notifyListeners("showOutOfStudyEvents");
-    if (!_useDhMineForDates) {
+    if (_useDhMineForDates) {
       return;
     }
 
@@ -687,7 +687,12 @@ class DateManagementViewModel extends BaseViewModel {
 
   void _refreshRaplaWindowInBackground(DateRange window) {
     Future.microtask(() async {
-      await _refreshRaplaWindow(window, CancellationToken());
+      try {
+        await _refreshRaplaWindow(window, CancellationToken());
+      } catch (error, trace) {
+        print(error);
+        print(trace);
+      }
     });
   }
 
