@@ -35,6 +35,7 @@ class ScheduleWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
         return buildWithSize(
@@ -71,7 +72,7 @@ class ScheduleWidget extends StatelessWidget {
       width - 50,
       days,
     );
-  
+
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[

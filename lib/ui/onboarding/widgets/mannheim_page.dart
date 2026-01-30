@@ -66,7 +66,6 @@ class SelectMannheimCourseWidget extends StatelessWidget {
           case LoadCoursesState.Failed:
             return _buildLoadingError(context, viewModel);
         }
-
       },
     );
   }
@@ -93,14 +92,27 @@ class SelectMannheimCourseWidget extends StatelessWidget {
     BuildContext context,
   ) {
     var isSelected = viewModel.selectedCourse == viewModel.courses[index];
+    var overlayColor =
+        Theme.of(context).colorScheme.onSurface.withOpacity(0.08);
+    var selectedOverlayColor =
+        Theme.of(context).colorScheme.onSurface.withOpacity(0.04);
 
     return ListTile(
+      tileColor: Theme.of(context).scaffoldBackgroundColor,
+      selectedTileColor: Theme.of(context).scaffoldBackgroundColor,
+      splashColor: overlayColor,
+      hoverColor: overlayColor,
+      focusColor: overlayColor,
+      selectedColor: Theme.of(context).colorScheme.secondary,
+      iconColor: Theme.of(context).colorScheme.secondary,
+      textColor: Theme.of(context).textTheme.bodyLarge?.color,
       trailing: isSelected
           ? Icon(
               Icons.check,
               color: Theme.of(context).colorScheme.secondary,
             )
           : null,
+      onTap: () => viewModel.setSelectedCourse(viewModel.courses[index]),
       title: Text(
         viewModel.courses[index].name,
         style: isSelected
@@ -110,7 +122,6 @@ class SelectMannheimCourseWidget extends StatelessWidget {
             : null,
       ),
       subtitle: Text(viewModel.courses[index].title),
-      onTap: () => viewModel.setSelectedCourse(viewModel.courses[index]),
     );
   }
 
