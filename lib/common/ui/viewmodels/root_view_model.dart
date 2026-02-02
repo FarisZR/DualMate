@@ -32,6 +32,11 @@ class RootViewModel extends BaseViewModel {
     notifyListeners("appTheme");
   }
 
+  void refreshSystemTheme() {
+    if (_appTheme != AppTheme.System) return;
+    notifyListeners("appTheme");
+  }
+
   Future<void> setIsOnboarding(bool value) async {
     await _preferencesProvider.setIsFirstStart(value);
     _isOnboarding = value;

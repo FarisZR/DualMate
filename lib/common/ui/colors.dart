@@ -1,6 +1,7 @@
 import 'package:dualmate/common/data/preferences/app_theme_enum.dart';
 import 'package:dualmate/common/util/platform_util.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 Color colorScheduleEntryPublicHoliday(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
@@ -85,19 +86,30 @@ class ColorPalettes {
     var brightness = isDark ? Brightness.dark : Brightness.light;
 
     var baseTheme = isDark ? ThemeData.dark() : ThemeData.light();
+    var lightSurface = const Color(0xFFFFFFFF);
+    var darkSurface = const Color(0xFF1E1E1E);
+    var lightBackground = const Color(0xFFFFFFFF);
+    var darkBackground = const Color(0xFF121212);
+
     var colorScheme = ColorScheme.fromSwatch(
       primarySwatch: ColorPalettes.main,
       brightness: brightness,
     ).copyWith(
       secondary: ColorPalettes.main[500],
-      surface: isDark ? const Color(0xFF1E1E1E) : baseTheme.colorScheme.surface,
+      surface: isDark ? darkBackground : lightBackground,
+      surfaceContainerHighest: isDark ? darkSurface : lightSurface,
+      surfaceTint: Colors.transparent,
     );
 
     var themeData = baseTheme.copyWith(
       brightness: brightness,
+      useMaterial3: true,
+      applyElevationOverlayColor: false,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor:
-          isDark ? const Color(0xFF121212) : baseTheme.scaffoldBackgroundColor,
+      scaffoldBackgroundColor: isDark ? darkBackground : lightBackground,
+      canvasColor: isDark ? darkBackground : lightBackground,
+      cardColor: isDark ? darkSurface : lightSurface,
+      dialogBackgroundColor: isDark ? darkSurface : lightSurface,
       appBarTheme: baseTheme.appBarTheme.copyWith(
         backgroundColor: isDark
             ? const Color(0xFF1B1B1B)
@@ -105,6 +117,8 @@ class ColorPalettes {
         foregroundColor:
             isDark ? Colors.white : baseTheme.appBarTheme.foregroundColor,
         surfaceTintColor: Colors.transparent,
+        systemOverlayStyle:
+            isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         scrolledUnderElevation: 0,
       ),
       inputDecorationTheme: baseTheme.inputDecorationTheme.copyWith(
@@ -177,6 +191,10 @@ class ColorPalettes {
             return isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
           },
         ),
+      ),
+      cardTheme: CardThemeData(
+        color: isDark ? darkSurface : lightSurface,
+        surfaceTintColor: Colors.transparent,
       ),
     );
 

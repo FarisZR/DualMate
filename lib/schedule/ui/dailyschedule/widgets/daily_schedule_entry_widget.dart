@@ -18,6 +18,10 @@ class DailyScheduleEntryWidget extends StatelessWidget {
 
     var startTime = timeFormatter.format(scheduleEntry.start);
     var endTime = timeFormatter.format(scheduleEntry.end);
+    var entryColor = scheduleEntryTypeToColor(context, scheduleEntry.type);
+    var titleColor = entryColor.computeLuminance() > 0.45
+      ? Colors.black
+      : Colors.white;
 
     return IntrinsicHeight(
       child: Row(
@@ -59,7 +63,7 @@ class DailyScheduleEntryWidget extends StatelessWidget {
               margin: const EdgeInsets.all(0),
               surfaceTintColor: Colors.transparent,
               elevation: 8,
-              color: scheduleEntryTypeToColor(context, scheduleEntry.type),
+              color: entryColor,
               child: Padding(
                 padding: const EdgeInsets.all(8),
                 child: Column(
@@ -70,7 +74,8 @@ class DailyScheduleEntryWidget extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
                       child: Text(
                         scheduleEntry.title,
-                        style: textStyleDailyScheduleEntryWidgetTitle(context),
+                        style: textStyleDailyScheduleEntryWidgetTitle(context)
+                            .copyWith(color: titleColor),
                       ),
                     ),
                     Row(

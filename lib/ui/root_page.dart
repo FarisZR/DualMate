@@ -61,6 +61,11 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     }
   }
 
+  @override
+  void didChangePlatformBrightness() {
+    _rootViewModel?.refreshSystemTheme();
+  }
+
   Future<void> _fetchLaunchRoute() async {
     try {
       final route = await _navigationChannel.invokeMethod<String>(
