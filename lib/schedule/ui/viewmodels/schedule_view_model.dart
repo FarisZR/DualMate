@@ -10,8 +10,10 @@ class ScheduleViewModel extends BaseViewModel {
   bool _isDisposed = false;
 
   bool _didSetupProperly = false;
+  bool _isInitializingScheduleSource = true;
 
   bool get didSetupProperly => _didSetupProperly;
+  bool get isInitializingScheduleSource => _isInitializingScheduleSource;
 
   ScheduleViewModel(this._scheduleSourceProvider) {
     _scheduleSourceProvider
@@ -24,13 +26,25 @@ class ScheduleViewModel extends BaseViewModel {
     _initialSetupTimer?.cancel();
     _initialSetupTimer = Timer(const Duration(seconds: 1), () {
       if (_isDisposed) return;
-      _scheduleSourceProvider.setupScheduleSource();
+      _isInitializingScheduleSource = true;
+      notifyListeners("isInitializingScheduleSource");
+      _scheduleSourceProvider.setupScheduleSource().then((_) {
+        if (_isDisposed) return;
+        if (_isInitializingScheduleSource) {
+          _isInitializingScheduleSource = false;
+          notifyListeners("isInitializingScheduleSource");
+        }
+      });
     });
   }
 
   void onDidChangeScheduleSource(ScheduleSource scheduleSource, bool valid) {
     if (_isDisposed) return;
     _didSetupProperly = valid;
+    if (_isInitializingScheduleSource) {
+      _isInitializingScheduleSource = false;
+      notifyListeners("isInitializingScheduleSource");
+    }
     notifyListeners("didSetupProperly");
   }
 

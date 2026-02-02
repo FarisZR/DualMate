@@ -5,6 +5,7 @@ import 'package:dualmate/schedule/ui/viewmodels/schedule_view_model.dart';
 import 'package:dualmate/schedule/ui/viewmodels/weekly_schedule_view_model.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/weekly_schedule_page.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_empty_state.dart';
+import 'package:dualmate/schedule/ui/widgets/schedule_empty_state_placeholder.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:dualmate/ui/pager_widget.dart';
 import 'package:flutter/material.dart';
@@ -49,6 +50,12 @@ class _SchedulePageState extends State<SchedulePage> {
   Widget build(BuildContext context) {
     ScheduleViewModel viewModel = Provider.of<ScheduleViewModel>(context);
 
+    if (viewModel.isInitializingScheduleSource) {
+      return Padding(
+        padding: const EdgeInsets.all(32),
+        child: ScheduleEmptyStatePlaceholder(),
+      );
+    }
     if (!viewModel.didSetupProperly) {
       return ScheduleEmptyState();
     } else {

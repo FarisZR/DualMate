@@ -337,6 +337,9 @@ class L {
   String get dateManagementRaplaMissing =>
       _getValue("dateManagementRaplaMissing");
 
+  String get dateManagementEmptyStateBannerMessage =>
+      _getValue("dateManagementEmptyStateBannerMessage");
+
   String get dateManagementRaplaEmpty => _getValue("dateManagementRaplaEmpty");
 
   String get scheduleQueryFailedMessage =>

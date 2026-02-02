@@ -135,6 +135,8 @@ final en = {
       "Choose the calendar to export the dates to:",
   "dateManagementRaplaMissing":
       "No Rapla URL configured. Configure a schedule source to see Rapla events.",
+  "dateManagementEmptyStateBannerMessage":
+      "No schedule source configured for dates. Configure one to see Rapla events.",
   "dateManagementRaplaEmpty": "No Rapla events found for this period.",
   "scheduleQueryFailedMessage":
       "Oops, something went wrong. It is possible that the schedule is incomplete. To ensure that you do not miss something, view the schedule in the browser.",
