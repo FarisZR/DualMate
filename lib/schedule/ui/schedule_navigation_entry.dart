@@ -36,17 +36,17 @@ class ScheduleNavigationEntry extends NavigationEntry<ScheduleViewModel> {
 
   @override
   List<Widget> appBarActions(BuildContext context) {
-    initViewModel();
+    final viewModel = this.viewModel();
     return [
       PropertyChangeProvider<ScheduleViewModel, String>(
-        value: _viewModel,
+        value: viewModel,
         child: PropertyChangeConsumer<ScheduleViewModel, String>(
             properties: const ["didSetupProperly"],
             builder: (
               BuildContext _,
               ScheduleViewModel? __,
               Set<String>? ___,
-            ) => _viewModel.didSetupProperly
+            ) => viewModel.didSetupProperly
                     ? Container()
                     : IconButton(
                         icon: Icon(Icons.help_outline),
@@ -57,14 +57,14 @@ class ScheduleNavigationEntry extends NavigationEntry<ScheduleViewModel> {
                       )),
       ),
       PropertyChangeProvider<ScheduleViewModel, String>(
-        value: _viewModel,
+        value: viewModel,
         child: PropertyChangeConsumer<ScheduleViewModel, String>(
           properties: const ["didSetupProperly"],
           builder: (
             BuildContext _,
             ScheduleViewModel? __,
             Set<String>? ___,
-          ) => _viewModel.didSetupProperly
+          ) => viewModel.didSetupProperly
                   ? IconButton(
                       icon: Icon(Icons.filter_alt),
                       onPressed: () async {
