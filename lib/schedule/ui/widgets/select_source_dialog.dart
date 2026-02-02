@@ -41,8 +41,9 @@ class SelectSourceDialog {
         RadioListTile<ScheduleSourceType>(
           groupValue: _currentScheduleSource,
           value: ScheduleSourceType.Rapla,
-          onChanged: (v) {
-            if (v != null) sourceSelected(v, context);
+          toggleable: true,
+          onChanged: (_) {
+            sourceSelected(ScheduleSourceType.Rapla, context);
           },
           title: Text(L.of(context).scheduleSourceTypeRapla),
         ),
