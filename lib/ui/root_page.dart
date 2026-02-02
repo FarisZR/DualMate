@@ -31,7 +31,7 @@ class RootPage extends StatefulWidget {
 class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   RootViewModel? _rootViewModel;
   bool _isInitializing = true;
-  bool _perfOverlayEnabled = kDebugMode || kProfileMode;
+  bool _perfOverlayEnabled = false;
   bool _backgroundInitStarted = false;
   static const MethodChannel _navigationChannel =
       MethodChannel('com.fariszr.dualmate/navigation');
@@ -140,10 +140,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
   Future<void> _initializeApp() async {
     final stopwatch = Stopwatch()..start();
-    final initTask = PerformanceTelemetry.instance.startTask('root_init');
-    final baseTask = PerformanceTelemetry.instance.startTask('root_init_base');
     await initializeAppBase(false);
-    baseTask.finish();
     print("Root init: base ${stopwatch.elapsedMilliseconds}ms");
 
     await saveLastStartLanguage();
@@ -154,14 +151,12 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     await _rootViewModel?.loadFromPreferences();
     print("Root init: prefs ${stopwatch.elapsedMilliseconds}ms");
     WidgetsBinding.instance.allowFirstFrame();
-    PerformanceTelemetry.instance.logInstant('allow_first_frame');
 
     _applyPendingRoute();
 
     print("Root init: allow first frame ${stopwatch.elapsedMilliseconds}ms");
 
     if (!mounted) {
-      initTask.finish();
       return;
     }
 
@@ -174,8 +169,6 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       _backgroundInitStarted = true;
       _runDeferredInitialization(stopwatch);
     });
-
-    initTask.finish();
   }
 
   void _applyPendingRoute() {
@@ -260,8 +253,6 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   }
 
   Future<void> _runDeferredInitialization(Stopwatch stopwatch) async {
-    final deferredTask =
-        PerformanceTelemetry.instance.startTask('root_init_background');
     try {
       await initializeAppBackground(false);
       print(
@@ -270,8 +261,6 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       print("Root init: deferred background failed");
       print(error);
       print(trace);
-    } finally {
-      deferredTask.finish();
     }
   }
 }

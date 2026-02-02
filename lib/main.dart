@@ -16,8 +16,6 @@ void main() async {
   // Setup the flutter bindings and the error reporting as early as possible
   final binding = WidgetsFlutterBinding.ensureInitialized();
   binding.deferFirstFrame();
-  final bootTask = PerformanceTelemetry.instance.startTask('app_boot');
-  PerformanceTelemetry.instance.ensureFrameTimingListenerAttached();
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.dumpErrorToConsole(details);
     reportException(details.exception, details.stack ?? StackTrace.current);
@@ -26,9 +24,6 @@ void main() async {
   await PlatformUtil.initializePortraitLandscapeMode();
 
   runApp(const RootPage());
-
-  PerformanceTelemetry.instance.logInstant('runApp_called');
-  bootTask.finish();
 }
 
 ///

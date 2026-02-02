@@ -18,17 +18,11 @@ final Analytics analytics = Analytics();
 class _PerfAwareNavigatorObserver extends NavigatorObserver {
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    PerformanceTelemetry.instance.markNavEvent(
-      name: 'push:${route.settings.name ?? route.hashCode}',
-    );
     super.didPush(route, previousRoute);
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    PerformanceTelemetry.instance.markNavEvent(
-      name: 'pop:${route.settings.name ?? route.hashCode}',
-    );
     super.didPop(route, previousRoute);
   }
 }
