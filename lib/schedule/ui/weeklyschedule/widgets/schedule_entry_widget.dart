@@ -18,6 +18,9 @@ class ScheduleEntryWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color color = scheduleEntryTypeToColor(context, scheduleEntry.type);
+    var textColor = color.computeLuminance() > 0.45
+        ? Colors.black
+        : Colors.white;
 
     return Card(
       color: color,
@@ -35,7 +38,9 @@ class ScheduleEntryWidget extends StatelessWidget {
             softWrap: true,
             overflow: TextOverflow.clip,
             textAlign: TextAlign.left,
-            style: textStyleScheduleEntryWidgetTitle(context),
+            style: textStyleScheduleEntryWidgetTitle(context).copyWith(
+              color: textColor,
+            ),
           ),
         ),
       ),
