@@ -6,7 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 
 class DatesEmptyState extends StatelessWidget {
-  const DatesEmptyState({Key? key}) : super(key: key);
+  final Future<void> Function()? onSetupCompleted;
+
+  const DatesEmptyState({
+    Key? key,
+    this.onSetupCompleted,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +27,9 @@ class DatesEmptyState extends StatelessWidget {
                 KiwiContainer().resolve(),
                 KiwiContainer().resolve(),
               ).show(context);
+              if (onSetupCompleted != null) {
+                await onSetupCompleted!();
+              }
             },
             buttonText: L.of(context).scheduleEmptyStateSetUrl.toUpperCase(),
           ),

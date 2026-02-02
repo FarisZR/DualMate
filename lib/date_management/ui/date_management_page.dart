@@ -172,7 +172,12 @@ class _DateManagementPageState extends State<DateManagementPage> {
     }
 
     if (model.bothSourcesUnconfigured) {
-      return const DatesEmptyState();
+      return DatesEmptyState(
+        onSetupCompleted: () async {
+          if (!mounted) return;
+          await model.updateDates();
+        },
+      );
     }
 
     if (!model.raplaUrlValid) {
@@ -186,6 +191,8 @@ class _DateManagementPageState extends State<DateManagementPage> {
               KiwiContainer().resolve(),
               KiwiContainer().resolve(),
             ).show(context);
+            if (!mounted) return;
+            await model.updateDates();
           },
         ),
       );

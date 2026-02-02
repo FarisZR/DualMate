@@ -10,6 +10,7 @@ class ImportantEventTile extends StatelessWidget {
   final VisualDensity? visualDensity;
   final double dotSize;
   final TextStyle? titleStyle;
+  final Color? dotColor;
 
   const ImportantEventTile({
     Key? key,
@@ -18,6 +19,7 @@ class ImportantEventTile extends StatelessWidget {
     this.visualDensity,
     this.dotSize = 12,
     this.titleStyle,
+    this.dotColor,
   }) : super(key: key);
 
   @override
@@ -32,7 +34,10 @@ class ImportantEventTile extends StatelessWidget {
     return ListTile(
       contentPadding: contentPadding,
       visualDensity: visualDensity,
-      leading: _EventDot(color: _eventColor(context, event), size: dotSize),
+      leading: _EventDot(
+        color: dotColor ?? _eventColor(context, event),
+        size: dotSize,
+      ),
       title: Text(event.title, style: resolvedTitleStyle),
       subtitle: Text(_formatEventDate(context, event)),
     );

@@ -24,7 +24,13 @@ class ImportantEventSectionCard extends StatelessWidget {
       }
     } else {
       if (section.header != null) {
-        children.add(_buildSectionHeader(section.header!, context));
+        children.add(
+          _buildSectionHeader(
+            section.header!,
+            context,
+            _isExamSection(section),
+          ),
+        );
       }
 
       if (section.events.isNotEmpty) {
@@ -51,12 +57,17 @@ class ImportantEventSectionCard extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader(ImportantEvent event, BuildContext context) {
+  Widget _buildSectionHeader(
+    ImportantEvent event,
+    BuildContext context,
+    bool isExamSection,
+  ) {
     return ImportantEventTile(
       event: event,
       contentPadding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
       titleStyle: (Theme.of(context).textTheme.titleMedium ?? const TextStyle())
           .copyWith(fontWeight: FontWeight.w600),
+      dotColor: isExamSection ? const Color(0xffff0000) : null,
     );
   }
 
