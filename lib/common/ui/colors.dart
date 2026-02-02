@@ -96,9 +96,8 @@ class ColorPalettes {
       brightness: brightness,
     ).copyWith(
       secondary: ColorPalettes.main[500],
-      surface: isDark ? darkSurface : lightSurface,
-      background: isDark ? darkBackground : lightBackground,
-      surfaceVariant: isDark ? darkSurface : lightSurface,
+      surface: isDark ? darkBackground : lightBackground,
+      surfaceContainerHighest: isDark ? darkSurface : lightSurface,
       surfaceTint: Colors.transparent,
     );
 
