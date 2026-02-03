@@ -146,6 +146,8 @@ final de = {
       "Wähle den Kalender aus, in den die Termine übertragen werden sollen:",
   "dateManagementRaplaMissing":
       "Keine Rapla-URL konfiguriert. Richte eine Vorlesungsplan-Quelle ein, um Rapla-Termine zu sehen.",
+  "dateManagementEmptyStateBannerMessage":
+      "Keine Terminquelle konfiguriert. Richte eine Quelle ein, um Rapla-Termine zu sehen.",
   "dateManagementRaplaEmpty":
       "Keine Rapla-Termine für diesen Zeitraum gefunden.",
   "scheduleQueryFailedMessage":

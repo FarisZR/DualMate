@@ -44,6 +44,7 @@ class DateManagementViewModel extends BaseViewModel {
   List<DateDatabase> get allDateDatabases => _allDateDatabases;
 
   final CancelableMutex _updateMutex = CancelableMutex();
+  bool _isDisposed = false;
 
   Timer? _errorResetTimer;
 
@@ -117,6 +118,7 @@ class DateManagementViewModel extends BaseViewModel {
 
   bool _raplaUrlValid = true;
   bool get raplaUrlValid => _raplaUrlValid;
+  bool get bothSourcesUnconfigured => !_useDhMineForDates && !_raplaUrlValid;
 
   final Map<String, ScheduleFreshnessGate> _raplaFreshnessGates = {};
   final List<DateRange> _loadedRaplaWindows = <DateRange>[];
@@ -148,6 +150,11 @@ class DateManagementViewModel extends BaseViewModel {
         currentDateDatabase.id,
       );
 
+  void _notifySafely(String property) {
+    if (_isDisposed) return;
+    notifyListeners(property);
+  }
+
   DateManagementViewModel(
     this._dateEntryProvider,
     this._preferencesProvider,
@@ -168,9 +175,14 @@ class DateManagementViewModel extends BaseViewModel {
   Future<void> updateDates() async {
     await _updateMutex.acquireAndCancelOther();
 
+    if (_isDisposed) {
+      _updateMutex.release();
+      return;
+    }
+
     try {
       _isLoading = true;
-      notifyListeners("isLoading");
+      _notifySafely("isLoading");
 
       if (_useDhMineForDates) {
         await _doUpdateDates();
@@ -181,7 +193,7 @@ class DateManagementViewModel extends BaseViewModel {
     } finally {
       _isLoading = false;
       _updateMutex.release();
-      notifyListeners("isLoading");
+      _notifySafely("isLoading");
     }
   }
 
@@ -191,9 +203,11 @@ class DateManagementViewModel extends BaseViewModel {
 
     try {
       var storedValue = await _preferencesProvider.getUseDhMineForDates();
+      if (_isDisposed) return;
       if (storedValue != _useDhMineForDates) {
         _useDhMineForDates = storedValue;
-        notifyListeners("useDhMineForDates");
+        _notifySafely("useDhMineForDates");
+        _notifySafely("bothSourcesUnconfigured");
         await updateDates();
       }
     } finally {
@@ -203,10 +217,12 @@ class DateManagementViewModel extends BaseViewModel {
 
   Future<void> _doUpdateDates() async {
     var cachedDateEntries = await _readCachedDateEntries();
+    if (_isDisposed) return;
     _updateMutex.token.throwIfCancelled();
     _setAllDates(cachedDateEntries);
 
     var loadedDateEntries = await _readUpdatedDateEntries();
+    if (_isDisposed) return;
     _updateMutex.token.throwIfCancelled();
 
     if (loadedDateEntries != null) {
@@ -218,13 +234,15 @@ class DateManagementViewModel extends BaseViewModel {
       _cancelErrorInFuture();
     }
 
-    notifyListeners("updateFailed");
+    _notifySafely("updateFailed");
   }
 
   Future<void> _doUpdateRaplaEvents() async {
     _resetRaplaPaging();
     await _applyCachedRaplaWindows();
+    if (_isDisposed) return;
     var raplaEvents = await _readRaplaImportantEventsPage();
+    if (_isDisposed) return;
     _updateMutex.token.throwIfCancelled();
 
     if (raplaEvents != null) {
@@ -232,13 +250,14 @@ class DateManagementViewModel extends BaseViewModel {
     }
 
     await _prefetchRaplaUntilFilled();
+    if (_isDisposed) return;
 
     _updateFailed = raplaEvents == null;
     if (updateFailed) {
       _cancelErrorInFuture();
     }
 
-    notifyListeners("updateFailed");
+    _notifySafely("updateFailed");
 
     if (raplaEvents != null) {
       _refreshRaplaEventsInBackground();
@@ -247,8 +266,10 @@ class DateManagementViewModel extends BaseViewModel {
 
   Future<List<ImportantEvent>?> _readRaplaImportantEventsPage() async {
     var raplaUrl = await _preferencesProvider.getRaplaUrl();
+    if (_isDisposed) return null;
     _raplaUrlValid = RaplaScheduleSource.isValidUrl(raplaUrl);
-    notifyListeners("raplaUrlValid");
+    _notifySafely("raplaUrlValid");
+    _notifySafely("bothSourcesUnconfigured");
 
     if (!_raplaUrlValid) {
       return null;
@@ -263,6 +284,7 @@ class DateManagementViewModel extends BaseViewModel {
       advanceWindow: true,
       refresh: false,
     );
+    if (_isDisposed) return null;
     _refreshRaplaWindowInBackground(window);
     return loaded;
   }
@@ -274,6 +296,7 @@ class DateManagementViewModel extends BaseViewModel {
       }
 
       var raplaUrl = await _preferencesProvider.getRaplaUrl();
+      if (_isDisposed) return;
       if (!RaplaScheduleSource.isValidUrl(raplaUrl)) {
         return;
       }
@@ -315,14 +338,14 @@ class DateManagementViewModel extends BaseViewModel {
     _allDates = dateEntries;
     _dateEntriesKeyIndex++;
 
-    notifyListeners("allDates");
+    _notifySafely("allDates");
   }
 
   void _setImportantEvents(List<ImportantEvent> events) {
     _importantEvents = events;
     _updateLastNonHolidayEventEnd(events);
     _setImportantEventSections();
-    notifyListeners("importantEvents");
+    _notifySafely("importantEvents");
   }
 
   void _appendImportantEvents(DateRange window, List<ImportantEvent> events) {
@@ -330,7 +353,7 @@ class DateManagementViewModel extends BaseViewModel {
     _importantEvents = _mergeImportantEvents(_importantEvents, events);
     _updateLastNonHolidayEventEnd(_importantEvents);
     _setImportantEventSections();
-    notifyListeners("importantEvents");
+    _notifySafely("importantEvents");
   }
 
   void _replaceImportantEvents(DateRange window, List<ImportantEvent> events) {
@@ -345,7 +368,7 @@ class DateManagementViewModel extends BaseViewModel {
     _importantEvents = _mergeImportantEvents(trimmed, events);
     _updateLastNonHolidayEventEnd(_importantEvents);
     _setImportantEventSections();
-    notifyListeners("importantEvents");
+    _notifySafely("importantEvents");
   }
 
   void _trackRaplaWindow(DateRange window) {
@@ -381,7 +404,7 @@ class DateManagementViewModel extends BaseViewModel {
       _importantEvents,
       includeOutsideStudy: _showOutOfStudyEvents,
     );
-    notifyListeners("importantEventSections");
+    _notifySafely("importantEventSections");
   }
 
   void _addEvent(
@@ -398,7 +421,7 @@ class DateManagementViewModel extends BaseViewModel {
 
   void setShowPassedDates(bool value) {
     _showPassedDates = value;
-    notifyListeners("showPassedDates");
+    _notifySafely("showPassedDates");
 
     if (!_useDhMineForDates) {
       return;
@@ -409,7 +432,7 @@ class DateManagementViewModel extends BaseViewModel {
 
   void setShowFutureDates(bool value) {
     _showFutureDates = value;
-    notifyListeners("showFutureDates");
+    _notifySafely("showFutureDates");
 
     if (!_useDhMineForDates) {
       return;
@@ -420,7 +443,7 @@ class DateManagementViewModel extends BaseViewModel {
 
   void setShowOutOfStudyEvents(bool value) {
     _showOutOfStudyEvents = value;
-    notifyListeners("showOutOfStudyEvents");
+    _notifySafely("showOutOfStudyEvents");
     if (_useDhMineForDates) {
       return;
     }
@@ -430,23 +453,26 @@ class DateManagementViewModel extends BaseViewModel {
 
   void setCurrentDateDatabase(DateDatabase database) {
     _currentDateDatabase = database;
-    notifyListeners("currentDateDatabase");
+    _notifySafely("currentDateDatabase");
 
     _preferencesProvider.setLastViewedDateEntryDatabase(database.id);
   }
 
   void setCurrentSelectedYear(String year) {
     _currentSelectedYear = year;
-    notifyListeners("currentSelectedYear");
+    _notifySafely("currentSelectedYear");
 
     _preferencesProvider.setLastViewedDateEntryYear(year);
   }
 
   void _loadDefaultSelection() async {
     _useDhMineForDates = await _preferencesProvider.getUseDhMineForDates();
-    notifyListeners("useDhMineForDates");
+    if (_isDisposed) return;
+    _notifySafely("useDhMineForDates");
+    _notifySafely("bothSourcesUnconfigured");
 
     var database = await _preferencesProvider.getLastViewedDateEntryDatabase();
+    if (_isDisposed) return;
 
     bool didSetDatabase = false;
     for (var db in allDateDatabases) {
@@ -461,6 +487,7 @@ class DateManagementViewModel extends BaseViewModel {
     }
 
     var year = await _preferencesProvider.getLastViewedDateEntryYear();
+    if (_isDisposed) return;
     if (years.contains(year)) {
       setCurrentSelectedYear(year);
     } else {
@@ -523,7 +550,7 @@ class DateManagementViewModel extends BaseViewModel {
     if (_nextRaplaWindow == null) return;
     if (!_nextRaplaWindow!.start.isBefore(_maxRaplaEndDate())) {
       _hasMoreRaplaPages = false;
-      notifyListeners("hasMoreRaplaPages");
+      _notifySafely("hasMoreRaplaPages");
     }
   }
 
@@ -537,7 +564,7 @@ class DateManagementViewModel extends BaseViewModel {
     _hasMoreRaplaPages = true;
     _lastRaplaPageRequestAt = null;
     _lastNonHolidayEventEnd = null;
-    notifyListeners("hasMoreRaplaPages");
+    _notifySafely("hasMoreRaplaPages");
   }
 
   Future<void> loadNextRaplaPage({bool bypassCooldown = false}) async {
@@ -556,14 +583,14 @@ class DateManagementViewModel extends BaseViewModel {
     var maxEnd = _maxRaplaEndDate();
     if (!_nextRaplaWindow!.start.isBefore(maxEnd)) {
       _hasMoreRaplaPages = false;
-      notifyListeners("hasMoreRaplaPages");
+      _notifySafely("hasMoreRaplaPages");
       return;
     }
 
     _isLoadingNextRaplaPage = true;
     _nextRaplaPageFailed = false;
-    notifyListeners("isLoadingNextRaplaPage");
-    notifyListeners("nextRaplaPageFailed");
+    _notifySafely("isLoadingNextRaplaPage");
+    _notifySafely("nextRaplaPageFailed");
 
     var window = _nextRaplaWindow!;
 
@@ -579,23 +606,24 @@ class DateManagementViewModel extends BaseViewModel {
         advanceWindow: true,
         refresh: true,
       );
+      if (_isDisposed) return;
       if (loaded == null) {
         _nextRaplaPageFailed = true;
         if (bypassCooldown) {
           _lastRaplaPageRequestAt = null;
         }
-        notifyListeners("nextRaplaPageFailed");
+        _notifySafely("nextRaplaPageFailed");
       } else {
         var afterCount = importantEvents.length;
         if (afterCount == beforeCount &&
             !windowToLoad.end.isBefore(_maxRaplaEndDate())) {
           _hasMoreRaplaPages = false;
-          notifyListeners("hasMoreRaplaPages");
+          _notifySafely("hasMoreRaplaPages");
         }
       }
     } finally {
       _isLoadingNextRaplaPage = false;
-      notifyListeners("isLoadingNextRaplaPage");
+      _notifySafely("isLoadingNextRaplaPage");
     }
   }
 
@@ -624,7 +652,7 @@ class DateManagementViewModel extends BaseViewModel {
         var maxEnd = _maxRaplaEndDate();
         if (!next.start.isBefore(maxEnd)) {
           _hasMoreRaplaPages = false;
-          notifyListeners("hasMoreRaplaPages");
+          _notifySafely("hasMoreRaplaPages");
         } else {
           _nextRaplaWindow = next;
         }
@@ -734,6 +762,7 @@ class DateManagementViewModel extends BaseViewModel {
   Future<void> _applyCachedRaplaWindows() async {
     var cachedEnd =
         await _preferencesProvider.getRaplaImportantEventsWindowEnd();
+    if (_isDisposed) return;
     if (cachedEnd == null || cachedEnd.isEmpty) {
       return;
     }
@@ -762,6 +791,7 @@ class DateManagementViewModel extends BaseViewModel {
         advanceWindow: false,
         refresh: false,
       );
+      if (_isDisposed) return;
       lastWindowEnd = window.end;
       windowStart = window.end;
     }
@@ -772,7 +802,7 @@ class DateManagementViewModel extends BaseViewModel {
     );
     if (!_nextRaplaWindow!.start.isBefore(maxEnd)) {
       _hasMoreRaplaPages = false;
-      notifyListeners("hasMoreRaplaPages");
+      _notifySafely("hasMoreRaplaPages");
     }
   }
 
@@ -806,8 +836,16 @@ class DateManagementViewModel extends BaseViewModel {
       const Duration(seconds: 5),
       () {
         _updateFailed = false;
-        notifyListeners("updateFailed");
+        _notifySafely("updateFailed");
       },
     );
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _updateMutex.cancel();
+    _errorResetTimer?.cancel();
+    super.dispose();
   }
 }

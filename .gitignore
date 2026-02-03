@@ -28,9 +28,20 @@
 .packages
 .pub-cache/
 .pub/
-/build/
+build/
 android/build/
 local.properties
+third_party/**/build/
+third_party/**/.dart_tool/
+third_party/**/.gradle/
+third_party/**/.cxx/
+third_party/**/android/build/
+third_party/**/ios/build/
+third_party/**/local.properties
+third_party/**/Pods/
+third_party/**/example/android/gradle/wrapper/
+third_party/**/example/android/gradlew
+third_party/**/example/android/gradlew.bat
 
 # Web related
 lib/generated_plugin_registrant.dart
