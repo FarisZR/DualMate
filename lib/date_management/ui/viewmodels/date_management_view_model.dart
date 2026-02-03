@@ -207,6 +207,7 @@ class DateManagementViewModel extends BaseViewModel {
       if (storedValue != _useDhMineForDates) {
         _useDhMineForDates = storedValue;
         _notifySafely("useDhMineForDates");
+        _notifySafely("bothSourcesUnconfigured");
         await updateDates();
       }
     } finally {
@@ -268,6 +269,7 @@ class DateManagementViewModel extends BaseViewModel {
     if (_isDisposed) return null;
     _raplaUrlValid = RaplaScheduleSource.isValidUrl(raplaUrl);
     _notifySafely("raplaUrlValid");
+    _notifySafely("bothSourcesUnconfigured");
 
     if (!_raplaUrlValid) {
       return null;
@@ -467,6 +469,7 @@ class DateManagementViewModel extends BaseViewModel {
     _useDhMineForDates = await _preferencesProvider.getUseDhMineForDates();
     if (_isDisposed) return;
     _notifySafely("useDhMineForDates");
+    _notifySafely("bothSourcesUnconfigured");
 
     var database = await _preferencesProvider.getLastViewedDateEntryDatabase();
     if (_isDisposed) return;
