@@ -66,6 +66,10 @@ class _PagerWidgetState extends State<PagerWidget> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        selectedItemColor: Theme.of(context).colorScheme.secondary,
+        unselectedItemColor:
+            Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         currentIndex: _currentPage,
         onTap: (int index) async {
           await setActivePage(index);

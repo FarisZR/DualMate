@@ -98,6 +98,18 @@ class SelectSourcePage extends StatelessWidget {
       ScheduleSourceType type,
       String title) {
     return RadioListTile(
+      tileColor: Theme.of(context).scaffoldBackgroundColor,
+      selectedTileColor: Theme.of(context).scaffoldBackgroundColor,
+      overlayColor: WidgetStateProperty.resolveWith<Color?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.pressed) ||
+              states.contains(WidgetState.focused) ||
+              states.contains(WidgetState.hovered)) {
+            return Theme.of(context).colorScheme.onSurface.withOpacity(0.08);
+          }
+          return Colors.transparent;
+        },
+      ),
       value: type, //model.useDualis,
       onChanged: (value) {
         if (value == null) return;
