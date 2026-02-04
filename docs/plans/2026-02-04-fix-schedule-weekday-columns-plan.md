@@ -32,7 +32,7 @@ The weekly schedule grid sometimes shows empty columns for earlier weekdays even
 - [ ] Lessons that occur earlier in the week always render in their correct columns (no empty column when entries exist for that day).
 - [ ] Saturday column appears only when at least one valid lesson occurs on Saturday within the week being displayed.
 - [ ] Sunday is never displayed in the weekly grid.
-- [ ] Day labels match visible columns (no extra labels for hidden days).
+- [ ] Day labels match visible columns (no extra labels for hidden dazys).
 - [ ] Behavior is consistent for:
   - [ ] initial app open
   - [ ] previous/next week navigation
@@ -47,7 +47,7 @@ The weekly schedule grid sometimes shows empty columns for earlier weekdays even
 
 ## Dependencies & Risks
 - Risk of hiding legitimate Sunday lessons if they exist in data (confirmed not required for current scope).
-- Misclassification of "valid" Saturday lessons could toggle the column incorrectly; define validity explicitly in code (non-canceled, non-hidden).
+- Misclassification of "valid" Saturday lessons could toggle the column incorrectly; define validity explicitly in code ( non-hidden).
 - If schedule fetching is limited to a narrower range, the UI will still show empty earlier days; ensure fetch range matches the displayed week.
 
 ## References & Research
