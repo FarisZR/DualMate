@@ -76,6 +76,29 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _initViewModel();
   }
 
+  static WeeklyDisplayRange resolveWeeklyDisplayRange(
+    DateTime referenceStart,
+    Schedule? schedule,
+  ) {
+    final weekStart =
+        toStartOfDay(toDayOfWeek(referenceStart, DateTime.monday));
+    final weekEnd = toStartOfDay(toDayOfWeek(referenceStart, DateTime.friday));
+
+    if (schedule == null) {
+      return WeeklyDisplayRange(weekStart, weekEnd);
+    }
+
+    var displayEnd = weekEnd;
+    final saturday =
+        toStartOfDay(toDayOfWeek(referenceStart, DateTime.saturday));
+
+    if (_hasEntriesOnDay(schedule, saturday)) {
+      displayEnd = saturday;
+    }
+
+    return WeeklyDisplayRange(weekStart, displayEnd);
+  }
+
   Future<void> _initViewModel() async {
     currentDateStart =
         toStartOfDay(toDayOfWeek(DateTime.now(), DateTime.monday));
@@ -135,20 +158,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     currentDateEnd = end;
 
     if (weekSchedule != null) {
-      var scheduleStart = weekSchedule!.getStartDate();
-      var scheduleEnd = weekSchedule!.getEndDate();
-
-      if (scheduleStart == null || scheduleEnd == null) {
-        clippedDateStart = toDayOfWeek(start, DateTime.monday);
-        clippedDateEnd = toDayOfWeek(start, DateTime.friday);
-      } else {
-        clippedDateStart = toDayOfWeek(scheduleStart, DateTime.monday);
-        clippedDateEnd = toDayOfWeek(scheduleEnd, DateTime.friday);
-      }
-
-      if (scheduleEnd != null && scheduleEnd.isAfter(clippedDateEnd!)) {
-        clippedDateEnd = scheduleEnd;
-      }
+      var displayRange =
+          resolveWeeklyDisplayRange(currentDateStart, weekSchedule);
+      clippedDateStart = displayRange.start;
+      clippedDateEnd = displayRange.end;
 
       displayStartHour = weekSchedule?.getStartTime()?.hour ?? 23;
       displayStartHour = min(7, displayStartHour);
@@ -156,8 +169,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       displayEndHour = weekSchedule?.getEndTime()?.hour ?? 0;
       displayEndHour = max(displayEndHour + 1, 17);
     } else {
-      clippedDateStart = toDayOfWeek(currentDateStart, DateTime.monday);
-      clippedDateEnd = toDayOfWeek(currentDateEnd, DateTime.friday);
+      var displayRange = resolveWeeklyDisplayRange(currentDateStart, null);
+      clippedDateStart = displayRange.start;
+      clippedDateEnd = displayRange.end;
     }
 
     notifyListeners("weekSchedule");
@@ -416,4 +430,17 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     if (_widgetLockedStart == null || _widgetLockedEnd == null) return false;
     return _widgetLockedStart != start || _widgetLockedEnd != end;
   }
+}
+
+class WeeklyDisplayRange {
+  final DateTime start;
+  final DateTime end;
+
+  WeeklyDisplayRange(this.start, this.end);
+}
+
+bool _hasEntriesOnDay(Schedule schedule, DateTime dayStart) {
+  final start = toStartOfDay(dayStart);
+  final end = tomorrow(start);
+  return schedule.trim(start, end).entries.isNotEmpty;
 }
