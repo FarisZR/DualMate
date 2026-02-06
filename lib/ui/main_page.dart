@@ -51,7 +51,7 @@ class _MainPageState extends State<MainPage> {
       setState(() {
         _showContent = true;
       });
-      Future.delayed(const Duration(milliseconds: 700), () {
+      Future.delayed(const Duration(milliseconds: 300), () {
         if (!mounted) return;
         _pushInitialRouteAfterShell();
       });
@@ -230,7 +230,7 @@ class _MainPageState extends State<MainPage> {
   void _showAppLaunchDialogsIfNeeded(BuildContext context) {
     if (!_appLaunchDialogsShown) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Future.delayed(const Duration(milliseconds: 1500), () {
+        Future.delayed(const Duration(milliseconds: 800), () {
           if (!mounted) return;
           AppLaunchDialog(KiwiContainer().resolve())
               .showAppLaunchDialogs(context);

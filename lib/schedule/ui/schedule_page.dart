@@ -19,15 +19,24 @@ class SchedulePage extends StatefulWidget {
 }
 
 class _SchedulePageState extends State<SchedulePage> {
-  final WeeklyScheduleViewModel weeklyScheduleViewModel =
-      WeeklyScheduleViewModel(
-    KiwiContainer().resolve(),
-    KiwiContainer().resolve(),
-  );
+  static WeeklyScheduleViewModel? _sharedWeeklyScheduleViewModel;
+  static DailyScheduleViewModel? _sharedDailyScheduleViewModel;
+  static bool _warmUpCompleted = false;
 
-  final DailyScheduleViewModel dailyScheduleViewModel = DailyScheduleViewModel(
-    KiwiContainer().resolve(),
-  );
+  WeeklyScheduleViewModel get weeklyScheduleViewModel {
+    _sharedWeeklyScheduleViewModel ??= WeeklyScheduleViewModel(
+      KiwiContainer().resolve(),
+      KiwiContainer().resolve(),
+    );
+    return _sharedWeeklyScheduleViewModel!;
+  }
+
+  DailyScheduleViewModel get dailyScheduleViewModel {
+    _sharedDailyScheduleViewModel ??= DailyScheduleViewModel(
+      KiwiContainer().resolve(),
+    );
+    return _sharedDailyScheduleViewModel!;
+  }
 
   final ValueNotifier<int?> _forcedPage = ValueNotifier<int?>(null);
   bool _didWarmUp = false;
@@ -37,12 +46,17 @@ class _SchedulePageState extends State<SchedulePage> {
     super.initState();
     WidgetNavigationPayloadStore.instance.addListener(_handleWidgetPayload);
     _handleWidgetPayload();
+    if (_warmUpCompleted) {
+      _didWarmUp = true;
+      return;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      Future.delayed(const Duration(milliseconds: 300), () {
+      Future.delayed(const Duration(milliseconds: 200), () {
         if (!mounted) return;
         setState(() {
           _didWarmUp = true;
+          _warmUpCompleted = true;
         });
       });
     });
@@ -52,8 +66,6 @@ class _SchedulePageState extends State<SchedulePage> {
   void dispose() {
     WidgetNavigationPayloadStore.instance.removeListener(_handleWidgetPayload);
     _forcedPage.dispose();
-    weeklyScheduleViewModel.dispose();
-    dailyScheduleViewModel.dispose();
     super.dispose();
   }
 
