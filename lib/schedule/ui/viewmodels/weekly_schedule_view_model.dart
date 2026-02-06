@@ -251,6 +251,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     if (_isDisposed) return;
 
     if (!scheduleSourceProvider.didSetupCorrectly()) {
+      updateFailed = true;
+      notifyIfMounted("updateFailed");
+      _cancelErrorInFuture();
       return;
     }
 
@@ -287,7 +290,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       notifyIfMounted("isUpdating");
 
       await _doUpdateSchedule(start, end);
-    } catch (_) {
+    } on ScheduleQueryFailedException catch (_) {
+      updateFailed = true;
+      notifyIfMounted("updateFailed");
+      _cancelErrorInFuture();
     } finally {
       isUpdating = false;
       _updateMutex.release();
