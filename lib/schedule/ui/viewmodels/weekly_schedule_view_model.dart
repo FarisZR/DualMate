@@ -138,6 +138,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       if (_isDisposed) return;
       Future.delayed(const Duration(milliseconds: 150), () {
         if (_isDisposed) return;
+        if (!scheduleSourceProvider.didSetupCorrectly()) {
+          return;
+        }
         updateSchedule(currentDateStart, currentDateEnd);
       });
     });
@@ -246,6 +249,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   Future updateSchedule(DateTime start, DateTime end,
       {bool force = false}) async {
     if (_isDisposed) return;
+
+    if (!scheduleSourceProvider.didSetupCorrectly()) {
+      return;
+    }
 
     if (_shouldSkipUpdate(start, end)) {
       return;

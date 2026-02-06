@@ -84,7 +84,8 @@ class _SchedulePageState extends State<SchedulePage> {
     final hasCachedSchedule = weeklyScheduleViewModel.weekSchedule != null;
 
     if (!viewModel.didSetupProperly && !hasCachedSchedule) {
-      if (viewModel.isInitializingScheduleSource) {
+      if (viewModel.isInitializingScheduleSource ||
+          !viewModel.didAttemptSetup) {
         return Padding(
           padding: const EdgeInsets.all(32),
           child: ScheduleEmptyStatePlaceholder(),
