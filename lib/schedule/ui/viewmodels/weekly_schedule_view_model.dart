@@ -54,6 +54,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   final ScheduleFreshnessGate _entryRefreshGate =
       ScheduleFreshnessGate(staleAfter: const Duration(minutes: 20));
   Schedule? weekSchedule;
+  Schedule? _lastCachedSchedule;
   final Map<String, ScheduleFreshnessGate> _windowFreshnessGates = {};
   Timer? _windowRefreshTimer;
 
@@ -115,9 +116,15 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     currentDateStart =
         toStartOfDay(toDayOfWeek(DateTime.now(), DateTime.monday));
     currentDateEnd = toNextWeek(currentDateStart);
+    if (_lastCachedSchedule != null) {
+      _setSchedule(_lastCachedSchedule!, currentDateStart, currentDateEnd);
+    }
     var cachedSchedule = await scheduleProvider.getCachedSchedule(
-        currentDateStart, currentDateEnd);
+      currentDateStart,
+      currentDateEnd,
+    );
     _setSchedule(cachedSchedule, currentDateStart, currentDateEnd);
+    _lastCachedSchedule = cachedSchedule;
     _scheduleInitialRefresh();
     ensureUpdateNowTimerRunning();
     _ensureWindowRefreshTimer();
@@ -163,6 +170,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   void _setSchedule(Schedule? schedule, DateTime start, DateTime end) {
     weekSchedule = schedule;
+    _lastCachedSchedule = schedule;
     if (_hasCurrentDateRange) {
       didUpdateScheduleIntoFuture = currentDateStart.isBefore(start);
     } else {
