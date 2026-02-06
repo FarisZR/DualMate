@@ -52,7 +52,7 @@ class _SchedulePageState extends State<SchedulePage> {
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      Future.delayed(const Duration(milliseconds: 120), () {
+      Future.delayed(Duration.zero, () {
         if (!mounted) return;
         final scheduleViewModel =
             Provider.of<ScheduleViewModel>(context, listen: false);
@@ -80,18 +80,18 @@ class _SchedulePageState extends State<SchedulePage> {
       viewModel.initialize();
       weeklyScheduleViewModel.initialize();
     }
-    if (_didWarmUp) {
-      viewModel.initialize();
-    }
 
-    if (viewModel.isInitializingScheduleSource) {
+    final hasCachedSchedule = weeklyScheduleViewModel.weekSchedule != null;
+
+    if (viewModel.isInitializingScheduleSource && !hasCachedSchedule) {
       return Padding(
         padding: const EdgeInsets.all(32),
         child: ScheduleEmptyStatePlaceholder(),
       );
     }
     if (!viewModel.didSetupProperly &&
-        !viewModel.isInitializingScheduleSource) {
+        !viewModel.isInitializingScheduleSource &&
+        !hasCachedSchedule) {
       return ScheduleEmptyState();
     } else {
       if (!_didWarmUp) {
