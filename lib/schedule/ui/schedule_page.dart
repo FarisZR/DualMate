@@ -59,10 +59,10 @@ class _SchedulePageState extends State<SchedulePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_didWarmUp) {
+    ScheduleViewModel viewModel = Provider.of<ScheduleViewModel>(context);
+    if (_didWarmUp && viewModel.didSetupProperly) {
       weeklyScheduleViewModel.initialize();
     }
-    ScheduleViewModel viewModel = Provider.of<ScheduleViewModel>(context);
     if (_didWarmUp) {
       viewModel.initialize();
     }

@@ -230,9 +230,11 @@ class _MainPageState extends State<MainPage> {
   void _showAppLaunchDialogsIfNeeded(BuildContext context) {
     if (!_appLaunchDialogsShown) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        AppLaunchDialog(KiwiContainer().resolve())
-            .showAppLaunchDialogs(context);
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (!mounted) return;
+          AppLaunchDialog(KiwiContainer().resolve())
+              .showAppLaunchDialogs(context);
+        });
       });
 
       _appLaunchDialogsShown = true;
