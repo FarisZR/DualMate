@@ -252,10 +252,6 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       {bool force = false}) async {
     if (_isDisposed) return;
 
-    if (!scheduleSourceProvider.didSetupCorrectly()) {
-      return;
-    }
-
     if (_shouldSkipUpdate(start, end)) {
       return;
     }
@@ -287,6 +283,14 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     try {
       isUpdating = true;
       notifyIfMounted("isUpdating");
+
+      if (!scheduleSourceProvider.didSetupCorrectly()) {
+        updateFailed = true;
+        notifyIfMounted("updateFailed");
+        _cancelErrorInFuture();
+        _updateMutex.cancel();
+        return;
+      }
 
       await _doUpdateSchedule(start, end);
     } finally {
