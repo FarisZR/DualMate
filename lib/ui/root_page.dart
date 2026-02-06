@@ -11,6 +11,8 @@ import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/util/launch_intent.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:dualmate/main.dart';
+import 'package:dualmate/schedule/business/schedule_provider.dart';
+import 'package:dualmate/common/util/date_utils.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:flutter/services.dart';
 import 'package:dualmate/ui/navigation/navigator_key.dart';
@@ -319,6 +321,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       await initializeAppBackground(false);
       print(
           "Root init: deferred background ${stopwatch.elapsedMilliseconds}ms");
+      _prewarmScheduleCache();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _runForegroundHeavyInitialization();
       });
@@ -334,6 +337,19 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       await initializeAppForegroundHeavy();
     } catch (error, trace) {
       print("Root init: foreground heavy failed");
+      print(error);
+      print(trace);
+    }
+  }
+
+  void _prewarmScheduleCache() {
+    try {
+      final scheduleProvider = KiwiContainer().resolve<ScheduleProvider>();
+      final start = toStartOfDay(toDayOfWeek(DateTime.now(), DateTime.monday));
+      final end = toNextWeek(start);
+      scheduleProvider.warmScheduleCache(start, end);
+    } catch (error, trace) {
+      print("Root init: schedule cache warm failed");
       print(error);
       print(trace);
     }
