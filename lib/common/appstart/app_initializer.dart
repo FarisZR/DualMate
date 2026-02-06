@@ -33,8 +33,7 @@ Future<void> initializeAppBase(bool isBackground) async {
   injectServices(isBackground);
   print("Base init: services ${stopwatch.elapsedMilliseconds}ms");
 
-  tz.initializeTimeZones();
-  print("Base init: time zones ${stopwatch.elapsedMilliseconds}ms");
+  print("Base init: time zones deferred ${stopwatch.elapsedMilliseconds}ms");
 
   if (isBackground) {
     await LocalizationInitialize.fromPreferences(
@@ -70,6 +69,9 @@ Future<void> initializeAppBackground(bool isBackground) async {
   print("Background init: workmanager ${stopwatch.elapsedMilliseconds}ms");
   NotificationScheduleChangedInitialize().setupNotification();
   print("Background init: schedule notify ${stopwatch.elapsedMilliseconds}ms");
+
+  tz.initializeTimeZones();
+  print("Background init: time zones ${stopwatch.elapsedMilliseconds}ms");
 
   if (isBackground) {
     var setup = KiwiContainer().resolve<ScheduleSourceProvider>();
