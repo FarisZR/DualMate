@@ -16,6 +16,7 @@ import 'package:dualmate/ui/navigation/navigator_key.dart';
 import 'package:dualmate/ui/settings/select_theme_dialog.dart';
 import 'package:dualmate/ui/settings/viewmodels/settings_view_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -266,6 +267,8 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   List<Widget> buildDeveloperSettings(BuildContext context) {
+    if (!kDebugMode) return [];
+
     return [
       PropertyChangeConsumer<SettingsViewModel, String>(
         properties: const [
