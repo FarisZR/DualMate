@@ -33,6 +33,8 @@ class _PagerWidgetState extends State<PagerWidget> {
   final String? pagesId;
   final List<PageDefinition> pages;
   int _currentPage = 0;
+  DateTime? _lastSwitchAt;
+  static const Duration _switchThrottle = Duration(milliseconds: 300);
 
   _PagerWidgetState(this.pages, this.pagesId);
 
@@ -93,6 +95,12 @@ class _PagerWidgetState extends State<PagerWidget> {
     if (page < 0 || page >= pages.length) {
       return;
     }
+    var now = DateTime.now();
+    if (_lastSwitchAt != null &&
+        now.difference(_lastSwitchAt!) < _switchThrottle) {
+      return;
+    }
+    _lastSwitchAt = now;
 
     setState(() {
       _currentPage = page;

@@ -9,13 +9,24 @@ import 'package:flutter/material.dart';
 
 import 'common/util/platform_util.dart';
 
+final Stopwatch _startupStopwatch = Stopwatch()..start();
+
 ///
 /// Main entry point for the app
 ///
 void main() async {
   // Setup the flutter bindings and the error reporting as early as possible
   final binding = WidgetsFlutterBinding.ensureInitialized();
+  PerformanceTelemetry.instance.ensureFrameTimingListenerAttached();
+  PerformanceTelemetry.instance.logInstant(
+    'startup.binding.ready',
+    args: {'elapsedMs': _startupStopwatch.elapsedMilliseconds},
+  );
   binding.deferFirstFrame();
+  PerformanceTelemetry.instance.logInstant(
+    'startup.deferFirstFrame',
+    args: {'elapsedMs': _startupStopwatch.elapsedMilliseconds},
+  );
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.dumpErrorToConsole(details);
     reportException(details.exception, details.stack ?? StackTrace.current);
@@ -23,7 +34,7 @@ void main() async {
 
   await PlatformUtil.initializePortraitLandscapeMode();
 
-  runApp(const RootPage());
+  runApp(RootPage(startupStopwatch: _startupStopwatch));
 }
 
 ///

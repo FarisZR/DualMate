@@ -433,6 +433,14 @@ class L {
   String get settingsWidgetDidPurchase =>
       _getValue("settingsWidgetDidPurchase");
 
+  String get settingsDeveloperTitle => _getValue("settingsDeveloperTitle");
+
+  String get settingsDeveloperSubtitle =>
+      _getValue("settingsDeveloperSubtitle");
+
+  String get settingsPerformanceOverlay =>
+      _getValue("settingsPerformanceOverlay");
+
   String get selectThemeDialogTitle => _getValue("selectThemeDialogTitle");
   String get selectThemeLight => _getValue("selectThemeLight");
   String get selectThemeDark => _getValue("selectThemeDark");
@@ -450,6 +458,8 @@ class L {
   String get canteenNoMenuToday => _getValue("canteenNoMenuToday");
   String get canteenLoadError => _getValue("canteenLoadError");
   String get canteenCategoryWahlessen => _getValue("canteenCategoryWahlessen");
+
+  String get lastUpdatedLabel => _getValue("lastUpdatedLabel");
   String get canteenHelpDialogTitle => _getValue("canteenHelpDialogTitle");
   String get canteenHelpDialogContent => _getValue("canteenHelpDialogContent");
 

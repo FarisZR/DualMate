@@ -20,7 +20,6 @@ import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-
 ///
 /// Widget for the application settings route. Provides access to many settings
 /// of the app
@@ -42,6 +41,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     widgets.addAll(buildScheduleSourceSettings(context));
     widgets.addAll(buildDesignSettings(context));
+    widgets.addAll(buildDeveloperSettings(context));
     widgets.addAll(buildNotificationSettings(context));
     widgets.addAll(buildAboutSettings(context));
     widgets.add(buildDisclaimer(context));
@@ -258,6 +258,42 @@ class _SettingsPageState extends State<SettingsPage> {
                   AppTheme.System: L.of(context).selectThemeSystem,
                 }[model.appTheme] ??
                 ""),
+          );
+        },
+      ),
+      const Divider(),
+    ];
+  }
+
+  List<Widget> buildDeveloperSettings(BuildContext context) {
+    return [
+      PropertyChangeConsumer<SettingsViewModel, String>(
+        properties: const [
+          "developerOptions",
+          "showPerformanceOverlay",
+        ],
+        builder: (
+          BuildContext context,
+          SettingsViewModel? model,
+          Set<String>? properties,
+        ) {
+          if (model == null || !model.isDeveloperOptionsEnabled) {
+            return ListTile(
+              title: Text(L.of(context).settingsDeveloperTitle),
+              subtitle: Text(L.of(context).settingsDeveloperSubtitle),
+              onTap: settingsViewModel.incrementDeveloperTapCount,
+            );
+          }
+
+          return Column(
+            children: [
+              TitleListTile(title: L.of(context).settingsDeveloperTitle),
+              SwitchListTile(
+                title: Text(L.of(context).settingsPerformanceOverlay),
+                onChanged: model.setShowPerformanceOverlay,
+                value: model.showPerformanceOverlay,
+              ),
+            ],
           );
         },
       ),

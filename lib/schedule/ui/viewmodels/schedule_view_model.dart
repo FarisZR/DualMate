@@ -27,12 +27,12 @@ class ScheduleViewModel extends BaseViewModel {
     _initialSetupTimer = Timer(const Duration(seconds: 1), () {
       if (_isDisposed) return;
       _isInitializingScheduleSource = true;
-      notifyListeners("isInitializingScheduleSource");
+      notifyIfMounted("isInitializingScheduleSource");
       _scheduleSourceProvider.setupScheduleSource().then((_) {
         if (_isDisposed) return;
         if (_isInitializingScheduleSource) {
           _isInitializingScheduleSource = false;
-          notifyListeners("isInitializingScheduleSource");
+          notifyIfMounted("isInitializingScheduleSource");
         }
       });
     });
@@ -43,9 +43,9 @@ class ScheduleViewModel extends BaseViewModel {
     _didSetupProperly = valid;
     if (_isInitializingScheduleSource) {
       _isInitializingScheduleSource = false;
-      notifyListeners("isInitializingScheduleSource");
+      notifyIfMounted("isInitializingScheduleSource");
     }
-    notifyListeners("didSetupProperly");
+    notifyIfMounted("didSetupProperly");
   }
 
   @override

@@ -182,6 +182,9 @@ final en = {
   "examNotPassed": "Not passed",
   "settingsWidgetPurchase": "Enable widgets",
   "settingsWidgetDidPurchase": "Widgets are enabled",
+  "settingsDeveloperTitle": "Developer options",
+  "settingsDeveloperSubtitle": "Tap to unlock debugging tools",
+  "settingsPerformanceOverlay": "Show performance overlay",
   "selectThemeDialogTitle": "Select theme",
   "selectThemeLight": "Light",
   "selectThemeDark": "Dark",
@@ -198,6 +201,7 @@ final en = {
   "canteenNoMenuToday": "No menu available for this day",
   "canteenLoadError": "Could not load the canteen menu",
   "canteenCategoryWahlessen": "Choice %0",
+  "lastUpdatedLabel": "Last updated %0",
   "canteenHelpDialogTitle": "Canteen Menu",
   "canteenHelpDialogContent":
       "View the daily menu of the DHBW Karlsruhe canteen (Menseria Erzbergerstraße). Data is from Studierendenwerk Karlsruhe.",

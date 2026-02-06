@@ -1,5 +1,6 @@
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
+import 'package:dualmate/common/logging/perf_overlay_controller.dart';
 import 'package:dualmate/schedule/ui/notification/next_day_information_notification.dart';
 import 'package:kiwi/kiwi.dart';
 
@@ -10,6 +11,8 @@ import '../../../schedule/business/schedule_provider.dart';
 /// The view model for the settings page.
 ///
 class SettingsViewModel extends BaseViewModel {
+  static const int developerTapThreshold = 6;
+
   final PreferencesProvider _preferencesProvider;
   final NextDayInformationNotification _nextDayInformationNotification;
 
@@ -33,11 +36,28 @@ class SettingsViewModel extends BaseViewModel {
 
   bool get isCalendarSyncEnabled => _isCalendarSyncEnabled;
 
+  bool get showPerformanceOverlay => PerformanceOverlayController.enabled.value;
+
+  bool _isDeveloperOptionsEnabled = false;
+
+  bool get isDeveloperOptionsEnabled => _isDeveloperOptionsEnabled;
+
+  int _developerTapCount = 0;
+
   SettingsViewModel(
     this._preferencesProvider,
     this._nextDayInformationNotification,
   ) {
     _loadPreferences();
+  }
+
+  void incrementDeveloperTapCount() {
+    if (_isDeveloperOptionsEnabled) return;
+    _developerTapCount += 1;
+    if (_developerTapCount >= developerTapThreshold) {
+      _isDeveloperOptionsEnabled = true;
+      notifyIfMounted("developerOptions");
+    }
   }
 
   Future<void> setIsCalendarSyncEnabled(bool value) async {
@@ -58,7 +78,7 @@ class SettingsViewModel extends BaseViewModel {
   Future<void> setNotifyAboutScheduleChanges(bool value) async {
     _notifyAboutScheduleChanges = value;
 
-    notifyListeners("notifyAboutScheduleChanges");
+    notifyIfMounted("notifyAboutScheduleChanges");
 
     await _preferencesProvider.setNotifyAboutScheduleChanges(value);
   }
@@ -66,7 +86,7 @@ class SettingsViewModel extends BaseViewModel {
   Future<void> setPrettifySchedule(bool value) async {
     _prettifySchedule = value;
 
-    notifyListeners("prettifySchedule");
+    notifyIfMounted("prettifySchedule");
 
     await _preferencesProvider.setPrettifySchedule(value);
   }
@@ -74,7 +94,7 @@ class SettingsViewModel extends BaseViewModel {
   Future<void> setNotifyAboutNextDay(bool value) async {
     _notifyAboutNextDay = value;
 
-    notifyListeners("notifyAboutNextDay");
+    notifyIfMounted("notifyAboutNextDay");
 
     await _preferencesProvider.setNotifyAboutNextDay(value);
 
@@ -87,7 +107,7 @@ class SettingsViewModel extends BaseViewModel {
   Future<void> setUseDhMineForDates(bool value) async {
     _useDhMineForDates = value;
 
-    notifyListeners("useDhMineForDates");
+    notifyIfMounted("useDhMineForDates");
 
     await _preferencesProvider.setUseDhMineForDates(value);
   }
@@ -99,9 +119,16 @@ class SettingsViewModel extends BaseViewModel {
 
     _prettifySchedule = await _preferencesProvider.getPrettifySchedule();
     _useDhMineForDates = await _preferencesProvider.getUseDhMineForDates();
-    notifyListeners("notifyAboutNextDay");
-    notifyListeners("notifyAboutScheduleChanges");
-    notifyListeners("prettifySchedule");
-    notifyListeners("useDhMineForDates");
+    await PerformanceOverlayController.load(_preferencesProvider);
+    notifyIfMounted("notifyAboutNextDay");
+    notifyIfMounted("notifyAboutScheduleChanges");
+    notifyIfMounted("prettifySchedule");
+    notifyIfMounted("useDhMineForDates");
+    notifyIfMounted("showPerformanceOverlay");
+  }
+
+  Future<void> setShowPerformanceOverlay(bool value) async {
+    await PerformanceOverlayController.setEnabled(_preferencesProvider, value);
+    notifyIfMounted("showPerformanceOverlay");
   }
 }

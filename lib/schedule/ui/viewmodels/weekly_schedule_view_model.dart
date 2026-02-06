@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'dart:developer' as developer;
+
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
+import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/util/cancelable_mutex.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
@@ -45,8 +48,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   bool isUpdating = false;
   final ScheduleUpdateRequestGate _updateRequestGate =
-      ScheduleUpdateRequestGate();
+      ScheduleUpdateRequestGate(minInterval: const Duration(seconds: 1));
   final ScheduleFreshnessGate _freshnessGate = ScheduleFreshnessGate();
+  final ScheduleFreshnessGate _entryRefreshGate =
+      ScheduleFreshnessGate(staleAfter: const Duration(minutes: 20));
   Schedule? weekSchedule;
   final Map<String, ScheduleFreshnessGate> _windowFreshnessGates = {};
   Timer? _windowRefreshTimer;
@@ -69,10 +74,16 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   DateTime? lastRequestedStart;
   DateTime? lastRequestedEnd;
 
+  bool _initialized = false;
+
   WeeklyScheduleViewModel(
     this.scheduleProvider,
     this.scheduleSourceProvider,
-  ) {
+  );
+
+  void initialize() {
+    if (_initialized) return;
+    _initialized = true;
     _initViewModel();
   }
 
@@ -174,7 +185,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       clippedDateEnd = displayRange.end;
     }
 
-    notifyListeners("weekSchedule");
+    notifyIfMounted("weekSchedule");
   }
 
   Future nextWeek() async {
@@ -233,6 +244,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       return;
     }
 
+    if (!force && !_entryRefreshGate.isStale(start, end, now)) {
+      return;
+    }
+
     lastRequestedEnd = end;
     lastRequestedStart = start;
 
@@ -250,29 +265,31 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
     try {
       isUpdating = true;
-      if (!_isDisposed) {
-        notifyListeners("isUpdating");
-      }
+      notifyIfMounted("isUpdating");
 
       await _doUpdateSchedule(start, end);
     } catch (_) {
     } finally {
       isUpdating = false;
       _updateMutex.release();
-      if (!_isDisposed) {
-        notifyListeners("isUpdating");
-      }
+      notifyIfMounted("isUpdating");
     }
   }
 
   Future _doUpdateSchedule(DateTime start, DateTime end) async {
     print("Refreshing schedule...");
+    final task = PerformanceTelemetry.instance
+        .startTask('schedule.refresh.${start.toIso8601String()}');
 
     var cancellationToken = _updateMutex.token;
 
     scheduleUrl = null;
 
+    final cacheTask = PerformanceTelemetry.instance.startTask(
+      'schedule.cache.${start.toIso8601String()}',
+    );
     var cachedSchedule = await scheduleProvider.getCachedSchedule(start, end);
+    cacheTask.finish();
     cancellationToken.throwIfCancelled();
     if (_isDisposed) return;
 
@@ -287,9 +304,21 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
     if (!isStale) {
       print("Schedule fresh; skip network fetch");
+      task.finish();
       return;
     }
 
+    unawaited(
+      _refreshScheduleInBackground(start, end, cancellationToken, task),
+    );
+  }
+
+  Future<void> _refreshScheduleInBackground(
+    DateTime start,
+    DateTime end,
+    CancellationToken cancellationToken,
+    developer.TimelineTask task,
+  ) async {
     ScheduleQueryResult? updatedSchedule;
     try {
       updatedSchedule = await _readScheduleFromService(
@@ -312,7 +341,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       _setSchedule(schedule, start, end);
 
       _hasQueryErrors = updatedSchedule.hasError;
-      notifyListeners("hasQueryErrors");
+      notifyIfMounted("hasQueryErrors");
 
       if (updatedSchedule.hasError) {
         _queryFailedCallback?.call();
@@ -321,16 +350,19 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       scheduleUrl = schedule.urls.isNotEmpty ? schedule.urls[0] : null;
     }
 
-    updateFailed = (updatedSchedule == null);
-    if (!_isDisposed) {
-      notifyListeners("updateFailed");
+    if (updatedSchedule != null) {
+      _entryRefreshGate.markFetched(start, end, DateTime.now());
     }
+
+    updateFailed = (updatedSchedule == null);
+    notifyIfMounted("updateFailed");
 
     if (updateFailed) {
       _cancelErrorInFuture();
     }
 
     print("Refreshing done");
+    task.finish();
   }
 
   Future<ScheduleQueryResult?> _readScheduleFromService(
@@ -359,7 +391,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       () {
         if (_isDisposed) return;
         updateFailed = false;
-        notifyListeners("updateFailed");
+        notifyIfMounted("updateFailed");
       },
     );
   }
@@ -368,7 +400,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     if (_updateNowTimer == null || !_updateNowTimer!.isActive) {
       _updateNowTimer = Timer.periodic(const Duration(minutes: 1), (_) {
         if (_isDisposed) return;
-        notifyListeners("now");
+        notifyIfMounted("now");
       });
     }
   }

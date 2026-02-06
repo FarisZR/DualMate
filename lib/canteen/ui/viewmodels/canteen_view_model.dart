@@ -15,9 +15,15 @@ class CanteenViewModel extends BaseViewModel {
   final Map<DateTime, List<DailyMenu>> _weeklyMenus = {};
   final Map<DateTime, String?> _weekErrors = {};
   final Set<DateTime> _loadingWeeks = {};
+  final Map<DateTime, DateTime> _weekLastUpdated = {};
+  bool _initialized = false;
 
   CanteenViewModel(this._provider)
-      : todayWeekStart = toStartOfDay(toMonday(DateTime.now())) {
+      : todayWeekStart = toStartOfDay(toMonday(DateTime.now()));
+
+  void initialize() {
+    if (_initialized) return;
+    _initialized = true;
     _provider.addMenuUpdatedCallback(_onMenusUpdated);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_weeklyMenus.containsKey(todayWeekStart)) return;
@@ -41,6 +47,10 @@ class CanteenViewModel extends BaseViewModel {
     return _weekErrors[weekStart];
   }
 
+  DateTime? lastUpdatedForWeek(DateTime weekStart) {
+    return _weekLastUpdated[weekStart];
+  }
+
   DateTime weekStartFor(DateTime date) {
     return toStartOfDay(toMonday(date));
   }
@@ -62,25 +72,30 @@ class CanteenViewModel extends BaseViewModel {
     if (_loadingWeeks.contains(weekStart)) return;
 
     _loadingWeeks.add(weekStart);
-    notifyListeners("loadingWeeks");
+    notifyIfMounted("loadingWeeks");
 
     var cachedMenus = await _provider.getCachedWeek(weekStart);
     _weeklyMenus[weekStart] = cachedMenus;
-    notifyListeners("weeklyMenus");
+    var lastUpdated = await _provider.lastUpdatedForWeek(weekStart);
+    if (lastUpdated != null) {
+      _weekLastUpdated[weekStart] = lastUpdated;
+    }
+    notifyIfMounted("weeklyMenus");
 
     try {
       var menus = await _provider.refreshWeek(weekStart);
       _weeklyMenus[weekStart] = menus;
       _weekErrors[weekStart] = null;
+      _weekLastUpdated[weekStart] = DateTime.now();
     } catch (exception) {
       // keep cached data visible
       _weekErrors[weekStart] = exception.toString();
     }
 
     _loadingWeeks.remove(weekStart);
-    notifyListeners("weeklyMenus");
-    notifyListeners("weekErrors");
-    notifyListeners("loadingWeeks");
+    notifyIfMounted("weeklyMenus");
+    notifyIfMounted("weekErrors");
+    notifyIfMounted("loadingWeeks");
   }
 
   void ensureWeekLoaded(DateTime weekStart) {
@@ -95,7 +110,7 @@ class CanteenViewModel extends BaseViewModel {
   void setFilter(CanteenFilter nextFilter) {
     if (filter == nextFilter) return;
     filter = nextFilter;
-    notifyListeners("filter");
+    notifyIfMounted("filter");
   }
 
   Future<void> _onMenusUpdated(
@@ -105,8 +120,9 @@ class CanteenViewModel extends BaseViewModel {
   ) async {
     var weekStart = toStartOfDay(toMonday(start));
     _weeklyMenus[weekStart] = menus;
+    _weekLastUpdated[weekStart] = DateTime.now();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners("weeklyMenus");
+      notifyIfMounted("weeklyMenus");
     });
   }
 

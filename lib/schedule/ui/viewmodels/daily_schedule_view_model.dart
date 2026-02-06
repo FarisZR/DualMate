@@ -23,7 +23,7 @@ class DailyScheduleViewModel extends BaseViewModel {
   Future<void> setSchedule(Schedule schedule) async {
     daySchedule = schedule;
     if (_isDisposed) return;
-    notifyListeners("daySchedule");
+    notifyIfMounted("daySchedule");
   }
 
   Future loadScheduleForToday() async {

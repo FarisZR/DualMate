@@ -38,15 +38,20 @@ class BackgroundScheduleUpdate extends TaskCallback {
       print("Background schedule update failed");
       print(e.innerException.toString());
       print(trace);
+      print("Background schedule update status: failure");
+      print("Background schedule update next: retry in 4h");
       return;
     } catch (e, trace) {
       print("Background schedule update unexpected failure");
       print(e);
       print(trace);
+      print("Background schedule update status: failure");
+      print("Background schedule update next: retry in 4h");
       return;
     }
 
     print("Finished updating schedule");
+    print("Background schedule update status: success");
   }
 
   @override

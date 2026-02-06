@@ -4,6 +4,7 @@ import 'package:dualmate/ui/navigation/navigation_entry.dart';
 import 'package:dualmate/ui/navigation/navigator_key.dart';
 import 'package:dualmate/ui/navigation/router.dart';
 import 'package:dualmate/ui/navigation_drawer.dart';
+import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:provider/provider.dart';
@@ -155,6 +156,8 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _onNavigationTapped(int index) {
+    PerformanceTelemetry.instance
+        .markNavEvent(name: "drawer.tab.${navigationEntries[index].route}");
     _currentEntryIndex.value = index;
 
     NavigatorKey.mainKey.currentState

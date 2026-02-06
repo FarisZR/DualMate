@@ -11,6 +11,7 @@ import 'package:dualmate/ui/pager_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:provider/provider.dart';
+import 'package:dualmate/common/logging/performance_telemetry.dart';
 
 class SchedulePage extends StatefulWidget {
   @override
@@ -48,6 +49,7 @@ class _SchedulePageState extends State<SchedulePage> {
 
   @override
   Widget build(BuildContext context) {
+    weeklyScheduleViewModel.initialize();
     ScheduleViewModel viewModel = Provider.of<ScheduleViewModel>(context);
 
     if (viewModel.isInitializingScheduleSource) {
@@ -90,5 +92,11 @@ class _SchedulePageState extends State<SchedulePage> {
       return;
     }
     _forcedPage.value = 0;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    PerformanceTelemetry.instance.markNavEvent(name: "schedule.entry");
   }
 }
