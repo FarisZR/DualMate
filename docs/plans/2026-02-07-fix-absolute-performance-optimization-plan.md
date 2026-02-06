@@ -36,6 +36,7 @@ The app performs heavy initialization and data work on the UI thread, causing lo
 - [x] Move non-critical work (background init, canteen refresh, calendar sync) strictly after the first frame and/or to background isolates.
 - [x] Ensure localization + minimal preferences are the only blocking steps before first frame.
 - [x] Add run-once guards around `addPostFrameCallback` to avoid stacking.
+- [x] Defer heavy foreground init (canteen refresh + calendar sync) until after first render.
   3) Schedule & Canteen Offloading
 - [x] Audit schedule parsing and canteen scraping to ensure isolate usage.
 - [x] Add safe fallback: if isolate fails, show cached data with “last updated” label, and log errors without blocking.

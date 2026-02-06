@@ -37,10 +37,10 @@ class DualisNavigationEntry extends NavigationEntry<StudyGradesViewModel> {
 
   @override
   List<Widget> appBarActions(BuildContext context) {
-    initViewModel();
+    final model = viewModel();
     return [
       PropertyChangeProvider<StudyGradesViewModel, String>(
-        value: _viewModel,
+        value: model,
         child: PropertyChangeConsumer<StudyGradesViewModel, String>(
           builder: (
             BuildContext _,

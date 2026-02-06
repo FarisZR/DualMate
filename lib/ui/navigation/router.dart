@@ -20,6 +20,20 @@ final List<NavigationEntry> navigationEntries = [
 Route<dynamic> generateDrawerRoute(RouteSettings settings) {
   print("=== === === === === === Navigating to: ${settings.name}");
 
+  if (settings.name == "shell") {
+    return PageRouteBuilder(
+      settings: settings,
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Container(color: Theme.of(context).scaffoldBackgroundColor);
+      },
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return child;
+      },
+    );
+  }
+
   WidgetBuilder widget = (_) => Container();
 
   for (var route in navigationEntries) {

@@ -328,10 +328,18 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       );
       _freshnessGate.markFetched(start, end, DateTime.now());
       _markWindowFetched(start, end, DateTime.now());
+    } on OperationCancelledException {
+      task.finish();
+      return;
     } catch (e) {
       print("Schedule update failed: $e");
     }
-    cancellationToken.throwIfCancelled();
+    try {
+      cancellationToken.throwIfCancelled();
+    } on OperationCancelledException {
+      task.finish();
+      return;
+    }
 
     if (_isDisposed) return;
 

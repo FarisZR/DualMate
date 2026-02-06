@@ -17,6 +17,7 @@ import 'package:timezone/data/latest.dart' as tz;
 
 bool isInitialized = false;
 bool isBaseInitialized = false;
+bool isForegroundHeavyInitialized = false;
 
 Future<void> initializeAppBase(bool isBackground) async {
   if (isBaseInitialized) {
@@ -70,20 +71,6 @@ Future<void> initializeAppBackground(bool isBackground) async {
   NotificationScheduleChangedInitialize().setupNotification();
   print("Background init: schedule notify ${stopwatch.elapsedMilliseconds}ms");
 
-  if (!isBackground) {
-    try {
-      await KiwiContainer()
-          .resolve<CanteenProvider>()
-          .refreshWeek(DateTime.now());
-      print(
-          "Background init: canteen refresh ${stopwatch.elapsedMilliseconds}ms");
-    } catch (exception, trace) {
-      print("Background init: canteen refresh failed");
-      print(exception);
-      print(trace);
-    }
-  }
-
   if (isBackground) {
     var setup = KiwiContainer().resolve<ScheduleSourceProvider>();
     setup.setupScheduleSource();
@@ -91,18 +78,46 @@ Future<void> initializeAppBackground(bool isBackground) async {
         "Background init: schedule source ${stopwatch.elapsedMilliseconds}ms");
   }
 
-  // Callback-Function for synchronizing the device calendar with the schedule, when schedule is updated
-  CalendarSynchronizer calendarSynchronizer = new CalendarSynchronizer(
-      KiwiContainer().resolve<ScheduleProvider>(),
-      KiwiContainer().resolve<ScheduleSourceProvider>(),
-      KiwiContainer().resolve<PreferencesProvider>());
-
-  calendarSynchronizer.registerSynchronizationCallback();
-  calendarSynchronizer.scheduleSyncInAFewSeconds();
-  print("Background init: calendar sync ${stopwatch.elapsedMilliseconds}ms");
-
   isInitialized = true;
   print("Initialization finished ${stopwatch.elapsedMilliseconds}ms");
+}
+
+Future<void> initializeAppForegroundHeavy() async {
+  if (isForegroundHeavyInitialized) {
+    return;
+  }
+
+  final stopwatch = Stopwatch()..start();
+  try {
+    await KiwiContainer()
+        .resolve<CanteenProvider>()
+        .refreshWeek(DateTime.now());
+    print(
+        "Background init: canteen refresh ${stopwatch.elapsedMilliseconds}ms");
+  } catch (exception, trace) {
+    print("Background init: canteen refresh failed");
+    print(exception);
+    print(trace);
+  }
+
+  try {
+    CalendarSynchronizer calendarSynchronizer = CalendarSynchronizer(
+      KiwiContainer().resolve<ScheduleProvider>(),
+      KiwiContainer().resolve<ScheduleSourceProvider>(),
+      KiwiContainer().resolve<PreferencesProvider>(),
+    );
+
+    calendarSynchronizer.registerSynchronizationCallback();
+    calendarSynchronizer.scheduleSyncInAFewSeconds();
+    print("Background init: calendar sync ${stopwatch.elapsedMilliseconds}ms");
+  } catch (exception, trace) {
+    print("Background init: calendar sync failed");
+    print(exception);
+    print(trace);
+  }
+
+  isForegroundHeavyInitialized = true;
+  print("Foreground heavy init finished ${stopwatch.elapsedMilliseconds}ms");
 }
 
 ///

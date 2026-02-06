@@ -29,6 +29,9 @@ class _MainPageState extends State<MainPage> {
   String? _initialRoute;
   bool _didApplyInitialRoute = false;
 
+  bool _showContent = false;
+  bool _appliedInitialRoutePostShell = false;
+
   final ValueNotifier<int> _currentEntryIndex = ValueNotifier<int>(0);
 
   NavigationEntry get currentEntry =>
@@ -41,6 +44,14 @@ class _MainPageState extends State<MainPage> {
     _initialRoute = widget.initialRoute;
 
     _syncCurrentEntryIndex();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _showContent = true;
+      });
+      _pushInitialRouteAfterShell();
+    });
   }
 
   @override
@@ -52,7 +63,7 @@ class _MainPageState extends State<MainPage> {
     var navigator = Navigator(
       key: NavigatorKey.mainKey,
       onGenerateRoute: generateDrawerRoute,
-      initialRoute: "schedule",
+      initialRoute: "shell",
     );
 
     return ChangeNotifierProvider.value(
@@ -179,11 +190,22 @@ class _MainPageState extends State<MainPage> {
     _didApplyInitialRoute = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_initialRoute == null) return;
-      NavigatorKey.mainKey.currentState?.pushNamedAndRemoveUntil(_initialRoute!,
-          (route) {
-        return route.settings.name == navigationEntries[0].route;
-      });
+      if (!_showContent) return;
+      _pushInitialRouteAfterShell();
     });
+  }
+
+  void _pushInitialRouteAfterShell() {
+    if (_appliedInitialRoutePostShell) return;
+    if (!_showContent) return;
+    _appliedInitialRoutePostShell = true;
+    NavigatorKey.mainKey.currentState?.pushNamedAndRemoveUntil(
+      _initialRoute ?? navigationEntries[0].route,
+      (route) {
+        return route.settings.name == navigationEntries[0].route ||
+            route.settings.name == "shell";
+      },
+    );
   }
 
   void _showAppLaunchDialogsIfNeeded(BuildContext context) {

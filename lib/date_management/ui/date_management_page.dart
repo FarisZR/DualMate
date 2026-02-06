@@ -29,7 +29,7 @@ class _DateManagementPageState extends State<DateManagementPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       var viewModel =
           Provider.of<DateManagementViewModel>(context, listen: false);
-      viewModel.reloadUseDhMineSetting();
+      viewModel.initialize();
     });
   }
 

@@ -111,6 +111,8 @@ class DateManagementViewModel extends BaseViewModel {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
+  bool _initialized = false;
+
   bool _isReloadingPreferences = false;
 
   bool _useDhMineForDates = false;
@@ -163,6 +165,11 @@ class DateManagementViewModel extends BaseViewModel {
     _buildYearsArray();
     _currentSelectedYear = DateTime.now().year.toString();
     _currentDateDatabase = _allDateDatabases.first;
+  }
+
+  void initialize() {
+    if (_initialized) return;
+    _initialized = true;
     _loadDefaultSelection();
   }
 

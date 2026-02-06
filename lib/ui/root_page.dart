@@ -319,8 +319,21 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       await initializeAppBackground(false);
       print(
           "Root init: deferred background ${stopwatch.elapsedMilliseconds}ms");
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _runForegroundHeavyInitialization();
+      });
     } catch (error, trace) {
       print("Root init: deferred background failed");
+      print(error);
+      print(trace);
+    }
+  }
+
+  Future<void> _runForegroundHeavyInitialization() async {
+    try {
+      await initializeAppForegroundHeavy();
+    } catch (error, trace) {
+      print("Root init: foreground heavy failed");
       print(error);
       print(trace);
     }
