@@ -12,6 +12,8 @@ import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:provider/provider.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
+import 'package:dualmate/ui/banner_widget.dart';
+import 'package:dualmate/schedule/ui/widgets/select_source_dialog.dart';
 
 class SchedulePage extends StatefulWidget {
   @override
@@ -96,7 +98,7 @@ class _SchedulePageState extends State<SchedulePage> {
       if (!_didWarmUp) {
         return ScheduleEmptyStatePlaceholder();
       }
-      return PagerWidget(
+      final pager = PagerWidget(
         forcedPage: _forcedPage,
         pages: <PageDefinition>[
           PageDefinition(
@@ -119,6 +121,33 @@ class _SchedulePageState extends State<SchedulePage> {
           ),
         ],
       );
+
+      if (!viewModel.didSetupProperly &&
+          viewModel.didAttemptSetup &&
+          !viewModel.isInitializingScheduleSource) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
+              child: BannerWidget(
+                message: L.of(context).scheduleEmptyStateBannerMessage,
+                onButtonTap: () async {
+                  await SelectSourceDialog(
+                    KiwiContainer().resolve(),
+                    KiwiContainer().resolve(),
+                  ).show(context);
+                },
+                buttonText:
+                    L.of(context).scheduleEmptyStateSetUrl.toUpperCase(),
+              ),
+            ),
+            Expanded(child: pager),
+          ],
+        );
+      }
+
+      return pager;
     }
   }
 
