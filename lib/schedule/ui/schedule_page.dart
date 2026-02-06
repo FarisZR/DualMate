@@ -83,15 +83,13 @@ class _SchedulePageState extends State<SchedulePage> {
 
     final hasCachedSchedule = weeklyScheduleViewModel.weekSchedule != null;
 
-    if (viewModel.isInitializingScheduleSource && !hasCachedSchedule) {
-      return Padding(
-        padding: const EdgeInsets.all(32),
-        child: ScheduleEmptyStatePlaceholder(),
-      );
-    }
-    if (!viewModel.didSetupProperly &&
-        !viewModel.isInitializingScheduleSource &&
-        !hasCachedSchedule) {
+    if (!viewModel.didSetupProperly && !hasCachedSchedule) {
+      if (viewModel.isInitializingScheduleSource) {
+        return Padding(
+          padding: const EdgeInsets.all(32),
+          child: ScheduleEmptyStatePlaceholder(),
+        );
+      }
       return ScheduleEmptyState();
     } else {
       if (!_didWarmUp) {
