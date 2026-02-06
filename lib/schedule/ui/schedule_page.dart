@@ -30,12 +30,19 @@ class _SchedulePageState extends State<SchedulePage> {
   );
 
   final ValueNotifier<int?> _forcedPage = ValueNotifier<int?>(null);
+  bool _didWarmUp = false;
 
   @override
   void initState() {
     super.initState();
     WidgetNavigationPayloadStore.instance.addListener(_handleWidgetPayload);
     _handleWidgetPayload();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _didWarmUp = true;
+      });
+    });
   }
 
   @override
@@ -49,7 +56,9 @@ class _SchedulePageState extends State<SchedulePage> {
 
   @override
   Widget build(BuildContext context) {
-    weeklyScheduleViewModel.initialize();
+    if (_didWarmUp) {
+      weeklyScheduleViewModel.initialize();
+    }
     ScheduleViewModel viewModel = Provider.of<ScheduleViewModel>(context);
 
     if (viewModel.isInitializingScheduleSource) {
@@ -61,6 +70,9 @@ class _SchedulePageState extends State<SchedulePage> {
     if (!viewModel.didSetupProperly) {
       return ScheduleEmptyState();
     } else {
+      if (!_didWarmUp) {
+        return ScheduleEmptyStatePlaceholder();
+      }
       return PagerWidget(
         forcedPage: _forcedPage,
         pages: <PageDefinition>[

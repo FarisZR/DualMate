@@ -18,6 +18,7 @@ import 'package:dualmate/schedule/ui/viewmodels/schedule_freshness_gate.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_update_request_gate.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 class WeeklyScheduleViewModel extends BaseViewModel {
   static const Duration weekDuration = Duration(days: 7);
@@ -126,7 +127,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   void _scheduleInitialRefresh() {
-    Future.microtask(() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_isDisposed) return;
       updateSchedule(currentDateStart, currentDateEnd);
     });

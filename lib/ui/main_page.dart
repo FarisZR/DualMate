@@ -31,6 +31,7 @@ class _MainPageState extends State<MainPage> {
 
   bool _showContent = false;
   bool _appliedInitialRoutePostShell = false;
+  bool _shellRendered = false;
 
   final ValueNotifier<int> _currentEntryIndex = ValueNotifier<int>(0);
 
@@ -50,7 +51,10 @@ class _MainPageState extends State<MainPage> {
       setState(() {
         _showContent = true;
       });
-      _pushInitialRouteAfterShell();
+      Future.delayed(const Duration(milliseconds: 250), () {
+        if (!mounted) return;
+        _pushInitialRouteAfterShell();
+      });
     });
   }
 
@@ -59,6 +63,12 @@ class _MainPageState extends State<MainPage> {
     _showAppLaunchDialogsIfNeeded(context);
 
     _syncCurrentEntryIndex();
+
+    if (!_shellRendered) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _shellRendered = true;
+      });
+    }
 
     var navigator = Navigator(
       key: NavigatorKey.mainKey,
@@ -210,7 +220,11 @@ class _MainPageState extends State<MainPage> {
 
   void _showAppLaunchDialogsIfNeeded(BuildContext context) {
     if (!_appLaunchDialogsShown) {
-      AppLaunchDialog(KiwiContainer().resolve()).showAppLaunchDialogs(context);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        AppLaunchDialog(KiwiContainer().resolve())
+            .showAppLaunchDialogs(context);
+      });
 
       _appLaunchDialogsShown = true;
     }
