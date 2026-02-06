@@ -129,7 +129,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   void _scheduleInitialRefresh() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_isDisposed) return;
-      updateSchedule(currentDateStart, currentDateEnd);
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (_isDisposed) return;
+        updateSchedule(currentDateStart, currentDateEnd);
+      });
     });
   }
 

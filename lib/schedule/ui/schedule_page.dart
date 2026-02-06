@@ -39,8 +39,11 @@ class _SchedulePageState extends State<SchedulePage> {
     _handleWidgetPayload();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      setState(() {
-        _didWarmUp = true;
+      Future.delayed(const Duration(milliseconds: 120), () {
+        if (!mounted) return;
+        setState(() {
+          _didWarmUp = true;
+        });
       });
     });
   }

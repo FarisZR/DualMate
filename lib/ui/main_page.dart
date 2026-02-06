@@ -51,7 +51,7 @@ class _MainPageState extends State<MainPage> {
       setState(() {
         _showContent = true;
       });
-      Future.delayed(const Duration(milliseconds: 250), () {
+      Future.delayed(const Duration(milliseconds: 400), () {
         if (!mounted) return;
         _pushInitialRouteAfterShell();
       });
@@ -214,6 +214,9 @@ class _MainPageState extends State<MainPage> {
       (route) {
         return route.settings.name == navigationEntries[0].route ||
             route.settings.name == "shell";
+      },
+      arguments: const {
+        "disableTransitions": true,
       },
     );
   }
