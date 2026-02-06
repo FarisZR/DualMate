@@ -1,4 +1,5 @@
 import 'dart:developer' as developer;
+import 'dart:async';
 
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/logging/analytics.dart';
@@ -223,8 +224,11 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       setState(() {
         _perfOverlayLoaded = true;
       });
-    } catch (_) {
-      _perfOverlayLoaded = true;
+    } catch (error, trace) {
+      print("Perf overlay load failed");
+      print(error);
+      print(trace);
+      rethrow;
     }
   }
 
@@ -321,7 +325,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       await initializeAppBackground(false);
       print(
           "Root init: deferred background ${stopwatch.elapsedMilliseconds}ms");
-      _prewarmScheduleCache();
+      unawaited(_prewarmScheduleCache());
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _runForegroundHeavyInitialization();
       });
@@ -342,12 +346,12 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     }
   }
 
-  void _prewarmScheduleCache() {
+  Future<void> _prewarmScheduleCache() async {
     try {
       final scheduleProvider = KiwiContainer().resolve<ScheduleProvider>();
       final start = toStartOfDay(toDayOfWeek(DateTime.now(), DateTime.monday));
       final end = toNextWeek(start);
-      scheduleProvider.warmScheduleCache(start, end);
+      await scheduleProvider.warmScheduleCache(start, end);
     } catch (error, trace) {
       print("Root init: schedule cache warm failed");
       print(error);

@@ -51,6 +51,8 @@ DateTime? _cachedScheduleEnd;
 
 Future<Schedule> getCachedSchedule(DateTime start, DateTime end) async {
   if (_cachedSchedule != null &&
+      _cachedScheduleStart != null &&
+      _cachedScheduleEnd != null &&
       _cachedScheduleStart == start &&
       _cachedScheduleEnd == end) {
     return _cachedSchedule!;
@@ -73,12 +75,12 @@ Future<void> warmScheduleCache(DateTime start, DateTime end) async {
 
 ```dart
 // lib/ui/root_page.dart
-void _prewarmScheduleCache() {
+Future<void> _prewarmScheduleCache() async {
   final scheduleProvider = KiwiContainer().resolve<ScheduleProvider>();
   final start =
       toStartOfDay(toDayOfWeek(DateTime.now(), DateTime.monday));
   final end = toNextWeek(start);
-  scheduleProvider.warmScheduleCache(start, end);
+  await scheduleProvider.warmScheduleCache(start, end);
 }
 ```
 

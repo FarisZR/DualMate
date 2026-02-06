@@ -45,16 +45,17 @@ class ScheduleFilterPage extends StatelessWidget {
             Expanded(
               child: PropertyChangeProvider<FilterViewModel, String>(
                 value: _viewModel,
-                child: PropertyChangeConsumer<FilterViewModel, String>(builder:
-                    (BuildContext _, FilterViewModel? viewModel,
+                child: PropertyChangeConsumer<FilterViewModel, String>(
+                    properties: const ["filterStates"],
+                    builder: (BuildContext _, FilterViewModel? viewModel,
                         Set<String>? ___) {
-                  if (viewModel == null) return Container();
-                  return ListView.builder(
-                    itemCount: viewModel.filterStates.length,
-                    itemBuilder: (context, index) =>
-                        FilterStateRow(viewModel.filterStates[index]),
-                  );
-                }),
+                      if (viewModel == null) return Container();
+                      return ListView.builder(
+                        itemCount: viewModel.filterStates.length,
+                        itemBuilder: (context, index) =>
+                            FilterStateRow(viewModel.filterStates[index]),
+                      );
+                    }),
               ),
             )
           ],

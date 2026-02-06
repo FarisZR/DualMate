@@ -9,8 +9,6 @@ import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 
 class DualisNavigationEntry extends NavigationEntry<StudyGradesViewModel> {
-  late StudyGradesViewModel _viewModel;
-
   @override
   Widget icon(BuildContext context) {
     return Icon(Icons.data_usage);
@@ -23,11 +21,10 @@ class DualisNavigationEntry extends NavigationEntry<StudyGradesViewModel> {
 
   @override
   StudyGradesViewModel initViewModel() {
-    _viewModel = StudyGradesViewModel(
+    return StudyGradesViewModel(
       KiwiContainer().resolve(),
       KiwiContainer().resolve(),
     );
-    return _viewModel;
   }
 
   @override

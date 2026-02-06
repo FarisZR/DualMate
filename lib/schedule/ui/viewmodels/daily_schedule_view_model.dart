@@ -12,8 +12,6 @@ class DailyScheduleViewModel extends BaseViewModel {
 
   Schedule daySchedule = Schedule();
 
-  bool _isDisposed = false;
-
   DailyScheduleViewModel(this.scheduleProvider) {
     scheduleProvider.addScheduleUpdatedCallback(_scheduleUpdatedCallback);
 
@@ -22,7 +20,7 @@ class DailyScheduleViewModel extends BaseViewModel {
 
   Future<void> setSchedule(Schedule schedule) async {
     daySchedule = schedule;
-    if (_isDisposed) return;
+    if (isDisposed) return;
     notifyIfMounted("daySchedule");
   }
 
@@ -51,7 +49,7 @@ class DailyScheduleViewModel extends BaseViewModel {
     DateTime start,
     DateTime end,
   ) async {
-    if (_isDisposed) return;
+    if (isDisposed) return;
     start = toStartOfDay(start);
     end = toStartOfDay(tomorrow(end));
 
@@ -67,7 +65,6 @@ class DailyScheduleViewModel extends BaseViewModel {
 
   @override
   void dispose() {
-    _isDisposed = true;
     scheduleProvider.removeScheduleUpdatedCallback(
       _scheduleUpdatedCallback,
     );

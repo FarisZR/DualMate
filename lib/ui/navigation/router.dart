@@ -17,6 +17,15 @@ final List<NavigationEntry> navigationEntries = [
   UsefulInformationNavigationEntry(),
 ];
 
+WidgetBuilder _resolveRoute(RouteSettings settings) {
+  for (var route in navigationEntries) {
+    if (route.route == settings.name) {
+      return route.buildRoute;
+    }
+  }
+  return (_) => Container();
+}
+
 Route<dynamic> generateDrawerRoute(RouteSettings settings) {
   print("=== === === === === === Navigating to: ${settings.name}");
 
@@ -27,14 +36,7 @@ Route<dynamic> generateDrawerRoute(RouteSettings settings) {
       transitionDuration: Duration.zero,
       reverseTransitionDuration: Duration.zero,
       pageBuilder: (context, animation, secondaryAnimation) {
-        WidgetBuilder builder = (_) => Container();
-        for (var route in navigationEntries) {
-          if (route.route == settings.name) {
-            builder = route.buildRoute;
-            break;
-          }
-        }
-        return builder(context);
+        return _resolveRoute(settings)(context);
       },
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         return child;
@@ -56,14 +58,7 @@ Route<dynamic> generateDrawerRoute(RouteSettings settings) {
     );
   }
 
-  WidgetBuilder widget = (_) => Container();
-
-  for (var route in navigationEntries) {
-    if (route.route == settings.name) {
-      widget = route.buildRoute;
-      break;
-    }
-  }
+  final widget = _resolveRoute(settings);
 
   return PageRouteBuilder(
     settings: settings,

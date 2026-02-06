@@ -153,8 +153,7 @@ class DateManagementViewModel extends BaseViewModel {
       );
 
   void _notifySafely(String property) {
-    if (_isDisposed) return;
-    notifyListeners(property);
+    notifyIfMounted(property);
   }
 
   DateManagementViewModel(
@@ -170,7 +169,10 @@ class DateManagementViewModel extends BaseViewModel {
   void initialize() {
     if (_initialized) return;
     _initialized = true;
-    _loadDefaultSelection();
+    _loadDefaultSelection().catchError((error, trace) {
+      print("Failed to load default selection: $error");
+      print(trace);
+    });
   }
 
   void _buildYearsArray() {
@@ -472,7 +474,7 @@ class DateManagementViewModel extends BaseViewModel {
     _preferencesProvider.setLastViewedDateEntryYear(year);
   }
 
-  void _loadDefaultSelection() async {
+  Future<void> _loadDefaultSelection() async {
     _useDhMineForDates = await _preferencesProvider.getUseDhMineForDates();
     if (_isDisposed) return;
     _notifySafely("useDhMineForDates");

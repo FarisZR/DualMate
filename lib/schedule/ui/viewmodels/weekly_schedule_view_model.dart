@@ -83,10 +83,15 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     this.scheduleSourceProvider,
   );
 
-  void initialize() {
+  Future<void> initialize() async {
     if (_initialized) return;
     _initialized = true;
-    _initViewModel();
+    try {
+      await _initViewModel();
+    } catch (error, trace) {
+      print("Weekly schedule init failed: $error");
+      print(trace);
+    }
   }
 
   static WeeklyDisplayRange resolveWeeklyDisplayRange(
@@ -116,21 +121,29 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     currentDateStart =
         toStartOfDay(toDayOfWeek(DateTime.now(), DateTime.monday));
     currentDateEnd = toNextWeek(currentDateStart);
-    if (_lastCachedSchedule != null) {
-      _setSchedule(_lastCachedSchedule!, currentDateStart, currentDateEnd);
-    }
-    var cachedSchedule = await scheduleProvider.getCachedSchedule(
-      currentDateStart,
-      currentDateEnd,
-    );
-    _setSchedule(cachedSchedule, currentDateStart, currentDateEnd);
-    _lastCachedSchedule = cachedSchedule;
-    _scheduleInitialRefresh();
-    ensureUpdateNowTimerRunning();
-    _ensureWindowRefreshTimer();
+    try {
+      if (_lastCachedSchedule != null) {
+        // Keep cached schedule for warm starts.
+        _setSchedule(_lastCachedSchedule!, currentDateStart, currentDateEnd);
+      }
+      var cachedSchedule = await scheduleProvider.getCachedSchedule(
+        currentDateStart,
+        currentDateEnd,
+      );
+      _setSchedule(cachedSchedule, currentDateStart, currentDateEnd);
+      _lastCachedSchedule = cachedSchedule;
+      _scheduleInitialRefresh();
+      ensureUpdateNowTimerRunning();
+      _ensureWindowRefreshTimer();
 
-    scheduleSourceProvider
-        .addDidChangeScheduleSourceCallback(_onDidChangeScheduleSource);
+      scheduleSourceProvider
+          .addDidChangeScheduleSourceCallback(_onDidChangeScheduleSource);
+    } catch (error, trace) {
+      print("Weekly schedule init failed: $error");
+      print(trace);
+      ensureUpdateNowTimerRunning();
+      _ensureWindowRefreshTimer();
+    }
   }
 
   void _scheduleInitialRefresh() {
@@ -365,7 +378,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       return;
     }
 
-    if (_isDisposed) return;
+    if (_isDisposed) {
+      task.finish();
+      return;
+    }
 
     if (updatedSchedule != null) {
       var schedule = updatedSchedule.schedule;

@@ -11,7 +11,7 @@ import '../../../schedule/business/schedule_provider.dart';
 /// The view model for the settings page.
 ///
 class SettingsViewModel extends BaseViewModel {
-  static const int developerTapThreshold = 6;
+  static const int DeveloperTapThreshold = 6;
 
   final PreferencesProvider _preferencesProvider;
   final NextDayInformationNotification _nextDayInformationNotification;
@@ -54,7 +54,7 @@ class SettingsViewModel extends BaseViewModel {
   void incrementDeveloperTapCount() {
     if (_isDeveloperOptionsEnabled) return;
     _developerTapCount += 1;
-    if (_developerTapCount >= developerTapThreshold) {
+    if (_developerTapCount >= DeveloperTapThreshold) {
       _isDeveloperOptionsEnabled = true;
       notifyIfMounted("developerOptions");
     }
@@ -63,7 +63,7 @@ class SettingsViewModel extends BaseViewModel {
   Future<void> setIsCalendarSyncEnabled(bool value) async {
     _isCalendarSyncEnabled = value;
 
-    notifyListeners("isCalendarSyncEnabled");
+    notifyIfMounted("isCalendarSyncEnabled");
 
     await _preferencesProvider.setIsCalendarSyncEnabled(value);
 

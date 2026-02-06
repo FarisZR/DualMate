@@ -37,7 +37,7 @@ class CanteenProvider {
   Future<DateTime?> lastUpdatedForWeek(DateTime date) async {
     var weekStart = toStartOfDay(toMonday(date));
     var weekEnd = weekStart.add(const Duration(days: 5));
-    return _repository.lastUpdatedBetween(weekStart, weekEnd);
+    return _repository.latestMealDateBetween(weekStart, weekEnd);
   }
 
   Future<List<DailyMenu>> refreshWeek(

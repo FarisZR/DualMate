@@ -405,6 +405,7 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
     final formatted = DateFormat.yMMMd(L.of(context).locale.toString())
         .add_Hm()
         .format(lastUpdated);
+    assert(L.of(context).lastUpdatedLabel.contains("%0"));
     return L.of(context).lastUpdatedLabel.replaceFirst("%0", formatted);
   }
 }
@@ -452,7 +453,6 @@ class _MealLoadingListState extends State<_MealLoadingList>
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         itemCount: 6,
         addAutomaticKeepAlives: false,
-        cacheExtent: MediaQuery.of(context).size.height * 2.5,
         itemBuilder: (context, index) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),

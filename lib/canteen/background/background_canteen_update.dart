@@ -7,6 +7,7 @@ import 'package:dualmate/common/util/date_utils.dart';
 class BackgroundCanteenUpdate extends TaskCallback {
   final CanteenProvider _canteenProvider;
   final WorkSchedulerService _scheduler;
+  static const Duration _retryInterval = Duration(hours: 8);
 
   BackgroundCanteenUpdate(this._canteenProvider, this._scheduler);
 
@@ -25,7 +26,8 @@ class BackgroundCanteenUpdate extends TaskCallback {
       print(exception);
       print(trace);
       print("Background canteen update status: failure");
-      print("Background canteen update next: retry in 8h");
+      print(
+          "Background canteen update next: retry in ${_retryInterval.inHours}h");
       return;
     }
 
@@ -46,7 +48,7 @@ class BackgroundCanteenUpdate extends TaskCallback {
   @override
   Future<void> schedule() async {
     await _scheduler.schedulePeriodic(
-      const Duration(hours: 8),
+      _retryInterval,
       getName(),
       true,
     );

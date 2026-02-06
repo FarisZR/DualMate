@@ -165,7 +165,7 @@ class ScheduleProvider {
 
   void removeScheduleEntryChangedCallback(
       ScheduleEntryChangedCallback callback) {
-    if (_scheduleUpdatedCallbacks.contains(callback))
+    if (_scheduleEntryChangedCallbacks.contains(callback))
       _scheduleEntryChangedCallbacks.remove(callback);
   }
 
@@ -192,5 +192,11 @@ class ScheduleProvider {
       removedEntries: diff.removedEntries,
       updatedEntries: diff.updatedEntries,
     );
+  }
+
+  void invalidateScheduleCache() {
+    _cachedSchedule = null;
+    _cachedScheduleStart = null;
+    _cachedScheduleEnd = null;
   }
 }

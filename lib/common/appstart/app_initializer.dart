@@ -89,17 +89,20 @@ Future<void> initializeAppForegroundHeavy() async {
     return;
   }
 
+  isForegroundHeavyInitialized = true;
+
   final stopwatch = Stopwatch()..start();
   try {
     await KiwiContainer()
         .resolve<CanteenProvider>()
         .refreshWeek(DateTime.now());
     print(
-        "Background init: canteen refresh ${stopwatch.elapsedMilliseconds}ms");
+        "Foreground heavy init: canteen refresh ${stopwatch.elapsedMilliseconds}ms");
   } catch (exception, trace) {
-    print("Background init: canteen refresh failed");
+    print("Foreground heavy init: canteen refresh failed");
     print(exception);
     print(trace);
+    // Swallowing here is intentional; we don't want to block startup.
   }
 
   try {
@@ -111,14 +114,15 @@ Future<void> initializeAppForegroundHeavy() async {
 
     calendarSynchronizer.registerSynchronizationCallback();
     calendarSynchronizer.scheduleSyncInAFewSeconds();
-    print("Background init: calendar sync ${stopwatch.elapsedMilliseconds}ms");
+    print(
+        "Foreground heavy init: calendar sync ${stopwatch.elapsedMilliseconds}ms");
   } catch (exception, trace) {
-    print("Background init: calendar sync failed");
+    print("Foreground heavy init: calendar sync failed");
     print(exception);
     print(trace);
+    // Swallowing here is intentional; we don't want to block startup.
   }
 
-  isForegroundHeavyInitialized = true;
   print("Foreground heavy init finished ${stopwatch.elapsedMilliseconds}ms");
 }
 

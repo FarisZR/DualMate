@@ -31,7 +31,6 @@ class _MainPageState extends State<MainPage> {
 
   bool _showContent = false;
   bool _appliedInitialRoutePostShell = false;
-  bool _shellRendered = false;
 
   final ValueNotifier<int> _currentEntryIndex = ValueNotifier<int>(0);
 
@@ -68,12 +67,6 @@ class _MainPageState extends State<MainPage> {
       return Container(
         color: Theme.of(context).scaffoldBackgroundColor,
       );
-    }
-
-    if (!_shellRendered) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _shellRendered = true;
-      });
     }
 
     var navigator = Navigator(

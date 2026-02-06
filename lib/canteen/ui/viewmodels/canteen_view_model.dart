@@ -4,6 +4,8 @@ import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/util/date_utils.dart';
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 
 class CanteenViewModel extends BaseViewModel {
@@ -104,7 +106,7 @@ class CanteenViewModel extends BaseViewModel {
       return;
     }
 
-    loadWeek(weekStart);
+    unawaited(loadWeek(weekStart));
   }
 
   void setFilter(CanteenFilter nextFilter) {

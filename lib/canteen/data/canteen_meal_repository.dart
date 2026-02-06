@@ -34,7 +34,7 @@ class CanteenMealRepository {
     return meals;
   }
 
-  Future<DateTime?> lastUpdatedBetween(DateTime start, DateTime end) async {
+  Future<DateTime?> latestMealDateBetween(DateTime start, DateTime end) async {
     var rows = await _database.rawQuery(
       "SELECT MAX(date) as last_date FROM ${CanteenMealEntity.tableName()} WHERE date>=? AND date<?",
       [

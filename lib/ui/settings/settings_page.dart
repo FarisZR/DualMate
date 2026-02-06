@@ -284,7 +284,7 @@ class _SettingsPageState extends State<SettingsPage> {
             return ListTile(
               title: Text(L.of(context).settingsDeveloperTitle),
               subtitle: Text(L.of(context).settingsDeveloperSubtitle),
-              onTap: settingsViewModel.incrementDeveloperTapCount,
+              onTap: model!.incrementDeveloperTapCount,
             );
           }
 
@@ -306,7 +306,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void dispose() {
-    super.dispose();
     settingsViewModel.dispose();
+    super.dispose();
   }
 }

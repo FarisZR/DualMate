@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/schedule/ui/dailyschedule/daily_schedule_page.dart';
 import 'package:dualmate/schedule/ui/viewmodels/daily_schedule_view_model.dart';
@@ -48,8 +50,19 @@ class _SchedulePageState extends State<SchedulePage> {
     super.initState();
     WidgetNavigationPayloadStore.instance.addListener(_handleWidgetPayload);
     _handleWidgetPayload();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      PerformanceTelemetry.instance.markNavEvent(name: "schedule.entry");
+    });
     if (_warmUpCompleted) {
       _didWarmUp = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final scheduleViewModel =
+            Provider.of<ScheduleViewModel>(context, listen: false);
+        scheduleViewModel.initialize();
+        unawaited(weeklyScheduleViewModel.initialize());
+      });
       return;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -59,7 +72,7 @@ class _SchedulePageState extends State<SchedulePage> {
         final scheduleViewModel =
             Provider.of<ScheduleViewModel>(context, listen: false);
         scheduleViewModel.initialize();
-        weeklyScheduleViewModel.initialize();
+        unawaited(weeklyScheduleViewModel.initialize());
         setState(() {
           _didWarmUp = true;
           _warmUpCompleted = true;
@@ -78,10 +91,6 @@ class _SchedulePageState extends State<SchedulePage> {
   @override
   Widget build(BuildContext context) {
     ScheduleViewModel viewModel = Provider.of<ScheduleViewModel>(context);
-    if (_didWarmUp) {
-      viewModel.initialize();
-      weeklyScheduleViewModel.initialize();
-    }
 
     final hasCachedSchedule = weeklyScheduleViewModel.weekSchedule != null;
 
@@ -161,6 +170,5 @@ class _SchedulePageState extends State<SchedulePage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    PerformanceTelemetry.instance.markNavEvent(name: "schedule.entry");
   }
 }
