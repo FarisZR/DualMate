@@ -7,6 +7,7 @@ class PerformanceOverlayController {
   static bool _loaded = false;
 
   static Future<void> load(PreferencesProvider preferencesProvider) async {
+    if (!kDebugMode) return;
     if (_loaded) return;
     final stored = await preferencesProvider.get<bool>(preferenceKey) ?? false;
     enabled.value = stored;
@@ -17,6 +18,7 @@ class PerformanceOverlayController {
     PreferencesProvider preferencesProvider,
     bool value,
   ) async {
+    if (!kDebugMode) return;
     enabled.value = value;
     await preferencesProvider.set<bool>(preferenceKey, value);
   }
