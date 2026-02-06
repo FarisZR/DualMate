@@ -204,30 +204,31 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   Future nextWeek() async {
-    await updateSchedule(
-      toNextWeek(currentDateStart),
-      toNextWeek(currentDateEnd),
-    );
+    final nextStart = toNextWeek(currentDateStart);
+    final nextEnd = toNextWeek(currentDateEnd);
+    await _openWeekFromCache(nextStart, nextEnd);
+    await updateSchedule(nextStart, nextEnd);
   }
 
   Future previousWeek() async {
-    await updateSchedule(
-      toPreviousWeek(currentDateStart),
-      toPreviousWeek(currentDateEnd),
-    );
+    final previousStart = toPreviousWeek(currentDateStart);
+    final previousEnd = toPreviousWeek(currentDateEnd);
+    await _openWeekFromCache(previousStart, previousEnd);
+    await updateSchedule(previousStart, previousEnd);
   }
 
   Future goToToday() async {
     currentDateStart =
         toStartOfDay(toDayOfWeek(DateTime.now(), DateTime.monday));
     currentDateEnd = toNextWeek(currentDateStart);
-
+    await _openWeekFromCache(currentDateStart, currentDateEnd);
     await updateSchedule(currentDateStart, currentDateEnd);
   }
 
   Future openWeekContaining(DateTime date) async {
     final weekStart = toStartOfDay(toDayOfWeek(date, DateTime.monday));
     final weekEnd = toNextWeek(weekStart);
+    await _openWeekFromCache(weekStart, weekEnd);
     await updateSchedule(weekStart, weekEnd);
   }
 
@@ -237,13 +238,14 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _lockWidgetWeek(weekStart, weekEnd);
     _updateMutex.cancel();
 
-    final cachedSchedule = await scheduleProvider.getCachedSchedule(
-      weekStart,
-      weekEnd,
-    );
-    if (_isDisposed) return;
-    _setSchedule(cachedSchedule, weekStart, weekEnd);
+    await _openWeekFromCache(weekStart, weekEnd);
     await updateSchedule(weekStart, weekEnd, force: true);
+  }
+
+  Future<void> _openWeekFromCache(DateTime start, DateTime end) async {
+    final cachedSchedule = await scheduleProvider.getCachedSchedule(start, end);
+    if (_isDisposed) return;
+    _setSchedule(cachedSchedule, start, end);
   }
 
   Future updateSchedule(DateTime start, DateTime end,
@@ -251,9 +253,6 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     if (_isDisposed) return;
 
     if (!scheduleSourceProvider.didSetupCorrectly()) {
-      updateFailed = true;
-      notifyIfMounted("updateFailed");
-      _cancelErrorInFuture();
       return;
     }
 
@@ -290,10 +289,6 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       notifyIfMounted("isUpdating");
 
       await _doUpdateSchedule(start, end);
-    } on ScheduleQueryFailedException catch (_) {
-      updateFailed = true;
-      notifyIfMounted("updateFailed");
-      _cancelErrorInFuture();
     } finally {
       isUpdating = false;
       _updateMutex.release();
