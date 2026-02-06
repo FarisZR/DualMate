@@ -36,47 +36,7 @@ class ScheduleNavigationEntry extends NavigationEntry<ScheduleViewModel> {
 
   @override
   List<Widget> appBarActions(BuildContext context) {
-    final viewModel = this.viewModel();
-    return [
-      PropertyChangeProvider<ScheduleViewModel, String>(
-        value: viewModel,
-        child: PropertyChangeConsumer<ScheduleViewModel, String>(
-            properties: const ["didSetupProperly"],
-            builder: (
-              BuildContext _,
-              ScheduleViewModel? __,
-              Set<String>? ___,
-            ) => viewModel.didSetupProperly
-                    ? Container()
-                    : IconButton(
-                        icon: Icon(Icons.help_outline),
-                        onPressed: () async {
-                          await ScheduleHelpDialog().show(context);
-                        },
-                        tooltip: L.of(context).helpButtonTooltip,
-                      )),
-      ),
-      PropertyChangeProvider<ScheduleViewModel, String>(
-        value: viewModel,
-        child: PropertyChangeConsumer<ScheduleViewModel, String>(
-          properties: const ["didSetupProperly"],
-          builder: (
-            BuildContext _,
-            ScheduleViewModel? __,
-            Set<String>? ___,
-          ) => viewModel.didSetupProperly
-                  ? IconButton(
-                      icon: Icon(Icons.filter_alt),
-                      onPressed: () async {
-                        Navigator.of(context).push(MaterialPageRoute(
-                          builder: (context) => ScheduleFilterPage(),
-                        ));
-                      },
-                    )
-                  : Container(),
-        ),
-      )
-    ];
+    return [];
   }
 
   @override

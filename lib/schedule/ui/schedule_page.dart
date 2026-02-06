@@ -39,7 +39,7 @@ class _SchedulePageState extends State<SchedulePage> {
     _handleWidgetPayload();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      Future.delayed(const Duration(milliseconds: 120), () {
+      Future.delayed(const Duration(milliseconds: 300), () {
         if (!mounted) return;
         setState(() {
           _didWarmUp = true;
@@ -63,6 +63,9 @@ class _SchedulePageState extends State<SchedulePage> {
       weeklyScheduleViewModel.initialize();
     }
     ScheduleViewModel viewModel = Provider.of<ScheduleViewModel>(context);
+    if (_didWarmUp) {
+      viewModel.initialize();
+    }
 
     if (viewModel.isInitializingScheduleSource) {
       return Padding(

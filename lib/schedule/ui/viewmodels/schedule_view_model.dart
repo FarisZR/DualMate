@@ -8,6 +8,7 @@ class ScheduleViewModel extends BaseViewModel {
   final ScheduleSourceProvider _scheduleSourceProvider;
   Timer? _initialSetupTimer;
   bool _isDisposed = false;
+  bool _initialized = false;
 
   bool _didSetupProperly = false;
   bool _isInitializingScheduleSource = true;
@@ -15,7 +16,11 @@ class ScheduleViewModel extends BaseViewModel {
   bool get didSetupProperly => _didSetupProperly;
   bool get isInitializingScheduleSource => _isInitializingScheduleSource;
 
-  ScheduleViewModel(this._scheduleSourceProvider) {
+  ScheduleViewModel(this._scheduleSourceProvider);
+
+  void initialize() {
+    if (_initialized) return;
+    _initialized = true;
     _scheduleSourceProvider
         .addDidChangeScheduleSourceCallback(onDidChangeScheduleSource);
     _didSetupProperly = _scheduleSourceProvider.didSetupCorrectly();

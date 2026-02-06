@@ -51,7 +51,7 @@ class _MainPageState extends State<MainPage> {
       setState(() {
         _showContent = true;
       });
-      Future.delayed(const Duration(milliseconds: 400), () {
+      Future.delayed(const Duration(milliseconds: 700), () {
         if (!mounted) return;
         _pushInitialRouteAfterShell();
       });
