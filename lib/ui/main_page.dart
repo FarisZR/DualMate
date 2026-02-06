@@ -64,6 +64,12 @@ class _MainPageState extends State<MainPage> {
 
     _syncCurrentEntryIndex();
 
+    if (!_showContent) {
+      return Container(
+        color: Theme.of(context).scaffoldBackgroundColor,
+      );
+    }
+
     if (!_shellRendered) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _shellRendered = true;
