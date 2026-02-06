@@ -52,8 +52,12 @@ class _SchedulePageState extends State<SchedulePage> {
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      Future.delayed(const Duration(milliseconds: 200), () {
+      Future.delayed(const Duration(milliseconds: 120), () {
         if (!mounted) return;
+        final scheduleViewModel =
+            Provider.of<ScheduleViewModel>(context, listen: false);
+        scheduleViewModel.initialize();
+        weeklyScheduleViewModel.initialize();
         setState(() {
           _didWarmUp = true;
           _warmUpCompleted = true;
@@ -72,7 +76,8 @@ class _SchedulePageState extends State<SchedulePage> {
   @override
   Widget build(BuildContext context) {
     ScheduleViewModel viewModel = Provider.of<ScheduleViewModel>(context);
-    if (_didWarmUp && viewModel.didSetupProperly) {
+    if (_didWarmUp) {
+      viewModel.initialize();
       weeklyScheduleViewModel.initialize();
     }
     if (_didWarmUp) {
@@ -85,7 +90,8 @@ class _SchedulePageState extends State<SchedulePage> {
         child: ScheduleEmptyStatePlaceholder(),
       );
     }
-    if (!viewModel.didSetupProperly) {
+    if (!viewModel.didSetupProperly &&
+        !viewModel.isInitializingScheduleSource) {
       return ScheduleEmptyState();
     } else {
       if (!_didWarmUp) {
