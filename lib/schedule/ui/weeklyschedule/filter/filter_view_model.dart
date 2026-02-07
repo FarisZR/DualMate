@@ -1,5 +1,6 @@
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 
@@ -7,11 +8,16 @@ class FilterViewModel extends BaseViewModel {
   final ScheduleEntryRepository _scheduleEntryRepository;
   final ScheduleFilterRepository _scheduleFilterRepository;
   final ScheduleSourceProvider _scheduleSource;
+  final ScheduleProvider _scheduleProvider;
 
   List<ScheduleEntryFilterState> filterStates = [];
 
-  FilterViewModel(this._scheduleEntryRepository, this._scheduleFilterRepository,
-      this._scheduleSource) {
+  FilterViewModel(
+    this._scheduleEntryRepository,
+    this._scheduleFilterRepository,
+    this._scheduleSource,
+    this._scheduleProvider,
+  ) {
     loadFilterStates();
   }
 
@@ -28,7 +34,7 @@ class FilterViewModel extends BaseViewModel {
       return ScheduleEntryFilterState(!isFiltered, e);
     }).toList();
 
-    notifyListeners();
+    notifyIfMounted("filterStates");
   }
 
   void applyFilter() async {
@@ -39,6 +45,7 @@ class FilterViewModel extends BaseViewModel {
 
     await _scheduleFilterRepository.saveAllHiddenNames(allFilteredNames);
 
+    _scheduleProvider.invalidateScheduleCache();
     _scheduleSource.fireScheduleSourceChanged();
   }
 }

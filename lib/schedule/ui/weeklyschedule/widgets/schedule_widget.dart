@@ -36,10 +36,14 @@ class ScheduleWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-        return buildWithSize(
-            context, constraints.biggest.width, constraints.biggest.height);
-      }),
+        builder: (BuildContext context, BoxConstraints constraints) {
+          return buildWithSize(
+            context,
+            constraints.biggest.width,
+            constraints.biggest.height,
+          );
+        },
+      ),
     );
   }
 
@@ -71,7 +75,7 @@ class ScheduleWidget extends StatelessWidget {
       width - 50,
       days,
     );
-  
+
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[

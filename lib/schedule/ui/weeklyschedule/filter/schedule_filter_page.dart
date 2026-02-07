@@ -9,6 +9,7 @@ class ScheduleFilterPage extends StatelessWidget {
     KiwiContainer().resolve(),
     KiwiContainer().resolve(),
     KiwiContainer().resolve(),
+    KiwiContainer().resolve(),
   );
 
   @override
@@ -46,11 +47,11 @@ class ScheduleFilterPage extends StatelessWidget {
               child: PropertyChangeProvider<FilterViewModel, String>(
                 value: _viewModel,
                 child: PropertyChangeConsumer<FilterViewModel, String>(
+                    properties: const ["filterStates"],
                     builder: (BuildContext _, FilterViewModel? viewModel,
-                            Set<String>? ___) {
+                        Set<String>? ___) {
                       if (viewModel == null) return Container();
                       return ListView.builder(
-                        shrinkWrap: true,
                         itemCount: viewModel.filterStates.length,
                         itemBuilder: (context, index) =>
                             FilterStateRow(viewModel.filterStates[index]),

@@ -7,6 +7,7 @@ import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 
 class BackgroundScheduleUpdate extends TaskCallback {
+  static const Duration _updateInterval = Duration(hours: 4);
   final ScheduleProvider scheduleProvider;
   final ScheduleSourceProvider scheduleSource;
   final WorkSchedulerService scheduler;
@@ -38,15 +39,22 @@ class BackgroundScheduleUpdate extends TaskCallback {
       print("Background schedule update failed");
       print(e.innerException.toString());
       print(trace);
+      print("Background schedule update status: failure");
+      print(
+          "Background schedule update next: retry in ${_updateInterval.inHours}h");
       return;
     } catch (e, trace) {
       print("Background schedule update unexpected failure");
       print(e);
       print(trace);
+      print("Background schedule update status: failure");
+      print(
+          "Background schedule update next: retry in ${_updateInterval.inHours}h");
       return;
     }
 
     print("Finished updating schedule");
+    print("Background schedule update status: success");
   }
 
   @override
@@ -62,7 +70,7 @@ class BackgroundScheduleUpdate extends TaskCallback {
   @override
   Future<void> schedule() async {
     await scheduler.schedulePeriodic(
-      const Duration(hours: 4),
+      _updateInterval,
       getName(),
       true,
     );

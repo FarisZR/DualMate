@@ -41,20 +41,22 @@ class ScheduleNavigationEntry extends NavigationEntry<ScheduleViewModel> {
       PropertyChangeProvider<ScheduleViewModel, String>(
         value: viewModel,
         child: PropertyChangeConsumer<ScheduleViewModel, String>(
-            properties: const ["didSetupProperly"],
-            builder: (
-              BuildContext _,
-              ScheduleViewModel? __,
-              Set<String>? ___,
-            ) => viewModel.didSetupProperly
-                    ? Container()
-                    : IconButton(
-                        icon: Icon(Icons.help_outline),
-                        onPressed: () async {
-                          await ScheduleHelpDialog().show(context);
-                        },
-                        tooltip: L.of(context).helpButtonTooltip,
-                      )),
+          properties: const ["didSetupProperly"],
+          builder: (
+            BuildContext _,
+            ScheduleViewModel? __,
+            Set<String>? ___,
+          ) =>
+              viewModel.didSetupProperly
+                  ? Container()
+                  : IconButton(
+                      icon: Icon(Icons.help_outline),
+                      onPressed: () async {
+                        await ScheduleHelpDialog().show(context);
+                      },
+                      tooltip: L.of(context).helpButtonTooltip,
+                    ),
+        ),
       ),
       PropertyChangeProvider<ScheduleViewModel, String>(
         value: viewModel,
@@ -64,7 +66,8 @@ class ScheduleNavigationEntry extends NavigationEntry<ScheduleViewModel> {
             BuildContext _,
             ScheduleViewModel? __,
             Set<String>? ___,
-          ) => viewModel.didSetupProperly
+          ) =>
+              viewModel.didSetupProperly
                   ? IconButton(
                       icon: Icon(Icons.filter_alt),
                       onPressed: () async {

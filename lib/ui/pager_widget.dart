@@ -33,6 +33,8 @@ class _PagerWidgetState extends State<PagerWidget> {
   final String? pagesId;
   final List<PageDefinition> pages;
   int _currentPage = 0;
+  DateTime? _lastSwitchAt;
+  static const Duration _switchThrottle = Duration(milliseconds: 300);
 
   _PagerWidgetState(this.pages, this.pagesId);
 
@@ -89,10 +91,17 @@ class _PagerWidgetState extends State<PagerWidget> {
     return bottomNavigationBarItems;
   }
 
-  Future<void> setActivePage(int page) async {
+  Future<void> setActivePage(int page, {bool force = false}) async {
     if (page < 0 || page >= pages.length) {
       return;
     }
+    var now = DateTime.now();
+    if (!force &&
+        _lastSwitchAt != null &&
+        now.difference(_lastSwitchAt!) < _switchThrottle) {
+      return;
+    }
+    _lastSwitchAt = now;
 
     setState(() {
       _currentPage = page;
@@ -118,10 +127,10 @@ class _PagerWidgetState extends State<PagerWidget> {
     }
   }
 
-  void _handleForcedPage() {
+  void _handleForcedPage() async {
     final forced = widget.forcedPage?.value;
     if (forced == null) return;
-    setActivePage(forced);
+    await setActivePage(forced, force: true);
     widget.forcedPage?.value = null;
   }
 }

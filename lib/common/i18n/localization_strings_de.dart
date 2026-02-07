@@ -196,6 +196,9 @@ final de = {
   "examNotPassed": "Nicht bestanden",
   "settingsWidgetPurchase": "Widgets aktivieren",
   "settingsWidgetDidPurchase": "Widgets sind aktviert",
+  "settingsDeveloperTitle": "Entwickleroptionen",
+  "settingsDeveloperSubtitle": "Tippen, um Debug-Tools zu aktivieren",
+  "settingsPerformanceOverlay": "Performance-Overlay anzeigen",
   "selectThemeDialogTitle": "Design auswählen",
   "selectThemeLight": "Hell",
   "selectThemeDark": "Dunkel",
@@ -212,6 +215,7 @@ final de = {
   "canteenNoMenuToday": "Kein Speiseplan für diesen Tag verfügbar",
   "canteenLoadError": "Speiseplan konnte nicht geladen werden",
   "canteenCategoryWahlessen": "Wahlessen %0",
+  "lastUpdatedLabel": "Zuletzt aktualisiert %0",
   "canteenHelpDialogTitle": "Mensaspeiseplan",
   "canteenHelpDialogContent":
       "Zeigt den täglichen Speiseplan der DHBW Karlsruhe Mensa (Menseria Erzbergerstraße). Daten vom Studierendenwerk Karlsruhe.",

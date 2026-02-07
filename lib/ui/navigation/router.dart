@@ -17,17 +17,48 @@ final List<NavigationEntry> navigationEntries = [
   UsefulInformationNavigationEntry(),
 ];
 
+WidgetBuilder _resolveRoute(RouteSettings settings) {
+  for (var route in navigationEntries) {
+    if (route.route == settings.name) {
+      return route.buildRoute;
+    }
+  }
+  return (_) => Container();
+}
+
 Route<dynamic> generateDrawerRoute(RouteSettings settings) {
   print("=== === === === === === Navigating to: ${settings.name}");
 
-  WidgetBuilder widget = (_) => Container();
-
-  for (var route in navigationEntries) {
-    if (route.route == settings.name) {
-      widget = route.buildRoute;
-      break;
-    }
+  final args = settings.arguments;
+  if (args is Map && args["disableTransitions"] == true) {
+    return PageRouteBuilder(
+      settings: settings,
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return _resolveRoute(settings)(context);
+      },
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return child;
+      },
+    );
   }
+
+  if (settings.name == "shell") {
+    return PageRouteBuilder(
+      settings: settings,
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Container(color: Theme.of(context).scaffoldBackgroundColor);
+      },
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return child;
+      },
+    );
+  }
+
+  final widget = _resolveRoute(settings);
 
   return PageRouteBuilder(
     settings: settings,

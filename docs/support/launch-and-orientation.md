@@ -21,3 +21,9 @@ The app no longer uses a custom splash screen. Orientation is allowed in all dir
 - Test cold start in portrait and landscape.
 - Rotate during launch and confirm the first visible screen matches the device orientation.
 - Verify the main screens are usable in landscape (schedule, dualis, date management, settings, onboarding).
+
+## Performance profiling quickstart
+- Run profile on a device: `flutter run --profile -d <DEVICE_ID>`
+- Enable perf overlay: Settings -> Developer options -> Show performance overlay
+- Logs: filter `perf.` for frame timing and navigation events
+- Key markers: `startup.deferFirstFrame`, `startup.allowFirstFrame`, `schedule.refresh.*`

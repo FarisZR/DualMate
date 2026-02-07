@@ -3,14 +3,13 @@ import 'package:dualmate/common/ui/custom_icons_icons.dart';
 import 'package:dualmate/dualis/ui/dualis_page.dart';
 import 'package:dualmate/dualis/ui/viewmodels/study_grades_view_model.dart';
 import 'package:dualmate/dualis/ui/widgets/dualis_help_dialog.dart';
+import 'package:dualmate/schedule/ui/schedule_page.dart';
 import 'package:dualmate/ui/navigation/navigation_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 
 class DualisNavigationEntry extends NavigationEntry<StudyGradesViewModel> {
-  late StudyGradesViewModel _viewModel;
-
   @override
   Widget icon(BuildContext context) {
     return Icon(Icons.data_usage);
@@ -23,11 +22,10 @@ class DualisNavigationEntry extends NavigationEntry<StudyGradesViewModel> {
 
   @override
   StudyGradesViewModel initViewModel() {
-    _viewModel = StudyGradesViewModel(
+    return StudyGradesViewModel(
       KiwiContainer().resolve(),
       KiwiContainer().resolve(),
     );
-    return _viewModel;
   }
 
   @override
@@ -37,10 +35,10 @@ class DualisNavigationEntry extends NavigationEntry<StudyGradesViewModel> {
 
   @override
   List<Widget> appBarActions(BuildContext context) {
-    initViewModel();
+    final model = viewModel();
     return [
       PropertyChangeProvider<StudyGradesViewModel, String>(
-        value: _viewModel,
+        value: model,
         child: PropertyChangeConsumer<StudyGradesViewModel, String>(
           builder: (
             BuildContext _,
@@ -59,6 +57,7 @@ class DualisNavigationEntry extends NavigationEntry<StudyGradesViewModel> {
                 : IconButton(
                     icon: const Icon(CustomIcons.logout),
                     onPressed: () async {
+                      SchedulePage.resetSharedState();
                       await model.logout();
                     },
                     tooltip: L.of(context).logoutButtonTooltip,

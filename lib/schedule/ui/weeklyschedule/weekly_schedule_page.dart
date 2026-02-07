@@ -182,10 +182,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
                             Set<String>? properties) {
                           if (model == null) return Container();
                           return model.isUpdating
-                              ? const IgnorePointer(
-                                  ignoring: true,
-                                  child: LinearProgressIndicator(),
-                                )
+                              ? const LinearProgressIndicator()
                               : Container();
                         },
                       ),

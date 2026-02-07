@@ -16,10 +16,10 @@ import 'package:dualmate/ui/navigation/navigator_key.dart';
 import 'package:dualmate/ui/settings/select_theme_dialog.dart';
 import 'package:dualmate/ui/settings/viewmodels/settings_view_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:url_launcher/url_launcher.dart';
-
 
 ///
 /// Widget for the application settings route. Provides access to many settings
@@ -42,6 +42,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     widgets.addAll(buildScheduleSourceSettings(context));
     widgets.addAll(buildDesignSettings(context));
+    widgets.addAll(buildDeveloperSettings(context));
     widgets.addAll(buildNotificationSettings(context));
     widgets.addAll(buildAboutSettings(context));
     widgets.add(buildDisclaimer(context));
@@ -265,9 +266,47 @@ class _SettingsPageState extends State<SettingsPage> {
     ];
   }
 
+  List<Widget> buildDeveloperSettings(BuildContext context) {
+    if (!kDebugMode) return [];
+
+    return [
+      PropertyChangeConsumer<SettingsViewModel, String>(
+        properties: const [
+          "developerOptions",
+          "showPerformanceOverlay",
+        ],
+        builder: (
+          BuildContext context,
+          SettingsViewModel? model,
+          Set<String>? properties,
+        ) {
+          if (model == null || !model.isDeveloperOptionsEnabled) {
+            return ListTile(
+              title: Text(L.of(context).settingsDeveloperTitle),
+              subtitle: Text(L.of(context).settingsDeveloperSubtitle),
+              onTap: model?.incrementDeveloperTapCount,
+            );
+          }
+
+          return Column(
+            children: [
+              TitleListTile(title: L.of(context).settingsDeveloperTitle),
+              SwitchListTile(
+                title: Text(L.of(context).settingsPerformanceOverlay),
+                onChanged: model.setShowPerformanceOverlay,
+                value: model.showPerformanceOverlay,
+              ),
+            ],
+          );
+        },
+      ),
+      const Divider(),
+    ];
+  }
+
   @override
   void dispose() {
-    super.dispose();
     settingsViewModel.dispose();
+    super.dispose();
   }
 }

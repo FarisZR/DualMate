@@ -34,6 +34,28 @@ class CanteenMealRepository {
     return meals;
   }
 
+  Future<DateTime?> latestMealDateBetween(DateTime start, DateTime end) async {
+    var rows = await _database.rawQuery(
+      "SELECT MAX(date) as last_date FROM ${CanteenMealEntity.tableName()} WHERE date>=? AND date<?",
+      [
+        start.millisecondsSinceEpoch,
+        end.millisecondsSinceEpoch,
+      ],
+    );
+
+    if (rows.isEmpty) return null;
+
+    var value = rows.first["last_date"];
+    if (value is int) {
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    }
+    if (value is num) {
+      return DateTime.fromMillisecondsSinceEpoch(value.toInt());
+    }
+
+    return null;
+  }
+
   Future<void> saveMeals(List<Meal> meals) async {
     var rows =
         meals.map((meal) => CanteenMealEntity.fromModel(meal).toMap()).toList();

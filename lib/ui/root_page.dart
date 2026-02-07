@@ -1,12 +1,19 @@
+import 'dart:developer' as developer;
+import 'dart:async';
+
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/logging/analytics.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
+import 'package:dualmate/common/logging/perf_overlay_controller.dart';
 import 'package:dualmate/common/ui/colors.dart';
 import 'package:dualmate/common/ui/viewmodels/root_view_model.dart';
 import 'package:dualmate/common/appstart/app_initializer.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/util/launch_intent.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:dualmate/main.dart';
+import 'package:dualmate/schedule/business/schedule_provider.dart';
+import 'package:dualmate/common/util/date_utils.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:flutter/services.dart';
 import 'package:dualmate/ui/navigation/navigator_key.dart';
@@ -22,7 +29,9 @@ import 'package:property_change_notifier/property_change_notifier.dart';
 /// root navigator and rebuilds its child widgets on theme changes
 ///
 class RootPage extends StatefulWidget {
-  const RootPage({Key? key}) : super(key: key);
+  final Stopwatch startupStopwatch;
+
+  const RootPage({Key? key, required this.startupStopwatch}) : super(key: key);
 
   @override
   _RootPageState createState() => _RootPageState();
@@ -31,11 +40,13 @@ class RootPage extends StatefulWidget {
 class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   RootViewModel? _rootViewModel;
   bool _isInitializing = true;
-  bool _perfOverlayEnabled = false;
   bool _backgroundInitStarted = false;
   static const MethodChannel _navigationChannel =
       MethodChannel('com.fariszr.dualmate/navigation');
   String? _pendingRoute;
+  developer.TimelineTask? _startupTask;
+  bool _pendingRouteScheduled = false;
+  bool _perfOverlayLoaded = false;
 
   @override
   void initState() {
@@ -44,6 +55,12 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     _navigationChannel.setMethodCallHandler(_handleNavigationCall);
     _fetchLaunchRoute();
     _fetchLaunchPayload();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadPerfOverlayPreference();
+    });
+    PerformanceTelemetry.instance.ensureFrameTimingListenerAttached();
+    _startupTask =
+        PerformanceTelemetry.instance.startTask('startup.initialize');
     _initializeApp();
   }
 
@@ -140,21 +157,47 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
   Future<void> _initializeApp() async {
     final stopwatch = Stopwatch()..start();
+    PerformanceTelemetry.instance.logInstant(
+      'startup.initialize.start',
+      args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
+    );
+    PerformanceTelemetry.instance.logInstant(
+      'startup.root.init.start',
+      args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
+    );
     await initializeAppBase(false);
     print("Root init: base ${stopwatch.elapsedMilliseconds}ms");
+    PerformanceTelemetry.instance.logInstant(
+      'startup.root.base.done',
+      args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
+    );
 
     await saveLastStartLanguage();
     print("Root init: save language ${stopwatch.elapsedMilliseconds}ms");
+    PerformanceTelemetry.instance.logInstant(
+      'startup.root.language.done',
+      args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
+    );
     _rootViewModel = RootViewModel(
       KiwiContainer().resolve(),
     );
-    await _rootViewModel?.loadFromPreferences();
-    print("Root init: prefs ${stopwatch.elapsedMilliseconds}ms");
     WidgetsBinding.instance.allowFirstFrame();
+    PerformanceTelemetry.instance.logInstant(
+      'startup.allowFirstFrame',
+      args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
+    );
 
     _applyPendingRoute();
 
     print("Root init: allow first frame ${stopwatch.elapsedMilliseconds}ms");
+    _startupTask?.finish();
+
+    await _rootViewModel?.loadFromPreferences();
+    print("Root init: prefs ${stopwatch.elapsedMilliseconds}ms");
+    PerformanceTelemetry.instance.logInstant(
+      'startup.root.preferences.done',
+      args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
+    );
 
     if (!mounted) {
       return;
@@ -171,11 +214,32 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     });
   }
 
+  Future<void> _loadPerfOverlayPreference() async {
+    if (_perfOverlayLoaded) return;
+    try {
+      final preferencesProvider =
+          KiwiContainer().resolve<PreferencesProvider>();
+      await PerformanceOverlayController.load(preferencesProvider);
+      if (!mounted) return;
+      setState(() {
+        _perfOverlayLoaded = true;
+      });
+    } catch (error, trace) {
+      print("Perf overlay load failed");
+      print(error);
+      print(trace);
+      rethrow;
+    }
+  }
+
   void _applyPendingRoute() {
     if (_pendingRoute == null) return;
     final navigator = NavigatorKey.mainKey.currentState;
     if (navigator == null) {
+      if (_pendingRouteScheduled) return;
+      _pendingRouteScheduled = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        _pendingRouteScheduled = false;
         _applyPendingRoute();
       });
       return;
@@ -194,6 +258,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       navigator.pushNamed(_pendingRoute!);
     }
     _pendingRoute = null;
+    _pendingRouteScheduled = false;
   }
 
   @override
@@ -213,25 +278,28 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
           Set<String>? properties,
         ) {
           if (model == null) return Container();
-          return MaterialApp(
-            theme: ColorPalettes.buildTheme(model.appTheme),
-            showPerformanceOverlay: _perfOverlayEnabled,
-            initialRoute:
-                model.isOnboarding ? "onboarding" : _resolveInitialRoute(),
-            navigatorKey: NavigatorKey.rootKey,
-            navigatorObservers: [rootNavigationObserver],
-            localizationsDelegates: [
-              const LocalizationDelegate(),
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-              DefaultCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: const [
-              Locale('en'),
-              Locale('de'),
-            ],
-            onGenerateRoute: generateRoute,
+          return ValueListenableBuilder<bool>(
+            valueListenable: PerformanceOverlayController.enabled,
+            builder: (context, perfEnabled, _) => MaterialApp(
+              theme: ColorPalettes.buildTheme(model.appTheme),
+              showPerformanceOverlay: perfEnabled,
+              initialRoute:
+                  model.isOnboarding ? "onboarding" : _resolveInitialRoute(),
+              navigatorKey: NavigatorKey.rootKey,
+              navigatorObservers: [rootNavigationObserver],
+              localizationsDelegates: [
+                const LocalizationDelegate(),
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+                DefaultCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: const [
+                Locale('en'),
+                Locale('de'),
+              ],
+              onGenerateRoute: generateRoute,
+            ),
           );
         },
       ),
@@ -257,8 +325,35 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       await initializeAppBackground(false);
       print(
           "Root init: deferred background ${stopwatch.elapsedMilliseconds}ms");
+      unawaited(_prewarmScheduleCache());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _runForegroundHeavyInitialization();
+      });
     } catch (error, trace) {
       print("Root init: deferred background failed");
+      print(error);
+      print(trace);
+    }
+  }
+
+  Future<void> _runForegroundHeavyInitialization() async {
+    try {
+      await initializeAppForegroundHeavy();
+    } catch (error, trace) {
+      print("Root init: foreground heavy failed");
+      print(error);
+      print(trace);
+    }
+  }
+
+  Future<void> _prewarmScheduleCache() async {
+    try {
+      final scheduleProvider = KiwiContainer().resolve<ScheduleProvider>();
+      final start = toStartOfDay(toDayOfWeek(DateTime.now(), DateTime.monday));
+      final end = toNextWeek(start);
+      await scheduleProvider.warmScheduleCache(start, end);
+    } catch (error, trace) {
+      print("Root init: schedule cache warm failed");
       print(error);
       print(trace);
     }

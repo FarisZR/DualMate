@@ -2,6 +2,7 @@ import 'package:dualmate/canteen/ui/viewmodels/canteen_view_model.dart';
 import 'package:dualmate/canteen/ui/widgets/filter_dropdown.dart';
 import 'package:dualmate/canteen/ui/widgets/meal_card.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -26,12 +27,14 @@ class _CanteenPageState extends State<CanteenPage> {
   void initState() {
     super.initState();
     viewModel = Provider.of<CanteenViewModel>(context, listen: false);
+    viewModel.initialize();
     baseDate = _normalizeToWeekday(DateTime.now());
     pageController = PageController(initialPage: _basePage);
     pageNotifier = ValueNotifier<int>(_basePage);
     WidgetNavigationPayloadStore.instance.addListener(_handleWidgetPayload);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      PerformanceTelemetry.instance.markNavEvent(name: "canteen.entry");
       _loadWeekForDate(baseDate);
       _applyWidgetPayload();
     });
@@ -132,6 +135,8 @@ class _CanteenPageState extends State<CanteenPage> {
                     pageNotifier.value = index;
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (!mounted) return;
+                      PerformanceTelemetry.instance
+                          .markNavEvent(name: "canteen.pageChanged");
                       _loadWeekForDate(_dateForPage(index));
                     });
                   },
@@ -298,6 +303,7 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
         var isLoading = model.isLoadingWeek(weekStart);
         var showError = model.errorForWeek(weekStart) != null;
         var hasWeekData = model.hasWeekData(weekStart);
+        var lastUpdated = model.lastUpdatedForWeek(weekStart);
 
         if ((!hasWeekData || isLoading) && meals.isEmpty) {
           return const _MealLoadingList();
@@ -310,7 +316,11 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
             switchOutCurve: Curves.easeIn,
             child: SizedBox(
               key: ValueKey("canteen_empty_${showError}"),
-              child: _buildEmptyState(context, showError: showError),
+              child: _buildEmptyState(
+                context,
+                showError: showError,
+                lastUpdated: lastUpdated,
+              ),
             ),
           );
         }
@@ -328,6 +338,7 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                 itemCount: meals.length,
                 addAutomaticKeepAlives: false,
+                cacheExtent: MediaQuery.of(context).size.height * 2.5,
                 itemBuilder: (context, index) {
                   var meal = meals[index];
                   return Padding(
@@ -343,7 +354,12 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, {required bool showError}) {
+  Widget _buildEmptyState(
+    BuildContext context, {
+    required bool showError,
+    DateTime? lastUpdated,
+  }) {
+    final lastUpdatedText = _formatLastUpdated(context, lastUpdated);
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       child: Padding(
@@ -357,6 +373,14 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium,
             ),
+            if (lastUpdatedText != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                lastUpdatedText,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
             if (showError) ...[
               const SizedBox(height: 12),
               Text(
@@ -374,6 +398,19 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
         ),
       ),
     );
+  }
+
+  String? _formatLastUpdated(BuildContext context, DateTime? lastUpdated) {
+    if (lastUpdated == null) return null;
+    final formatted = DateFormat.yMMMd(L.of(context).locale.toString())
+        .add_Hm()
+        .format(lastUpdated);
+    final template = L.of(context).lastUpdatedLabel;
+    assert(template.contains("%0"));
+    if (!template.contains("%0")) {
+      return formatted;
+    }
+    return template.replaceFirst("%0", formatted);
   }
 }
 

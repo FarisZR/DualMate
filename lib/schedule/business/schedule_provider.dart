@@ -39,6 +39,10 @@ class ScheduleProvider {
   final List<ScheduleEntryChangedCallback> _scheduleEntryChangedCallbacks =
       <ScheduleEntryChangedCallback>[];
 
+  Schedule? _cachedSchedule;
+  DateTime? _cachedScheduleStart;
+  DateTime? _cachedScheduleEnd;
+
   ScheduleProvider(
       this._scheduleSource,
       this._scheduleEntryRepository,
@@ -48,18 +52,31 @@ class ScheduleProvider {
     _scheduleFilter = ScheduleFilter(_scheduleFilterRepository);
   }
 
+  Future<void> warmScheduleCache(DateTime start, DateTime end) async {
+    await getCachedSchedule(start, end);
+  }
+
   Future<Schedule> getCachedSchedule(DateTime start, DateTime end) async {
+    if (_cachedSchedule != null &&
+        _cachedScheduleStart != null &&
+        _cachedScheduleEnd != null &&
+        _cachedScheduleStart == start &&
+        _cachedScheduleEnd == end) {
+      return _cachedSchedule!;
+    }
     var cachedSchedule =
         await _scheduleEntryRepository.queryScheduleBetweenDates(start, end);
 
-    print(
-        "Read chached schedule with ${cachedSchedule.entries.length.toString()} entries");
+    print("Read cached schedule with ${cachedSchedule.entries.length} entries");
 
     cachedSchedule = await _scheduleFilter.filter(cachedSchedule);
 
     print(
         "Filtered cached schedule has ${cachedSchedule.entries.length} entries");
 
+    _cachedSchedule = cachedSchedule;
+    _cachedScheduleStart = start;
+    _cachedScheduleEnd = end;
     return cachedSchedule;
   }
 
@@ -90,6 +107,10 @@ class ScheduleProvider {
       );
 
       schedule = await _scheduleFilter.filter(schedule);
+
+      _cachedSchedule = schedule;
+      _cachedScheduleStart = start;
+      _cachedScheduleEnd = end;
 
       print("Filtered schedule has ${schedule.entries.length} entries");
 
@@ -143,7 +164,7 @@ class ScheduleProvider {
 
   void removeScheduleEntryChangedCallback(
       ScheduleEntryChangedCallback callback) {
-    if (_scheduleUpdatedCallbacks.contains(callback))
+    if (_scheduleEntryChangedCallbacks.contains(callback))
       _scheduleEntryChangedCallbacks.remove(callback);
   }
 
@@ -170,5 +191,11 @@ class ScheduleProvider {
       removedEntries: diff.removedEntries,
       updatedEntries: diff.updatedEntries,
     );
+  }
+
+  void invalidateScheduleCache() {
+    _cachedSchedule = null;
+    _cachedScheduleStart = null;
+    _cachedScheduleEnd = null;
   }
 }
