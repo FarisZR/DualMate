@@ -9,6 +9,7 @@ class ScheduleFilterPage extends StatelessWidget {
     KiwiContainer().resolve(),
     KiwiContainer().resolve(),
     KiwiContainer().resolve(),
+    KiwiContainer().resolve(),
   );
 
   @override

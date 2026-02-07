@@ -256,9 +256,15 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   Future<void> _openWeekFromCache(DateTime start, DateTime end) async {
-    final cachedSchedule = await scheduleProvider.getCachedSchedule(start, end);
-    if (_isDisposed) return;
-    _setSchedule(cachedSchedule, start, end);
+    try {
+      final cachedSchedule =
+          await scheduleProvider.getCachedSchedule(start, end);
+      if (_isDisposed) return;
+      _setSchedule(cachedSchedule, start, end);
+    } catch (error, trace) {
+      print("Failed to open cached week: $error");
+      print(trace);
+    }
   }
 
   Future updateSchedule(DateTime start, DateTime end,

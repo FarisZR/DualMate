@@ -3,17 +3,21 @@ import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
-import 'package:kiwi/kiwi.dart';
 
 class FilterViewModel extends BaseViewModel {
   final ScheduleEntryRepository _scheduleEntryRepository;
   final ScheduleFilterRepository _scheduleFilterRepository;
   final ScheduleSourceProvider _scheduleSource;
+  final ScheduleProvider _scheduleProvider;
 
   List<ScheduleEntryFilterState> filterStates = [];
 
-  FilterViewModel(this._scheduleEntryRepository, this._scheduleFilterRepository,
-      this._scheduleSource) {
+  FilterViewModel(
+    this._scheduleEntryRepository,
+    this._scheduleFilterRepository,
+    this._scheduleSource,
+    this._scheduleProvider,
+  ) {
     loadFilterStates();
   }
 
@@ -41,7 +45,7 @@ class FilterViewModel extends BaseViewModel {
 
     await _scheduleFilterRepository.saveAllHiddenNames(allFilteredNames);
 
-    KiwiContainer().resolve<ScheduleProvider>().invalidateScheduleCache();
+    _scheduleProvider.invalidateScheduleCache();
     _scheduleSource.fireScheduleSourceChanged();
   }
 }

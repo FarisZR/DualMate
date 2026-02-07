@@ -98,74 +98,80 @@ class _SchedulePageState extends State<SchedulePage> {
 
   @override
   Widget build(BuildContext context) {
-    ScheduleViewModel viewModel = Provider.of<ScheduleViewModel>(context);
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<WeeklyScheduleViewModel>.value(
+          value: weeklyScheduleViewModel,
+        ),
+        ChangeNotifierProvider<DailyScheduleViewModel>.value(
+          value: dailyScheduleViewModel,
+        ),
+      ],
+      child: Builder(
+        builder: (context) {
+          final viewModel = Provider.of<ScheduleViewModel>(context);
+          final weeklyViewModel = Provider.of<WeeklyScheduleViewModel>(context);
+          final hasCachedSchedule = weeklyViewModel.weekSchedule != null;
 
-    final hasCachedSchedule = weeklyScheduleViewModel.weekSchedule != null;
+          if (!viewModel.didSetupProperly && !hasCachedSchedule) {
+            if (viewModel.isInitializingScheduleSource ||
+                !viewModel.didAttemptSetup) {
+              return Padding(
+                padding: const EdgeInsets.all(32),
+                child: ScheduleEmptyStatePlaceholder(),
+              );
+            }
+            return ScheduleEmptyState();
+          } else {
+            if (!_didWarmUp) {
+              return ScheduleEmptyStatePlaceholder();
+            }
+            final pager = PagerWidget(
+              forcedPage: _forcedPage,
+              pages: <PageDefinition>[
+                PageDefinition(
+                  icon: Icon(Icons.view_week),
+                  text: L.of(context).pageWeekOverviewTitle,
+                  builder: (_) => WeeklySchedulePage(),
+                ),
+                PageDefinition(
+                  icon: Icon(Icons.view_day),
+                  text: L.of(context).pageDayOverviewTitle,
+                  builder: (_) => DailySchedulePage(),
+                ),
+              ],
+            );
 
-    if (!viewModel.didSetupProperly && !hasCachedSchedule) {
-      if (viewModel.isInitializingScheduleSource ||
-          !viewModel.didAttemptSetup) {
-        return Padding(
-          padding: const EdgeInsets.all(32),
-          child: ScheduleEmptyStatePlaceholder(),
-        );
-      }
-      return ScheduleEmptyState();
-    } else {
-      if (!_didWarmUp) {
-        return ScheduleEmptyStatePlaceholder();
-      }
-      final pager = PagerWidget(
-        forcedPage: _forcedPage,
-        pages: <PageDefinition>[
-          PageDefinition(
-            icon: Icon(Icons.view_week),
-            text: L.of(context).pageWeekOverviewTitle,
-            builder: (_) =>
-                ChangeNotifierProvider<WeeklyScheduleViewModel>.value(
-              value: weeklyScheduleViewModel,
-              child: WeeklySchedulePage(),
-            ),
-          ),
-          PageDefinition(
-            icon: Icon(Icons.view_day),
-            text: L.of(context).pageDayOverviewTitle,
-            builder: (_) =>
-                ChangeNotifierProvider<DailyScheduleViewModel>.value(
-              value: dailyScheduleViewModel,
-              child: DailySchedulePage(),
-            ),
-          ),
-        ],
-      );
+            if (!viewModel.didSetupProperly &&
+                viewModel.didAttemptSetup &&
+                !viewModel.isInitializingScheduleSource) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
+                    child: BannerWidget(
+                      message: L.of(context).scheduleEmptyStateBannerMessage,
+                      onButtonTap: () async {
+                        await SelectSourceDialog(
+                          KiwiContainer().resolve(),
+                          KiwiContainer().resolve(),
+                        ).show(context);
+                      },
+                      buttonText:
+                          L.of(context).scheduleEmptyStateSetUrl.toUpperCase(),
+                    ),
+                  ),
+                  Expanded(child: pager),
+                ],
+              );
+            }
 
-      if (!viewModel.didSetupProperly &&
-          viewModel.didAttemptSetup &&
-          !viewModel.isInitializingScheduleSource) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
-              child: BannerWidget(
-                message: L.of(context).scheduleEmptyStateBannerMessage,
-                onButtonTap: () async {
-                  await SelectSourceDialog(
-                    KiwiContainer().resolve(),
-                    KiwiContainer().resolve(),
-                  ).show(context);
-                },
-                buttonText:
-                    L.of(context).scheduleEmptyStateSetUrl.toUpperCase(),
-              ),
-            ),
-            Expanded(child: pager),
-          ],
-        );
-      }
-
-      return pager;
-    }
+            return pager;
+          }
+        },
+      ),
+    );
   }
 
   void _handleWidgetPayload() {
