@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/logging/performance_telemetry.dart';
+import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:dualmate/schedule/ui/dailyschedule/daily_schedule_page.dart';
 import 'package:dualmate/schedule/ui/viewmodels/daily_schedule_view_model.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_view_model.dart';
@@ -8,38 +10,44 @@ import 'package:dualmate/schedule/ui/viewmodels/weekly_schedule_view_model.dart'
 import 'package:dualmate/schedule/ui/weeklyschedule/weekly_schedule_page.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_empty_state.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_empty_state_placeholder.dart';
-import 'package:dualmate/common/util/widget_navigation_payload.dart';
+import 'package:dualmate/schedule/ui/widgets/select_source_dialog.dart';
+import 'package:dualmate/ui/banner_widget.dart';
 import 'package:dualmate/ui/pager_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:provider/provider.dart';
-import 'package:dualmate/common/logging/performance_telemetry.dart';
-import 'package:dualmate/ui/banner_widget.dart';
-import 'package:dualmate/schedule/ui/widgets/select_source_dialog.dart';
 
 class SchedulePage extends StatefulWidget {
+  static WeeklyScheduleViewModel? _sharedWeeklyScheduleViewModel;
+  static DailyScheduleViewModel? _sharedDailyScheduleViewModel;
+  static bool _warmUpCompleted = false;
+
+  static void resetSharedState() {
+    _sharedWeeklyScheduleViewModel?.dispose();
+    _sharedWeeklyScheduleViewModel = null;
+    _sharedDailyScheduleViewModel?.dispose();
+    _sharedDailyScheduleViewModel = null;
+    _warmUpCompleted = false;
+  }
+
   @override
   _SchedulePageState createState() => _SchedulePageState();
 }
 
 class _SchedulePageState extends State<SchedulePage> {
-  static WeeklyScheduleViewModel? _sharedWeeklyScheduleViewModel;
-  static DailyScheduleViewModel? _sharedDailyScheduleViewModel;
-  static bool _warmUpCompleted = false;
-
   WeeklyScheduleViewModel get weeklyScheduleViewModel {
-    _sharedWeeklyScheduleViewModel ??= WeeklyScheduleViewModel(
+    SchedulePage._sharedWeeklyScheduleViewModel ??= WeeklyScheduleViewModel(
       KiwiContainer().resolve(),
       KiwiContainer().resolve(),
     );
-    return _sharedWeeklyScheduleViewModel!;
+    return SchedulePage._sharedWeeklyScheduleViewModel!;
   }
 
   DailyScheduleViewModel get dailyScheduleViewModel {
-    _sharedDailyScheduleViewModel ??= DailyScheduleViewModel(
+    SchedulePage._sharedDailyScheduleViewModel ??= DailyScheduleViewModel(
       KiwiContainer().resolve(),
     );
-    return _sharedDailyScheduleViewModel!;
+    return SchedulePage._sharedDailyScheduleViewModel!;
   }
 
   final ValueNotifier<int?> _forcedPage = ValueNotifier<int?>(null);
@@ -54,7 +62,7 @@ class _SchedulePageState extends State<SchedulePage> {
       if (!mounted) return;
       PerformanceTelemetry.instance.markNavEvent(name: "schedule.entry");
     });
-    if (_warmUpCompleted) {
+    if (SchedulePage._warmUpCompleted) {
       _didWarmUp = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -75,7 +83,7 @@ class _SchedulePageState extends State<SchedulePage> {
         unawaited(weeklyScheduleViewModel.initialize());
         setState(() {
           _didWarmUp = true;
-          _warmUpCompleted = true;
+          SchedulePage._warmUpCompleted = true;
         });
       });
     });

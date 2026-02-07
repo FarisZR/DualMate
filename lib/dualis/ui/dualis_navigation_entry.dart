@@ -3,6 +3,7 @@ import 'package:dualmate/common/ui/custom_icons_icons.dart';
 import 'package:dualmate/dualis/ui/dualis_page.dart';
 import 'package:dualmate/dualis/ui/viewmodels/study_grades_view_model.dart';
 import 'package:dualmate/dualis/ui/widgets/dualis_help_dialog.dart';
+import 'package:dualmate/schedule/ui/schedule_page.dart';
 import 'package:dualmate/ui/navigation/navigation_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
@@ -56,6 +57,7 @@ class DualisNavigationEntry extends NavigationEntry<StudyGradesViewModel> {
                 : IconButton(
                     icon: const Icon(CustomIcons.logout),
                     onPressed: () async {
+                      SchedulePage.resetSharedState();
                       await model.logout();
                     },
                     tooltip: L.of(context).logoutButtonTooltip,

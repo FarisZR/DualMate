@@ -284,7 +284,7 @@ class _SettingsPageState extends State<SettingsPage> {
             return ListTile(
               title: Text(L.of(context).settingsDeveloperTitle),
               subtitle: Text(L.of(context).settingsDeveloperSubtitle),
-              onTap: model!.incrementDeveloperTapCount,
+              onTap: model?.incrementDeveloperTapCount,
             );
           }
 

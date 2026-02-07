@@ -371,12 +371,6 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     } catch (e) {
       print("Schedule update failed: $e");
     }
-    try {
-      cancellationToken.throwIfCancelled();
-    } on OperationCancelledException {
-      task.finish();
-      return;
-    }
 
     if (_isDisposed) {
       task.finish();
@@ -424,8 +418,6 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         end,
         token,
       );
-    } on OperationCancelledException {
-      return null;
     } on ScheduleQueryFailedException {
       return null;
     }

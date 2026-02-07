@@ -405,8 +405,12 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
     final formatted = DateFormat.yMMMd(L.of(context).locale.toString())
         .add_Hm()
         .format(lastUpdated);
-    assert(L.of(context).lastUpdatedLabel.contains("%0"));
-    return L.of(context).lastUpdatedLabel.replaceFirst("%0", formatted);
+    final template = L.of(context).lastUpdatedLabel;
+    assert(template.contains("%0"));
+    if (!template.contains("%0")) {
+      return formatted;
+    }
+    return template.replaceFirst("%0", formatted);
   }
 }
 
