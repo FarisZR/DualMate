@@ -386,7 +386,19 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       print("Schedule update failed: $e");
     }
 
+    try {
+      cancellationToken.throwIfCancelled();
+    } on OperationCancelledException {
+      task.finish();
+      return;
+    }
+
     if (_isDisposed) {
+      task.finish();
+      return;
+    }
+
+    if (currentDateStart != start || currentDateEnd != end) {
       task.finish();
       return;
     }
