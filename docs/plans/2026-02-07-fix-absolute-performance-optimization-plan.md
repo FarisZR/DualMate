@@ -1,4 +1,5 @@
 ---
+---
 title: fix: Absolute performance optimization (startup + schedule)
 type: fix
 date: 2026-02-07
