@@ -49,10 +49,15 @@ use caching, lazy loading, and background refresh.
 - If the cached week is empty and the schedule source can query, a network fetch
   is forced to avoid showing an empty schedule as "fresh".
 
+### Cache management
+- The schedule cache can be invalidated manually (e.g., when schedule filters change) via `scheduleProvider.invalidateScheduleCache()`.
+- This ensures that hidden classes or updated source settings take effect immediately on the next navigation or refresh.
+
 ### Refresh behavior
 - Each viewed week has a per-window freshness gate to avoid stale data.
-- The next 14 days are refreshed regularly (periodic background update) so the
-  widget and schedule stay current.
+- The next 14 days are refreshed regularly (periodic background update) so the widget and schedule stay current.
+- **Cache-First Transition**: When opening a week, cached data is applied instantly. If the week is stale (15–30 min), a background fetch is unawaited to update the view without blocking navigation.
+
 
 ## Related files
 - lib/date_management/ui/viewmodels/date_management_view_model.dart

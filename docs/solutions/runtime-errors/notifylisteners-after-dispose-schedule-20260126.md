@@ -32,79 +32,38 @@ Entering then leaving the Schedule tab could log "setState()/notifyListeners cal
 **Attempted Solution 1:** Rely on default ChangeNotifier disposal without guards.
 - **Why it failed:** Pending timers and async refreshes still fired after the widget tree removed listeners, causing late notifications.
 
-## Solution
+### Solution (Modernized)
 
-Added dispose-aware guards and cancellation in schedule view models to stop late notifications:
+We have standardized on using `notifyIfMounted(String property)` in `BaseViewModel` instead of manual `if (!_isDisposed) notifyListeners(property)` checks. This helper centralizes the disposal guard.
 
 ```dart
+// base_view_model.dart
+void notifyIfMounted(String property) {
+  if (isDisposed) return;
+  notifyListeners(property);
+}
+
 // weekly_schedule_view_model.dart
 Future updateSchedule(DateTime start, DateTime end) async {
-  if (_isDisposed) return;
+  if (isDisposed) return;
   await _updateMutex.acquireAndCancelOther();
-  if (_isDisposed) { _updateMutex.release(); return; }
+  if (isDisposed) { _updateMutex.release(); return; }
   try {
     isUpdating = true;
-    if (!_isDisposed) notifyListeners("isUpdating");
+    notifyIfMounted("isUpdating");
     await _doUpdateSchedule(start, end);
   } finally {
     isUpdating = false;
     _updateMutex.release();
-    if (!_isDisposed) notifyListeners("isUpdating");
+    notifyIfMounted("isUpdating");
   }
-}
-
-Future _doUpdateSchedule(...) async {
-  var cached = await scheduleProvider.getCachedSchedule(start, end);
-  cancellationToken.throwIfCancelled();
-  if (_isDisposed) return;
-  _setSchedule(cached, start, end);
-  var updated = await _readScheduleFromService(...);
-  cancellationToken.throwIfCancelled();
-  if (_isDisposed) return;
-  ...
-  if (!_isDisposed) notifyListeners("updateFailed");
-}
-
-void ensureUpdateNowTimerRunning() {
-  if (_updateNowTimer == null || !_updateNowTimer!.isActive) {
-    _updateNowTimer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (_isDisposed) return;
-      notifyListeners("now");
-    });
-  }
-}
-
-@override
-void dispose() {
-  _isDisposed = true;
-  _updateMutex.cancel();
-  _updateNowTimer?.cancel();
-  _errorResetTimer?.cancel();
-  super.dispose();
-}
-
-// schedule_view_model.dart
-_initialSetupTimer = Timer(const Duration(seconds: 1), () {
-  if (_isDisposed) return;
-  _scheduleSourceProvider.setupScheduleSource();
-});
-
-void onDidChangeScheduleSource(...) {
-  if (_isDisposed) return;
-  _didSetupProperly = valid;
-  notifyListeners("didSetupProperly");
-}
-
-@override
-void dispose() {
-  _isDisposed = true;
-  _initialSetupTimer?.cancel();
-  _scheduleSourceProvider.removeDidChangeScheduleSourceCallback(onDidChangeScheduleSource);
-  super.dispose();
 }
 ```
 
-Key changes: guard every timer/notify path with `_isDisposed`, cancel periodic timers and mutex token on dispose, and early-return during async refresh when disposed.
+Key changes:
+1. Inherit from `BaseViewModel` and use `notifyIfMounted`.
+2. Ensure `isDisposed` is set and all callbacks/timers are removed in `dispose()`.
+3. Use `cancellationToken.throwIfCancelled()` and re-check `isDisposed` after every async `await`.
 
 ## Why This Works
 

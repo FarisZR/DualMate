@@ -53,6 +53,12 @@ This document summarizes the design decisions, issues fixed, and the reasoning p
 **Fix**: Build theme from light/dark base, set dark surfaces, and explicitly set `hintStyle`, `labelStyle`, and focused/disabled border styles.
 **Why**: Ensures consistent dark theme and improved contrast.
 
+### 8) Startup and Schedule Performance Optimization
+**Symptom**: Skipped >120 frames at launch; >50 frames on schedule entry.
+**Cause**: Heavy foreground initialization (canteen refresh, calendar sync) and main-thread schedule parsing.
+**Fix**: Deferred heavy init to post-frame callbacks; enforced isolate-based parsing; implemented `notifyIfMounted` in ViewModels; added staleness/cancellation guards for background fetches.
+**Why**: Ensures a smooth 60fps experience during critical transitions and prevents crashes on disposed ViewModels.
+
 ## How We Got to a Running App
 1. **Observed crashes** by running the app on a device and monitoring logs.
 2. **Triaged root causes** (navigator observer misuse, provider scope, late-init fields, DB updates).

@@ -24,11 +24,9 @@ pages use identical cached entries, freshness logic, and update paths.
 4. If the window is stale, ScheduleProvider fetches updates and the cache is
    refreshed, then the events list is rebuilt from the updated cache.
 
-## Why this matters
-
-- Consistent data between schedule and events.
-- Reduced duplicate fetching and parsing work.
-- Single freshness gate strategy with shared schedule infrastructure.
+## Cache Invalidation
+- When a user changes schedule filters (hiding/showing specific classes), the `FilterViewModel` calls `invalidateScheduleCache()`.
+- This ensures the next view of the schedule accurately reflects the new filters by forcing a re-read and re-filter from the underlying database.
 
 ## Related files
 

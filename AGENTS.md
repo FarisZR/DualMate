@@ -57,29 +57,27 @@ ios/                         # iOS native code (Swift)
 ### Import Organization
 ```dart
 import 'dart:io';                                           // 1. Dart SDK
-import 'package:dhbwstudentapp/common/appstart/app_initializer.dart';  // 2. Own package
+import 'package:dualmate/common/logging/performance_telemetry.dart'; // 2. Own package
 import 'package:flutter/material.dart';                     // 3. Third-party
 ```
+Note: Always group own-package imports before third-party imports.
 
 ### Documentation
-Use triple-slash `///` doc comments:
-```dart
-///
-/// This class handles authentication with the Dualis API.
-///
-class DualisAuthentication {
-```
-
+Use triple-slash `///` doc comments for classes and methods.
+Markdown headings in documentation must always have a space and proper prefix (e.g., `# Heading`, `## Subheading`).
 New features and fixes are to be documented under the `docs` directory.
 
 ## Architecture Patterns
 
 ### MVVM Pattern
 - ViewModels extend `BaseViewModel` (uses `PropertyChangeNotifier`)
-- Call `notifyListeners("propertyName")` to notify property changes
+- Use `notifyIfMounted("propertyName")` instead of `notifyListeners` to safely notify property changes after async work.
+- Avoid heavy initialization in constructors; use an async `initialize()` method instead.
+- Ensure all callbacks (e.g., `_onDidChangeScheduleSource`) are removed in `dispose()`.
 
 ### Dependency Injection
 - Use `KiwiContainer` (see `lib/common/appstart/service_injector.dart`)
+- **Preferred**: Inject dependencies via the constructor rather than resolving inside methods.
 - Register: `KiwiContainer().registerInstance(MyService())`
 - Resolve: `KiwiContainer().resolve<MyService>()`
 
