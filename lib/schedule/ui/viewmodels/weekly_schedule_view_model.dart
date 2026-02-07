@@ -147,15 +147,19 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   void _scheduleInitialRefresh() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (_isDisposed) return;
-      Future.delayed(const Duration(milliseconds: 150), () {
+      try {
+        await Future.delayed(const Duration(milliseconds: 150));
         if (_isDisposed) return;
         if (!scheduleSourceProvider.didSetupCorrectly()) {
           return;
         }
-        updateSchedule(currentDateStart, currentDateEnd);
-      });
+        await updateSchedule(currentDateStart, currentDateEnd);
+      } catch (error, trace) {
+        print("Weekly schedule refresh failed: $error");
+        print(trace);
+      }
     });
   }
 
@@ -177,10 +181,14 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     bool setupSuccess,
   ) async {
     if (setupSuccess) {
-      Future.delayed(const Duration(milliseconds: 500), () {
+      try {
+        await Future.delayed(const Duration(milliseconds: 500));
         if (_isDisposed) return;
-        updateSchedule(currentDateStart, currentDateEnd);
-      });
+        await updateSchedule(currentDateStart, currentDateEnd);
+      } catch (error, trace) {
+        print("Weekly schedule source refresh failed: $error");
+        print(trace);
+      }
     }
   }
 
