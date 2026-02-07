@@ -173,7 +173,12 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     if (_isDisposed) return;
     var start = toStartOfDay(DateTime.now());
     var end = addDays(start, 14);
-    await updateSchedule(start, end, force: true);
+    try {
+      await updateSchedule(start, end, force: true);
+    } catch (error, trace) {
+      print("Weekly schedule widget refresh failed: $error");
+      print(trace);
+    }
   }
 
   Future<void> _onDidChangeScheduleSource(
@@ -403,34 +408,40 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       return;
     }
 
-    if (updatedSchedule != null) {
-      var schedule = updatedSchedule.schedule;
+    try {
+      if (updatedSchedule != null) {
+        var schedule = updatedSchedule.schedule;
 
-      _setSchedule(schedule, start, end);
+        _setSchedule(schedule, start, end);
 
-      _hasQueryErrors = updatedSchedule.hasError;
-      notifyIfMounted("hasQueryErrors");
+        _hasQueryErrors = updatedSchedule.hasError;
+        notifyIfMounted("hasQueryErrors");
 
-      if (updatedSchedule.hasError) {
-        _queryFailedCallback?.call();
+        if (updatedSchedule.hasError) {
+          _queryFailedCallback?.call();
+        }
+
+        scheduleUrl = schedule.urls.isNotEmpty ? schedule.urls[0] : null;
       }
 
-      scheduleUrl = schedule.urls.isNotEmpty ? schedule.urls[0] : null;
+      if (updatedSchedule != null) {
+        _entryRefreshGate.markFetched(start, end, DateTime.now());
+      }
+
+      updateFailed = (updatedSchedule == null);
+      notifyIfMounted("updateFailed");
+
+      if (updateFailed) {
+        _cancelErrorInFuture();
+      }
+
+      print("Refreshing done");
+    } catch (error, trace) {
+      print("Weekly schedule background refresh failed: $error");
+      print(trace);
+    } finally {
+      task.finish();
     }
-
-    if (updatedSchedule != null) {
-      _entryRefreshGate.markFetched(start, end, DateTime.now());
-    }
-
-    updateFailed = (updatedSchedule == null);
-    notifyIfMounted("updateFailed");
-
-    if (updateFailed) {
-      _cancelErrorInFuture();
-    }
-
-    print("Refreshing done");
-    task.finish();
   }
 
   Future<ScheduleQueryResult?> _readScheduleFromService(
@@ -489,6 +500,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   @override
   void dispose() {
     _isDisposed = true;
+
+    scheduleSourceProvider
+        .removeDidChangeScheduleSourceCallback(_onDidChangeScheduleSource);
 
     _updateMutex.cancel();
 
