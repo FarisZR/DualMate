@@ -189,7 +189,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       try {
         await Future.delayed(const Duration(milliseconds: 500));
         if (_isDisposed) return;
-        await updateSchedule(currentDateStart, currentDateEnd);
+        await updateSchedule(currentDateStart, currentDateEnd, force: true);
       } catch (error, trace) {
         print("Weekly schedule source refresh failed: $error");
         print(trace);
@@ -289,7 +289,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
 
     var now = DateTime.now();
-    if (!force && !_updateRequestGate.shouldAllow(start, end, now)) {
+    if (!_updateRequestGate.shouldAllow(start, end, now, force: force)) {
       return;
     }
 

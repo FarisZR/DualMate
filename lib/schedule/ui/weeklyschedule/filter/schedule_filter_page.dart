@@ -16,7 +16,7 @@ class ScheduleFilterPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        _viewModel.applyFilter();
+        await _viewModel.applyFilter();
         return true;
       },
       child: Scaffold(

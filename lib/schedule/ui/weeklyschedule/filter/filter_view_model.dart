@@ -37,7 +37,7 @@ class FilterViewModel extends BaseViewModel {
     notifyIfMounted("filterStates");
   }
 
-  void applyFilter() async {
+  Future<void> applyFilter() async {
     var allFilteredNames = filterStates
         .where((element) => !element.isDisplayed)
         .map((e) => e.entryName)
