@@ -16,7 +16,17 @@ class ScheduleFilterPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        await _viewModel.applyFilter();
+        try {
+          await _viewModel.applyFilter();
+        } catch (e, trace) {
+          debugPrint('Failed to apply schedule filter: $e');
+          debugPrint('$trace');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to save filters'),
+            ),
+          );
+        }
         return true;
       },
       child: Scaffold(
