@@ -18,12 +18,28 @@ class ScheduleFilterPage extends StatelessWidget {
       onWillPop: () async {
         try {
           await _viewModel.applyFilter();
+        } on FilterValidationException catch (e, trace) {
+          debugPrint('Failed to validate schedule filter: $e');
+          debugPrint('$trace');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(L.of(context).filterSaveError),
+            ),
+          );
+        } on FilterSaveException catch (e, trace) {
+          debugPrint('Failed to persist schedule filter: $e');
+          debugPrint('$trace');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(L.of(context).filterSaveError),
+            ),
+          );
         } catch (e, trace) {
           debugPrint('Failed to apply schedule filter: $e');
           debugPrint('$trace');
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to save filters'),
+            SnackBar(
+              content: Text(L.of(context).filterSaveError),
             ),
           );
         }
