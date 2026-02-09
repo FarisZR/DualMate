@@ -61,4 +61,24 @@ void main() {
       isTrue,
     );
   });
+
+  test('allows same range within interval when forced', () {
+    final gate = ScheduleUpdateRequestGate(
+      minInterval: const Duration(milliseconds: 300),
+    );
+    final start = DateTime(2026, 1, 27);
+    final end = DateTime(2026, 2, 3);
+    final now = DateTime(2026, 1, 27, 12, 0, 0, 0);
+
+    expect(gate.shouldAllow(start, end, now), isTrue);
+    expect(
+      gate.shouldAllow(
+        start,
+        end,
+        now.add(const Duration(milliseconds: 150)),
+        force: true,
+      ),
+      isTrue,
+    );
+  });
 }

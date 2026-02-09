@@ -8,7 +8,19 @@ class ScheduleUpdateRequestGate {
     this.minInterval = const Duration(milliseconds: 300),
   });
 
-  bool shouldAllow(DateTime start, DateTime end, DateTime now) {
+  bool shouldAllow(
+    DateTime start,
+    DateTime end,
+    DateTime now, {
+    bool force = false,
+  }) {
+    if (force) {
+      _lastRequestAt = now;
+      _lastStart = start;
+      _lastEnd = end;
+      return true;
+    }
+
     final isSameRange = _lastStart != null &&
         _lastEnd != null &&
         _lastStart == start &&

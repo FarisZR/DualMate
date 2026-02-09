@@ -4,6 +4,24 @@ import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 
+class FilterValidationException implements Exception {
+  final String message;
+
+  FilterValidationException(this.message);
+
+  @override
+  String toString() => 'FilterValidationException: $message';
+}
+
+class FilterSaveException implements Exception {
+  final Object innerException;
+
+  FilterSaveException(this.innerException);
+
+  @override
+  String toString() => 'FilterSaveException: $innerException';
+}
+
 class FilterViewModel extends BaseViewModel {
   final ScheduleEntryRepository _scheduleEntryRepository;
   final ScheduleFilterRepository _scheduleFilterRepository;
@@ -37,16 +55,29 @@ class FilterViewModel extends BaseViewModel {
     notifyIfMounted("filterStates");
   }
 
-  void applyFilter() async {
+  Future<void> applyFilter() async {
     var allFilteredNames = filterStates
         .where((element) => !element.isDisplayed)
         .map((e) => e.entryName)
         .toList();
 
-    await _scheduleFilterRepository.saveAllHiddenNames(allFilteredNames);
+    if (allFilteredNames.any((name) => name.trim().isEmpty)) {
+      throw FilterValidationException("Filter entry names must not be empty");
+    }
 
-    _scheduleProvider.invalidateScheduleCache();
-    _scheduleSource.fireScheduleSourceChanged();
+    final uniqueNames = allFilteredNames.toSet();
+    if (uniqueNames.length != allFilteredNames.length) {
+      throw FilterValidationException("Filter entry names must be unique");
+    }
+
+    try {
+      await _scheduleFilterRepository.saveAllHiddenNames(allFilteredNames);
+
+      _scheduleProvider.invalidateScheduleCache();
+      _scheduleSource.fireScheduleSourceChanged();
+    } catch (e) {
+      throw FilterSaveException(e);
+    }
   }
 }
 
