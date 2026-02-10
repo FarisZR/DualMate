@@ -11,7 +11,7 @@ final de = {
   "calendarSyncPageBeginSync": "Kalender synchronisieren",
   "applicationName": "DualMate",
   "applicationLegalese":
-      "Entwickelt von Benedikt Kolb. Dies ist keine offizielle App der DHBW Stuttgart und wird in Eigeninitiative entwickelt.",
+      "Entwickelt von FarisZR, basierend auf der Arbeit von Benedikt Kolb. Dies ist keine offizielle App der DHBW Stuttgart und wird in Eigeninitiative entwickelt.",
   "settingsAbout": "Über DualMate",
   "settingsAboutTitle": "Über",
   "settingsDarkMode": "Dark mode",

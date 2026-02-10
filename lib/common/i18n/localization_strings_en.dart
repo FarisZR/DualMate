@@ -5,7 +5,7 @@ final en = {
   "settingsViewSourceCode": "View the source code on GitHub",
   "applicationName": "DualMate",
   "applicationLegalese":
-      "Developed by Benedikt Kolb. This is not an official app of the DHBW Stuttgart.",
+      "Developed by FarisZR, based on the work of Benedikt Kolb. This is not an official app of the DHBW Stuttgart.",
   "settingsAbout": "About this app",
   "settingsAboutTitle": "About",
   "settingsDarkMode": "Dark mode",
