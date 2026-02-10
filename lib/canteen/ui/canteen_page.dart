@@ -3,6 +3,7 @@ import 'package:dualmate/canteen/ui/widgets/filter_dropdown.dart';
 import 'package:dualmate/canteen/ui/widgets/meal_card.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
+import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -15,12 +16,11 @@ class CanteenPage extends StatefulWidget {
 }
 
 class _CanteenPageState extends State<CanteenPage> {
-  static const int _basePage = 10000;
-
   late CanteenViewModel viewModel;
   late PageController pageController;
   late ValueNotifier<int> pageNotifier;
   late DateTime baseDate;
+  DateTime? _selectedDate;
   bool _isApplyingWidgetPayload = false;
 
   @override
@@ -29,13 +29,13 @@ class _CanteenPageState extends State<CanteenPage> {
     viewModel = Provider.of<CanteenViewModel>(context, listen: false);
     viewModel.initialize();
     baseDate = _normalizeToWeekday(DateTime.now());
-    pageController = PageController(initialPage: _basePage);
-    pageNotifier = ValueNotifier<int>(_basePage);
+    pageController = PageController(initialPage: 0);
+    pageNotifier = ValueNotifier<int>(0);
     WidgetNavigationPayloadStore.instance.addListener(_handleWidgetPayload);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       PerformanceTelemetry.instance.markNavEvent(name: "canteen.entry");
-      _loadWeekForDate(baseDate);
+      _loadContextWeeks(baseDate);
       _applyWidgetPayload();
     });
   }
@@ -55,144 +55,136 @@ class _CanteenPageState extends State<CanteenPage> {
 
     return PropertyChangeProvider<CanteenViewModel, String>(
       value: viewModel,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ValueListenableBuilder<int>(
-                    valueListenable: pageNotifier,
-                    builder: (context, page, _) {
-                      var date = _dateForPage(page);
-                      return AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        transitionBuilder: (child, animation) {
-                          var offsetAnimation = Tween<Offset>(
-                            begin: const Offset(0, 0.15),
-                            end: Offset.zero,
-                          ).animate(animation);
+      child: PropertyChangeConsumer<CanteenViewModel, String>(
+        properties: const ["weeklyMenus", "loadingWeeks", "weekErrors"],
+        builder: (
+          BuildContext context,
+          CanteenViewModel? model,
+          Set<String>? properties,
+        ) {
+          if (model == null) return const SizedBox();
+          final visibleDays = model.visibleContentDays;
+          _syncPageForVisibleDays(model, visibleDays);
+          _applyWidgetPayload(visibleDays: visibleDays);
 
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: offsetAnimation,
-                              child: child,
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ValueListenableBuilder<int>(
+                        valueListenable: pageNotifier,
+                        builder: (context, page, _) {
+                          final date =
+                              _displayDateForPage(page, visibleDays, model);
+                          return AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            transitionBuilder: (child, animation) {
+                              var offsetAnimation = Tween<Offset>(
+                                begin: const Offset(0, 0.15),
+                                end: Offset.zero,
+                              ).animate(animation);
+
+                              return FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position: offsetAnimation,
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: Text(
+                              dateFormat.format(date),
+                              key: ValueKey(date.toIso8601String()),
+                              style: Theme.of(context).textTheme.titleMedium,
                             ),
                           );
                         },
-                        child: Text(
-                          dateFormat.format(date),
-                          key: ValueKey(date.toIso8601String()),
-                          style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Row(
+                  children: [
+                    Text(
+                      L.of(context).filterTitle,
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: PropertyChangeConsumer<CanteenViewModel, String>(
+                          properties: const ["filter"],
+                          builder: (
+                            BuildContext context,
+                            CanteenViewModel? model,
+                            Set<String>? properties,
+                          ) {
+                            if (model == null) return const SizedBox();
+                            return FilterDropdown(
+                              filter: model.filter,
+                              onChanged: model.setFilter,
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Row(
-              children: [
-                Text(
-                  L.of(context).filterTitle,
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: PropertyChangeConsumer<CanteenViewModel, String>(
-                      properties: const ["filter"],
-                      builder: (
-                        BuildContext context,
-                        CanteenViewModel? model,
-                        Set<String>? properties,
-                      ) {
-                        if (model == null) return const SizedBox();
-                        return FilterDropdown(
-                          filter: model.filter,
-                          onChanged: model.setFilter,
+              ),
+              Expanded(
+                child: Stack(
+                  children: [
+                    _buildPageContent(model, visibleDays),
+                    ValueListenableBuilder<int>(
+                      valueListenable: pageNotifier,
+                      builder: (context, page, _) {
+                        final date =
+                            _displayDateForPage(page, visibleDays, model);
+                        var showButton = !_isBaseDate(date);
+
+                        return Positioned(
+                          right: 16,
+                          bottom: 16,
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 200),
+                            opacity: showButton ? 1 : 0,
+                            child: IgnorePointer(
+                              ignoring: !showButton,
+                              child: FloatingActionButton.extended(
+                                heroTag: "canteenBackToToday",
+                                onPressed: () {
+                                  final targetDay =
+                                      model.nearestVisibleContentDay(baseDate);
+                                  if (targetDay == null) return;
+                                  _goToVisibleDay(
+                                    targetDay,
+                                    visibleDays,
+                                    animate: true,
+                                  );
+                                },
+                                icon: const Icon(Icons.today),
+                                label: Text(L.of(context).canteenBackToToday),
+                              ),
+                            ),
+                          ),
                         );
                       },
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Stack(
-              children: [
-                PageView.builder(
-                  controller: pageController,
-                  allowImplicitScrolling: true,
-                  onPageChanged: (index) {
-                    pageNotifier.value = index;
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!mounted) return;
-                      PerformanceTelemetry.instance
-                          .markNavEvent(name: "canteen.pageChanged");
-                      _loadWeekForDate(_dateForPage(index));
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    var date = _dateForPage(index);
-                    return _CanteenDayView(date: date);
-                  },
-                ),
-                ValueListenableBuilder<int>(
-                  valueListenable: pageNotifier,
-                  builder: (context, page, _) {
-                    var date = _dateForPage(page);
-                    var showButton = !_isBaseDate(date);
-
-                    return Positioned(
-                      right: 16,
-                      bottom: 16,
-                      child: AnimatedOpacity(
-                        duration: const Duration(milliseconds: 200),
-                        opacity: showButton ? 1 : 0,
-                        child: IgnorePointer(
-                          ignoring: !showButton,
-                          child: FloatingActionButton.extended(
-                            heroTag: "canteenBackToToday",
-                            onPressed: () {
-                              pageController.animateToPage(
-                                _basePage,
-                                duration: const Duration(milliseconds: 250),
-                                curve: Curves.easeOut,
-                              );
-                            },
-                            icon: const Icon(Icons.today),
-                            label: Text(L.of(context).canteenBackToToday),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
-  }
-
-  DateTime _dateForPage(int page) {
-    var offset = page - _basePage;
-    var baseWeekStart = _toMonday(baseDate);
-    var baseIndex = baseDate.weekday - 1;
-    var totalIndex = baseIndex + offset;
-    var weekOffset = _floorDiv(totalIndex, 5);
-    var dayIndex = totalIndex - (weekOffset * 5);
-    var date = baseWeekStart.add(Duration(days: weekOffset * 7 + dayIndex));
-    return _normalizeToWeekday(date);
   }
 
   DateTime _normalizeToWeekday(DateTime date) {
@@ -206,28 +198,60 @@ class _CanteenPageState extends State<CanteenPage> {
     return normalized;
   }
 
-  int _pageForDate(DateTime date) {
-    final normalized = _normalizeToWeekday(date);
-    final baseWeekStart = _toMonday(baseDate);
-    final targetWeekStart = _toMonday(normalized);
-    final weekOffset = targetWeekStart.difference(baseWeekStart).inDays ~/ 7;
-    final baseIndex = baseDate.weekday - 1;
-    final dayIndex = normalized.weekday - 1;
-    final totalIndex = weekOffset * 5 + dayIndex;
-    return _basePage + (totalIndex - baseIndex);
-  }
-
-  DateTime _toMonday(DateTime date) {
-    return date.subtract(Duration(days: date.weekday - 1));
-  }
-
-  int _floorDiv(int value, int divisor) {
-    if (value >= 0) return value ~/ divisor;
-    return -(((-value + divisor - 1) ~/ divisor));
-  }
-
   void _loadWeekForDate(DateTime date) {
     viewModel.ensureWeekLoaded(viewModel.weekStartFor(date));
+  }
+
+  void _loadContextWeeks(DateTime date) {
+    _loadWeekForDate(date);
+    _loadWeekForDate(date.add(const Duration(days: 7)));
+    _loadWeekForDate(date.subtract(const Duration(days: 7)));
+  }
+
+  DateTime _displayDateForPage(
+    int page,
+    List<DateTime> visibleDays,
+    CanteenViewModel model,
+  ) {
+    if (visibleDays.isNotEmpty) {
+      final boundedPage = page.clamp(0, visibleDays.length - 1) as int;
+      return visibleDays[boundedPage];
+    }
+
+    return _selectedDate ??
+        model.nearestVisibleContentDay(baseDate) ??
+        baseDate;
+  }
+
+  Widget _buildPageContent(
+    CanteenViewModel model,
+    List<DateTime> visibleDays,
+  ) {
+    if (visibleDays.isEmpty) {
+      return _CanteenDayView(date: _selectedDate ?? baseDate);
+    }
+
+    return StretchingOverscrollIndicator(
+      axisDirection: AxisDirection.right,
+      child: PageView.builder(
+        controller: pageController,
+        allowImplicitScrolling: true,
+        itemCount: visibleDays.length,
+        onPageChanged: (index) {
+          pageNotifier.value = index;
+          _selectedDate = visibleDays[index];
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            PerformanceTelemetry.instance
+                .markNavEvent(name: "canteen.pageChanged");
+            _loadContextWeeks(visibleDays[index]);
+          });
+        },
+        itemBuilder: (context, index) {
+          return _CanteenDayView(date: visibleDays[index]);
+        },
+      ),
+    );
   }
 
   void _handleWidgetPayload() {
@@ -237,29 +261,82 @@ class _CanteenPageState extends State<CanteenPage> {
     });
   }
 
-  void _applyWidgetPayload() {
+  void _applyWidgetPayload({
+    List<DateTime>? visibleDays,
+  }) {
     if (_isApplyingWidgetPayload) return;
     final payload = WidgetNavigationPayloadStore.instance.peekCanteenPayload();
     if (payload == null || payload.dayStart == null) return;
 
     final targetDate = _normalizeToWeekday(payload.dayStart!);
     print("Widget canteen target date: $targetDate");
-    final targetPage = _pageForDate(targetDate);
+    _loadContextWeeks(targetDate);
+    final currentVisibleDays = visibleDays ?? viewModel.visibleContentDays;
+    if (currentVisibleDays.isEmpty) return;
 
     if (!pageController.hasClients) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        _applyWidgetPayload();
+        _applyWidgetPayload(visibleDays: currentVisibleDays);
       });
       return;
     }
 
+    final targetDay = viewModel.nearestVisibleContentDay(targetDate);
+    if (targetDay == null) return;
+
     _isApplyingWidgetPayload = true;
+    _goToVisibleDay(targetDay, currentVisibleDays);
     WidgetNavigationPayloadStore.instance.takeCanteenPayload();
-    pageController.jumpToPage(targetPage);
-    pageNotifier.value = targetPage;
-    _loadWeekForDate(targetDate);
     _isApplyingWidgetPayload = false;
+  }
+
+  void _syncPageForVisibleDays(
+    CanteenViewModel model,
+    List<DateTime> visibleDays,
+  ) {
+    if (visibleDays.isEmpty) return;
+
+    final currentTarget = _selectedDate ?? baseDate;
+    final syncedDate = model.nearestVisibleContentDay(currentTarget);
+    if (syncedDate == null) return;
+
+    final targetIndex =
+        visibleDays.indexWhere((day) => isAtSameDay(day, syncedDate));
+    if (targetIndex < 0) return;
+
+    _selectedDate = syncedDate;
+    if (pageNotifier.value == targetIndex) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !pageController.hasClients) return;
+      pageController.jumpToPage(targetIndex);
+      pageNotifier.value = targetIndex;
+    });
+  }
+
+  void _goToVisibleDay(
+    DateTime targetDay,
+    List<DateTime> visibleDays, {
+    bool animate = false,
+  }) {
+    final targetIndex =
+        visibleDays.indexWhere((day) => isAtSameDay(day, targetDay));
+    if (targetIndex < 0) return;
+    _selectedDate = targetDay;
+
+    if (!pageController.hasClients) return;
+    if (animate) {
+      pageController.animateToPage(
+        targetIndex,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    } else {
+      pageController.jumpToPage(targetIndex);
+    }
+
+    pageNotifier.value = targetIndex;
   }
 
   bool _isBaseDate(DateTime date) {

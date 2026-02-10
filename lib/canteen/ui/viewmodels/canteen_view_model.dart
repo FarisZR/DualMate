@@ -70,6 +70,40 @@ class CanteenViewModel extends BaseViewModel {
     return mealsForDay(weekStartFor(date), date);
   }
 
+  List<DateTime> get visibleContentDays {
+    final days = <DateTime>{};
+
+    for (final weeklyMenus in _weeklyMenus.values) {
+      for (final menu in weeklyMenus) {
+        if (menu.meals.isEmpty) continue;
+        days.add(toStartOfDay(menu.date));
+      }
+    }
+
+    final sortedDays = days.toList();
+    sortedDays.sort((a, b) => a.compareTo(b));
+    return sortedDays;
+  }
+
+  DateTime? nearestVisibleContentDay(DateTime targetDate) {
+    final visibleDays = visibleContentDays;
+    if (visibleDays.isEmpty) return null;
+
+    final normalizedTarget = toStartOfDay(targetDate);
+    var nearest = visibleDays.first;
+    var minDistance = nearest.difference(normalizedTarget).inDays.abs();
+
+    for (final day in visibleDays.skip(1)) {
+      final distance = day.difference(normalizedTarget).inDays.abs();
+      if (distance < minDistance) {
+        nearest = day;
+        minDistance = distance;
+      }
+    }
+
+    return nearest;
+  }
+
   Future<void> loadWeek(DateTime weekStart) async {
     if (_loadingWeeks.contains(weekStart)) return;
 
