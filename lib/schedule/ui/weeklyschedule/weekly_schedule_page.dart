@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:animations/animations.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/widgets/error_display.dart';
@@ -17,7 +19,8 @@ class WeeklySchedulePage extends StatefulWidget {
   _WeeklySchedulePageState createState() => _WeeklySchedulePageState();
 }
 
-class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
+class _WeeklySchedulePageState extends State<WeeklySchedulePage>
+    with WidgetsBindingObserver {
   late WeeklyScheduleViewModel viewModel;
   double _dragDelta = 0;
   bool _isApplyingWidgetPayload = false;
@@ -27,6 +30,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetNavigationPayloadStore.instance.addListener(_handleWidgetPayload);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -36,8 +40,16 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     WidgetNavigationPayloadStore.instance.removeListener(_handleWidgetPayload);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !mounted) return;
+    final model = Provider.of<WeeklyScheduleViewModel>(context, listen: false);
+    unawaited(model.refreshWidgetRangeInBackground());
   }
 
   void _showQueryFailedSnackBar() {

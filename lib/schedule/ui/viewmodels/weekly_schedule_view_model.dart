@@ -17,7 +17,6 @@ import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_freshness_gate.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_update_request_gate.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 class WeeklyScheduleViewModel extends BaseViewModel {
@@ -25,6 +24,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   final ScheduleProvider scheduleProvider;
   final ScheduleSourceProvider scheduleSourceProvider;
+  final DateTime Function() _nowProvider;
 
   late DateTime currentDateStart;
   late DateTime currentDateEnd;
@@ -60,7 +60,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   String? scheduleUrl;
 
-  DateTime get now => DateTime.now();
+  DateTime get now => _nowProvider();
 
   Timer? _errorResetTimer;
   Timer? _updateNowTimer;
@@ -80,8 +80,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   WeeklyScheduleViewModel(
     this.scheduleProvider,
-    this.scheduleSourceProvider,
-  );
+    this.scheduleSourceProvider, {
+    DateTime Function()? nowProvider,
+  }) : _nowProvider = nowProvider ?? DateTime.now;
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -118,8 +119,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   Future<void> _initViewModel() async {
-    currentDateStart =
-        toStartOfDay(toDayOfWeek(DateTime.now(), DateTime.monday));
+    currentDateStart = toStartOfDay(toDayOfWeek(now, DateTime.monday));
     currentDateEnd = toNextWeek(currentDateStart);
     try {
       if (_lastCachedSchedule != null) {
@@ -166,15 +166,23 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   void _ensureWindowRefreshTimer() {
     _windowRefreshTimer?.cancel();
     _windowRefreshTimer = Timer.periodic(
-        const Duration(minutes: 15), (_) => _refreshWidgetRange());
+      const Duration(minutes: 15),
+      (_) => refreshWidgetRangeInBackground(),
+    );
   }
 
-  Future<void> _refreshWidgetRange() async {
+  Future<void> refreshWidgetRangeInBackground() async {
     if (_isDisposed) return;
-    var start = toStartOfDay(DateTime.now());
+    var start = toStartOfDay(now);
     var end = addDays(start, 14);
     try {
-      await updateSchedule(start, end, force: true);
+      // Keep widget data fresh without changing the currently visible week.
+      await updateSchedule(
+        start,
+        end,
+        force: true,
+        applyToVisibleState: false,
+      );
     } catch (error, trace) {
       print("Weekly schedule widget refresh failed: $error");
       print(trace);
@@ -244,8 +252,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   Future goToToday() async {
-    currentDateStart =
-        toStartOfDay(toDayOfWeek(DateTime.now(), DateTime.monday));
+    currentDateStart = toStartOfDay(toDayOfWeek(now, DateTime.monday));
     currentDateEnd = toNextWeek(currentDateStart);
     await _openWeekFromCache(currentDateStart, currentDateEnd);
     await updateSchedule(currentDateStart, currentDateEnd);
@@ -280,20 +287,24 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
   }
 
-  Future updateSchedule(DateTime start, DateTime end,
-      {bool force = false}) async {
+  Future updateSchedule(
+    DateTime start,
+    DateTime end, {
+    bool force = false,
+    bool applyToVisibleState = true,
+  }) async {
     if (_isDisposed) return;
 
     if (_shouldSkipUpdate(start, end)) {
       return;
     }
 
-    var now = DateTime.now();
-    if (!_updateRequestGate.shouldAllow(start, end, now, force: force)) {
+    final nowValue = now;
+    if (!_updateRequestGate.shouldAllow(start, end, nowValue, force: force)) {
       return;
     }
 
-    if (!force && !_entryRefreshGate.isStale(start, end, now)) {
+    if (!force && !_entryRefreshGate.isStale(start, end, nowValue)) {
       return;
     }
 
@@ -313,26 +324,42 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
 
     try {
-      isUpdating = true;
-      notifyIfMounted("isUpdating");
+      if (applyToVisibleState) {
+        isUpdating = true;
+        notifyIfMounted("isUpdating");
+      }
 
       if (!scheduleSourceProvider.didSetupCorrectly()) {
-        updateFailed = true;
-        notifyIfMounted("updateFailed");
-        _cancelErrorInFuture();
+        if (applyToVisibleState) {
+          updateFailed = true;
+          notifyIfMounted("updateFailed");
+          _cancelErrorInFuture();
+        }
         _updateMutex.cancel();
         return;
       }
 
-      await _doUpdateSchedule(start, end);
+      await _doUpdateSchedule(
+        start,
+        end,
+        applyToVisibleState: applyToVisibleState,
+      );
     } finally {
-      isUpdating = false;
+      if (applyToVisibleState) {
+        isUpdating = false;
+      }
       _updateMutex.release();
-      notifyIfMounted("isUpdating");
+      if (applyToVisibleState) {
+        notifyIfMounted("isUpdating");
+      }
     }
   }
 
-  Future _doUpdateSchedule(DateTime start, DateTime end) async {
+  Future _doUpdateSchedule(
+    DateTime start,
+    DateTime end, {
+    bool applyToVisibleState = true,
+  }) async {
     print("Refreshing schedule...");
     final task = PerformanceTelemetry.instance
         .startTask('schedule.refresh.${start.toIso8601String()}');
@@ -349,14 +376,16 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     cancellationToken.throwIfCancelled();
     if (_isDisposed) return;
 
-    _setSchedule(cachedSchedule, start, end);
+    if (applyToVisibleState) {
+      _setSchedule(cachedSchedule, start, end);
+    }
 
-    final now = DateTime.now();
+    final nowValue = now;
     final shouldForceFetch = cachedSchedule.entries.isEmpty &&
         scheduleSourceProvider.currentScheduleSource.canQuery();
     final isStale = shouldForceFetch ||
-        _freshnessGate.isStale(start, end, now) ||
-        _isWindowStale(start, end, now);
+        _freshnessGate.isStale(start, end, nowValue) ||
+        _isWindowStale(start, end, nowValue);
 
     if (!isStale) {
       print("Schedule fresh; skip network fetch");
@@ -365,7 +394,13 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
 
     unawaited(
-      _refreshScheduleInBackground(start, end, cancellationToken, task),
+      _refreshScheduleInBackground(
+        start,
+        end,
+        cancellationToken,
+        task,
+        applyToVisibleState: applyToVisibleState,
+      ),
     );
   }
 
@@ -373,8 +408,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     DateTime start,
     DateTime end,
     CancellationToken cancellationToken,
-    developer.TimelineTask task,
-  ) async {
+    developer.TimelineTask task, {
+    bool applyToVisibleState = true,
+  }) async {
     ScheduleQueryResult? updatedSchedule;
     try {
       updatedSchedule = await _readScheduleFromService(
@@ -382,8 +418,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         end,
         cancellationToken,
       );
-      _freshnessGate.markFetched(start, end, DateTime.now());
-      _markWindowFetched(start, end, DateTime.now());
+      _freshnessGate.markFetched(start, end, now);
+      _markWindowFetched(start, end, now);
     } on OperationCancelledException {
       task.finish();
       return;
@@ -399,6 +435,11 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
 
     if (_isDisposed) {
+      task.finish();
+      return;
+    }
+
+    if (!applyToVisibleState) {
       task.finish();
       return;
     }
@@ -425,7 +466,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       }
 
       if (updatedSchedule != null) {
-        _entryRefreshGate.markFetched(start, end, DateTime.now());
+        _entryRefreshGate.markFetched(start, end, now);
       }
 
       updateFailed = (updatedSchedule == null);
@@ -527,13 +568,13 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   void _lockWidgetWeek(DateTime start, DateTime end) {
     _widgetLockedStart = start;
     _widgetLockedEnd = end;
-    _widgetLockExpiresAt = DateTime.now().add(const Duration(seconds: 6));
+    _widgetLockExpiresAt = now.add(const Duration(seconds: 6));
   }
 
   bool _shouldSkipUpdate(DateTime start, DateTime end) {
     final expiresAt = _widgetLockExpiresAt;
     if (expiresAt == null) return false;
-    if (DateTime.now().isAfter(expiresAt)) {
+    if (now.isAfter(expiresAt)) {
       _widgetLockedStart = null;
       _widgetLockedEnd = null;
       _widgetLockExpiresAt = null;
