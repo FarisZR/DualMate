@@ -88,7 +88,7 @@ class ScheduleFreshnessGate {
 **Commands run**:
 ```bash
 flutter test
-flutter run -d 59RYD25806200107
+flutter run -d <DEVICE_ID>
 ```
 
 ## Why This Works

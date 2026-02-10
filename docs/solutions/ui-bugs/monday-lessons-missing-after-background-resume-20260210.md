@@ -50,5 +50,5 @@ flutter test test/schedule/ui/weeklyschedule/weekly_schedule_page_lifecycle_test
 flutter test test/schedule/ui/viewmodels/weekly_schedule_display_range_test.dart
 flutter test test/schedule/ui/viewmodels
 flutter analyze lib/schedule/ui/viewmodels/weekly_schedule_view_model.dart lib/schedule/ui/weeklyschedule/weekly_schedule_page.dart test/schedule/ui/weeklyschedule/weekly_schedule_page_lifecycle_test.dart test/schedule/ui/viewmodels/weekly_schedule_background_refresh_test.dart
-flutter run -d 59RYD25806200107 --debug
+flutter run -d <DEVICE_ID> --debug
 ```
