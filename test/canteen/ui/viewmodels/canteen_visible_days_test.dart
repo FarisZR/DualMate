@@ -10,6 +10,8 @@ import 'package:dualmate/common/util/date_utils.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test('returns only days with actual meal content as visible days', () async {
     final monday = DateTime(2026, 2, 9);
     final weekStart = toStartOfDay(toMonday(monday));

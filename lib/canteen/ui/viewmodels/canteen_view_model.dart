@@ -85,8 +85,11 @@ class CanteenViewModel extends BaseViewModel {
     return sortedDays;
   }
 
-  DateTime? nearestVisibleContentDay(DateTime targetDate) {
-    final visibleDays = visibleContentDays;
+  DateTime? nearestVisibleContentDay(
+    DateTime targetDate, {
+    List<DateTime>? precomputedDays,
+  }) {
+    final visibleDays = precomputedDays ?? visibleContentDays;
     if (visibleDays.isEmpty) return null;
 
     final normalizedTarget = toStartOfDay(targetDate);

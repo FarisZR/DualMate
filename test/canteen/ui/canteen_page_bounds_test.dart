@@ -25,6 +25,7 @@ void main() {
 
     final provider = _FakeCanteenProvider({weekStart: menus});
     final viewModel = CanteenViewModel(provider);
+    await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
     await tester.pumpAndSettle();
@@ -43,6 +44,7 @@ void main() {
 
     final provider = _FakeCanteenProvider({weekStart: menus});
     final viewModel = CanteenViewModel(provider);
+    await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
     await tester.pumpAndSettle();
@@ -66,6 +68,7 @@ void main() {
 
     final provider = _FakeCanteenProvider({weekStart: menus});
     final viewModel = CanteenViewModel(provider);
+    await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
     await tester.pumpAndSettle();

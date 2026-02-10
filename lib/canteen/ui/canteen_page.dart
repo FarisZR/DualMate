@@ -269,21 +269,32 @@ class _CanteenPageState extends State<CanteenPage> {
     if (payload == null || payload.dayStart == null) return;
 
     final targetDate = _normalizeToWeekday(payload.dayStart!);
-    print("Widget canteen target date: $targetDate");
+    final targetWeekStart = viewModel.weekStartFor(targetDate);
     _loadContextWeeks(targetDate);
-    final currentVisibleDays = visibleDays ?? viewModel.visibleContentDays;
-    if (currentVisibleDays.isEmpty) return;
+
+    final hasTargetWeekData = viewModel.hasWeekData(targetWeekStart);
+    final isTargetWeekLoading = viewModel.isLoadingWeek(targetWeekStart);
+    if (!hasTargetWeekData || isTargetWeekLoading) return;
 
     if (!pageController.hasClients) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        _applyWidgetPayload(visibleDays: currentVisibleDays);
+        _applyWidgetPayload();
       });
       return;
     }
 
-    final targetDay = viewModel.nearestVisibleContentDay(targetDate);
-    if (targetDay == null) return;
+    final targetWeekVisibleDays = _contentDaysForWeek(targetWeekStart);
+    final currentVisibleDays = visibleDays ?? viewModel.visibleContentDays;
+    final targetDay = _nearestDay(targetDate, targetWeekVisibleDays) ??
+        viewModel.nearestVisibleContentDay(
+          targetDate,
+          precomputedDays: currentVisibleDays,
+        );
+    if (targetDay == null) {
+      WidgetNavigationPayloadStore.instance.takeCanteenPayload();
+      return;
+    }
 
     _isApplyingWidgetPayload = true;
     _goToVisibleDay(targetDay, currentVisibleDays);
@@ -337,6 +348,35 @@ class _CanteenPageState extends State<CanteenPage> {
     }
 
     pageNotifier.value = targetIndex;
+  }
+
+  List<DateTime> _contentDaysForWeek(DateTime weekStart) {
+    final days = <DateTime>[];
+
+    for (final menu in viewModel.weeklyMenusFor(weekStart)) {
+      if (menu.meals.isEmpty) continue;
+      days.add(toStartOfDay(menu.date));
+    }
+
+    days.sort((a, b) => a.compareTo(b));
+    return days;
+  }
+
+  DateTime? _nearestDay(DateTime targetDate, List<DateTime> days) {
+    if (days.isEmpty) return null;
+    final normalizedTarget = toStartOfDay(targetDate);
+    var nearest = days.first;
+    var minDistance = nearest.difference(normalizedTarget).inDays.abs();
+
+    for (final day in days.skip(1)) {
+      final distance = day.difference(normalizedTarget).inDays.abs();
+      if (distance < minDistance) {
+        nearest = day;
+        minDistance = distance;
+      }
+    }
+
+    return nearest;
   }
 
   bool _isBaseDate(DateTime date) {
