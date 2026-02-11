@@ -14,6 +14,7 @@ class ScheduleFilterPage extends StatefulWidget {
 class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
   late final FilterViewModel _viewModel;
   bool _isLoading = true;
+  bool _showLoadedList = false;
   bool _isHandlingPop = false;
 
   @override
@@ -42,6 +43,12 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _showLoadedList = true;
+        });
       });
     }
   }
@@ -85,49 +92,53 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
               ),
             ),
             Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 280),
-                reverseDuration: const Duration(milliseconds: 180),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) {
-                  final offsetAnimation = Tween<Offset>(
-                    begin: const Offset(0, 0.03),
-                    end: Offset.zero,
-                  ).animate(animation);
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: offsetAnimation,
-                      child: child,
-                    ),
-                  );
-                },
-                child: _isLoading
-                    ? const Center(
-                        key: ValueKey('filter_loading'),
-                        child: CircularProgressIndicator(),
-                      )
-                    : PropertyChangeProvider<FilterViewModel, String>(
-                        key: const ValueKey('filter_list'),
-                        value: _viewModel,
-                        child: PropertyChangeConsumer<FilterViewModel, String>(
-                          properties: const ["filterStates"],
-                          builder: (
-                            BuildContext _,
-                            FilterViewModel? viewModel,
-                            Set<String>? ___,
-                          ) {
-                            if (viewModel == null) return Container();
-                            return ListView.builder(
-                              itemCount: viewModel.filterStates.length,
-                              itemBuilder: (context, index) =>
-                                  FilterStateRow(viewModel.filterStates[index]),
-                            );
-                          },
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(),
+                    )
+                  : Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        PropertyChangeProvider<FilterViewModel, String>(
+                          value: _viewModel,
+                          child:
+                              PropertyChangeConsumer<FilterViewModel, String>(
+                            properties: const ["filterStates"],
+                            builder: (
+                              BuildContext _,
+                              FilterViewModel? viewModel,
+                              Set<String>? ___,
+                            ) {
+                              if (viewModel == null) return Container();
+                              return AnimatedSlide(
+                                duration: const Duration(milliseconds: 220),
+                                curve: Curves.easeOutCubic,
+                                offset: _showLoadedList
+                                    ? Offset.zero
+                                    : const Offset(0, 0.03),
+                                child: AnimatedOpacity(
+                                  duration: const Duration(milliseconds: 220),
+                                  curve: Curves.easeOutCubic,
+                                  opacity: _showLoadedList ? 1 : 0,
+                                  child: ListView.builder(
+                                    itemCount: viewModel.filterStates.length,
+                                    itemExtent: 56,
+                                    cacheExtent: 320,
+                                    itemBuilder: (context, index) =>
+                                        FilterStateRow(
+                                            viewModel.filterStates[index]),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      ),
-              ),
+                        if (!_showLoadedList)
+                          const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                      ],
+                    ),
             ),
           ],
         ),
@@ -195,17 +206,38 @@ class _FilterStateRowState extends State<FilterStateRow> {
 
   @override
   Widget build(BuildContext context) {
-    return CheckboxListTile(
-      value: isChecked,
-      onChanged: (checked) {
-        if (checked == null) return;
+    return InkWell(
+      onTap: () {
         setState(() {
-          isChecked = checked;
+          isChecked = !isChecked;
           widget.filterState.isDisplayed = isChecked;
         });
       },
-      controlAffinity: ListTileControlAffinity.leading,
-      title: Text(widget.filterState.entryName),
+      child: SizedBox(
+        height: 56,
+        child: Row(
+          children: [
+            Checkbox(
+              value: isChecked,
+              onChanged: (checked) {
+                if (checked == null) return;
+                setState(() {
+                  isChecked = checked;
+                  widget.filterState.isDisplayed = isChecked;
+                });
+              },
+            ),
+            Expanded(
+              child: Text(
+                widget.filterState.entryName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+        ),
+      ),
     );
   }
 }
