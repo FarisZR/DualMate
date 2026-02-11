@@ -94,24 +94,15 @@ class ScheduleNavigationEntry extends NavigationEntry<ScheduleViewModel> {
                             transitionsBuilder: (context, animation,
                                 secondaryAnimation, child) {
                               final offsetTween = Tween<Offset>(
-                                begin: const Offset(0.18, 0),
+                                begin: const Offset(0.24, 0),
                                 end: Offset.zero,
                               ).chain(
                                 CurveTween(curve: Curves.easeOutCubic),
                               );
-                              final fadeTween = Tween<double>(
-                                begin: 0.7,
-                                end: 1,
-                              ).chain(
-                                CurveTween(curve: Curves.easeOut),
-                              );
 
                               return SlideTransition(
                                 position: animation.drive(offsetTween),
-                                child: FadeTransition(
-                                  opacity: animation.drive(fadeTween),
-                                  child: child,
-                                ),
+                                child: child,
                               );
                             },
                           ),

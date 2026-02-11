@@ -32,7 +32,7 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
 
   Future<void> _initializeDeferred() async {
     try {
-      await Future.delayed(const Duration(milliseconds: 110));
+      await Future.delayed(const Duration(milliseconds: 320));
       if (!mounted) return;
       await _viewModel.initialize();
     } catch (e, trace) {
