@@ -40,15 +40,15 @@ void main() {
 
     final pageView = tester.widget<PageView>(pagerFinder);
     final controller = pageView.controller!;
-    expect(controller.page, closeTo(1.0, 0.001));
+    expect(controller.page, closeTo(10000.0, 0.001));
 
     final gesture = await tester.startGesture(tester.getCenter(pagerFinder));
     await gesture.moveBy(const Offset(-180, 0));
     await tester.pump();
 
-    final draggedPage = controller.page ?? 1.0;
-    expect(draggedPage, greaterThan(1.05));
-    expect(draggedPage, lessThan(2.0));
+    final draggedPage = controller.page ?? 10000.0;
+    expect(draggedPage, greaterThan(10000.05));
+    expect(draggedPage, lessThan(10001.0));
 
     await gesture.up();
 
