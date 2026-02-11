@@ -173,7 +173,7 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              L.of(context).filterSaveError,
+              L.of(context).filterLoadError,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),

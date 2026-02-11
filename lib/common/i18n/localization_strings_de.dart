@@ -208,6 +208,7 @@ final de = {
       "Wähle hier die Vorlesungen, die angezeigt werden sollen. Pass auf, dass Du keine ausgeblendete Vorlesung versehentlich verpasst.",
   "filterTitle": "Filter",
   "filterSaveError": "Filter konnten nicht gespeichert werden",
+  "filterLoadError": "Filter konnten nicht geladen werden",
   "canteenFilterAll": "Alle Gerichte",
   "canteenFilterNoPork": "Ohne Schwein",
   "canteenFilterVegetarian": "Vegetarisch",

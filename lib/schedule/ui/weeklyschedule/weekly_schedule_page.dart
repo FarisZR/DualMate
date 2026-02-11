@@ -398,7 +398,16 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
       final staleKey = _prefetchRequestOrder.removeFirst();
       _prefetchRequestedKeys.remove(staleKey);
     }
-    unawaited(model.prefetchWeek(start, end));
+    unawaited(
+      model.prefetchWeek(start, end).catchError((error, trace) {
+        developer.log(
+          'Week prefetch failed',
+          name: 'weekly_schedule_page',
+          error: error,
+          stackTrace: trace,
+        );
+      }),
+    );
   }
 
   void _ensurePagerInitialized() {
@@ -455,10 +464,13 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   }
 
   _AxisLayoutMetrics _resolveAxisLayoutMetrics(double totalWidth, int days) {
-    final widthWithWideAxis =
+    final pagerWidth =
         (totalWidth - _defaultWideAxisWidth).clamp(0.0, double.infinity);
-    final availableColumnWidth = widthWithWideAxis / days;
-    final compactPhone = availableColumnWidth <= 64 || totalWidth <= 430;
+    final compactPhone = ScheduleWidget.isCompactLayout(
+      width: pagerWidth,
+      days: days,
+      showTimeLabels: false,
+    );
 
     if (compactPhone) {
       return const _AxisLayoutMetrics(

@@ -16,6 +16,8 @@ class ScheduleWidget extends StatelessWidget {
   static const double _defaultOverlapColumnGap = 6;
   static const double _defaultEventVerticalGap = 4;
   static const double _minimumEventExtent = 6;
+  static const double _compactColumnWidthThreshold = 64.0;
+  static const double _compactWidthThreshold = 430.0;
 
   final Schedule schedule;
   final DateTime displayStart;
@@ -49,6 +51,17 @@ class ScheduleWidget extends StatelessWidget {
         );
       },
     );
+  }
+
+  static bool isCompactLayout({
+    required double width,
+    required int days,
+    required bool showTimeLabels,
+  }) {
+    final timeLabelWidth = showTimeLabels ? _defaultTimeLabelsWidth : 0.0;
+    final availableColumnWidth = (width - timeLabelWidth) / days;
+    return availableColumnWidth <= _compactColumnWidthThreshold ||
+        width <= _compactWidthThreshold;
   }
 
   Widget buildWithSize(BuildContext context, double width, double height) {
@@ -398,9 +411,11 @@ class ScheduleWidget extends StatelessWidget {
   }
 
   _ScheduleWidgetLayoutProfile _resolveLayoutProfile(double width, int days) {
-    final timeLabelWidth = showTimeLabels ? _defaultTimeLabelsWidth : 0.0;
-    final availableColumnWidth = (width - timeLabelWidth) / days;
-    final compactPhone = availableColumnWidth <= 64 || width <= 430;
+    final compactPhone = isCompactLayout(
+      width: width,
+      days: days,
+      showTimeLabels: showTimeLabels,
+    );
 
     if (compactPhone) {
       return const _ScheduleWidgetLayoutProfile(

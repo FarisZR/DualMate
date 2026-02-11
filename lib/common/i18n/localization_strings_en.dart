@@ -194,6 +194,7 @@ final en = {
       "Select the classes which sould be displayed. Be careful not to accidentally miss a hidden lecture",
   "filterTitle": "Filter",
   "filterSaveError": "Could not save filters",
+  "filterLoadError": "Could not load filters",
   "canteenFilterAll": "All meals",
   "canteenFilterNoPork": "Without pork",
   "canteenFilterVegetarian": "Vegetarian",
