@@ -11,6 +11,7 @@ import 'package:dualmate/schedule/service/isolate_schedule_source_decorator.dart
 import 'package:dualmate/schedule/service/mannheim/mannheim_course_scraper.dart';
 import 'package:dualmate/schedule/service/rapla/rapla_schedule_source.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
+import 'package:dualmate/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
 import 'package:kiwi/kiwi.dart';
 
 typedef OnDidChangeScheduleSource = void Function(
@@ -85,6 +86,7 @@ class ScheduleSourceProvider {
 
     if (credentials.allFieldsFilled()) {
       dualis.setLoginCredentials(credentials);
+      FilterViewModel.invalidateCache();
       return ErrorReportScheduleSourceDecorator(dualis);
     } else {
       return InvalidScheduleSource();

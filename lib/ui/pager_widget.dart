@@ -24,19 +24,15 @@ class PagerWidget extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _PagerWidgetState createState() => _PagerWidgetState(pages, pagesId);
+  _PagerWidgetState createState() => _PagerWidgetState();
 }
 
 class _PagerWidgetState extends State<PagerWidget> {
   final PreferencesProvider preferencesProvider = KiwiContainer().resolve();
 
-  final String? pagesId;
-  final List<PageDefinition> pages;
   int _currentPage = 0;
   final Set<int> _loadedPages = <int>{};
   final Map<int, Widget> _pageCache = {};
-
-  _PagerWidgetState(this.pages, this.pagesId);
 
   @override
   void initState() {
@@ -71,7 +67,7 @@ class _PagerWidgetState extends State<PagerWidget> {
       body: IndexedStack(
         index: _currentPage,
         children: List.generate(
-          pages.length,
+          widget.pages.length,
           (index) => _buildPage(context, index),
         ),
       ),
@@ -88,7 +84,7 @@ class _PagerWidgetState extends State<PagerWidget> {
   List<BottomNavigationBarItem> buildBottomNavigationBarItems() {
     var bottomNavigationBarItems = <BottomNavigationBarItem>[];
 
-    for (var page in pages) {
+    for (var page in widget.pages) {
       bottomNavigationBarItems.add(
         BottomNavigationBarItem(
           icon: page.icon,
@@ -100,7 +96,7 @@ class _PagerWidgetState extends State<PagerWidget> {
   }
 
   Future<void> setActivePage(int page, {bool force = false}) async {
-    if (page < 0 || page >= pages.length) {
+    if (page < 0 || page >= widget.pages.length) {
       return;
     }
 
@@ -108,21 +104,21 @@ class _PagerWidgetState extends State<PagerWidget> {
       _currentPage = page;
       _loadedPages.add(page);
     });
-    if (pagesId != null) {
-      await preferencesProvider.set("${pagesId}_active_page", page);
+    if (widget.pagesId != null) {
+      await preferencesProvider.set("${widget.pagesId}_active_page", page);
     }
   }
 
   Future<void> loadActivePage() async {
-    if (pagesId == null) return;
+    if (widget.pagesId == null) return;
 
     var selectedPage = await preferencesProvider.get<int>(
-      "${pagesId}_active_page",
+      "${widget.pagesId}_active_page",
     );
 
     if (selectedPage != null &&
         selectedPage > 0 &&
-        selectedPage < pages.length) {
+        selectedPage < widget.pages.length) {
       setState(() {
         _currentPage = selectedPage;
         _loadedPages.add(selectedPage);
@@ -141,7 +137,10 @@ class _PagerWidgetState extends State<PagerWidget> {
     if (!_loadedPages.contains(index)) {
       return const SizedBox.shrink();
     }
-    return _pageCache.putIfAbsent(index, () => pages[index].builder(context));
+    return _pageCache.putIfAbsent(
+      index,
+      () => widget.pages[index].builder(context),
+    );
   }
 }
 

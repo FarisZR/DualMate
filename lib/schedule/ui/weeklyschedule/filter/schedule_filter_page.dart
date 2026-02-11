@@ -186,7 +186,7 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
                 });
                 _initializeDeferred();
               },
-              child: const Text('Retry'),
+              child: Text(L.of(context).retry),
             ),
           ],
         ),
@@ -197,8 +197,10 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
   Future<void> _handlePopRequested(BuildContext context) async {
     if (_isHandlingPop) return;
     _isHandlingPop = true;
+    var applySucceeded = false;
     try {
       await _viewModel.applyFilter();
+      applySucceeded = true;
     } on FilterValidationException catch (e, trace) {
       debugPrint('Failed to validate schedule filter: $e');
       debugPrint('$trace');
@@ -224,7 +226,7 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
         ),
       );
     } finally {
-      if (mounted) {
+      if (applySucceeded && mounted) {
         Navigator.of(context).pop();
       }
       _isHandlingPop = false;
@@ -250,6 +252,16 @@ class _FilterStateRowState extends State<FilterStateRow> {
     super.initState();
 
     isChecked = widget.filterState.isDisplayed;
+  }
+
+  @override
+  void didUpdateWidget(covariant FilterStateRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.filterState.isDisplayed != widget.filterState.isDisplayed) {
+      setState(() {
+        isChecked = widget.filterState.isDisplayed;
+      });
+    }
   }
 
   @override

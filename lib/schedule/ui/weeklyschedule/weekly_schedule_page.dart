@@ -345,10 +345,19 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     final previousStart = toPreviousWeek(centerWeekStart);
     final nextStart = toNextWeek(centerWeekStart);
 
-    await Future.wait([
-      viewModel.prefetchWeek(previousStart, toNextWeek(previousStart)),
-      viewModel.prefetchWeek(nextStart, toNextWeek(nextStart)),
-    ]);
+    try {
+      await Future.wait([
+        viewModel.prefetchWeek(previousStart, toNextWeek(previousStart)),
+        viewModel.prefetchWeek(nextStart, toNextWeek(nextStart)),
+      ]);
+    } catch (error, trace) {
+      developer.log(
+        'Weekly prefetch failed',
+        name: 'weekly_schedule_page',
+        error: error,
+        stackTrace: trace,
+      );
+    }
   }
 
   _WeekPageData _buildPageData(
@@ -503,7 +512,10 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
       final targetDate = payload.start ?? payload.dayStart ?? DateTime.now();
       final targetWeekStart = _normalizeWeekStart(targetDate);
 
-      print('Widget schedule target date: $targetDate');
+      developer.log(
+        'Widget schedule target date: $targetDate',
+        name: 'weekly_schedule_page',
+      );
       await viewModel.openWeekContainingFromWidget(targetDate);
       if (!mounted) return;
 
@@ -517,10 +529,16 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
       if (payload.hasEntry) {
         final entry = viewModel.resolveEntryFromPayload(payload);
         if (entry != null) {
-          print('Widget schedule entry resolved: ${entry.title}');
+          developer.log(
+            'Widget schedule entry resolved: ${entry.title}',
+            name: 'weekly_schedule_page',
+          );
           _onScheduleEntryTap(context, entry);
         } else {
-          print('Widget schedule entry not resolved');
+          developer.log(
+            'Widget schedule entry not resolved',
+            name: 'weekly_schedule_page',
+          );
         }
       }
     } finally {

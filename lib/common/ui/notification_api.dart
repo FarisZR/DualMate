@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/services.dart';
 
 ///
 /// Provides methods to display native notifications
@@ -38,11 +39,29 @@ class NotificationApi {
     final androidPlugin =
         _localNotificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
-    final granted = await androidPlugin?.requestNotificationsPermission();
-    developer.log(
-      'Notification runtime permission requested: $granted',
-      name: 'notification_api',
-    );
+    try {
+      final granted = await androidPlugin?.requestNotificationsPermission();
+      developer.log(
+        'Notification runtime permission requested: $granted',
+        name: 'notification_api',
+      );
+    } on PlatformException catch (error, trace) {
+      developer.log(
+        'Notification runtime permission request failed',
+        name: 'notification_api',
+        error: error,
+        stackTrace: trace,
+      );
+      rethrow;
+    } on Exception catch (error, trace) {
+      developer.log(
+        'Notification runtime permission request failed',
+        name: 'notification_api',
+        error: error,
+        stackTrace: trace,
+      );
+      rethrow;
+    }
   }
 
   ///
