@@ -1,5 +1,4 @@
 import 'package:flutter/widgets.dart';
-import 'performance_telemetry.dart';
 
 class Analytics {
   Future<void> logEvent(

@@ -109,7 +109,6 @@ class ColorPalettes {
       scaffoldBackgroundColor: isDark ? darkBackground : lightBackground,
       canvasColor: isDark ? darkBackground : lightBackground,
       cardColor: isDark ? darkSurface : lightSurface,
-      dialogBackgroundColor: isDark ? darkSurface : lightSurface,
       appBarTheme: baseTheme.appBarTheme.copyWith(
         backgroundColor: isDark
             ? const Color(0xFF1B1B1B)
@@ -195,6 +194,9 @@ class ColorPalettes {
       cardTheme: CardThemeData(
         color: isDark ? darkSurface : lightSurface,
         surfaceTintColor: Colors.transparent,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: isDark ? darkSurface : lightSurface,
       ),
     );
 

@@ -214,7 +214,7 @@ class _CanteenPageState extends State<CanteenPage> {
     CanteenViewModel model,
   ) {
     if (visibleDays.isNotEmpty) {
-      final boundedPage = page.clamp(0, visibleDays.length - 1) as int;
+      final boundedPage = page.clamp(0, visibleDays.length - 1);
       return visibleDays[boundedPage];
     }
 
