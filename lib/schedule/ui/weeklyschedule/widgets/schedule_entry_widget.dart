@@ -27,6 +27,7 @@ class ScheduleEntryWidget extends StatelessWidget {
             constraints.maxHeight < 24 || constraints.maxWidth < 72;
         final isCompact = !isVeryCompact &&
             (constraints.maxHeight < 42 || constraints.maxWidth < 100);
+        final borderRadius = BorderRadius.circular(8);
 
         final baseStyle = textStyleScheduleEntryWidgetTitle(context).copyWith(
           color: textColor,
@@ -42,37 +43,53 @@ class ScheduleEntryWidget extends StatelessWidget {
         final horizontalPadding = isVeryCompact ? 3.0 : 5.0;
         final verticalPadding = isVeryCompact ? 2.0 : 4.0;
         final maxLines = isVeryCompact ? 1 : (isCompact ? 2 : 3);
+        final shadowOpacity = isVeryCompact ? 0.0 : 0.14;
 
-        return Material(
-          color: color,
-          elevation: 1.5,
-          shadowColor: Colors.black.withValues(alpha: 0.22),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(
-              color: Colors.black.withValues(alpha: 0.08),
-              width: 0.6,
-            ),
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            boxShadow: shadowOpacity == 0
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: shadowOpacity),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
           ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(8),
-            onTap: () {
-              onScheduleEntryTap(scheduleEntry);
-            },
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                horizontalPadding,
-                verticalPadding,
-                horizontalPadding,
-                verticalPadding,
+          child: Material(
+            type: MaterialType.transparency,
+            child: Ink(
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: borderRadius,
+                border: Border.all(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  width: 0.6,
+                ),
               ),
-              child: Text(
-                scheduleEntry.title,
-                maxLines: maxLines,
-                softWrap: true,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.left,
-                style: textStyle,
+              child: InkWell(
+                borderRadius: borderRadius,
+                onTap: () {
+                  onScheduleEntryTap(scheduleEntry);
+                },
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    verticalPadding,
+                    horizontalPadding,
+                    verticalPadding,
+                  ),
+                  child: Text(
+                    scheduleEntry.title,
+                    maxLines: maxLines,
+                    softWrap: true,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.left,
+                    style: textStyle,
+                  ),
+                ),
               ),
             ),
           ),

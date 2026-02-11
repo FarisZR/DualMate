@@ -4,46 +4,61 @@ import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 
-class ScheduleFilterPage extends StatelessWidget {
-  final FilterViewModel _viewModel = FilterViewModel(
-    KiwiContainer().resolve(),
-    KiwiContainer().resolve(),
-    KiwiContainer().resolve(),
-    KiwiContainer().resolve(),
-  );
+class ScheduleFilterPage extends StatefulWidget {
+  const ScheduleFilterPage({super.key});
+
+  @override
+  State<ScheduleFilterPage> createState() => _ScheduleFilterPageState();
+}
+
+class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
+  late final FilterViewModel _viewModel;
+  bool _isLoading = true;
+  bool _isHandlingPop = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = FilterViewModel(
+      KiwiContainer().resolve(),
+      KiwiContainer().resolve(),
+      KiwiContainer().resolve(),
+      KiwiContainer().resolve(),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeDeferred();
+    });
+  }
+
+  Future<void> _initializeDeferred() async {
+    try {
+      await Future.delayed(const Duration(milliseconds: 110));
+      if (!mounted) return;
+      await _viewModel.initialize();
+    } catch (e, trace) {
+      debugPrint('Failed to initialize schedule filter page: $e');
+      debugPrint('$trace');
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _viewModel.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        try {
-          await _viewModel.applyFilter();
-        } on FilterValidationException catch (e, trace) {
-          debugPrint('Failed to validate schedule filter: $e');
-          debugPrint('$trace');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(L.of(context).filterSaveError),
-            ),
-          );
-        } on FilterSaveException catch (e, trace) {
-          debugPrint('Failed to persist schedule filter: $e');
-          debugPrint('$trace');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(L.of(context).filterSaveError),
-            ),
-          );
-        } catch (e, trace) {
-          debugPrint('Failed to apply schedule filter: $e');
-          debugPrint('$trace');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(L.of(context).filterSaveError),
-            ),
-          );
-        }
-        return true;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        await _handlePopRequested(context);
       },
       child: Scaffold(
         appBar: AppBar(
@@ -70,25 +85,68 @@ class ScheduleFilterPage extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: PropertyChangeProvider<FilterViewModel, String>(
-                value: _viewModel,
-                child: PropertyChangeConsumer<FilterViewModel, String>(
-                    properties: const ["filterStates"],
-                    builder: (BuildContext _, FilterViewModel? viewModel,
-                        Set<String>? ___) {
-                      if (viewModel == null) return Container();
-                      return ListView.builder(
-                        itemCount: viewModel.filterStates.length,
-                        itemBuilder: (context, index) =>
-                            FilterStateRow(viewModel.filterStates[index]),
-                      );
-                    }),
-              ),
-            )
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : PropertyChangeProvider<FilterViewModel, String>(
+                      value: _viewModel,
+                      child: PropertyChangeConsumer<FilterViewModel, String>(
+                        properties: const ["filterStates"],
+                        builder: (
+                          BuildContext _,
+                          FilterViewModel? viewModel,
+                          Set<String>? ___,
+                        ) {
+                          if (viewModel == null) return Container();
+                          return ListView.builder(
+                            itemCount: viewModel.filterStates.length,
+                            itemBuilder: (context, index) =>
+                                FilterStateRow(viewModel.filterStates[index]),
+                          );
+                        },
+                      ),
+                    ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _handlePopRequested(BuildContext context) async {
+    if (_isHandlingPop) return;
+    _isHandlingPop = true;
+    try {
+      await _viewModel.applyFilter();
+    } on FilterValidationException catch (e, trace) {
+      debugPrint('Failed to validate schedule filter: $e');
+      debugPrint('$trace');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(L.of(context).filterSaveError),
+        ),
+      );
+    } on FilterSaveException catch (e, trace) {
+      debugPrint('Failed to persist schedule filter: $e');
+      debugPrint('$trace');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(L.of(context).filterSaveError),
+        ),
+      );
+    } catch (e, trace) {
+      debugPrint('Failed to apply schedule filter: $e');
+      debugPrint('$trace');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(L.of(context).filterSaveError),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+      _isHandlingPop = false;
+    }
   }
 }
 

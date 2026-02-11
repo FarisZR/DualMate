@@ -27,6 +27,7 @@ class FilterViewModel extends BaseViewModel {
   final ScheduleFilterRepository _scheduleFilterRepository;
   final ScheduleSourceProvider _scheduleSource;
   final ScheduleProvider _scheduleProvider;
+  bool _initialized = false;
 
   List<ScheduleEntryFilterState> filterStates = [];
 
@@ -35,11 +36,15 @@ class FilterViewModel extends BaseViewModel {
     this._scheduleFilterRepository,
     this._scheduleSource,
     this._scheduleProvider,
-  ) {
-    loadFilterStates();
+  );
+
+  Future<void> initialize() async {
+    if (_initialized) return;
+    _initialized = true;
+    await loadFilterStates();
   }
 
-  void loadFilterStates() async {
+  Future<void> loadFilterStates() async {
     var allNames =
         await _scheduleEntryRepository.queryAllNamesOfScheduleEntries();
 

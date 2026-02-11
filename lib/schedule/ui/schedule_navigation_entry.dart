@@ -71,9 +71,40 @@ class ScheduleNavigationEntry extends NavigationEntry<ScheduleViewModel> {
                   ? IconButton(
                       icon: Icon(Icons.filter_alt),
                       onPressed: () async {
-                        Navigator.of(context).push(MaterialPageRoute(
-                          builder: (context) => ScheduleFilterPage(),
-                        ));
+                        await Navigator.of(context).push(
+                          PageRouteBuilder<void>(
+                            transitionDuration:
+                                const Duration(milliseconds: 240),
+                            reverseTransitionDuration:
+                                const Duration(milliseconds: 200),
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) =>
+                                    const ScheduleFilterPage(),
+                            transitionsBuilder: (context, animation,
+                                secondaryAnimation, child) {
+                              final offsetTween = Tween<Offset>(
+                                begin: const Offset(0.18, 0),
+                                end: Offset.zero,
+                              ).chain(
+                                CurveTween(curve: Curves.easeOutCubic),
+                              );
+                              final fadeTween = Tween<double>(
+                                begin: 0.7,
+                                end: 1,
+                              ).chain(
+                                CurveTween(curve: Curves.easeOut),
+                              );
+
+                              return SlideTransition(
+                                position: animation.drive(offsetTween),
+                                child: FadeTransition(
+                                  opacity: animation.drive(fadeTween),
+                                  child: child,
+                                ),
+                              );
+                            },
+                          ),
+                        );
                       },
                     )
                   : Container(),

@@ -179,6 +179,10 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     _rootViewModel = RootViewModel(
       KiwiContainer().resolve(),
     );
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
     WidgetsBinding.instance.allowFirstFrame();
     PerformanceTelemetry.instance.logInstant(
       'startup.allowFirstFrame',
@@ -222,7 +226,10 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       print("Perf overlay load failed");
       print(error);
       print(trace);
-      rethrow;
+      if (!mounted) return;
+      setState(() {
+        _perfOverlayLoaded = true;
+      });
     }
   }
 
