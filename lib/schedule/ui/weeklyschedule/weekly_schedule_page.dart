@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show lerpDouble;
 
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/widgets/error_display.dart';
@@ -234,20 +235,30 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
         itemBuilder: (context, pageIndex) {
           final weekStart = _weekStartForPage(pageIndex);
           final pageData = _buildPageData(weekStart, model);
+          final targetViewport = _HourViewport(
+            startHour: pageData.displayStartHour,
+            endHour: pageData.displayEndHour,
+          );
 
           return RepaintBoundary(
             key: ValueKey<String>('week_page_${weekStart.toIso8601String()}'),
-            child: ScheduleWidget(
-              schedule: pageData.schedule,
-              displayStart: pageData.displayStart,
-              displayEnd: pageData.displayEnd,
-              onScheduleEntryTap: (entry) {
-                _onScheduleEntryTap(context, entry);
+            child: TweenAnimationBuilder<_HourViewport>(
+              tween: _HourViewportTween(end: targetViewport),
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              builder: (context, viewport, _) {
+                return ScheduleWidget(
+                  schedule: pageData.schedule,
+                  displayStart: pageData.displayStart,
+                  displayEnd: pageData.displayEnd,
+                  onScheduleEntryTap: (entry) {
+                    _onScheduleEntryTap(context, entry);
+                  },
+                  now: model.now,
+                  displayStartHour: viewport.startHour,
+                  displayEndHour: viewport.endHour,
+                );
               },
-              now: model.now,
-              // Keep the vertical axis stable while swiping across weeks.
-              displayStartHour: pageData.displayStartHour,
-              displayEndHour: pageData.displayEndHour,
             ),
           );
         },
@@ -309,9 +320,12 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     );
 
     final viewportStartHour =
-        model.displayStartHour > 0 ? model.displayStartHour : 7;
-    final viewportEndHour =
-        model.displayEndHour > 0 ? model.displayEndHour : 17;
+        (model.displayStartHour > 0 ? model.displayStartHour : 7).toDouble();
+    final viewportEndHourRaw =
+        (model.displayEndHour > 0 ? model.displayEndHour : 17).toDouble();
+    final viewportEndHour = viewportEndHourRaw <= viewportStartHour + 1
+        ? viewportStartHour + 1
+        : viewportEndHourRaw;
 
     return _WeekPageData(
       schedule: cachedSchedule ?? Schedule(),
@@ -508,8 +522,8 @@ class _WeekPageData {
   final Schedule schedule;
   final DateTime displayStart;
   final DateTime displayEnd;
-  final int displayStartHour;
-  final int displayEndHour;
+  final double displayStartHour;
+  final double displayEndHour;
 
   _WeekPageData({
     required this.schedule,
@@ -518,4 +532,32 @@ class _WeekPageData {
     required this.displayStartHour,
     required this.displayEndHour,
   });
+}
+
+class _HourViewport {
+  final double startHour;
+  final double endHour;
+
+  const _HourViewport({
+    required this.startHour,
+    required this.endHour,
+  });
+}
+
+class _HourViewportTween extends Tween<_HourViewport> {
+  _HourViewportTween({_HourViewport? begin, required _HourViewport end})
+      : super(begin: begin, end: end);
+
+  @override
+  _HourViewport lerp(double t) {
+    final beginValue = begin ?? end!;
+    final endValue = end!;
+
+    return _HourViewport(
+      startHour: lerpDouble(beginValue.startHour, endValue.startHour, t) ??
+          endValue.startHour,
+      endHour: lerpDouble(beginValue.endHour, endValue.endHour, t) ??
+          endValue.endHour,
+    );
+  }
 }

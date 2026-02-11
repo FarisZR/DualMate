@@ -20,8 +20,8 @@ class ScheduleWidget extends StatelessWidget {
   final DateTime displayStart;
   final DateTime displayEnd;
   final DateTime now;
-  final int displayStartHour;
-  final int displayEndHour;
+  final double displayStartHour;
+  final double displayEndHour;
   final ScheduleEntryTapCallback onScheduleEntryTap;
 
   const ScheduleWidget({
@@ -55,8 +55,8 @@ class ScheduleWidget extends StatelessWidget {
     var dayLabelsHeight = layoutProfile.dayLabelsHeight;
     var timeLabelsWidth = layoutProfile.timeLabelsWidth;
 
-    var hourHeight =
-        (height - dayLabelsHeight) / (displayEndHour - displayStartHour);
+    final visibleHours = (displayEndHour - displayStartHour).clamp(1.0, 24.0);
+    var hourHeight = (height - dayLabelsHeight) / visibleHours;
     var minuteHeight = hourHeight / 60;
 
     var labelWidgets = buildLabelWidgets(
@@ -142,12 +142,14 @@ class ScheduleWidget extends StatelessWidget {
   ) {
     var labelWidgets = <Widget>[];
 
-    for (var i = displayStartHour; i < displayEndHour; i++) {
-      var hourLabelText = i.toString() + ":00";
+    final firstHourLabel = displayStartHour.floor();
+    final lastHourLabel = displayEndHour.ceil();
+    for (var hour = firstHourLabel; hour < lastHourLabel; hour++) {
+      var hourLabelText = '$hour:00';
 
       labelWidgets.add(
         Positioned(
-          top: rowHeight * (i - displayStartHour) + dayLabelHeight,
+          top: rowHeight * (hour - displayStartHour) + dayLabelHeight,
           left: 0,
           child: Padding(
             padding: layoutProfile.compactPhone

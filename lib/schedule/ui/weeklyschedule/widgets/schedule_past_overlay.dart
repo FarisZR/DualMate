@@ -8,8 +8,8 @@ class SchedulePastOverlay extends CustomPaint {
   final DateTime fromDate;
   final DateTime toDate;
   final DateTime now;
-  final int fromHour;
-  final int toHour;
+  final double fromHour;
+  final double toHour;
   final int columns;
   final Color overlayColor;
 
@@ -38,8 +38,8 @@ class SchedulePastOverlayCustomPaint extends CustomPainter {
   final DateTime fromDate;
   final DateTime toDate;
   final DateTime now;
-  final int fromHour;
-  final int toHour;
+  final double fromHour;
+  final double toHour;
   final int columns;
   final Color overlayColor;
 
@@ -92,11 +92,12 @@ class SchedulePastOverlayCustomPaint extends CustomPainter {
       overlayPaint,
     );
 
-    var leftoverMinutes =
+    final leftoverMinutes =
         difference.inMinutes - (differenceInDays * 24 * 60) - (60 * fromHour);
 
-    var displayedMinutes = (toHour - fromHour) * 60;
-    var leftoverHeight = leftoverMinutes * (size.height / displayedMinutes);
+    final displayedMinutes = (toHour - fromHour) * 60;
+    if (displayedMinutes <= 0) return;
+    final leftoverHeight = leftoverMinutes * (size.height / displayedMinutes);
 
     if (leftoverHeight > 0) {
       canvas.drawRect(
@@ -113,7 +114,14 @@ class SchedulePastOverlayCustomPaint extends CustomPainter {
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) {
-    return false;
+    if (oldDelegate is! SchedulePastOverlayCustomPaint) return true;
+    return fromDate != oldDelegate.fromDate ||
+        toDate != oldDelegate.toDate ||
+        now != oldDelegate.now ||
+        fromHour != oldDelegate.fromHour ||
+        toHour != oldDelegate.toHour ||
+        columns != oldDelegate.columns ||
+        overlayColor != oldDelegate.overlayColor;
   }
 
   @override

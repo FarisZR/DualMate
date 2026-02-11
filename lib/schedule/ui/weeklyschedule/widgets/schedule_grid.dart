@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
 class ScheduleGrid extends CustomPaint {
-  final int fromHour;
-  final int toHour;
+  final double fromHour;
+  final double toHour;
   final double timeLabelsWidth;
   final double dateLabelsHeight;
   final int columns;
@@ -23,8 +23,8 @@ class ScheduleGrid extends CustomPaint {
 }
 
 class ScheduleGridCustomPaint extends CustomPainter {
-  final int fromHour;
-  final int toHour;
+  final double fromHour;
+  final double toHour;
   final double timeLabelsWidth;
   final double dateLabelsHeight;
   final int columns;
@@ -45,21 +45,21 @@ class ScheduleGridCustomPaint extends CustomPainter {
       ..color = gridLineColor
       ..strokeWidth = 1;
 
-    var lines = toHour - fromHour;
-
-    drawHorizontalLines(lines, size, canvas, secondaryPaint);
+    drawHorizontalLines(size, canvas, secondaryPaint);
     drawVerticalLines(size, canvas, secondaryPaint);
   }
 
-  void drawHorizontalLines(
-    int lines,
-    Size size,
-    Canvas canvas,
-    Paint secondaryPaint,
-  ) {
-    for (var i = 0; i < lines; i++) {
-      var y = ((size.height - dateLabelsHeight) / lines) * i + dateLabelsHeight;
+  void drawHorizontalLines(Size size, Canvas canvas, Paint secondaryPaint) {
+    final visibleHours = toHour - fromHour;
+    if (visibleHours <= 0) return;
 
+    final visibleHeight = size.height - dateLabelsHeight;
+    final firstHourMarker = fromHour.ceil();
+    final lastHourMarker = toHour.floor();
+
+    for (var marker = firstHourMarker; marker <= lastHourMarker; marker++) {
+      final normalized = (marker - fromHour) / visibleHours;
+      final y = (visibleHeight * normalized) + dateLabelsHeight;
       canvas.drawLine(Offset(0, y), Offset(size.width, y), secondaryPaint);
     }
   }
@@ -74,6 +74,12 @@ class ScheduleGridCustomPaint extends CustomPainter {
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) {
-    return false;
+    if (oldDelegate is! ScheduleGridCustomPaint) return true;
+    return fromHour != oldDelegate.fromHour ||
+        toHour != oldDelegate.toHour ||
+        timeLabelsWidth != oldDelegate.timeLabelsWidth ||
+        dateLabelsHeight != oldDelegate.dateLabelsHeight ||
+        columns != oldDelegate.columns ||
+        gridLineColor != oldDelegate.gridLineColor;
   }
 }
