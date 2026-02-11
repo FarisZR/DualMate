@@ -1,178 +1,230 @@
-# AGENTS.md - AI Agent Guidelines for DualMate
+# AGENTS.md - Engineering Guide for DualMate
 
-This document provides guidelines for AI coding agents working on this Flutter/Dart codebase.
+This file is an onboarding and implementation guide for engineers and AI/code agents working in this repository.
 
 ## Project Overview
 
-- **Project**: DualMate - Mobile app for DHBW (ka) students
-- **Language**: Dart
-- **Framework**: Flutter (cross-platform mobile)
-- **Dart SDK**: `>=2.10.0 <3.0.0`
-- **App Version**: See `lib/common/application_constants.dart`
-- **Target Platform**: Android, IOS is to be ignored.
+- Project: `DualMate` (Flutter/Dart app for DHBW students)
+- Language: Dart
+- Framework: Flutter
+- Dart SDK: `>=3.0.0 <4.0.0`
+- App semver/build: `2.0.0-beta+39`
+- Displayed app version: `2.0-beta` (+ build date + commit hash in debug) in `lib/common/application_constants.dart`
+- Target platform: Android
+- iOS: currently unmaintained, ignore iOS for fixes/features unless explicitly requested
 
-## Build Commands
+## Build, Run, Test
 
 ```bash
-flutter pub get              # Install dependencies
-flutter run                  # Run the app (debug mode)
-flutter build apk            # Build Android APK
-flutter build appbundle      # Build Android App Bundle (for Play Store)
+flutter pub get
+flutter run -d <DEVICE_ID>
+flutter test
+flutter build apk
+flutter build appbundle
 ```
 
-## Test Commands
+For performance profiling:
 
 ```bash
-flutter test                 # Run all tests
-```
-```bash
-flutter run -d <DEVICE_ID> #run the app on a real device to see the logs
+flutter run --profile -d <DEVICE_ID>
 ```
 
 ## Project Structure
 
 ```
 lib/
-├── main.dart                # App entry point
-├── common/                  # Shared code (appstart, data, i18n, ui, util)
-├── schedule/                # Schedule feature (Rapla/Dualis integration)
-├── dualis/                  # Dualis grades feature
-├── date_management/         # Date/calendar management
-└── ui/                      # Main UI (navigation, onboarding, settings)
-test/                        # Unit tests (mirrors lib/ structure)
-android/                     # Android native code (Kotlin)
-ios/                         # iOS native code (Swift)
+├── main.dart                      # App entry point
+├── common/                        # Shared appstart, data, logging, i18n, util, common UI
+├── schedule/                      # Schedule feature (sources, cache, weekly/daily UI, background updates)
+├── canteen/                       # Canteen scraping/cache/UI/background
+├── dualis/                        # Dualis grades/authentication feature
+├── date_management/               # Dates/Rapla important events and calendar export
+├── information/                   # Useful links/info screens
+├── native/                        # Flutter <-> native widget bridge code
+└── ui/                            # Root app UI, navigation, onboarding, settings
+test/                              # Mirrors lib/ structure with parser/viewmodel/widget tests
+docs/                              # Architecture notes, plans, and fix writeups
+android/                           # Android native implementation and widgets
+ios/                               # Unmaintained (ignore unless explicitly asked)
 ```
 
 ## Code Style Guidelines
 
-### Naming Conventions
-- **Files**: `snake_case.dart` (e.g., `schedule_entry.dart`, `base_view_model.dart`)
-- **Classes**: `PascalCase` (e.g., `ScheduleEntry`, `DualisService`)
-- **Enums**: `PascalCase` with `PascalCase` values (e.g., `ScheduleEntryType.Class`)
-- **Constants**: `PascalCase` (e.g., `ApplicationVersion`, `RateInStoreLaunchAfter`)
-- **Variables/Methods**: `camelCase` (e.g., `loginState`, `loadStudyGrades()`)
-- **Private members**: prefix with `_` (e.g., `_dualisService`, `_loginState`)
+### Naming
 
-### Import Organization
-```dart
-import 'dart:io';                                           // 1. Dart SDK
-import 'package:dualmate/common/logging/performance_telemetry.dart'; // 2. Own package
-import 'package:flutter/material.dart';                     // 3. Third-party
-```
-Note: Always group own-package imports before third-party imports.
+- Files: `snake_case.dart`
+- Classes/Enums: `PascalCase`
+- Methods/variables: `camelCase`
+- Private members: prefix with `_`
+- Constants: follow existing project style (`ApplicationVersion`, etc.)
+
+### Imports
+
+Keep imports grouped consistently:
+1. Dart SDK
+2. Own package (`package:dualmate/...`)
+3. Third-party packages
 
 ### Documentation
-Use triple-slash `///` doc comments for classes and methods.
-Markdown headings in documentation must always have a space and proper prefix (e.g., `# Heading`, `## Subheading`).
-New features and fixes are to be documented under the `docs` directory.
+
+- Use `///` doc comments for non-trivial public classes/methods.
+- Document new fixes/features in `docs/solutions/...` and plans in `docs/plans/...`.
+- Keep markdown headings valid (`# Heading`, `## Heading`).
 
 ## Architecture Patterns
 
-### MVVM Pattern
-- ViewModels extend `BaseViewModel` (uses `PropertyChangeNotifier`)
-- Use `notifyIfMounted("propertyName")` instead of `notifyListeners` to safely notify property changes after async work.
-- Avoid heavy initialization in constructors; use an async `initialize()` method instead.
-- Ensure all callbacks (e.g., `_onDidChangeScheduleSource`) are removed in `dispose()`.
+### MVVM + Property Change Notifier
 
-### Dependency Injection
-- Use `KiwiContainer` (see `lib/common/appstart/service_injector.dart`)
-- **Preferred**: Inject dependencies via the constructor rather than resolving inside methods.
-- Register: `KiwiContainer().registerInstance(MyService())`
-- Resolve: `KiwiContainer().resolve<MyService>()`
+- ViewModels extend `BaseViewModel` (`lib/common/ui/viewmodels/base_view_model.dart`).
+- Prefer `notifyIfMounted("propertyName")` for async-safe updates.
+- Avoid heavy constructor work; use guarded `initialize()` methods.
+- Remove callbacks/timers/listeners in `dispose()`.
 
-### Feature Module Structure
+### Dependency Injection (Kiwi)
+
+- Register core services in `lib/common/appstart/service_injector.dart`.
+- Resolve via `KiwiContainer().resolve<T>()`.
+- Prefer constructor injection for new code instead of resolving deep inside methods.
+
+### Feature module layout
+
+Common layout used across features:
+
 ```
 feature/
-├── model/      # Data models/entities
-├── data/       # Repositories, database entities
-├── service/    # Business services, API calls, parsing
-├── business/   # Business logic providers
-└── ui/         # viewmodels/ and widgets/
+├── model/      # Domain/data models
+├── data/       # Repository/database entities
+├── service/    # Scrapers/parsers/API integrations
+├── business/   # Providers/business orchestration
+└── ui/         # ViewModels and widgets/pages
 ```
-
-## Error Handling
-
-```dart
-// Try-catch with specific exceptions
-try {
-  var result = await _dualisService.login(username, password);
-} on OperationCancelledException catch (_) {
-  success = false;
-}
-
-// Rethrow with logging
-try {
-  // operation
-} on ScheduleQueryFailedException catch (e, trace) {
-  print("Failed to fetch schedule!");
-  print(e.innerException.toString());
-  print(trace);
-  rethrow;
-}
-```
-
-## Testing Patterns
-
-```dart
-import 'package:dualmate/common/util/string_utils.dart';
-import 'package:test/test.dart';
-
-void main() {
-  test('String interpolation', () async {
-    var format = "%0 %1!";
-    var result = interpolate(format, ["Hello", "world"]);
-    expect(result, "Hello world!");
-  });
-}
-```
-
-Parser tests use HTML fixtures:
-```dart
-var htmlContent = await File(
-  Directory.current.absolute.path +
-  '/test/schedule/service/rapla/html_resources/rapla_response.html'
-).readAsString();
-```
-
-## Key Dependencies
-
-| Package | Purpose |
-|---------|---------|
-| `provider` | State management |
-| `property_change_notifier` | ViewModel notifications |
-| `kiwi` | Dependency injection |
-| `sqflite` | Local SQLite database |
-| `shared_preferences` | Key-value storage |
-| `flutter_secure_storage` | Secure credential storage |
-| `http` | HTTP requests |
-| `html` | HTML parsing |
-| `workmanager` | Background tasks |
 
 ## Localization
 
-- Languages: English (`en`), German (`de`)
-- Files: `lib/common/i18n/localization_strings_en.dart`, `localization_strings_de.dart`
-- String interpolation: `%0`, `%1`, etc. placeholders
+- Supported locales: English (`en`) and German (`de`)
+- Localization entry: `lib/common/i18n/localizations.dart`
+- String files:
+  - `lib/common/i18n/localization_strings_en.dart`
+  - `lib/common/i18n/localization_strings_de.dart`
+- Interpolation format uses `%0`, `%1`, etc.
 
-## Version Updates
+## High-Value Architecture Map
 
-1. Update `lib/common/application_constants.dart`: `ApplicationVersion`
-2. Update `android/app/build.gradle`: `flutterVersionCode` and `flutterVersionName`
+### App startup path
 
-## Important Notes
+1. `lib/main.dart`
+2. `lib/ui/root_page.dart`
+3. `lib/common/appstart/app_initializer.dart`
+4. `lib/ui/main_page.dart`
 
-- No `analysis_options.yaml` - no custom lint rules enforced
-- Native code: Android (Kotlin), iOS (Swift) with widget extensions
-- Background tasks use `workmanager` package
+Key behavior:
+- First frame is deferred, then allowed as early as possible.
+- Base init (`initializeAppBase`) runs before first usable UI.
+- Heavy foreground work is deferred post-frame (`initializeAppForegroundHeavy`) to reduce launch jank.
+- Startup/perf markers are logged through `PerformanceTelemetry`.
 
-## Debugging Notes
+### Dependency injection
 
-- Device runs are stable across schedule/date management screens, but Android device connections can drop during long sessions. Re-run `flutter run -d <deviceId>` if the device disconnects.
-- See [docs/modernizing.md](docs/modernizing.md) for a full change rationale and debugging trail.
-- Fix issues completely by fixing the root cause and by implementing the modern fix (e.g., request required permissions via the correct OS flow instead of relying on fallbacks alone).
-- Always use the debugger to test changes on an actual Android phone.
+- DI container: Kiwi (`lib/common/appstart/service_injector.dart`)
+- Most app singletons are registered there: providers, repositories, schedule source provider, Dualis services, widget helper, etc.
+- Prefer constructor injection in new code.
 
+### Navigation and routes
+
+- Root routes (`generateRoute`): `onboarding`, `main`, `settings`
+- Drawer routes (`generateDrawerRoute`) are backed by `navigationEntries` in `lib/ui/navigation/router.dart`:
+  - `schedule`
+  - `canteen`
+  - `dualis`
+  - `date_management`
+  - `usefulInformation`
+- `MainPage` hosts a nested navigator (`NavigatorKey.mainKey`) with phone/tablet-specific scaffold layouts.
+
+## Feature Modules and Core Paths
+
+### Schedule (`lib/schedule`)
+
+- Main UI: `lib/schedule/ui/schedule_page.dart`
+- Weekly VM: `lib/schedule/ui/viewmodels/weekly_schedule_view_model.dart`
+- Data service/cache: `lib/schedule/business/schedule_provider.dart`
+- Source switching: `lib/schedule/business/schedule_source_provider.dart`
+
+Important runtime behavior:
+- Cache-first rendering, then stale-window background refresh.
+- Range-aware freshness and request gating.
+- Background widget refresh updates data without mutating visible week:
+  - `updateSchedule(..., applyToVisibleState: false)`
+- Filters must force refresh and invalidate cached ranges where needed.
+
+### Date Management (`lib/date_management`)
+
+- View model: `lib/date_management/ui/viewmodels/date_management_view_model.dart`
+- Default source is Rapla important events (DHmine optional via settings toggle).
+- Rapla events are derived from shared schedule cache (not a separate legacy cache).
+- Pagination is windowed (3-month chunks), throttled, and bounded.
+
+### Canteen (`lib/canteen`)
+
+- View model: `lib/canteen/ui/viewmodels/canteen_view_model.dart`
+- Page: `lib/canteen/ui/canteen_page.dart`
+- Provider/repository: `lib/canteen/business/canteen_provider.dart`, `lib/canteen/data/canteen_meal_repository.dart`
+- Scraping/parsing offloads heavy parsing to isolate path in service layer.
+- UI is day-based with visible-content-day bounds (recent fixes prevent invalid swipe pages/overscroll edge issues).
+
+### Dualis (`lib/dualis`)
+
+- Navigation entry and page under `lib/dualis/ui`
+- Service stack includes cache decorator + scraper/authentication in `lib/dualis/service`
+
+### Widgets and native bridge (`lib/native`, `android/.../widget`)
+
+- Widget refresh bridging: `lib/native/widget/widget_update_callback.dart`
+- Android method channel helper: `lib/native/widget/android_widget_helper.dart`
+- Widget payloads are routed into app via `RootPage` method channel and `WidgetNavigationPayloadStore`.
+
+## Background Jobs and Scheduling
+
+- Background scheduler setup: `lib/common/appstart/background_initialize.dart`
+- Tasks:
+  - `BackgroundScheduleUpdate` (~every 4h)
+  - `BackgroundCanteenUpdate` (~every 8h)
+  - `NextDayInformationNotification`
+- Android uses real scheduler service; non-Android gets no-op scheduler.
+
+## ViewModel and Lifecycle Rules
+
+- Base class: `lib/common/ui/viewmodels/base_view_model.dart`
+- Always use `notifyIfMounted(property)` for async/state updates.
+- Avoid heavy work in constructors; use guarded `initialize()` methods.
+- Remove callbacks/timers/listeners in `dispose()`.
+- For async refreshes, guard disposed state and stale-range application.
+
+## Testing Guidance
+
+- Test tree mirrors feature structure in `test/`.
+- Run targeted tests for touched areas, then broader suites.
+- High-signal suites recently expanded:
+  - `test/schedule/ui/viewmodels/*`
+  - `test/schedule/ui/weeklyschedule/*`
+  - `test/canteen/ui/*`
+  - parser/fixture tests under `test/.../html_resources`
+
+Use real Android device runs for final verification of:
+- lifecycle/resume behavior
+- widget tap navigation/payload handling
+- background refresh and performance
+
+## Documentation Workflow
+
+- Record fixes in `docs/solutions/<category>/...md` with frontmatter.
+- Keep implementation plans in `docs/plans/`.
+- Canonical behavior docs to consult before touching core flows:
+  - `docs/modernizing.md`
+  - `docs/rapla-cache-refresh-behavior.md`
+  - `docs/rapla-schedule-cache-merge.md`
+  - `docs/canteen-feature.md`
+  - `docs/multi-day-widgets.md`
+  - `docs/support/launch-and-orientation.md`
 
 ## Adding new features
 
@@ -180,3 +232,10 @@ var htmlContent = await File(
 - You should continue till the feature is implemented correctly with no errors.
 - Test your final changes using the debugger and the connected android device by reading the logs and checking for issues.
 - target Material you (Material 3) design language (https://m3.material.io/develop/flutter, https://m3.material.io/foundations/content-design/overview)
+
+## Practical Notes
+
+- `README.md` is marked TODO and is not the source of truth for current architecture.
+- `android/build/...` contains generated artifacts; do not treat them as source docs.
+- There is no strict custom lint config (`analysis_options.yaml` absent).
+- Keep new UI work aligned with Material 3 patterns already used in current screens.
