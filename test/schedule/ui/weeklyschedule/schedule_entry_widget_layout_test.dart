@@ -20,8 +20,8 @@ void main() {
 
     final textWidget = tester.widget<Text>(find.text(longTitle));
     expect(textWidget.overflow, TextOverflow.clip);
-    expect(textWidget.maxLines, 6);
-    expect((textWidget.style?.fontSize ?? 0), greaterThanOrEqualTo(12.0));
+    expect(textWidget.maxLines ?? 0, greaterThanOrEqualTo(6));
+    expect((textWidget.style?.fontSize ?? 0), greaterThanOrEqualTo(13.5));
 
     final padding = tester.widget<Padding>(
       find.descendant(
@@ -30,8 +30,8 @@ void main() {
       ),
     );
     final insets = padding.padding as EdgeInsets;
-    expect(insets.left, 2.0);
-    expect(insets.top, 1.5);
+    expect(insets.left, 1.0);
+    expect(insets.top, 1.0);
   });
 
   testWidgets('wider cards keep standard overflow strategy', (tester) async {

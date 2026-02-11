@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:dualmate/common/ui/schedule_entry_type_mappings.dart';
 import 'package:dualmate/common/ui/text_styles.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
@@ -24,10 +26,10 @@ class ScheduleEntryWidget extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isVeryCompact =
-            constraints.maxHeight < 22 || constraints.maxWidth < 60;
+            constraints.maxHeight < 18 || constraints.maxWidth < 48;
         final isCompact = !isVeryCompact &&
-            (constraints.maxHeight < 42 || constraints.maxWidth < 84);
-        final denseMobile = constraints.maxWidth <= 72;
+            (constraints.maxHeight < 34 || constraints.maxWidth < 70);
+        final denseMobile = constraints.maxWidth <= 80;
         final borderRadius = BorderRadius.circular(8);
 
         final baseStyle = textStyleScheduleEntryWidgetTitle(context).copyWith(
@@ -35,14 +37,14 @@ class ScheduleEntryWidget extends StatelessWidget {
         );
         final baseFontSize = baseStyle.fontSize ?? 14.0;
         final fontSize = isVeryCompact
-            ? 11.5
-            : (isCompact || denseMobile
-                ? baseFontSize.clamp(12.0, 13.0)
+            ? math.max(12.5, baseFontSize - 1.0)
+            : ((isCompact || denseMobile)
+                ? math.max(13.5, baseFontSize - 0.5)
                 : baseFontSize);
         final horizontalPadding =
-            (isCompact || denseMobile || isVeryCompact) ? 2.0 : 4.0;
+            (isCompact || denseMobile || isVeryCompact) ? 1.0 : 4.0;
         final verticalPadding =
-            (isCompact || denseMobile || isVeryCompact) ? 1.5 : 3.0;
+            (isCompact || denseMobile || isVeryCompact) ? 1.0 : 3.0;
 
         final estimatedLineHeight = fontSize * 1.08;
         final availableTextHeight =
@@ -51,12 +53,14 @@ class ScheduleEntryWidget extends StatelessWidget {
             ? 1
             : (availableTextHeight / estimatedLineHeight).floor().clamp(1, 12);
         final maxLines = (isCompact || denseMobile || isVeryCompact)
-            ? lineBudget.clamp(1, 6)
+            ? lineBudget.clamp(1, 8)
             : lineBudget;
 
         final textStyle = baseStyle.copyWith(
           fontSize: fontSize,
-          fontWeight: isVeryCompact ? FontWeight.w600 : baseStyle.fontWeight,
+          fontWeight: (isCompact || denseMobile || isVeryCompact)
+              ? FontWeight.w500
+              : baseStyle.fontWeight,
           height: 1.08,
         );
 
