@@ -41,6 +41,12 @@ void main() {
     final pageView = tester.widget<PageView>(pagerFinder);
     final controller = pageView.controller!;
     expect(controller.page, closeTo(10000.0, 0.001));
+    expect(
+      find.byKey(const ValueKey<String>('weekly_fixed_hour_axis')),
+      findsOneWidget,
+    );
+    final fixedAxisHourLabel = find.text('7:00').first;
+    final fixedAxisPositionBeforeDrag = tester.getTopLeft(fixedAxisHourLabel);
 
     final gesture = await tester.startGesture(tester.getCenter(pagerFinder));
     await gesture.moveBy(const Offset(-180, 0));
@@ -49,6 +55,11 @@ void main() {
     final draggedPage = controller.page ?? 10000.0;
     expect(draggedPage, greaterThan(10000.05));
     expect(draggedPage, lessThan(10001.0));
+    final fixedAxisPositionAfterDrag = tester.getTopLeft(fixedAxisHourLabel);
+    expect(
+      fixedAxisPositionAfterDrag.dx,
+      closeTo(fixedAxisPositionBeforeDrag.dx, 0.001),
+    );
 
     await gesture.up();
 

@@ -180,7 +180,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                           Set<String>? properties,
                         ) {
                           if (model == null) return const SizedBox.shrink();
-                          return _buildWeeklyPager(context, model);
+                          return _buildAnimatedScheduleViewport(context, model);
                         },
                       ),
                     ),
@@ -208,9 +208,56 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     );
   }
 
+  Widget _buildAnimatedScheduleViewport(
+    BuildContext context,
+    WeeklyScheduleViewModel model,
+  ) {
+    final targetViewport = _resolveTargetViewport(model);
+    final displayedDays = _resolveDisplayedDays(model);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final axisMetrics = _resolveAxisLayoutMetrics(
+          constraints.maxWidth,
+          displayedDays,
+        );
+
+        return TweenAnimationBuilder<_HourViewport>(
+          tween: _HourViewportTween(end: targetViewport),
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+          builder: (context, viewport, child) {
+            return Row(
+              children: [
+                SizedBox(
+                  key: const ValueKey<String>('weekly_fixed_hour_axis'),
+                  width: axisMetrics.axisWidth,
+                  child: _FixedHourAxis(
+                    dayLabelsHeight: axisMetrics.dayLabelsHeight,
+                    startHour: viewport.startHour,
+                    endHour: viewport.endHour,
+                    compactPhone: axisMetrics.compactPhone,
+                  ),
+                ),
+                Expanded(
+                  child: _buildWeeklyPager(
+                    context,
+                    model,
+                    viewport,
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildWeeklyPager(
     BuildContext context,
     WeeklyScheduleViewModel model,
+    _HourViewport viewport,
   ) {
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
@@ -235,30 +282,20 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
         itemBuilder: (context, pageIndex) {
           final weekStart = _weekStartForPage(pageIndex);
           final pageData = _buildPageData(weekStart, model);
-          final targetViewport = _HourViewport(
-            startHour: pageData.displayStartHour,
-            endHour: pageData.displayEndHour,
-          );
 
           return RepaintBoundary(
             key: ValueKey<String>('week_page_${weekStart.toIso8601String()}'),
-            child: TweenAnimationBuilder<_HourViewport>(
-              tween: _HourViewportTween(end: targetViewport),
-              duration: const Duration(milliseconds: 260),
-              curve: Curves.easeOutCubic,
-              builder: (context, viewport, _) {
-                return ScheduleWidget(
-                  schedule: pageData.schedule,
-                  displayStart: pageData.displayStart,
-                  displayEnd: pageData.displayEnd,
-                  onScheduleEntryTap: (entry) {
-                    _onScheduleEntryTap(context, entry);
-                  },
-                  now: model.now,
-                  displayStartHour: viewport.startHour,
-                  displayEndHour: viewport.endHour,
-                );
+            child: ScheduleWidget(
+              schedule: pageData.schedule,
+              displayStart: pageData.displayStart,
+              displayEnd: pageData.displayEnd,
+              onScheduleEntryTap: (entry) {
+                _onScheduleEntryTap(context, entry);
               },
+              now: model.now,
+              displayStartHour: viewport.startHour,
+              displayEndHour: viewport.endHour,
+              showTimeLabels: false,
             ),
           );
         },
@@ -319,20 +356,10 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
       cachedSchedule,
     );
 
-    final viewportStartHour =
-        (model.displayStartHour > 0 ? model.displayStartHour : 7).toDouble();
-    final viewportEndHourRaw =
-        (model.displayEndHour > 0 ? model.displayEndHour : 17).toDouble();
-    final viewportEndHour = viewportEndHourRaw <= viewportStartHour + 1
-        ? viewportStartHour + 1
-        : viewportEndHourRaw;
-
     return _WeekPageData(
       schedule: cachedSchedule ?? Schedule(),
       displayStart: displayRange.start,
       displayEnd: displayRange.end,
-      displayStartHour: viewportStartHour,
-      displayEndHour: viewportEndHour,
     );
   }
 
@@ -374,6 +401,52 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
 
   DateTime _normalizeWeekStart(DateTime date) {
     return toStartOfDay(toDayOfWeek(date, DateTime.monday));
+  }
+
+  _HourViewport _resolveTargetViewport(WeeklyScheduleViewModel model) {
+    final startHour =
+        (model.displayStartHour > 0 ? model.displayStartHour : 7).toDouble();
+    final endHourRaw =
+        (model.displayEndHour > 0 ? model.displayEndHour : 17).toDouble();
+    final endHour = endHourRaw <= startHour + 1 ? startHour + 1 : endHourRaw;
+    return _HourViewport(
+      startHour: startHour,
+      endHour: endHour,
+    );
+  }
+
+  int _resolveDisplayedDays(WeeklyScheduleViewModel model) {
+    final displayStart =
+        toStartOfDay(model.clippedDateStart ?? model.currentDateStart);
+    final displayEnd =
+        toStartOfDay(model.clippedDateEnd ?? model.currentDateEnd);
+    var days = displayEnd.difference(displayStart).inDays + 1;
+    if (days > 7) {
+      days = 7;
+    } else if (days < 5) {
+      days = 5;
+    }
+    return days;
+  }
+
+  _AxisLayoutMetrics _resolveAxisLayoutMetrics(double totalWidth, int days) {
+    final widthWithWideAxis = (totalWidth - 54).clamp(0.0, double.infinity);
+    final availableColumnWidth = (widthWithWideAxis - 54.0) / days;
+    final compactPhone = availableColumnWidth <= 64 || widthWithWideAxis <= 430;
+
+    if (compactPhone) {
+      return const _AxisLayoutMetrics(
+        axisWidth: 46,
+        dayLabelsHeight: 52,
+        compactPhone: true,
+      );
+    }
+
+    return const _AxisLayoutMetrics(
+      axisWidth: 54,
+      dayLabelsHeight: 72,
+      compactPhone: false,
+    );
   }
 
   int _pageIndexForWeek(DateTime weekStart) {
@@ -522,15 +595,11 @@ class _WeekPageData {
   final Schedule schedule;
   final DateTime displayStart;
   final DateTime displayEnd;
-  final double displayStartHour;
-  final double displayEndHour;
 
   _WeekPageData({
     required this.schedule,
     required this.displayStart,
     required this.displayEnd,
-    required this.displayStartHour,
-    required this.displayEndHour,
   });
 }
 
@@ -558,6 +627,74 @@ class _HourViewportTween extends Tween<_HourViewport> {
           endValue.startHour,
       endHour: lerpDouble(beginValue.endHour, endValue.endHour, t) ??
           endValue.endHour,
+    );
+  }
+}
+
+class _AxisLayoutMetrics {
+  final double axisWidth;
+  final double dayLabelsHeight;
+  final bool compactPhone;
+
+  const _AxisLayoutMetrics({
+    required this.axisWidth,
+    required this.dayLabelsHeight,
+    required this.compactPhone,
+  });
+}
+
+class _FixedHourAxis extends StatelessWidget {
+  final double dayLabelsHeight;
+  final double startHour;
+  final double endHour;
+  final bool compactPhone;
+
+  const _FixedHourAxis({
+    required this.dayLabelsHeight,
+    required this.startHour,
+    required this.endHour,
+    required this.compactPhone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final visibleHours = (endHour - startHour).clamp(1.0, 24.0);
+        final usableHeight = (constraints.maxHeight - dayLabelsHeight)
+            .clamp(1.0, double.infinity);
+        final hourHeight = usableHeight / visibleHours;
+        final firstHour = startHour.floor();
+        final lastHour = endHour.ceil();
+        final textColor = Theme.of(context)
+            .textTheme
+            .bodyMedium
+            ?.color
+            ?.withValues(alpha: 0.92);
+
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            for (var hour = firstHour; hour < lastHour; hour++)
+              Positioned(
+                top: hourHeight * (hour - startHour) + dayLabelsHeight,
+                left: 0,
+                right: 0,
+                child: Padding(
+                  padding: compactPhone
+                      ? const EdgeInsets.fromLTRB(2, 2, 2, 6)
+                      : const EdgeInsets.fromLTRB(4, 4, 4, 8),
+                  child: Text(
+                    '$hour:00',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: textColor,
+                        ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

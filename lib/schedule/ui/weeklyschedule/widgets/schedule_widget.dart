@@ -23,6 +23,7 @@ class ScheduleWidget extends StatelessWidget {
   final double displayStartHour;
   final double displayEndHour;
   final ScheduleEntryTapCallback onScheduleEntryTap;
+  final bool showTimeLabels;
 
   const ScheduleWidget({
     Key? key,
@@ -33,6 +34,7 @@ class ScheduleWidget extends StatelessWidget {
     required this.now,
     required this.displayStartHour,
     required this.displayEndHour,
+    this.showTimeLabels = true,
   }) : super(key: key);
 
   @override
@@ -53,7 +55,7 @@ class ScheduleWidget extends StatelessWidget {
     final layoutProfile = _resolveLayoutProfile(width, days);
 
     var dayLabelsHeight = layoutProfile.dayLabelsHeight;
-    var timeLabelsWidth = layoutProfile.timeLabelsWidth;
+    var timeLabelsWidth = showTimeLabels ? layoutProfile.timeLabelsWidth : 0.0;
 
     final visibleHours = (displayEndHour - displayStartHour).clamp(1.0, 24.0);
     var hourHeight = (height - dayLabelsHeight) / visibleHours;
@@ -144,21 +146,23 @@ class ScheduleWidget extends StatelessWidget {
 
     final firstHourLabel = displayStartHour.floor();
     final lastHourLabel = displayEndHour.ceil();
-    for (var hour = firstHourLabel; hour < lastHourLabel; hour++) {
-      var hourLabelText = '$hour:00';
+    if (showTimeLabels) {
+      for (var hour = firstHourLabel; hour < lastHourLabel; hour++) {
+        var hourLabelText = '$hour:00';
 
-      labelWidgets.add(
-        Positioned(
-          top: rowHeight * (hour - displayStartHour) + dayLabelHeight,
-          left: 0,
-          child: Padding(
-            padding: layoutProfile.compactPhone
-                ? const EdgeInsets.fromLTRB(2, 2, 2, 6)
-                : const EdgeInsets.fromLTRB(4, 4, 4, 8),
-            child: Text(hourLabelText),
+        labelWidgets.add(
+          Positioned(
+            top: rowHeight * (hour - displayStartHour) + dayLabelHeight,
+            left: 0,
+            child: Padding(
+              padding: layoutProfile.compactPhone
+                  ? const EdgeInsets.fromLTRB(2, 2, 2, 6)
+                  : const EdgeInsets.fromLTRB(4, 4, 4, 8),
+              child: Text(hourLabelText),
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
 
     var i = 0;
