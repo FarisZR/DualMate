@@ -173,7 +173,7 @@ class _SchedulePageState extends State<SchedulePage> {
 
   Future<void> _warmFilterPageState() async {
     try {
-      await Future.delayed(const Duration(milliseconds: 900));
+      await Future.delayed(const Duration(milliseconds: 250));
       if (!mounted) return;
       await FilterViewModel.preloadStates(
         KiwiContainer().resolve<ScheduleEntryRepository>(),
