@@ -85,26 +85,49 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
               ),
             ),
             Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : PropertyChangeProvider<FilterViewModel, String>(
-                      value: _viewModel,
-                      child: PropertyChangeConsumer<FilterViewModel, String>(
-                        properties: const ["filterStates"],
-                        builder: (
-                          BuildContext _,
-                          FilterViewModel? viewModel,
-                          Set<String>? ___,
-                        ) {
-                          if (viewModel == null) return Container();
-                          return ListView.builder(
-                            itemCount: viewModel.filterStates.length,
-                            itemBuilder: (context, index) =>
-                                FilterStateRow(viewModel.filterStates[index]),
-                          );
-                        },
-                      ),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 280),
+                reverseDuration: const Duration(milliseconds: 180),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) {
+                  final offsetAnimation = Tween<Offset>(
+                    begin: const Offset(0, 0.03),
+                    end: Offset.zero,
+                  ).animate(animation);
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: offsetAnimation,
+                      child: child,
                     ),
+                  );
+                },
+                child: _isLoading
+                    ? const Center(
+                        key: ValueKey('filter_loading'),
+                        child: CircularProgressIndicator(),
+                      )
+                    : PropertyChangeProvider<FilterViewModel, String>(
+                        key: const ValueKey('filter_list'),
+                        value: _viewModel,
+                        child: PropertyChangeConsumer<FilterViewModel, String>(
+                          properties: const ["filterStates"],
+                          builder: (
+                            BuildContext _,
+                            FilterViewModel? viewModel,
+                            Set<String>? ___,
+                          ) {
+                            if (viewModel == null) return Container();
+                            return ListView.builder(
+                              itemCount: viewModel.filterStates.length,
+                              itemBuilder: (context, index) =>
+                                  FilterStateRow(viewModel.filterStates[index]),
+                            );
+                          },
+                        ),
+                      ),
+              ),
             ),
           ],
         ),
