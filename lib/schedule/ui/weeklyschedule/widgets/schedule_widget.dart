@@ -12,8 +12,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class ScheduleWidget extends StatelessWidget {
-  static const double _columnGap = 6;
-  static const double _eventVerticalGap = 4;
+  static const double _defaultColumnGap = 6;
+  static const double _defaultEventVerticalGap = 4;
   static const double _minimumEventExtent = 6;
 
   final Schedule schedule;
@@ -49,14 +49,15 @@ class ScheduleWidget extends StatelessWidget {
   }
 
   Widget buildWithSize(BuildContext context, double width, double height) {
-    var dayLabelsHeight = 72.0;
-    var timeLabelsWidth = 54.0;
+    var days = calculateDisplayedDays();
+    final layoutProfile = _resolveLayoutProfile(width, days);
+
+    var dayLabelsHeight = layoutProfile.dayLabelsHeight;
+    var timeLabelsWidth = layoutProfile.timeLabelsWidth;
 
     var hourHeight =
         (height - dayLabelsHeight) / (displayEndHour - displayStartHour);
     var minuteHeight = hourHeight / 60;
-
-    var days = calculateDisplayedDays();
 
     var labelWidgets = buildLabelWidgets(
       context,
@@ -66,6 +67,7 @@ class ScheduleWidget extends StatelessWidget {
       timeLabelsWidth,
       hourHeight,
       minuteHeight,
+      layoutProfile,
     );
 
     var entryWidgets = <Widget>[];
@@ -73,8 +75,9 @@ class ScheduleWidget extends StatelessWidget {
     entryWidgets = buildEntryWidgets(
       hourHeight,
       minuteHeight,
-      width - 50,
+      width - timeLabelsWidth,
       days,
+      layoutProfile,
     );
 
     return Stack(
@@ -135,6 +138,7 @@ class ScheduleWidget extends StatelessWidget {
     double timeLabelWidth,
     double hourHeight,
     double minuteHeight,
+    _ScheduleWidgetLayoutProfile layoutProfile,
   ) {
     var labelWidgets = <Widget>[];
 
@@ -146,7 +150,9 @@ class ScheduleWidget extends StatelessWidget {
           top: rowHeight * (i - displayStartHour) + dayLabelHeight,
           left: 0,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+            padding: layoutProfile.compactPhone
+                ? const EdgeInsets.fromLTRB(2, 2, 2, 6)
+                : const EdgeInsets.fromLTRB(4, 4, 4, 8),
             child: Text(hourLabelText),
           ),
         ),
@@ -166,6 +172,7 @@ class ScheduleWidget extends StatelessWidget {
         columnDate = tomorrow(columnDate)) {
       final isToday = isAtSameDay(columnDate, now);
       final dayNumber = dayNumberFormatter.format(columnDate);
+      final monthShort = monthFormatter.format(columnDate);
       labelWidgets.add(
         Positioned(
           top: 0,
@@ -173,7 +180,12 @@ class ScheduleWidget extends StatelessWidget {
           width: columnWidth,
           height: dayLabelHeight,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 0),
+            padding: EdgeInsets.fromLTRB(
+              layoutProfile.dayLabelHorizontalPadding,
+              0,
+              layoutProfile.dayLabelHorizontalPadding,
+              0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -186,41 +198,63 @@ class ScheduleWidget extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                if (isToday)
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(8, 2, 8, 2),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
+                if (layoutProfile.compactPhone)
+                  Text(
+                    '$dayNumber $monthShort',
+                    maxLines: 1,
+                    overflow: TextOverflow.clip,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: isToday
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.color
+                                  ?.withValues(alpha: 0.86),
+                          fontWeight:
+                              isToday ? FontWeight.w700 : FontWeight.w500,
+                        ),
+                  )
+                else ...[
+                  if (isToday)
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(8, 2, 8, 2),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        dayNumber,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                              fontWeight: FontWeight.w700,
+                              height: 1.0,
+                            ),
+                      ),
+                    )
+                  else
+                    Text(
                       dayNumber,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onPrimary,
-                            fontWeight: FontWeight.w700,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
                             height: 1.0,
                           ),
                     ),
-                  )
-                else
+                  const SizedBox(height: 1),
                   Text(
-                    dayNumber,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          height: 1.0,
+                    monthShort,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(context)
+                              .textTheme
+                              .labelSmall
+                              ?.color
+                              ?.withValues(alpha: 0.8),
                         ),
                   ),
-                const SizedBox(height: 1),
-                Text(
-                  monthFormatter.format(columnDate),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context)
-                            .textTheme
-                            .labelSmall
-                            ?.color
-                            ?.withValues(alpha: 0.8),
-                      ),
-                ),
+                ],
               ],
             ),
           ),
@@ -238,6 +272,7 @@ class ScheduleWidget extends StatelessWidget {
     double minuteHeight,
     double width,
     int columns,
+    _ScheduleWidgetLayoutProfile layoutProfile,
   ) {
     if (schedule.entries.isEmpty) return <Widget>[];
 
@@ -257,6 +292,7 @@ class ScheduleWidget extends StatelessWidget {
         minuteHeight,
         xPosition,
         entriesByColumn[columnStartDate] ?? const <ScheduleEntry>[],
+        layoutProfile,
       ));
 
       columnStartDate = tomorrow(columnStartDate);
@@ -294,6 +330,7 @@ class ScheduleWidget extends StatelessWidget {
     double minuteHeight,
     double xPosition,
     List<ScheduleEntry> entries,
+    _ScheduleWidgetLayoutProfile layoutProfile,
   ) {
     var entryWidgets = <Widget>[];
 
@@ -312,11 +349,13 @@ class ScheduleWidget extends StatelessWidget {
       var rawEntryLeft = maxWidth * value.leftColumn;
       var rawEntryWidth = maxWidth * (value.rightColumn - value.leftColumn);
 
-      var verticalInset = rawYEnd - rawYStart > (_eventVerticalGap + 6)
-          ? _eventVerticalGap / 2
+      var verticalInset =
+          rawYEnd - rawYStart > (layoutProfile.eventVerticalGap + 6)
+              ? layoutProfile.eventVerticalGap / 2
+              : 1.0;
+      var horizontalInset = rawEntryWidth > (layoutProfile.columnGap + 10)
+          ? layoutProfile.columnGap / 2
           : 1.0;
-      var horizontalInset =
-          rawEntryWidth > (_columnGap + 10) ? _columnGap / 2 : 1.0;
 
       var yStart = rawYStart + verticalInset;
       var eventHeight = (rawYEnd - rawYStart - (verticalInset * 2))
@@ -344,4 +383,47 @@ class ScheduleWidget extends StatelessWidget {
 
     return entryWidgets;
   }
+
+  _ScheduleWidgetLayoutProfile _resolveLayoutProfile(double width, int days) {
+    final availableColumnWidth = (width - 54.0) / days;
+    final compactPhone = availableColumnWidth <= 64 || width <= 430;
+
+    if (compactPhone) {
+      return const _ScheduleWidgetLayoutProfile(
+        compactPhone: true,
+        dayLabelsHeight: 52,
+        timeLabelsWidth: 46,
+        columnGap: 2,
+        eventVerticalGap: 2,
+        dayLabelHorizontalPadding: 2,
+      );
+    }
+
+    return const _ScheduleWidgetLayoutProfile(
+      compactPhone: false,
+      dayLabelsHeight: 72,
+      timeLabelsWidth: 54,
+      columnGap: _defaultColumnGap,
+      eventVerticalGap: _defaultEventVerticalGap,
+      dayLabelHorizontalPadding: 4,
+    );
+  }
+}
+
+class _ScheduleWidgetLayoutProfile {
+  final bool compactPhone;
+  final double dayLabelsHeight;
+  final double timeLabelsWidth;
+  final double columnGap;
+  final double eventVerticalGap;
+  final double dayLabelHorizontalPadding;
+
+  const _ScheduleWidgetLayoutProfile({
+    required this.compactPhone,
+    required this.dayLabelsHeight,
+    required this.timeLabelsWidth,
+    required this.columnGap,
+    required this.eventVerticalGap,
+    required this.dayLabelHorizontalPadding,
+  });
 }

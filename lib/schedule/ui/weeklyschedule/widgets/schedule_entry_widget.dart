@@ -24,26 +24,48 @@ class ScheduleEntryWidget extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isVeryCompact =
-            constraints.maxHeight < 24 || constraints.maxWidth < 72;
+            constraints.maxHeight < 22 || constraints.maxWidth < 60;
         final isCompact = !isVeryCompact &&
-            (constraints.maxHeight < 42 || constraints.maxWidth < 100);
+            (constraints.maxHeight < 42 || constraints.maxWidth < 84);
+        final denseMobile = constraints.maxWidth <= 72;
         final borderRadius = BorderRadius.circular(8);
 
         final baseStyle = textStyleScheduleEntryWidgetTitle(context).copyWith(
           color: textColor,
         );
+        final baseFontSize = baseStyle.fontSize ?? 14.0;
+        final fontSize = isVeryCompact
+            ? 11.5
+            : (isCompact || denseMobile
+                ? baseFontSize.clamp(12.0, 13.0)
+                : baseFontSize);
+        final horizontalPadding =
+            (isCompact || denseMobile || isVeryCompact) ? 2.0 : 4.0;
+        final verticalPadding =
+            (isCompact || denseMobile || isVeryCompact) ? 1.5 : 3.0;
+
+        final estimatedLineHeight = fontSize * 1.08;
+        final availableTextHeight =
+            (constraints.maxHeight - (verticalPadding * 2)).clamp(0.0, 3000.0);
+        final lineBudget = estimatedLineHeight <= 0
+            ? 1
+            : (availableTextHeight / estimatedLineHeight).floor().clamp(1, 12);
+        final maxLines = (isCompact || denseMobile || isVeryCompact)
+            ? lineBudget.clamp(1, 6)
+            : lineBudget;
+
         final textStyle = baseStyle.copyWith(
-          fontSize: isVeryCompact
-              ? 10.5
-              : (isCompact ? 11.5 : (baseStyle.fontSize ?? 14)),
+          fontSize: fontSize,
           fontWeight: isVeryCompact ? FontWeight.w600 : baseStyle.fontWeight,
-          height: 1.15,
+          height: 1.08,
         );
 
-        final horizontalPadding = isVeryCompact ? 3.0 : 5.0;
-        final verticalPadding = isVeryCompact ? 2.0 : 4.0;
-        final maxLines = isVeryCompact ? 1 : (isCompact ? 2 : 3);
         final shadowOpacity = isVeryCompact ? 0.0 : 0.14;
+        final borderWidth =
+            (isCompact || denseMobile || isVeryCompact) ? 0.5 : 0.6;
+        final overflow = (isCompact || denseMobile || isVeryCompact)
+            ? TextOverflow.clip
+            : TextOverflow.ellipsis;
 
         return DecoratedBox(
           decoration: BoxDecoration(
@@ -66,7 +88,7 @@ class ScheduleEntryWidget extends StatelessWidget {
                 borderRadius: borderRadius,
                 border: Border.all(
                   color: Colors.black.withValues(alpha: 0.08),
-                  width: 0.6,
+                  width: borderWidth,
                 ),
               ),
               child: InkWell(
@@ -85,7 +107,7 @@ class ScheduleEntryWidget extends StatelessWidget {
                     scheduleEntry.title,
                     maxLines: maxLines,
                     softWrap: true,
-                    overflow: TextOverflow.ellipsis,
+                    overflow: overflow,
                     textAlign: TextAlign.left,
                     style: textStyle,
                   ),
