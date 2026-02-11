@@ -23,7 +23,7 @@ The canteen feature provides a performant, swipeable daily menu for the DHBW Kar
 - Persistence: `lib/canteen/data/canteen_meal_repository.dart`, `lib/canteen/data/canteen_meal_entity.dart`
 - View model: `lib/canteen/ui/viewmodels/canteen_view_model.dart`
 - UI: `lib/canteen/ui/canteen_page.dart`, `lib/canteen/ui/widgets/meal_card.dart`
-- Widget: `android/app/src/main/kotlin/de/bennik2000/dhbwstudentapp/widget/canteen` + `android/app/src/main/res/layout/widget_canteen_today.xml`
+- Widget: `android/app/src/main/kotlin/com/fariszr/dualmate/widget/canteen` + `android/app/src/main/res/layout/widget_canteen_today.xml`
 
 ## Data Source
 - Provider: Studierendenwerk Karlsruhe

@@ -115,7 +115,7 @@ try {
 ## Testing Patterns
 
 ```dart
-import 'package:dhbwstudentapp/common/util/string_utils.dart';
+import 'package:dualmate/common/util/string_utils.dart';
 import 'package:test/test.dart';
 
 void main() {
