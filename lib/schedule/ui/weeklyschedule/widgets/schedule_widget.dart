@@ -12,7 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class ScheduleWidget extends StatelessWidget {
-  static const double _defaultColumnGap = 6;
+  static const double _defaultOverlapColumnGap = 6;
   static const double _defaultEventVerticalGap = 4;
   static const double _minimumEventExtent = 6;
 
@@ -354,9 +354,14 @@ class ScheduleWidget extends StatelessWidget {
           rawYEnd - rawYStart > (layoutProfile.eventVerticalGap + 6)
               ? layoutProfile.eventVerticalGap / 2
               : compactMinInset;
-      var horizontalInset = rawEntryWidth > (layoutProfile.columnGap + 10)
-          ? layoutProfile.columnGap / 2
-          : compactMinInset;
+      final spansMultipleOverlapColumns =
+          (value.rightColumn - value.leftColumn) < 0.999;
+      final overlapMinInset = layoutProfile.compactPhone ? 0.25 : 1.0;
+      final horizontalInset = spansMultipleOverlapColumns
+          ? (rawEntryWidth > (layoutProfile.overlapColumnGap + 10)
+              ? layoutProfile.overlapColumnGap / 2
+              : overlapMinInset)
+          : layoutProfile.dayBoundaryInset;
 
       var yStart = rawYStart + verticalInset;
       var eventHeight = (rawYEnd - rawYStart - (verticalInset * 2))
@@ -394,9 +399,10 @@ class ScheduleWidget extends StatelessWidget {
         compactPhone: true,
         dayLabelsHeight: 52,
         timeLabelsWidth: 46,
-        columnGap: 0.0,
+        overlapColumnGap: 0.8,
         eventVerticalGap: 1.2,
         dayLabelHorizontalPadding: 2,
+        dayBoundaryInset: 0.0,
       );
     }
 
@@ -404,9 +410,10 @@ class ScheduleWidget extends StatelessWidget {
       compactPhone: false,
       dayLabelsHeight: 72,
       timeLabelsWidth: 54,
-      columnGap: _defaultColumnGap,
+      overlapColumnGap: _defaultOverlapColumnGap,
       eventVerticalGap: _defaultEventVerticalGap,
       dayLabelHorizontalPadding: 4,
+      dayBoundaryInset: 1.0,
     );
   }
 }
@@ -415,16 +422,18 @@ class _ScheduleWidgetLayoutProfile {
   final bool compactPhone;
   final double dayLabelsHeight;
   final double timeLabelsWidth;
-  final double columnGap;
+  final double overlapColumnGap;
   final double eventVerticalGap;
   final double dayLabelHorizontalPadding;
+  final double dayBoundaryInset;
 
   const _ScheduleWidgetLayoutProfile({
     required this.compactPhone,
     required this.dayLabelsHeight,
     required this.timeLabelsWidth,
-    required this.columnGap,
+    required this.overlapColumnGap,
     required this.eventVerticalGap,
     required this.dayLabelHorizontalPadding,
+    required this.dayBoundaryInset,
   });
 }
