@@ -57,6 +57,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   Schedule? _lastCachedSchedule;
   final Map<String, ScheduleFreshnessGate> _windowFreshnessGates = {};
   final Map<String, Schedule> _memoryWeekCache = {};
+  final Map<String, Future<void>> _prefetchInFlight = {};
   Timer? _windowRefreshTimer;
 
   String? scheduleUrl;
@@ -290,7 +291,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   Future<void> _openWeekFromCache(DateTime start, DateTime end) async {
     try {
       final cacheKey = _windowKey(start, end);
-      final cachedSchedule = _memoryWeekCache[cacheKey] ??
+      final cachedSchedule = getCachedWeek(start, end) ??
           await scheduleProvider.getCachedSchedule(start, end);
       if (_isDisposed) return;
       _memoryWeekCache[cacheKey] = cachedSchedule;
@@ -581,6 +582,53 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
   }
 
+  Schedule? getCachedWeek(DateTime start, DateTime end) {
+    final cacheKey = _windowKey(start, end);
+    final cachedSchedule = _memoryWeekCache[cacheKey];
+    if (cachedSchedule != null) {
+      return cachedSchedule;
+    }
+
+    if (currentDateStart == start && currentDateEnd == end) {
+      return weekSchedule;
+    }
+    return null;
+  }
+
+  Future<void> prefetchWeek(DateTime start, DateTime end) async {
+    if (_isDisposed) return;
+    final cacheKey = _windowKey(start, end);
+    if (_memoryWeekCache.containsKey(cacheKey)) {
+      return;
+    }
+
+    final existingRequest = _prefetchInFlight[cacheKey];
+    if (existingRequest != null) {
+      await existingRequest;
+      return;
+    }
+
+    final request = _prefetchWeekInternal(cacheKey, start, end);
+    _prefetchInFlight[cacheKey] = request;
+    await request;
+  }
+
+  Future<void> _prefetchWeekInternal(
+    String cacheKey,
+    DateTime start,
+    DateTime end,
+  ) async {
+    try {
+      final schedule = await scheduleProvider.getCachedSchedule(start, end);
+      if (_isDisposed) return;
+      _memoryWeekCache[cacheKey] = schedule;
+    } catch (_) {
+      // Best-effort warmup only.
+    } finally {
+      _prefetchInFlight.remove(cacheKey);
+    }
+  }
+
   void _debounceVisibleRefresh(DateTime start, DateTime end) {
     _visibleRefreshDebounce?.cancel();
     _visibleRefreshDebounce = Timer(const Duration(milliseconds: 180), () {
@@ -603,6 +651,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _visibleRefreshDebounce?.cancel();
 
     _errorResetTimer?.cancel();
+    _prefetchInFlight.clear();
 
     super.dispose();
   }
