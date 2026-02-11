@@ -101,11 +101,9 @@ class ScheduleEntryWidget extends StatelessWidget {
                   onScheduleEntryTap(scheduleEntry);
                 },
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    horizontalPadding,
-                    verticalPadding,
-                    horizontalPadding,
-                    verticalPadding,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: verticalPadding,
                   ),
                   child: Text(
                     scheduleEntry.title,

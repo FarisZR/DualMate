@@ -38,6 +38,11 @@ class RootPage extends StatefulWidget {
 }
 
 class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
+  static const Duration _deferredBackgroundInitDelay =
+      Duration(milliseconds: 900);
+  static const Duration _foregroundHeavyInitDelay =
+      Duration(milliseconds: 1400);
+
   RootViewModel? _rootViewModel;
   bool _backgroundInitStarted = false;
   static const MethodChannel _navigationChannel =
@@ -301,13 +306,15 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
   Future<void> _runDeferredInitialization(Stopwatch stopwatch) async {
     try {
-      await Future.delayed(const Duration(milliseconds: 900));
+      // Allow first-frame interaction and navigation transitions to settle.
+      await Future.delayed(_deferredBackgroundInitDelay);
       if (!mounted) return;
       await initializeAppBackground(false);
       print(
           "Root init: deferred background ${stopwatch.elapsedMilliseconds}ms");
       unawaited(_prewarmScheduleCache());
-      Future.delayed(const Duration(milliseconds: 1400), () {
+      // Delay foreground-heavy tasks to keep startup animations responsive.
+      Future.delayed(_foregroundHeavyInitDelay, () {
         if (!mounted) return;
         _runForegroundHeavyInitialization();
       });

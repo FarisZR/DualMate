@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class ScheduleWidget extends StatelessWidget {
+  static const double _defaultTimeLabelsWidth = 54.0;
   static const double _defaultOverlapColumnGap = 6;
   static const double _defaultEventVerticalGap = 4;
   static const double _minimumEventExtent = 6;
@@ -397,7 +398,8 @@ class ScheduleWidget extends StatelessWidget {
   }
 
   _ScheduleWidgetLayoutProfile _resolveLayoutProfile(double width, int days) {
-    final availableColumnWidth = (width - 54.0) / days;
+    final timeLabelWidth = showTimeLabels ? _defaultTimeLabelsWidth : 0.0;
+    final availableColumnWidth = (width - timeLabelWidth) / days;
     final compactPhone = availableColumnWidth <= 64 || width <= 430;
 
     if (compactPhone) {
@@ -415,7 +417,7 @@ class ScheduleWidget extends StatelessWidget {
     return const _ScheduleWidgetLayoutProfile(
       compactPhone: false,
       dayLabelsHeight: 72,
-      timeLabelsWidth: 54,
+      timeLabelsWidth: _defaultTimeLabelsWidth,
       overlapColumnGap: _defaultOverlapColumnGap,
       eventVerticalGap: _defaultEventVerticalGap,
       dayLabelHorizontalPadding: 4,

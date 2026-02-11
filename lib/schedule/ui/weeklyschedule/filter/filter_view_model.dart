@@ -3,6 +3,7 @@ import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
+import 'package:flutter/foundation.dart';
 
 class FilterValidationException implements Exception {
   final String message;
@@ -49,6 +50,17 @@ class FilterViewModel extends BaseViewModel {
     _cachedStatesFuture ??=
         _loadStates(scheduleEntryRepository, scheduleFilterRepository);
     _cachedStates = _cloneStates(await _cachedStatesFuture!);
+  }
+
+  /// Clears the static cache so the next load reflects latest repository data.
+  static void invalidateCache() {
+    _cachedStates = null;
+    _cachedStatesFuture = null;
+  }
+
+  @visibleForTesting
+  static void resetCachedStateForTesting() {
+    invalidateCache();
   }
 
   Future<void> initialize() async {

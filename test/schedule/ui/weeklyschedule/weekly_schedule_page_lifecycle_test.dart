@@ -184,7 +184,9 @@ class _TrackingScheduleProvider implements ScheduleProvider {
   }
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(Invocation invocation) {
+    throw UnsupportedError('Unexpected ScheduleProvider call: $invocation');
+  }
 }
 
 class _RangeRequest {
@@ -218,13 +220,17 @@ class _FakeScheduleSourceProvider implements ScheduleSourceProvider {
   }
 
   void fireScheduleSourceChanged() {
-    for (final callback in _callbacks) {
+    for (final callback in List.of(_callbacks)) {
       callback(_source, true);
     }
   }
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(Invocation invocation) {
+    throw UnsupportedError(
+      'Unexpected ScheduleSourceProvider call: $invocation',
+    );
+  }
 }
 
 class _FakeScheduleSource implements ScheduleSource {

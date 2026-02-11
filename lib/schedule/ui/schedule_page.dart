@@ -52,7 +52,6 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   final ValueNotifier<int?> _forcedPage = ValueNotifier<int?>(null);
-  bool _didWarmUp = false;
 
   @override
   void initState() {
@@ -63,7 +62,6 @@ class _SchedulePageState extends State<SchedulePage> {
       if (!mounted) return;
       PerformanceTelemetry.instance.markNavEvent(name: "schedule.entry");
     });
-    _didWarmUp = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final scheduleViewModel =
@@ -108,9 +106,6 @@ class _SchedulePageState extends State<SchedulePage> {
             }
             return ScheduleEmptyState();
           } else {
-            if (!_didWarmUp) {
-              return ScheduleEmptyStatePlaceholder();
-            }
             final pager = PagerWidget(
               forcedPage: _forcedPage,
               pages: <PageDefinition>[

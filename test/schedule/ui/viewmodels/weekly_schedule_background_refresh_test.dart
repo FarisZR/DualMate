@@ -160,7 +160,9 @@ class _FakeScheduleProvider implements ScheduleProvider {
   }
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(Invocation invocation) {
+    throw UnsupportedError('Unexpected ScheduleProvider call: $invocation');
+  }
 }
 
 class _FakeScheduleSourceProvider implements ScheduleSourceProvider {
@@ -181,7 +183,11 @@ class _FakeScheduleSourceProvider implements ScheduleSourceProvider {
   ) {}
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(Invocation invocation) {
+    throw UnsupportedError(
+      'Unexpected ScheduleSourceProvider call: $invocation',
+    );
+  }
 }
 
 class _FakeScheduleSource implements ScheduleSource {

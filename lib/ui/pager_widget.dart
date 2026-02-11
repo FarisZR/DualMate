@@ -55,6 +55,17 @@ class _PagerWidgetState extends State<PagerWidget> {
   }
 
   @override
+  void didUpdateWidget(covariant PagerWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.pages, widget.pages)) {
+      _pageCache.clear();
+      _loadedPages
+        ..clear()
+        ..add(_currentPage);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(

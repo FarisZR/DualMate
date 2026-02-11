@@ -100,10 +100,8 @@ class _MainPageState extends State<MainPage> {
   }
 
   Widget buildPhoneLayout(BuildContext context, Widget body) {
-    return WillPopScope(
-      onWillPop: () async {
-        return true;
-      },
+    return PopScope(
+      canPop: true,
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.transparent,

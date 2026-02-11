@@ -70,8 +70,8 @@ switches, and lowering schedule swipe refresh pressure.
 - Added device integration smoke test:
   - `integration_test/performance_smoke_test.dart`
   - covers launch, schedule interactions, drawer navigation, and canteen paging.
-- Integration smoke test validated with real Rapla source URL:
-  `https://rapla.dhbw-karlsruhe.de/rapla?page=calendar&user=eisenbiegler&file=TINF25B4`.
+- Integration smoke test now uses a local deterministic Rapla stub URL:
+  `http://127.0.0.1:<PORT>/rapla?page=calendar&user=USERNAME&file=CLASSID`.
 
 # Remaining Observations
 
@@ -79,6 +79,5 @@ switches, and lowering schedule swipe refresh pressure.
   path (notably when onboarding + DB migration + secure-storage migration happen
   together). This is now a narrower first-run path and is less representative of
   warmed daily usage.
-- `integration_test` reports an Android NDK version recommendation
-  (`28.2.13676358`), but local SDK copy for that version is malformed on this
-  machine, so project remains buildable on current installed NDK.
+- Android build now uses `flutter.ndkVersion` (from the active Flutter/AGP toolchain)
+  instead of pinning a fixed NDK version, avoiding machine-specific NDK pin drift.

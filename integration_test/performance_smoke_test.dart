@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dualmate/canteen/ui/canteen_page.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/weekly_schedule_page.dart';
@@ -14,8 +16,9 @@ void main() {
 
   testWidgets('startup, schedule swipe and canteen navigation stay responsive',
       (tester) async {
-    const raplaUrl =
-        'https://rapla.dhbw-karlsruhe.de/rapla?page=calendar&user=eisenbiegler&file=TINF25B4';
+    final raplaStubServer = await _startRaplaStubServer();
+    final raplaUrl =
+        'http://${raplaStubServer.address.address}:${raplaStubServer.port}/rapla?page=calendar&user=USERNAME&file=CLASSID';
     SharedPreferences.setMockInitialValues(
       {
         PreferencesProvider.IsFirstStartKey: false,
@@ -24,42 +27,69 @@ void main() {
       },
     );
 
-    app.main();
-    await tester.pumpAndSettle(const Duration(seconds: 2));
-
-    await _finishOnboardingIfVisible(tester);
-    await tester.pumpAndSettle(const Duration(seconds: 2));
-
-    if (find.byType(WeeklySchedulePage).evaluate().isNotEmpty) {
+    try {
+      app.main();
       await tester.pumpAndSettle(const Duration(seconds: 2));
-      final nextWeekButton = find.byIcon(Icons.chevron_right).first;
-      await tester.tap(nextWeekButton);
-      await tester.pumpAndSettle(const Duration(milliseconds: 500));
 
-      final weeklyPageFinder = find.byType(WeeklySchedulePage);
-      await tester.fling(weeklyPageFinder, const Offset(-360, 0), 1400);
-      await tester.pumpAndSettle(const Duration(milliseconds: 800));
-      await tester.fling(weeklyPageFinder, const Offset(360, 0), 1400);
-      await tester.pumpAndSettle(const Duration(milliseconds: 800));
-    }
+      await _finishOnboardingIfVisible(tester);
+      await tester.pumpAndSettle(const Duration(seconds: 2));
 
-    await _openDrawer(tester);
-    final canteenDrawerItem = find.byKey(
-      const ValueKey<String>('drawer_item_1'),
-    );
-    expect(canteenDrawerItem, findsOneWidget);
-    await tester.tap(canteenDrawerItem);
-    await tester.pumpAndSettle(const Duration(seconds: 2));
+      if (find.byType(WeeklySchedulePage).evaluate().isNotEmpty) {
+        await tester.pumpAndSettle(const Duration(seconds: 2));
+        final chevronFinder = find.byIcon(Icons.chevron_right);
+        if (chevronFinder.evaluate().isNotEmpty) {
+          await tester.tap(chevronFinder.first);
+          await tester.pumpAndSettle(const Duration(milliseconds: 500));
+        }
 
-    final canteenFinder = find.byType(CanteenPage);
-    expect(canteenFinder, findsOneWidget);
+        final weeklyPageFinder = find.byType(WeeklySchedulePage);
+        if (weeklyPageFinder.evaluate().isNotEmpty) {
+          await tester.fling(weeklyPageFinder, const Offset(-360, 0), 1400);
+          await tester.pumpAndSettle(const Duration(milliseconds: 800));
+          await tester.fling(weeklyPageFinder, const Offset(360, 0), 1400);
+          await tester.pumpAndSettle(const Duration(milliseconds: 800));
+        }
+      }
 
-    final pageViewFinder = find.byType(PageView);
-    if (pageViewFinder.evaluate().isNotEmpty) {
-      await tester.fling(pageViewFinder.first, const Offset(-320, 0), 1200);
-      await tester.pumpAndSettle(const Duration(milliseconds: 800));
+      await _openDrawer(tester);
+      final canteenDrawerItem = find.byKey(
+        const ValueKey<String>('drawer_item_1'),
+      );
+      expect(canteenDrawerItem, findsOneWidget);
+      await tester.tap(canteenDrawerItem);
+      await tester.pumpAndSettle(const Duration(seconds: 2));
+
+      final canteenFinder = find.byType(CanteenPage);
+      expect(canteenFinder, findsOneWidget);
+
+      final pageViewFinder = find.byType(PageView);
+      if (pageViewFinder.evaluate().isNotEmpty) {
+        await tester.fling(pageViewFinder.first, const Offset(-320, 0), 1200);
+        await tester.pumpAndSettle(const Duration(milliseconds: 800));
+      }
+    } finally {
+      await raplaStubServer.close(force: true);
     }
   });
+}
+
+Future<HttpServer> _startRaplaStubServer() async {
+  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+  server.listen((request) async {
+    request.response.statusCode = HttpStatus.ok;
+    request.response.headers.contentType = ContentType.html;
+    request.response.write('''
+<!doctype html>
+<html>
+  <head><title>Rapla Test Stub</title></head>
+  <body>
+    <div class="week_table"></div>
+  </body>
+</html>
+''');
+    await request.response.close();
+  });
+  return server;
 }
 
 Future<void> _finishOnboardingIfVisible(WidgetTester tester) async {

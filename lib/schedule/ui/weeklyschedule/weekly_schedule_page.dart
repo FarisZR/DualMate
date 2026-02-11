@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:collection';
+import 'dart:developer' as developer;
 import 'dart:ui' show lerpDouble;
 
 import 'package:dualmate/common/i18n/localizations.dart';
@@ -28,13 +30,16 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     with WidgetsBindingObserver {
   static const int _initialPageIndex = 10000;
   static const int _daysPerWeek = 7;
+  static const double _defaultWideAxisWidth = 54.0;
 
   final Set<String> _prefetchRequestedKeys = <String>{};
+  final Queue<String> _prefetchRequestOrder = Queue<String>();
   late final PageController _weekPageController;
   late WeeklyScheduleViewModel viewModel;
 
   bool _isApplyingWidgetPayload = false;
   bool _pagerInitialized = false;
+  bool _didBindViewModel = false;
   late DateTime _anchorWeekStart;
   int _currentPageIndex = _initialPageIndex;
   int _weekOpenRequestId = 0;
@@ -90,6 +95,18 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
         duration: const Duration(seconds: 15),
       ),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didBindViewModel) return;
+
+    viewModel = Provider.of<WeeklyScheduleViewModel>(context, listen: false);
+    viewModel.ensureUpdateNowTimerRunning();
+    viewModel.setQueryFailedCallback(_showQueryFailedSnackBar);
+    _ensurePagerInitialized();
+    _didBindViewModel = true;
   }
 
   void _previousWeek() {
@@ -151,10 +168,6 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   @override
   Widget build(BuildContext context) {
     viewModel = Provider.of<WeeklyScheduleViewModel>(context);
-    _ensurePagerInitialized();
-
-    viewModel.ensureUpdateNowTimerRunning();
-    viewModel.setQueryFailedCallback(_showQueryFailedSnackBar);
 
     return PropertyChangeProvider<WeeklyScheduleViewModel, String>(
       value: viewModel,
@@ -371,6 +384,11 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     }
 
     _prefetchRequestedKeys.add(key);
+    _prefetchRequestOrder.addLast(key);
+    while (_prefetchRequestOrder.length > 20) {
+      final staleKey = _prefetchRequestOrder.removeFirst();
+      _prefetchRequestedKeys.remove(staleKey);
+    }
     unawaited(model.prefetchWeek(start, end));
   }
 
@@ -380,7 +398,13 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     _pagerInitialized = true;
     try {
       _anchorWeekStart = _normalizeWeekStart(viewModel.currentDateStart);
-    } catch (_) {
+    } catch (error, trace) {
+      developer.log(
+        'Weekly pager init fallback to current date',
+        name: 'weekly_schedule_page',
+        error: error,
+        stackTrace: trace,
+      );
       _anchorWeekStart = _normalizeWeekStart(viewModel.now);
     }
     _currentPageIndex = _pageIndexForWeek(_anchorWeekStart);
@@ -422,9 +446,10 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   }
 
   _AxisLayoutMetrics _resolveAxisLayoutMetrics(double totalWidth, int days) {
-    final widthWithWideAxis = (totalWidth - 54).clamp(0.0, double.infinity);
-    final availableColumnWidth = (widthWithWideAxis - 54.0) / days;
-    final compactPhone = availableColumnWidth <= 64 || widthWithWideAxis <= 430;
+    final widthWithWideAxis =
+        (totalWidth - _defaultWideAxisWidth).clamp(0.0, double.infinity);
+    final availableColumnWidth = widthWithWideAxis / days;
+    final compactPhone = availableColumnWidth <= 64 || totalWidth <= 430;
 
     if (compactPhone) {
       return const _AxisLayoutMetrics(
@@ -442,8 +467,10 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   }
 
   int _pageIndexForWeek(DateTime weekStart) {
-    final normalizedWeekStart = _normalizeWeekStart(weekStart);
-    final dayDelta = normalizedWeekStart.difference(_anchorWeekStart).inDays;
+    final normalizedWeekStartUtc = _normalizeWeekStart(weekStart).toUtc();
+    final anchorWeekStartUtc = _anchorWeekStart.toUtc();
+    final dayDelta =
+        normalizedWeekStartUtc.difference(anchorWeekStartUtc).inDays;
     return _initialPageIndex + (dayDelta ~/ _daysPerWeek);
   }
 

@@ -105,9 +105,15 @@ Future<void> _refreshCanteenInBackground(Stopwatch stopwatch) async {
         .refreshWeek(DateTime.now());
     print(
         "Foreground heavy init: canteen refresh ${stopwatch.elapsedMilliseconds}ms");
-  } catch (exception, trace) {
-    print("Foreground heavy init: canteen refresh failed");
+  } on Exception catch (exception, trace) {
+    print(
+        "Foreground heavy init: canteen refresh failed (${exception.runtimeType})");
     print(exception);
+    print(trace);
+    // Swallowing here is intentional; we don't want to block startup.
+  } catch (error, trace) {
+    print("Foreground heavy init: canteen refresh failed");
+    print(error);
     print(trace);
     // Swallowing here is intentional; we don't want to block startup.
   }
@@ -125,9 +131,15 @@ Future<void> _setupCalendarSyncInBackground(Stopwatch stopwatch) async {
     calendarSynchronizer.scheduleSyncInAFewSeconds();
     print(
         "Foreground heavy init: calendar sync ${stopwatch.elapsedMilliseconds}ms");
-  } catch (exception, trace) {
-    print("Foreground heavy init: calendar sync failed");
+  } on Exception catch (exception, trace) {
+    print(
+        "Foreground heavy init: calendar sync failed (${exception.runtimeType})");
     print(exception);
+    print(trace);
+    // Swallowing here is intentional; we don't want to block startup.
+  } catch (error, trace) {
+    print("Foreground heavy init: calendar sync failed");
+    print(error);
     print(trace);
     // Swallowing here is intentional; we don't want to block startup.
   }

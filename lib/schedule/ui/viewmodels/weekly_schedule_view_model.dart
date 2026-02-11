@@ -21,6 +21,7 @@ import 'package:flutter/widgets.dart';
 
 class WeeklyScheduleViewModel extends BaseViewModel {
   static const Duration weekDuration = Duration(days: 7);
+  static const int _maxRetainedWeeks = 12;
 
   final ScheduleProvider scheduleProvider;
   final ScheduleSourceProvider scheduleSourceProvider;
@@ -80,6 +81,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   DateTime? lastRequestedEnd;
 
   bool _initialized = false;
+  DateTime? _lastWarmedWeekStart;
 
   WeeklyScheduleViewModel(
     this.scheduleProvider,
@@ -200,6 +202,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       try {
         _memoryWeekCache.clear();
         _windowFreshnessGates.clear();
+        _lastWarmedWeekStart = null;
         _freshnessGate.reset();
         _entryRefreshGate.reset();
         await _openWeekFromCache(currentDateStart, currentDateEnd);
@@ -228,6 +231,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
     currentDateStart = start;
     currentDateEnd = end;
+    _evictDistantWindowData(start);
 
     if (weekSchedule != null) {
       var displayRange =
@@ -247,7 +251,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
 
     notifyIfMounted("weekSchedule");
-    unawaited(_warmAdjacentWeeks(start));
+    if (_lastWarmedWeekStart != start) {
+      _lastWarmedWeekStart = start;
+      unawaited(_warmAdjacentWeeks(start));
+    }
   }
 
   Future nextWeek() async {
@@ -574,12 +581,16 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       } catch (_) {}
     }
 
+    if (_isDisposed) return;
+
     if (!_memoryWeekCache.containsKey(nextKey)) {
       try {
         _memoryWeekCache[nextKey] =
             await scheduleProvider.getCachedSchedule(nextStart, nextEnd);
       } catch (_) {}
     }
+
+    _evictDistantWindowData(weekStart);
   }
 
   Schedule? getCachedWeek(DateTime start, DateTime end) {
@@ -635,6 +646,35 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       if (_isDisposed) return;
       unawaited(updateSchedule(start, end));
     });
+  }
+
+  void _evictDistantWindowData(DateTime centerWeekStart) {
+    if (_memoryWeekCache.length <= _maxRetainedWeeks &&
+        _windowFreshnessGates.length <= _maxRetainedWeeks) {
+      return;
+    }
+
+    final sortedKeys = _memoryWeekCache.keys.toList()
+      ..sort((a, b) {
+        final distanceA = _windowDistanceFromCenter(a, centerWeekStart).abs();
+        final distanceB = _windowDistanceFromCenter(b, centerWeekStart).abs();
+        return distanceA.compareTo(distanceB);
+      });
+
+    final retained = sortedKeys.take(_maxRetainedWeeks).toSet();
+    _memoryWeekCache.removeWhere((key, _) => !retained.contains(key));
+    _windowFreshnessGates.removeWhere((key, _) => !retained.contains(key));
+  }
+
+  int _windowDistanceFromCenter(String key, DateTime centerWeekStart) {
+    final separator = key.indexOf('_');
+    if (separator <= 0) return 1 << 20;
+
+    final startString = key.substring(0, separator);
+    final parsedStart = DateTime.tryParse(startString);
+    if (parsedStart == null) return 1 << 20;
+
+    return parsedStart.difference(centerWeekStart).inDays ~/ 7;
   }
 
   @override
