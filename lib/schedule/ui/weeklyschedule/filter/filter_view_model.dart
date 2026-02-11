@@ -23,6 +23,9 @@ class FilterSaveException implements Exception {
 }
 
 class FilterViewModel extends BaseViewModel {
+  static List<ScheduleEntryFilterState>? _cachedStates;
+  static Future<List<ScheduleEntryFilterState>>? _cachedStatesFuture;
+
   final ScheduleEntryRepository _scheduleEntryRepository;
   final ScheduleFilterRepository _scheduleFilterRepository;
   final ScheduleSourceProvider _scheduleSource;
@@ -38,6 +41,16 @@ class FilterViewModel extends BaseViewModel {
     this._scheduleProvider,
   );
 
+  static Future<void> preloadStates(
+    ScheduleEntryRepository scheduleEntryRepository,
+    ScheduleFilterRepository scheduleFilterRepository,
+  ) async {
+    if (_cachedStates != null) return;
+    _cachedStatesFuture ??=
+        _loadStates(scheduleEntryRepository, scheduleFilterRepository);
+    _cachedStates = _cloneStates(await _cachedStatesFuture!);
+  }
+
   Future<void> initialize() async {
     if (_initialized) return;
     _initialized = true;
@@ -45,17 +58,18 @@ class FilterViewModel extends BaseViewModel {
   }
 
   Future<void> loadFilterStates() async {
-    var allNames =
-        await _scheduleEntryRepository.queryAllNamesOfScheduleEntries();
+    final cached = _cachedStates;
+    if (cached != null) {
+      filterStates = _cloneStates(cached);
+      notifyIfMounted("filterStates");
+      return;
+    }
 
-    var filteredNames = await _scheduleFilterRepository.queryAllHiddenNames();
-
-    allNames.sort((s1, s2) => s1.compareTo(s2));
-
-    filterStates = allNames.map((e) {
-      var isFiltered = filteredNames.contains(e);
-      return ScheduleEntryFilterState(!isFiltered, e);
-    }).toList();
+    _cachedStatesFuture ??=
+        _loadStates(_scheduleEntryRepository, _scheduleFilterRepository);
+    final loadedStates = await _cachedStatesFuture!;
+    _cachedStates = _cloneStates(loadedStates);
+    filterStates = _cloneStates(loadedStates);
 
     notifyIfMounted("filterStates");
   }
@@ -77,12 +91,41 @@ class FilterViewModel extends BaseViewModel {
 
     try {
       await _scheduleFilterRepository.saveAllHiddenNames(allFilteredNames);
+      _cachedStates = _cloneStates(filterStates);
+      _cachedStatesFuture = null;
 
       _scheduleProvider.invalidateScheduleCache();
       _scheduleSource.fireScheduleSourceChanged();
     } catch (e) {
       throw FilterSaveException(e);
     }
+  }
+
+  static Future<List<ScheduleEntryFilterState>> _loadStates(
+    ScheduleEntryRepository scheduleEntryRepository,
+    ScheduleFilterRepository scheduleFilterRepository,
+  ) async {
+    final allNames =
+        await scheduleEntryRepository.queryAllNamesOfScheduleEntries();
+    final filteredNames = await scheduleFilterRepository.queryAllHiddenNames();
+
+    allNames.sort((s1, s2) => s1.compareTo(s2));
+
+    return allNames.map((e) {
+      final isFiltered = filteredNames.contains(e);
+      return ScheduleEntryFilterState(!isFiltered, e);
+    }).toList();
+  }
+
+  static List<ScheduleEntryFilterState> _cloneStates(
+    List<ScheduleEntryFilterState> source,
+  ) {
+    return source
+        .map((state) => ScheduleEntryFilterState(
+              state.isDisplayed,
+              state.entryName,
+            ))
+        .toList();
   }
 }
 

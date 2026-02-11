@@ -1,6 +1,9 @@
 import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
+import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 import 'package:dualmate/schedule/ui/schedule_page.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_view_model.dart';
+import 'package:dualmate/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/filter/schedule_filter_page.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_help_dialog.dart';
 import 'package:dualmate/ui/navigation/navigation_entry.dart';
@@ -71,6 +74,12 @@ class ScheduleNavigationEntry extends NavigationEntry<ScheduleViewModel> {
                   ? IconButton(
                       icon: Icon(Icons.filter_alt),
                       onPressed: () async {
+                        try {
+                          await FilterViewModel.preloadStates(
+                            KiwiContainer().resolve<ScheduleEntryRepository>(),
+                            KiwiContainer().resolve<ScheduleFilterRepository>(),
+                          ).timeout(const Duration(milliseconds: 900));
+                        } catch (_) {}
                         await Navigator.of(context).push(
                           PageRouteBuilder<void>(
                             transitionDuration:

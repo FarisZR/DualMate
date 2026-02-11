@@ -4,9 +4,12 @@ import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:dualmate/schedule/ui/dailyschedule/daily_schedule_page.dart';
+import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
+import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 import 'package:dualmate/schedule/ui/viewmodels/daily_schedule_view_model.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_view_model.dart';
 import 'package:dualmate/schedule/ui/viewmodels/weekly_schedule_view_model.dart';
+import 'package:dualmate/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/weekly_schedule_page.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_empty_state.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_empty_state_placeholder.dart';
@@ -67,6 +70,7 @@ class _SchedulePageState extends State<SchedulePage> {
           Provider.of<ScheduleViewModel>(context, listen: false);
       scheduleViewModel.initialize();
       unawaited(weeklyScheduleViewModel.initialize());
+      unawaited(_warmFilterPageState());
     });
   }
 
@@ -165,5 +169,19 @@ class _SchedulePageState extends State<SchedulePage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+  }
+
+  Future<void> _warmFilterPageState() async {
+    try {
+      await Future.delayed(const Duration(milliseconds: 900));
+      if (!mounted) return;
+      await FilterViewModel.preloadStates(
+        KiwiContainer().resolve<ScheduleEntryRepository>(),
+        KiwiContainer().resolve<ScheduleFilterRepository>(),
+      );
+    } catch (error, trace) {
+      debugPrint('Failed to warm filter state: $error');
+      debugPrint('$trace');
+    }
   }
 }
