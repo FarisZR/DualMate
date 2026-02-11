@@ -9,6 +9,8 @@ class PerformanceTelemetry {
   static final PerformanceTelemetry instance = PerformanceTelemetry._();
 
   bool _frameTimingListenerAttached = false;
+  DateTime? _lastJankFrameLogAt;
+  static const Duration _minJankLogInterval = Duration(milliseconds: 500);
 
   /// Attach frame timing listener once (debug/profile). No-op if already attached.
   void ensureFrameTimingListenerAttached() {
@@ -22,8 +24,18 @@ class PerformanceTelemetry {
       final build = timing.buildDuration.inMilliseconds;
       final raster = timing.rasterDuration.inMilliseconds;
       final isJanky = build > 16 || raster > 16;
+      if (!isJanky) continue;
+
+      final now = DateTime.now();
+      final lastLogAt = _lastJankFrameLogAt;
+      if (lastLogAt != null &&
+          now.difference(lastLogAt) < _minJankLogInterval) {
+        continue;
+      }
+
+      _lastJankFrameLogAt = now;
       developer.log(
-        'frame timing: build=${build}ms raster=${raster}ms jank=$isJanky',
+        'janky frame timing: build=${build}ms raster=${raster}ms',
         name: 'perf.frame',
       );
     }

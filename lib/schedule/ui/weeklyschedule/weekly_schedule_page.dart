@@ -336,9 +336,6 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
       viewModel.prefetchWeek(previousStart, toNextWeek(previousStart)),
       viewModel.prefetchWeek(nextStart, toNextWeek(nextStart)),
     ]);
-
-    if (!mounted) return;
-    setState(() {});
   }
 
   _WeekPageData _buildPageData(
@@ -374,12 +371,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     }
 
     _prefetchRequestedKeys.add(key);
-    unawaited(
-      model.prefetchWeek(start, end).then((_) {
-        if (!mounted) return;
-        setState(() {});
-      }),
-    );
+    unawaited(model.prefetchWeek(start, end));
   }
 
   void _ensurePagerInitialized() {
