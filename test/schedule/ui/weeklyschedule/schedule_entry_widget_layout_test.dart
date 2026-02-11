@@ -30,8 +30,8 @@ void main() {
       ),
     );
     final insets = padding.padding as EdgeInsets;
-    expect(insets.left, 1.0);
-    expect(insets.top, 1.0);
+    expect(insets.left, 1.35);
+    expect(insets.top, 1.2);
   });
 
   testWidgets('wider cards keep standard overflow strategy', (tester) async {

@@ -42,9 +42,9 @@ class ScheduleEntryWidget extends StatelessWidget {
                 ? math.max(13.5, baseFontSize - 0.5)
                 : baseFontSize);
         final horizontalPadding =
-            (isCompact || denseMobile || isVeryCompact) ? 1.0 : 4.0;
+            (isCompact || denseMobile || isVeryCompact) ? 1.35 : 4.0;
         final verticalPadding =
-            (isCompact || denseMobile || isVeryCompact) ? 1.0 : 3.0;
+            (isCompact || denseMobile || isVeryCompact) ? 1.2 : 3.0;
 
         final estimatedLineHeight = fontSize * 1.08;
         final availableTextHeight =

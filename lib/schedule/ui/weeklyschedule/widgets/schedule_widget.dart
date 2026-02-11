@@ -349,7 +349,7 @@ class ScheduleWidget extends StatelessWidget {
       var rawEntryLeft = maxWidth * value.leftColumn;
       var rawEntryWidth = maxWidth * (value.rightColumn - value.leftColumn);
 
-      final compactMinInset = layoutProfile.compactPhone ? 0.35 : 1.0;
+      final compactMinInset = layoutProfile.compactPhone ? 0.1 : 1.0;
       var verticalInset =
           rawYEnd - rawYStart > (layoutProfile.eventVerticalGap + 6)
               ? layoutProfile.eventVerticalGap / 2
@@ -394,7 +394,7 @@ class ScheduleWidget extends StatelessWidget {
         compactPhone: true,
         dayLabelsHeight: 52,
         timeLabelsWidth: 46,
-        columnGap: 0.8,
+        columnGap: 0.0,
         eventVerticalGap: 1.2,
         dayLabelHorizontalPadding: 2,
       );
