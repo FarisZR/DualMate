@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:animations/animations.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/widgets/error_display.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
@@ -13,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 
 class WeeklySchedulePage extends StatefulWidget {
   @override
@@ -141,12 +141,12 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                _buildNavigationButtonBar(),
+                _buildNavigationHeader(context),
                 Expanded(
                   child: Stack(
                     children: <Widget>[
                       Padding(
-                        padding: const EdgeInsets.all(8.0),
+                        padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
                         child: PropertyChangeConsumer<WeeklyScheduleViewModel,
                             String>(
                           properties: const ["weekSchedule", "now"],
@@ -154,34 +154,48 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                               WeeklyScheduleViewModel? model,
                               Set<String>? properties) {
                             if (model == null) return Container();
-                            return PageTransitionSwitcher(
-                              reverse: !model.didUpdateScheduleIntoFuture,
-                              duration: const Duration(milliseconds: 180),
-                              transitionBuilder: (Widget child,
-                                      Animation<double> animation,
-                                      Animation<double> secondaryAnimation) =>
-                                  SharedAxisTransition(
-                                child: child,
-                                animation: animation,
-                                secondaryAnimation: secondaryAnimation,
-                                transitionType:
-                                    SharedAxisTransitionType.horizontal,
-                              ),
-                              child: ScheduleWidget(
+                            return AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 120),
+                              switchInCurve: Curves.easeOut,
+                              switchOutCurve: Curves.easeOut,
+                              transitionBuilder: (child, animation) {
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: SlideTransition(
+                                    position: Tween<Offset>(
+                                      begin: const Offset(0.01, 0),
+                                      end: Offset.zero,
+                                    ).animate(animation),
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              layoutBuilder: (currentChild, previousChildren) {
+                                return Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    ...previousChildren,
+                                    if (currentChild != null) currentChild,
+                                  ],
+                                );
+                              },
+                              child: RepaintBoundary(
                                 key: ValueKey(
                                   model.currentDateStart.toIso8601String(),
                                 ),
-                                schedule: model.weekSchedule ?? Schedule(),
-                                displayStart: model.clippedDateStart ??
-                                    model.currentDateStart,
-                                displayEnd: model.clippedDateEnd ??
-                                    model.currentDateEnd,
-                                onScheduleEntryTap: (entry) {
-                                  _onScheduleEntryTap(context, entry);
-                                },
-                                now: model.now,
-                                displayEndHour: model.displayEndHour,
-                                displayStartHour: model.displayStartHour,
+                                child: ScheduleWidget(
+                                  schedule: model.weekSchedule ?? Schedule(),
+                                  displayStart: model.clippedDateStart ??
+                                      model.currentDateStart,
+                                  displayEnd: model.clippedDateEnd ??
+                                      model.currentDateEnd,
+                                  onScheduleEntryTap: (entry) {
+                                    _onScheduleEntryTap(context, entry);
+                                  },
+                                  now: model.now,
+                                  displayEndHour: model.displayEndHour,
+                                  displayStartHour: model.displayStartHour,
+                                ),
                               ),
                             );
                           },
@@ -245,23 +259,70 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     }
   }
 
-  Row _buildNavigationButtonBar() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: <Widget>[
-        IconButton(
-          icon: Icon(Icons.chevron_left),
-          onPressed: _previousWeek,
+  Widget _buildNavigationHeader(BuildContext context) {
+    final locale = L.of(context).locale.toString();
+    final monthFormatter = DateFormat.yMMMM(locale);
+    final dayFormatter = DateFormat('d MMM', locale);
+    final weekStart = viewModel.currentDateStart;
+    final weekEnd = viewModel.currentDateEnd.subtract(const Duration(days: 1));
+    final weekRange = '${dayFormatter.format(weekStart)} - '
+        '${dayFormatter.format(weekEnd)}';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+          ),
         ),
-        IconButton(
-          icon: Icon(Icons.today),
-          onPressed: _goToToday,
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    monthFormatter.format(weekStart),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    weekRange,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.color
+                              ?.withValues(alpha: 0.75),
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.chevron_left),
+              visualDensity: VisualDensity.compact,
+              onPressed: _previousWeek,
+            ),
+            IconButton(
+              icon: const Icon(Icons.today_outlined),
+              visualDensity: VisualDensity.compact,
+              onPressed: _goToToday,
+            ),
+            IconButton(
+              icon: const Icon(Icons.chevron_right),
+              visualDensity: VisualDensity.compact,
+              onPressed: _nextWeek,
+            ),
+          ],
         ),
-        IconButton(
-          icon: Icon(Icons.chevron_right),
-          onPressed: _nextWeek,
-        ),
-      ],
+      ),
     );
   }
 

@@ -20,14 +20,12 @@ import 'package:provider/provider.dart';
 class SchedulePage extends StatefulWidget {
   static WeeklyScheduleViewModel? _sharedWeeklyScheduleViewModel;
   static DailyScheduleViewModel? _sharedDailyScheduleViewModel;
-  static bool _warmUpCompleted = false;
 
   static void resetSharedState() {
     _sharedWeeklyScheduleViewModel?.dispose();
     _sharedWeeklyScheduleViewModel = null;
     _sharedDailyScheduleViewModel?.dispose();
     _sharedDailyScheduleViewModel = null;
-    _warmUpCompleted = false;
   }
 
   @override
@@ -62,30 +60,13 @@ class _SchedulePageState extends State<SchedulePage> {
       if (!mounted) return;
       PerformanceTelemetry.instance.markNavEvent(name: "schedule.entry");
     });
-    if (SchedulePage._warmUpCompleted) {
-      _didWarmUp = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        final scheduleViewModel =
-            Provider.of<ScheduleViewModel>(context, listen: false);
-        scheduleViewModel.initialize();
-        unawaited(weeklyScheduleViewModel.initialize());
-      });
-      return;
-    }
+    _didWarmUp = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      Future.delayed(Duration.zero, () {
-        if (!mounted) return;
-        final scheduleViewModel =
-            Provider.of<ScheduleViewModel>(context, listen: false);
-        scheduleViewModel.initialize();
-        unawaited(weeklyScheduleViewModel.initialize());
-        setState(() {
-          _didWarmUp = true;
-          SchedulePage._warmUpCompleted = true;
-        });
-      });
+      final scheduleViewModel =
+          Provider.of<ScheduleViewModel>(context, listen: false);
+      scheduleViewModel.initialize();
+      unawaited(weeklyScheduleViewModel.initialize());
     });
   }
 

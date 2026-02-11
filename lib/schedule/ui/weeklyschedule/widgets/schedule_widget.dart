@@ -9,10 +9,13 @@ import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_entry_widge
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_grid.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_past_overlay.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 
 class ScheduleWidget extends StatelessWidget {
+  static const double _columnGap = 6;
+  static const double _eventVerticalGap = 4;
+  static const double _minimumEventExtent = 6;
+
   final Schedule schedule;
   final DateTime displayStart;
   final DateTime displayEnd;
@@ -34,22 +37,20 @@ class ScheduleWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          return buildWithSize(
-            context,
-            constraints.biggest.width,
-            constraints.biggest.height,
-          );
-        },
-      ),
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        return buildWithSize(
+          context,
+          constraints.biggest.width,
+          constraints.biggest.height,
+        );
+      },
     );
   }
 
   Widget buildWithSize(BuildContext context, double width, double height) {
-    var dayLabelsHeight = 40.0;
-    var timeLabelsWidth = 50.0;
+    var dayLabelsHeight = 72.0;
+    var timeLabelsWidth = 54.0;
 
     var hourHeight =
         (height - dayLabelsHeight) / (displayEndHour - displayStartHour);
@@ -155,13 +156,16 @@ class ScheduleWidget extends StatelessWidget {
     var i = 0;
 
     var dayFormatter = DateFormat("E", L.of(context).locale.languageCode);
-    var dateFormatter = DateFormat("d. MMM", L.of(context).locale.languageCode);
+    var dayNumberFormatter = DateFormat("d", L.of(context).locale.languageCode);
+    var monthFormatter = DateFormat("MMM", L.of(context).locale.languageCode);
 
     var loopEnd = toStartOfDay(tomorrow(displayEnd));
 
     for (var columnDate = toStartOfDay(displayStart);
         columnDate.isBefore(loopEnd);
         columnDate = tomorrow(columnDate)) {
+      final isToday = isAtSameDay(columnDate, now);
+      final dayNumber = dayNumberFormatter.format(columnDate);
       labelWidgets.add(
         Positioned(
           top: 0,
@@ -175,10 +179,48 @@ class ScheduleWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 Text(
-                  dayFormatter.format(columnDate),
-                  style: textStyleScheduleWidgetColumnTitleDay(context),
+                  dayFormatter.format(columnDate).toUpperCase(),
+                  style:
+                      textStyleScheduleWidgetColumnTitleDay(context).copyWith(
+                    letterSpacing: 0.6,
+                  ),
                 ),
-                Text(dateFormatter.format(columnDate)),
+                const SizedBox(height: 2),
+                if (isToday)
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(8, 2, 8, 2),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      dayNumber,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            fontWeight: FontWeight.w700,
+                            height: 1.0,
+                          ),
+                    ),
+                  )
+                else
+                  Text(
+                    dayNumber,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          height: 1.0,
+                        ),
+                  ),
+                const SizedBox(height: 1),
+                Text(
+                  monthFormatter.format(columnDate),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context)
+                            .textTheme
+                            .labelSmall
+                            ?.color
+                            ?.withValues(alpha: 0.8),
+                      ),
+                ),
               ],
             ),
           ),
@@ -192,35 +234,58 @@ class ScheduleWidget extends StatelessWidget {
   }
 
   List<Widget> buildEntryWidgets(
-      double hourHeight, double minuteHeight, double width, int columns) {
+    double hourHeight,
+    double minuteHeight,
+    double width,
+    int columns,
+  ) {
     if (schedule.entries.isEmpty) return <Widget>[];
 
     var entryWidgets = <Widget>[];
 
     var columnWidth = width / columns;
-
-    DateTime columnStartDate = toStartOfDay(displayStart);
-    DateTime columnEndDate = tomorrow(columnStartDate);
+    final entriesByColumn = _buildEntriesByColumn(columns);
+    var columnStartDate = toStartOfDay(displayStart);
 
     for (int i = 0; i < columns; i++) {
       var xPosition = columnWidth * i;
       var maxWidth = columnWidth;
-
-      var columnSchedule = schedule.trim(columnStartDate, columnEndDate);
 
       entryWidgets.addAll(buildEntryWidgetsForColumn(
         maxWidth,
         hourHeight,
         minuteHeight,
         xPosition,
-        columnSchedule.entries,
+        entriesByColumn[columnStartDate] ?? const <ScheduleEntry>[],
       ));
 
-      columnStartDate = columnEndDate;
-      columnEndDate = tomorrow(columnEndDate);
+      columnStartDate = tomorrow(columnStartDate);
     }
 
     return entryWidgets;
+  }
+
+  Map<DateTime, List<ScheduleEntry>> _buildEntriesByColumn(int columns) {
+    final result = <DateTime, List<ScheduleEntry>>{};
+    final columnStarts = <DateTime>[];
+    var cursor = toStartOfDay(displayStart);
+
+    for (var i = 0; i < columns; i++) {
+      columnStarts.add(cursor);
+      result[cursor] = <ScheduleEntry>[];
+      cursor = tomorrow(cursor);
+    }
+
+    for (final entry in schedule.entries) {
+      for (final dayStart in columnStarts) {
+        final dayEnd = tomorrow(dayStart);
+        if (entry.start.isBefore(dayEnd) && entry.end.isAfter(dayStart)) {
+          result[dayStart]!.add(entry);
+        }
+      }
+    }
+
+    return result;
   }
 
   List<Widget> buildEntryWidgetsForColumn(
@@ -238,19 +303,35 @@ class ScheduleWidget extends StatelessWidget {
     for (var value in laidOutEntries) {
       var entry = value.entry;
 
-      var yStart = hourHeight * (entry.start.hour - displayStartHour) +
+      var rawYStart = hourHeight * (entry.start.hour - displayStartHour) +
           minuteHeight * entry.start.minute;
 
-      var yEnd = hourHeight * (entry.end.hour - displayStartHour) +
+      var rawYEnd = hourHeight * (entry.end.hour - displayStartHour) +
           minuteHeight * entry.end.minute;
 
-      var entryLeft = maxWidth * value.leftColumn;
-      var entryWidth = maxWidth * (value.rightColumn - value.leftColumn);
+      var rawEntryLeft = maxWidth * value.leftColumn;
+      var rawEntryWidth = maxWidth * (value.rightColumn - value.leftColumn);
+
+      var verticalInset = rawYEnd - rawYStart > (_eventVerticalGap + 6)
+          ? _eventVerticalGap / 2
+          : 1.0;
+      var horizontalInset =
+          rawEntryWidth > (_columnGap + 10) ? _columnGap / 2 : 1.0;
+
+      var yStart = rawYStart + verticalInset;
+      var eventHeight = (rawYEnd - rawYStart - (verticalInset * 2))
+          .clamp(_minimumEventExtent, double.infinity)
+          .toDouble();
+
+      var entryLeft = rawEntryLeft + horizontalInset;
+      var entryWidth = (rawEntryWidth - (horizontalInset * 2))
+          .clamp(_minimumEventExtent, double.infinity)
+          .toDouble();
 
       var widget = Positioned(
         top: yStart,
         left: entryLeft + xPosition,
-        height: yEnd - yStart,
+        height: eventHeight,
         width: entryWidth,
         child: ScheduleEntryWidget(
           scheduleEntry: entry,

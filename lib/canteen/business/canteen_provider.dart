@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
@@ -57,7 +59,7 @@ class CanteenProvider {
 
     await _notifyCallbacks(normalizedMenus, weekStart, weekEnd);
 
-    await _prefetchNextWeek(weekStart, cancellationToken);
+    unawaited(_prefetchNextWeek(weekStart, cancellationToken));
 
     return normalizedMenus;
   }

@@ -33,8 +33,8 @@ class _PagerWidgetState extends State<PagerWidget> {
   final String? pagesId;
   final List<PageDefinition> pages;
   int _currentPage = 0;
-  DateTime? _lastSwitchAt;
-  static const Duration _switchThrottle = Duration(milliseconds: 300);
+  final Set<int> _loadedPages = <int>{};
+  final Map<int, Widget> _pageCache = {};
 
   _PagerWidgetState(this.pages, this.pagesId);
 
@@ -43,6 +43,7 @@ class _PagerWidgetState extends State<PagerWidget> {
     super.initState();
 
     loadActivePage();
+    _loadedPages.add(_currentPage);
     widget.forcedPage?.addListener(_handleForcedPage);
     _handleForcedPage();
   }
@@ -56,15 +57,11 @@ class _PagerWidgetState extends State<PagerWidget> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        child: Column(
-          key: ValueKey(_currentPage),
-          children: <Widget>[
-            Expanded(
-              child: pages[_currentPage].builder(context),
-            ),
-          ],
+      body: IndexedStack(
+        index: _currentPage,
+        children: List.generate(
+          pages.length,
+          (index) => _buildPage(context, index),
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -95,16 +92,10 @@ class _PagerWidgetState extends State<PagerWidget> {
     if (page < 0 || page >= pages.length) {
       return;
     }
-    var now = DateTime.now();
-    if (!force &&
-        _lastSwitchAt != null &&
-        now.difference(_lastSwitchAt!) < _switchThrottle) {
-      return;
-    }
-    _lastSwitchAt = now;
 
     setState(() {
       _currentPage = page;
+      _loadedPages.add(page);
     });
     if (pagesId != null) {
       await preferencesProvider.set("${pagesId}_active_page", page);
@@ -123,6 +114,7 @@ class _PagerWidgetState extends State<PagerWidget> {
         selectedPage < pages.length) {
       setState(() {
         _currentPage = selectedPage;
+        _loadedPages.add(selectedPage);
       });
     }
   }
@@ -132,6 +124,13 @@ class _PagerWidgetState extends State<PagerWidget> {
     if (forced == null) return;
     await setActivePage(forced, force: true);
     widget.forcedPage?.value = null;
+  }
+
+  Widget _buildPage(BuildContext context, int index) {
+    if (!_loadedPages.contains(index)) {
+      return const SizedBox.shrink();
+    }
+    return _pageCache.putIfAbsent(index, () => pages[index].builder(context));
   }
 }
 

@@ -25,4 +25,10 @@ class ScheduleFreshnessGate {
     _lastEnd = end;
     _lastFetchedAt = now;
   }
+
+  void reset() {
+    _lastStart = null;
+    _lastEnd = null;
+    _lastFetchedAt = null;
+  }
 }

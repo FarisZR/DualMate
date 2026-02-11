@@ -1,7 +1,7 @@
 import 'package:dualmate/common/ui/app_launch_dialogs.dart';
 import 'package:dualmate/common/util/platform_util.dart';
 import 'package:dualmate/ui/navigation/navigation_entry.dart';
-import 'package:dualmate/ui/navigation/navigator_key.dart';
+import 'package:dualmate/ui/navigation/main_section_controller.dart';
 import 'package:dualmate/ui/navigation/router.dart';
 import 'package:dualmate/ui/navigation_drawer.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
@@ -25,14 +25,9 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   bool _appLaunchDialogsShown = false;
-
-  String? _initialRoute;
-  bool _didApplyInitialRoute = false;
-
-  bool _showContent = false;
-  bool _appliedInitialRoutePostShell = false;
-
   final ValueNotifier<int> _currentEntryIndex = ValueNotifier<int>(0);
+  final Map<int, Widget> _sectionCache = {};
+  final Set<int> _loadedSections = <int>{};
 
   NavigationEntry get currentEntry =>
       navigationEntries[_currentEntryIndex.value];
@@ -40,51 +35,39 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
-
-    _initialRoute = widget.initialRoute;
-
-    _syncCurrentEntryIndex();
-
+    _setCurrentEntryFromRoute(widget.initialRoute);
+    _loadedSections.add(_currentEntryIndex.value);
+    MainSectionController.instance.routeSignal
+        .addListener(_handleExternalRouteRequest);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      setState(() {
-        _showContent = true;
-      });
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (!mounted) return;
-        _pushInitialRouteAfterShell();
-      });
+      _handleExternalRouteRequest();
     });
+  }
+
+  @override
+  void dispose() {
+    MainSectionController.instance.routeSignal
+        .removeListener(_handleExternalRouteRequest);
+    _currentEntryIndex.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     _showAppLaunchDialogsIfNeeded(context);
 
-    _syncCurrentEntryIndex();
-
-    if (!_showContent) {
-      return Container(
-        color: Theme.of(context).scaffoldBackgroundColor,
-      );
-    }
-
-    var navigator = Navigator(
-      key: NavigatorKey.mainKey,
-      onGenerateRoute: generateDrawerRoute,
-      initialRoute: "shell",
-    );
-
     return ChangeNotifierProvider.value(
       value: _currentEntryIndex,
       child: Consumer<ValueNotifier<int>>(
         builder: (BuildContext context, value, Widget? child) {
+          final body = _buildSectionStack(context);
           Widget content;
 
           if (PlatformUtil.isTablet()) {
-            content = buildTabletLayout(context, navigator);
+            content = buildTabletLayout(context, body);
           } else {
-            content = buildPhoneLayout(context, navigator);
+            content = buildPhoneLayout(context, body);
           }
 
           return content;
@@ -93,16 +76,33 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  Widget buildPhoneLayout(BuildContext context, Navigator navigator) {
+  Widget _buildSectionStack(BuildContext context) {
+    return IndexedStack(
+      index: _currentEntryIndex.value,
+      children: List.generate(
+        navigationEntries.length,
+        (index) => _buildSection(context, index),
+      ),
+    );
+  }
+
+  Widget _buildSection(BuildContext context, int index) {
+    if (!_loadedSections.contains(index)) {
+      return const SizedBox.shrink();
+    }
+    return _sectionCache.putIfAbsent(
+      index,
+      () => KeyedSubtree(
+        key: ValueKey<String>("main_section_${navigationEntries[index].route}"),
+        child: navigationEntries[index].buildRoute(context),
+      ),
+    );
+  }
+
+  Widget buildPhoneLayout(BuildContext context, Widget body) {
     return WillPopScope(
       onWillPop: () async {
-        var canPop = NavigatorKey.mainKey.currentState?.canPop() ?? false;
-
-        if (!canPop) return true;
-
-        NavigatorKey.mainKey.currentState?.pop();
-
-        return false;
+        return true;
       },
       child: Scaffold(
         appBar: AppBar(
@@ -115,7 +115,7 @@ class _MainPageState extends State<MainPage> {
           toolbarTextStyle: Theme.of(context).textTheme.bodyMedium,
           titleTextStyle: Theme.of(context).textTheme.titleLarge,
         ),
-        body: navigator,
+        body: body,
         drawer: MyNavigationDrawer(
           selectedIndex: _currentEntryIndex.value,
           onTap: _onNavigationTapped,
@@ -125,7 +125,7 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  Widget buildTabletLayout(BuildContext context, Navigator navigator) {
+  Widget buildTabletLayout(BuildContext context, Widget body) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -154,7 +154,7 @@ class _MainPageState extends State<MainPage> {
             width: 1,
           ),
           Expanded(
-            child: navigator,
+            child: body,
             flex: 3,
           ),
         ],
@@ -178,52 +178,35 @@ class _MainPageState extends State<MainPage> {
   void _onNavigationTapped(int index) {
     PerformanceTelemetry.instance
         .markNavEvent(name: "drawer.tab.${navigationEntries[index].route}");
-    _currentEntryIndex.value = index;
-
-    NavigatorKey.mainKey.currentState
-        ?.pushNamedAndRemoveUntil(currentEntry.route, (route) {
-      return route.settings.name == navigationEntries[0].route;
-    });
+    _setCurrentEntryIndex(index);
   }
 
-  void _syncCurrentEntryIndex() {
-    if (_initialRoute == null || _didApplyInitialRoute) return;
+  void _setCurrentEntryFromRoute(String? route) {
+    if (route == null) return;
+    final targetIndex =
+        navigationEntries.indexWhere((entry) => entry.route == route);
+    if (targetIndex < 0) return;
+    _setCurrentEntryIndex(targetIndex);
+  }
 
-    var index = navigationEntries.indexWhere(
-      (entry) => entry.route == _initialRoute,
-    );
-    if (index >= 0 && _currentEntryIndex.value != index) {
-      _currentEntryIndex.value = index;
+  void _setCurrentEntryIndex(int index) {
+    if (index < 0 || index >= navigationEntries.length) return;
+    if (_loadedSections.add(index) && mounted) {
+      setState(() {});
     }
-
-    _didApplyInitialRoute = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_initialRoute == null) return;
-      if (!_showContent) return;
-      _pushInitialRouteAfterShell();
-    });
+    _currentEntryIndex.value = index;
   }
 
-  void _pushInitialRouteAfterShell() {
-    if (_appliedInitialRoutePostShell) return;
-    if (!_showContent) return;
-    _appliedInitialRoutePostShell = true;
-    NavigatorKey.mainKey.currentState?.pushNamedAndRemoveUntil(
-      _initialRoute ?? navigationEntries[0].route,
-      (route) {
-        return route.settings.name == navigationEntries[0].route ||
-            route.settings.name == "shell";
-      },
-      arguments: const {
-        "disableTransitions": true,
-      },
-    );
+  void _handleExternalRouteRequest() {
+    final route = MainSectionController.instance.consumePendingRoute();
+    if (route == null) return;
+    _setCurrentEntryFromRoute(route);
   }
 
   void _showAppLaunchDialogsIfNeeded(BuildContext context) {
     if (!_appLaunchDialogsShown) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Future.delayed(const Duration(milliseconds: 800), () {
+        Future.delayed(const Duration(milliseconds: 1200), () {
           if (!mounted) return;
           AppLaunchDialog(KiwiContainer().resolve())
               .showAppLaunchDialogs(context);

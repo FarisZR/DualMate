@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:dualmate/canteen/business/canteen_provider.dart';
@@ -92,6 +93,12 @@ Future<void> initializeAppForegroundHeavy() async {
   isForegroundHeavyInitialized = true;
 
   final stopwatch = Stopwatch()..start();
+  unawaited(_refreshCanteenInBackground(stopwatch));
+  unawaited(_setupCalendarSyncInBackground(stopwatch));
+  print("Foreground heavy init scheduled ${stopwatch.elapsedMilliseconds}ms");
+}
+
+Future<void> _refreshCanteenInBackground(Stopwatch stopwatch) async {
   try {
     await KiwiContainer()
         .resolve<CanteenProvider>()
@@ -104,7 +111,9 @@ Future<void> initializeAppForegroundHeavy() async {
     print(trace);
     // Swallowing here is intentional; we don't want to block startup.
   }
+}
 
+Future<void> _setupCalendarSyncInBackground(Stopwatch stopwatch) async {
   try {
     CalendarSynchronizer calendarSynchronizer = CalendarSynchronizer(
       KiwiContainer().resolve<ScheduleProvider>(),
@@ -122,8 +131,6 @@ Future<void> initializeAppForegroundHeavy() async {
     print(trace);
     // Swallowing here is intentional; we don't want to block startup.
   }
-
-  print("Foreground heavy init finished ${stopwatch.elapsedMilliseconds}ms");
 }
 
 ///

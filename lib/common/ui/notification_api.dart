@@ -15,15 +15,13 @@ class NotificationApi {
   /// call this method
   ///
   Future<void> initialize() async {
-    var initializationSettingsAndroid = const AndroidInitializationSettings(
+    const initializationSettingsAndroid = AndroidInitializationSettings(
       'outline_event_note_24',
     );
 
-    var initializationSettingsIOS = DarwinInitializationSettings(
-      onDidReceiveLocalNotification: onDidReceiveLocalNotification,
-    );
+    const initializationSettingsIOS = DarwinInitializationSettings();
 
-    var initializationSettings = InitializationSettings(
+    final initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
     );
@@ -32,6 +30,14 @@ class NotificationApi {
       initializationSettings,
       onDidReceiveNotificationResponse: selectNotification,
     );
+    await _requestRuntimePermissions();
+  }
+
+  Future<void> _requestRuntimePermissions() async {
+    final androidPlugin =
+        _localNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.requestNotificationsPermission();
   }
 
   ///
@@ -71,9 +77,6 @@ class NotificationApi {
     );
   }
 
-    void onDidReceiveLocalNotification(
-      int id, String? title, String? body, String? payload) {}
-
   void selectNotification(NotificationResponse notificationResponse) {}
 }
 
@@ -94,14 +97,15 @@ class VoidNotificationApi implements NotificationApi {
   }
 
   @override
-    void onDidReceiveLocalNotification(
-      int id, String? title, String? body, String? payload) {}
-
-  @override
   void selectNotification(NotificationResponse notificationResponse) {}
 
   @override
   Future<void> showNotification(String title, String message, [int? id]) {
+    return Future.value();
+  }
+
+  @override
+  Future<void> _requestRuntimePermissions() {
     return Future.value();
   }
 }

@@ -65,7 +65,14 @@ class _CanteenPageState extends State<CanteenPage> {
           if (model == null) return const SizedBox();
           final visibleDays = model.visibleContentDays;
           _syncPageForVisibleDays(model, visibleDays);
-          _applyWidgetPayload(visibleDays: visibleDays);
+          if (WidgetNavigationPayloadStore.instance.peekCanteenPayload() !=
+                  null &&
+              !_isApplyingWidgetPayload) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              _applyWidgetPayload(visibleDays: visibleDays);
+            });
+          }
 
           return Column(
             children: [
@@ -318,12 +325,9 @@ class _CanteenPageState extends State<CanteenPage> {
 
     _selectedDate = syncedDate;
     if (pageNotifier.value == targetIndex) return;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !pageController.hasClients) return;
-      pageController.jumpToPage(targetIndex);
-      pageNotifier.value = targetIndex;
-    });
+    if (!pageController.hasClients) return;
+    pageController.jumpToPage(targetIndex);
+    pageNotifier.value = targetIndex;
   }
 
   void _goToVisibleDay(

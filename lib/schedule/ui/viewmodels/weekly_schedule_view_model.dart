@@ -56,6 +56,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   Schedule? weekSchedule;
   Schedule? _lastCachedSchedule;
   final Map<String, ScheduleFreshnessGate> _windowFreshnessGates = {};
+  final Map<String, Schedule> _memoryWeekCache = {};
   Timer? _windowRefreshTimer;
 
   String? scheduleUrl;
@@ -64,6 +65,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   Timer? _errorResetTimer;
   Timer? _updateNowTimer;
+  Timer? _visibleRefreshDebounce;
 
   bool _isDisposed = false;
 
@@ -195,7 +197,11 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   ) async {
     if (setupSuccess) {
       try {
-        await Future.delayed(const Duration(milliseconds: 500));
+        _memoryWeekCache.clear();
+        _windowFreshnessGates.clear();
+        _freshnessGate.reset();
+        _entryRefreshGate.reset();
+        await _openWeekFromCache(currentDateStart, currentDateEnd);
         if (_isDisposed) return;
         await updateSchedule(currentDateStart, currentDateEnd, force: true);
       } catch (error, trace) {
@@ -208,6 +214,11 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   void _setSchedule(Schedule? schedule, DateTime start, DateTime end) {
     weekSchedule = schedule;
     _lastCachedSchedule = schedule;
+    if (schedule != null) {
+      _memoryWeekCache[_windowKey(start, end)] = schedule;
+    } else {
+      _memoryWeekCache.remove(_windowKey(start, end));
+    }
     if (_hasCurrentDateRange) {
       didUpdateScheduleIntoFuture = currentDateStart.isBefore(start);
     } else {
@@ -235,34 +246,35 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
 
     notifyIfMounted("weekSchedule");
+    unawaited(_warmAdjacentWeeks(start));
   }
 
   Future nextWeek() async {
     final nextStart = toNextWeek(currentDateStart);
     final nextEnd = toNextWeek(currentDateEnd);
     await _openWeekFromCache(nextStart, nextEnd);
-    await updateSchedule(nextStart, nextEnd);
+    _debounceVisibleRefresh(nextStart, nextEnd);
   }
 
   Future previousWeek() async {
     final previousStart = toPreviousWeek(currentDateStart);
     final previousEnd = toPreviousWeek(currentDateEnd);
     await _openWeekFromCache(previousStart, previousEnd);
-    await updateSchedule(previousStart, previousEnd);
+    _debounceVisibleRefresh(previousStart, previousEnd);
   }
 
   Future goToToday() async {
     currentDateStart = toStartOfDay(toDayOfWeek(now, DateTime.monday));
     currentDateEnd = toNextWeek(currentDateStart);
     await _openWeekFromCache(currentDateStart, currentDateEnd);
-    await updateSchedule(currentDateStart, currentDateEnd);
+    _debounceVisibleRefresh(currentDateStart, currentDateEnd);
   }
 
   Future openWeekContaining(DateTime date) async {
     final weekStart = toStartOfDay(toDayOfWeek(date, DateTime.monday));
     final weekEnd = toNextWeek(weekStart);
     await _openWeekFromCache(weekStart, weekEnd);
-    await updateSchedule(weekStart, weekEnd);
+    _debounceVisibleRefresh(weekStart, weekEnd);
   }
 
   Future openWeekContainingFromWidget(DateTime date) async {
@@ -277,9 +289,11 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   Future<void> _openWeekFromCache(DateTime start, DateTime end) async {
     try {
-      final cachedSchedule =
+      final cacheKey = _windowKey(start, end);
+      final cachedSchedule = _memoryWeekCache[cacheKey] ??
           await scheduleProvider.getCachedSchedule(start, end);
       if (_isDisposed) return;
+      _memoryWeekCache[cacheKey] = cachedSchedule;
       _setSchedule(cachedSchedule, start, end);
     } catch (error, trace) {
       print("Failed to open cached week: $error");
@@ -371,7 +385,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     final cacheTask = PerformanceTelemetry.instance.startTask(
       'schedule.cache.${start.toIso8601String()}',
     );
-    var cachedSchedule = await scheduleProvider.getCachedSchedule(start, end);
+    var cacheKey = _windowKey(start, end);
+    var cachedSchedule = _memoryWeekCache[cacheKey] ??
+        await scheduleProvider.getCachedSchedule(start, end);
+    _memoryWeekCache[cacheKey] = cachedSchedule;
     cacheTask.finish();
     cancellationToken.throwIfCancelled();
     if (_isDisposed) return;
@@ -452,6 +469,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     try {
       if (updatedSchedule != null) {
         var schedule = updatedSchedule.schedule;
+        _memoryWeekCache[_windowKey(start, end)] = schedule;
 
         _setSchedule(schedule, start, end);
 
@@ -538,6 +556,39 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     return '${start.toIso8601String()}_${end.toIso8601String()}';
   }
 
+  Future<void> _warmAdjacentWeeks(DateTime weekStart) async {
+    if (_isDisposed) return;
+    final previousStart = toPreviousWeek(weekStart);
+    final nextStart = toNextWeek(weekStart);
+    final previousEnd = toNextWeek(previousStart);
+    final nextEnd = toNextWeek(nextStart);
+
+    final previousKey = _windowKey(previousStart, previousEnd);
+    final nextKey = _windowKey(nextStart, nextEnd);
+
+    if (!_memoryWeekCache.containsKey(previousKey)) {
+      try {
+        _memoryWeekCache[previousKey] = await scheduleProvider
+            .getCachedSchedule(previousStart, previousEnd);
+      } catch (_) {}
+    }
+
+    if (!_memoryWeekCache.containsKey(nextKey)) {
+      try {
+        _memoryWeekCache[nextKey] =
+            await scheduleProvider.getCachedSchedule(nextStart, nextEnd);
+      } catch (_) {}
+    }
+  }
+
+  void _debounceVisibleRefresh(DateTime start, DateTime end) {
+    _visibleRefreshDebounce?.cancel();
+    _visibleRefreshDebounce = Timer(const Duration(milliseconds: 180), () {
+      if (_isDisposed) return;
+      unawaited(updateSchedule(start, end));
+    });
+  }
+
   @override
   void dispose() {
     _isDisposed = true;
@@ -549,6 +600,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
     _updateNowTimer?.cancel();
     _windowRefreshTimer?.cancel();
+    _visibleRefreshDebounce?.cancel();
 
     _errorResetTimer?.cancel();
 

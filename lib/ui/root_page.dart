@@ -16,6 +16,7 @@ import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:flutter/services.dart';
+import 'package:dualmate/ui/navigation/main_section_controller.dart';
 import 'package:dualmate/ui/navigation/navigator_key.dart';
 import 'package:dualmate/ui/navigation/router.dart';
 import 'package:flutter/cupertino.dart';
@@ -38,13 +39,11 @@ class RootPage extends StatefulWidget {
 
 class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   RootViewModel? _rootViewModel;
-  bool _isInitializing = true;
   bool _backgroundInitStarted = false;
   static const MethodChannel _navigationChannel =
       MethodChannel('com.fariszr.dualmate/navigation');
   String? _pendingRoute;
   developer.TimelineTask? _startupTask;
-  bool _pendingRouteScheduled = false;
   bool _perfOverlayLoaded = false;
 
   @override
@@ -202,10 +201,6 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       return;
     }
 
-    setState(() {
-      _isInitializing = false;
-    });
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_backgroundInitStarted) return;
       _backgroundInitStarted = true;
@@ -232,32 +227,10 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   }
 
   void _applyPendingRoute() {
-    if (_pendingRoute == null) return;
-    final navigator = NavigatorKey.mainKey.currentState;
-    if (navigator == null) {
-      if (_pendingRouteScheduled) return;
-      _pendingRouteScheduled = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _pendingRouteScheduled = false;
-        _applyPendingRoute();
-      });
-      return;
-    }
-
-    var found = false;
-    navigator.popUntil((route) {
-      if (route.settings.name == _pendingRoute) {
-        found = true;
-        return true;
-      }
-      return route.isFirst;
-    });
-
-    if (!found) {
-      navigator.pushNamed(_pendingRoute!);
-    }
+    final route = _pendingRoute;
+    if (route == null) return;
+    MainSectionController.instance.openRoute(route);
     _pendingRoute = null;
-    _pendingRouteScheduled = false;
   }
 
   @override
@@ -321,11 +294,14 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
   Future<void> _runDeferredInitialization(Stopwatch stopwatch) async {
     try {
+      await Future.delayed(const Duration(milliseconds: 900));
+      if (!mounted) return;
       await initializeAppBackground(false);
       print(
           "Root init: deferred background ${stopwatch.elapsedMilliseconds}ms");
       unawaited(_prewarmScheduleCache());
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 1400), () {
+        if (!mounted) return;
         _runForegroundHeavyInitialization();
       });
     } catch (error, trace) {
