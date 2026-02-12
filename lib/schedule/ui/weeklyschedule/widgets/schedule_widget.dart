@@ -58,6 +58,7 @@ class ScheduleWidget extends StatelessWidget {
     required int days,
     required bool showTimeLabels,
   }) {
+    assert(days > 0, 'days must be positive');
     final timeLabelWidth = showTimeLabels ? _defaultTimeLabelsWidth : 0.0;
     final availableColumnWidth = (width - timeLabelWidth) / days;
     return availableColumnWidth <= _compactColumnWidthThreshold ||
