@@ -15,7 +15,7 @@ This plan reduces launch-time contention by separating startup heavy work, makin
 - Foreground startup still triggered canteen refresh work close to first interactions.
 - Canteen entry loaded context weeks eagerly (current, next, previous), increasing startup-window isolate/network/DB pressure.
 - Repeated same-week refreshes had no in-flight dedupe.
-- Integration smoke flow was brittle due startup dialogs and host-loopback assumptions.
+- Integration smoke flow was brittle due to startup dialogs and host-loopback assumptions.
 
 ## Proposed Solution
 1. Split startup heavy init:
