@@ -177,6 +177,10 @@ class CanteenViewModel extends BaseViewModel {
 
   void primeVisibleWeek(DateTime day) {
     final weekStart = weekStartFor(day);
+    if (hasWeekData(weekStart)) {
+      refreshVisibleWeekIfStale(day);
+      return;
+    }
     ensureWeekLoaded(
       weekStart,
       allowNetworkRefresh: true,
