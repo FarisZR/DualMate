@@ -41,6 +41,19 @@ This change set targets canteen jank observed immediately after app launch. The 
   - uses visible-week prime + stale-gated refresh,
   - uses debounced adjacent cache prefetch.
 
+## Follow-up regression fix (same day)
+
+- Issue: on cold cache startup, forward paging could stop at the current week end
+  (for example Friday, February 13, 2026) because next-week data was never
+  fetched from network.
+- Root cause: `prefetchAdjacentWeeksDebounced(...)` only warmed adjacent cache,
+  while the next week was often absent in local DB.
+- Fix: keep previous-week prefetch cache-only, but warm next week via
+  stale-gated network load (`refreshWeekIfStale`) in the debounced path.
+- Added regression coverage:
+  - `test/canteen/ui/viewmodels/canteen_startup_loading_policy_test.dart`
+  - `test/canteen/ui/canteen_page_bounds_test.dart`
+
 ## Integration test hardening
 
 - Added `integration_test/canteen_startup_responsiveness_test.dart` for immediate post-launch canteen interaction.

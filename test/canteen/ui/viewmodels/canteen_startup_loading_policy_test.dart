@@ -26,7 +26,7 @@ void main() {
     expect(provider.refreshWeekIfStaleRequests, <DateTime>[weekStart]);
   });
 
-  test('prefetchAdjacentWeeksDebounced loads adjacent cache only', () async {
+  test('prefetchAdjacentWeeksDebounced warms next week from network', () async {
     final monday = DateTime(2026, 2, 9);
     final weekStart = toStartOfDay(toMonday(monday));
     final previous = toStartOfDay(weekStart.subtract(const Duration(days: 7)));
@@ -43,7 +43,8 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 320));
 
     expect(provider.cachedWeekRequests.toSet(), <DateTime>{previous, next});
-    expect(provider.refreshWeekIfStaleRequests, isEmpty);
+    expect(provider.refreshWeekIfStaleRequests, <DateTime>[next]);
+    expect(model.visibleContentDays, <DateTime>[weekStart, next]);
   });
 }
 
@@ -52,15 +53,10 @@ class _TrackingCanteenProvider extends CanteenProvider {
   final List<DateTime> cachedWeekRequests = [];
   final List<DateTime> refreshWeekRequests = [];
   final List<DateTime> refreshWeekIfStaleRequests = [];
+  final Set<DateTime> _cachedWeeks = <DateTime>{};
 
   _TrackingCanteenProvider()
       : super(CanteenMealRepository(_FakeDatabaseAccess()), CanteenScraper());
-
-  void clearRequests() {
-    cachedWeekRequests.clear();
-    refreshWeekRequests.clear();
-    refreshWeekIfStaleRequests.clear();
-  }
 
   @override
   void addMenuUpdatedCallback(CanteenMenuUpdatedCallback callback) {
@@ -72,16 +68,21 @@ class _TrackingCanteenProvider extends CanteenProvider {
     _callbacks.remove(callback);
   }
 
+  DateTime get _baseWeekStart => toStartOfDay(toMonday(DateTime(2026, 2, 9)));
+
   @override
   Future<List<DailyMenu>> getCachedWeek(DateTime date) async {
     final weekStart = toStartOfDay(toMonday(date));
     cachedWeekRequests.add(weekStart);
-    return _menusForWeek(weekStart);
-  }
 
-  @override
-  Future<DateTime?> lastUpdatedForWeek(DateTime date) async {
-    return null;
+    // Simulate cold startup: only the current week exists in local cache.
+    if (_cachedWeeks.isEmpty) {
+      _cachedWeeks.add(_baseWeekStart);
+    }
+    if (!_cachedWeeks.contains(weekStart)) {
+      return _emptyWeek(weekStart);
+    }
+    return _menusForWeek(weekStart);
   }
 
   @override
@@ -91,12 +92,24 @@ class _TrackingCanteenProvider extends CanteenProvider {
   ]) async {
     final weekStart = toStartOfDay(toMonday(date));
     refreshWeekRequests.add(weekStart);
+    _cachedWeeks.add(weekStart);
     final menus = _menusForWeek(weekStart);
     final weekEnd = weekStart.add(const Duration(days: 5));
     for (final callback in _callbacks) {
       await callback(menus, weekStart, weekEnd);
     }
     return menus;
+  }
+
+  void clearRequests() {
+    cachedWeekRequests.clear();
+    refreshWeekRequests.clear();
+    refreshWeekIfStaleRequests.clear();
+  }
+
+  @override
+  Future<DateTime?> lastUpdatedForWeek(DateTime date) async {
+    return null;
   }
 
   @override
@@ -128,6 +141,13 @@ class _TrackingCanteenProvider extends CanteenProvider {
           : <Meal>[];
 
       return DailyMenu(date: day, meals: meals);
+    });
+  }
+
+  List<DailyMenu> _emptyWeek(DateTime weekStart) {
+    return List.generate(5, (index) {
+      final day = toStartOfDay(weekStart.add(Duration(days: index)));
+      return DailyMenu(date: day, meals: const <Meal>[]);
     });
   }
 }

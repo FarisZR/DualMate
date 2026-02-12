@@ -89,6 +89,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(_mealNameFor(today)), findsOneWidget);
   });
+
+  testWidgets('warms next week so forward pages become available',
+      (tester) async {
+    final now = DateTime.now();
+    final today = _normalizeToWeekday(now);
+    final weekStart = toStartOfDay(toMonday(today));
+    final nextWeekStart = toStartOfDay(weekStart.add(const Duration(days: 7)));
+    final menusByWeek = <DateTime, List<DailyMenu>>{
+      weekStart: _buildWeekMenusWithSingleDayMeal(weekStart, today),
+      nextWeekStart:
+          _buildWeekMenusWithSingleDayMeal(nextWeekStart, nextWeekStart),
+    };
+
+    final provider = _FakeCanteenProvider(
+      menusByWeek,
+      cacheOnlyKnownWeeks: true,
+    );
+    final viewModel = CanteenViewModel(provider);
+    addTearDown(viewModel.dispose);
+    await viewModel.loadWeek(weekStart);
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final pageView = tester.widget<PageView>(find.byType(PageView));
+    final delegate = pageView.childrenDelegate as SliverChildBuilderDelegate;
+    expect(delegate.childCount, 2);
+  });
 }
 
 Widget _wrapWithApp(CanteenViewModel viewModel) {
@@ -158,9 +187,13 @@ DateTime _normalizeToWeekday(DateTime date) {
 class _FakeCanteenProvider extends CanteenProvider {
   final Map<DateTime, List<DailyMenu>> _menusByWeek;
   final List<CanteenMenuUpdatedCallback> _callbacks = [];
+  final bool cacheOnlyKnownWeeks;
+  final Set<DateTime> _cachedWeeks = <DateTime>{};
 
-  _FakeCanteenProvider(this._menusByWeek)
-      : super(CanteenMealRepository(_FakeDatabaseAccess()), CanteenScraper());
+  _FakeCanteenProvider(
+    this._menusByWeek, {
+    this.cacheOnlyKnownWeeks = false,
+  }) : super(CanteenMealRepository(_FakeDatabaseAccess()), CanteenScraper());
 
   @override
   void addMenuUpdatedCallback(CanteenMenuUpdatedCallback callback) {
@@ -174,6 +207,10 @@ class _FakeCanteenProvider extends CanteenProvider {
 
   @override
   Future<List<DailyMenu>> getCachedWeek(DateTime date) async {
+    final weekStart = toStartOfDay(toMonday(date));
+    if (cacheOnlyKnownWeeks && !_cachedWeeks.contains(weekStart)) {
+      return _emptyWeek(weekStart);
+    }
     return _menusForWeek(date);
   }
 
@@ -190,6 +227,7 @@ class _FakeCanteenProvider extends CanteenProvider {
     final weekStart = toStartOfDay(toMonday(date));
     final weekEnd = weekStart.add(const Duration(days: 5));
     final menus = _menusForWeek(date);
+    _cachedWeeks.add(weekStart);
 
     for (final callback in _callbacks) {
       await callback(menus, weekStart, weekEnd);
