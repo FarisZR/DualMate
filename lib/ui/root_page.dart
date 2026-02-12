@@ -21,6 +21,7 @@ import 'package:dualmate/ui/navigation/navigator_key.dart';
 import 'package:dualmate/ui/navigation/router.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 
@@ -42,6 +43,8 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       Duration(milliseconds: 900);
   static const Duration _foregroundHeavyInitDelay =
       Duration(milliseconds: 1400);
+  static const Duration _foregroundCanteenPrewarmDelay =
+      Duration(milliseconds: 4200);
 
   RootViewModel? _rootViewModel;
   bool _backgroundInitStarted = false;
@@ -318,6 +321,11 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         if (!mounted) return;
         _runForegroundHeavyInitialization();
       });
+      // Defer canteen prewarm further and run at idle priority.
+      Future.delayed(_foregroundCanteenPrewarmDelay, () {
+        if (!mounted) return;
+        _scheduleIdleCanteenPrewarm();
+      });
     } catch (error, trace) {
       print("Root init: deferred background failed");
       print(error);
@@ -330,6 +338,26 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       await initializeAppForegroundHeavy();
     } catch (error, trace) {
       print("Root init: foreground heavy failed");
+      print(error);
+      print(trace);
+    }
+  }
+
+  void _scheduleIdleCanteenPrewarm() {
+    SchedulerBinding.instance.scheduleTask<void>(
+      () {
+        unawaited(_runCanteenPrewarm());
+      },
+      Priority.idle,
+      debugLabel: 'startup.canteenPrewarm',
+    );
+  }
+
+  Future<void> _runCanteenPrewarm() async {
+    try {
+      await prewarmCanteenIfStale();
+    } catch (error, trace) {
+      print("Root init: canteen prewarm failed");
       print(error);
       print(trace);
     }
