@@ -35,11 +35,11 @@ This plan reduces launch-time contention by separating startup heavy work, makin
 - Update existing performance smoke test to dismiss blocking dialogs and avoid localhost-only schedule assumptions.
 
 ## Acceptance Criteria
-- [ ] Startup heavy init no longer performs canteen refresh directly.
-- [ ] Canteen page no longer loads 3 weeks eagerly on first frame.
-- [ ] Same-week concurrent refresh requests are deduplicated.
-- [ ] Canteen launch-window interaction integration test passes on connected Android device.
-- [ ] Existing canteen bounds and visible-day tests remain green.
+- [x] Startup heavy init no longer performs canteen refresh directly.
+- [x] Canteen page no longer loads 3 weeks eagerly on first frame.
+- [x] Same-week concurrent refresh requests are deduplicated.
+- [x] Canteen launch-window interaction integration test passes on connected Android device.
+- [x] Existing canteen bounds and visible-day tests remain green.
 
 ## Test Plan
 - Unit/widget:
