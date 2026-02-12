@@ -35,7 +35,8 @@ class _CanteenPageState extends State<CanteenPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       PerformanceTelemetry.instance.markNavEvent(name: "canteen.entry");
-      _loadContextWeeks(baseDate);
+      viewModel.primeVisibleWeek(baseDate);
+      viewModel.prefetchAdjacentWeeksDebounced(baseDate);
       _applyWidgetPayload();
     });
   }
@@ -205,16 +206,6 @@ class _CanteenPageState extends State<CanteenPage> {
     return normalized;
   }
 
-  void _loadWeekForDate(DateTime date) {
-    viewModel.ensureWeekLoaded(viewModel.weekStartFor(date));
-  }
-
-  void _loadContextWeeks(DateTime date) {
-    _loadWeekForDate(date);
-    _loadWeekForDate(date.add(const Duration(days: 7)));
-    _loadWeekForDate(date.subtract(const Duration(days: 7)));
-  }
-
   DateTime _displayDateForPage(
     int page,
     List<DateTime> visibleDays,
@@ -247,12 +238,9 @@ class _CanteenPageState extends State<CanteenPage> {
         onPageChanged: (index) {
           pageNotifier.value = index;
           _selectedDate = visibleDays[index];
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            PerformanceTelemetry.instance
-                .markNavEvent(name: "canteen.pageChanged");
-            _loadContextWeeks(visibleDays[index]);
-          });
+          PerformanceTelemetry.instance.markNavEvent(name: "canteen.pageChanged");
+          viewModel.refreshVisibleWeekIfStale(visibleDays[index]);
+          viewModel.prefetchAdjacentWeeksDebounced(visibleDays[index]);
         },
         itemBuilder: (context, index) {
           return _CanteenDayView(date: visibleDays[index]);
@@ -277,7 +265,8 @@ class _CanteenPageState extends State<CanteenPage> {
 
     final targetDate = _normalizeToWeekday(payload.dayStart!);
     final targetWeekStart = viewModel.weekStartFor(targetDate);
-    _loadContextWeeks(targetDate);
+    viewModel.primeVisibleWeek(targetDate);
+    viewModel.prefetchAdjacentWeeksDebounced(targetDate);
 
     final hasTargetWeekData = viewModel.hasWeekData(targetWeekStart);
     final isTargetWeekLoading = viewModel.isLoadingWeek(targetWeekStart);

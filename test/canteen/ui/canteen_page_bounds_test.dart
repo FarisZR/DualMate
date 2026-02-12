@@ -25,10 +25,12 @@ void main() {
 
     final provider = _FakeCanteenProvider({weekStart: menus});
     final viewModel = CanteenViewModel(provider);
+    addTearDown(viewModel.dispose);
     await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
     await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     final pageView = tester.widget<PageView>(find.byType(PageView));
     final delegate = pageView.childrenDelegate as SliverChildBuilderDelegate;
@@ -44,10 +46,12 @@ void main() {
 
     final provider = _FakeCanteenProvider({weekStart: menus});
     final viewModel = CanteenViewModel(provider);
+    addTearDown(viewModel.dispose);
     await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
     await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(
       find.byWidgetPredicate(
@@ -68,10 +72,12 @@ void main() {
 
     final provider = _FakeCanteenProvider({weekStart: menus});
     final viewModel = CanteenViewModel(provider);
+    addTearDown(viewModel.dispose);
     await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
     await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text(_mealNameFor(today)), findsOneWidget);
 
@@ -190,6 +196,16 @@ class _FakeCanteenProvider extends CanteenProvider {
     }
 
     return menus;
+  }
+
+  @override
+  Future<List<DailyMenu>> refreshWeekIfStale(
+    DateTime date, {
+    Duration staleAfter = const Duration(hours: 2),
+    CancellationToken? cancellationToken,
+    bool prefetchNextWeek = true,
+  }) async {
+    return refreshWeek(date, cancellationToken);
   }
 
   List<DailyMenu> _menusForWeek(DateTime date) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/canteen/business/canteen_provider.dart';
 import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
@@ -12,73 +14,55 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('returns only days with actual meal content as visible days', () async {
+  test('primeVisibleWeek loads only the requested week immediately', () async {
     final monday = DateTime(2026, 2, 9);
     final weekStart = toStartOfDay(toMonday(monday));
-    final tuesday = weekStart.add(const Duration(days: 1));
-    final thursday = weekStart.add(const Duration(days: 3));
-
-    final provider = _FakeCanteenProvider({
-      weekStart: _buildMenus(weekStart, <DateTime>{tuesday, thursday}),
-    });
+    final provider = _TrackingCanteenProvider();
     final model = CanteenViewModel(provider);
     addTearDown(model.dispose);
 
-    await model.loadWeek(weekStart);
+    model.primeVisibleWeek(monday);
+    await Future<void>.delayed(const Duration(milliseconds: 30));
 
-    expect(model.visibleContentDays, <DateTime>[tuesday, thursday]);
+    expect(provider.cachedWeekRequests, <DateTime>[weekStart]);
+    expect(provider.refreshWeekIfStaleRequests, <DateTime>[weekStart]);
   });
 
-  test('clamps target date to nearest visible content day', () async {
+  test('prefetchAdjacentWeeksDebounced loads adjacent cache only', () async {
     final monday = DateTime(2026, 2, 9);
     final weekStart = toStartOfDay(toMonday(monday));
-    final tuesday = weekStart.add(const Duration(days: 1));
-    final thursday = weekStart.add(const Duration(days: 3));
-
-    final provider = _FakeCanteenProvider({
-      weekStart: _buildMenus(weekStart, <DateTime>{tuesday, thursday}),
-    });
+    final previous = toStartOfDay(weekStart.subtract(const Duration(days: 7)));
+    final next = toStartOfDay(weekStart.add(const Duration(days: 7)));
+    final provider = _TrackingCanteenProvider();
     final model = CanteenViewModel(provider);
     addTearDown(model.dispose);
 
-    await model.loadWeek(weekStart);
+    model.primeVisibleWeek(monday);
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    provider.clearRequests();
 
-    expect(model.nearestVisibleContentDay(weekStart), tuesday);
-    expect(
-        model.nearestVisibleContentDay(weekStart.add(const Duration(days: 4))),
-        thursday);
+    model.prefetchAdjacentWeeksDebounced(monday);
+    await Future<void>.delayed(const Duration(milliseconds: 320));
+
+    expect(provider.cachedWeekRequests.toSet(), <DateTime>{previous, next});
+    expect(provider.refreshWeekIfStaleRequests, isEmpty);
   });
 }
 
-List<DailyMenu> _buildMenus(DateTime weekStart, Set<DateTime> mealDays) {
-  return List.generate(5, (index) {
-    final day = toStartOfDay(weekStart.add(Duration(days: index)));
-    final hasMeals = mealDays.contains(day);
-
-    return DailyMenu(
-      date: day,
-      meals: hasMeals
-          ? <Meal>[
-              Meal(
-                date: day,
-                name: 'Meal_${day.day}',
-                category: 'Wahlessen 1',
-                price: 3.5,
-                notes: const <String>[],
-                mealTypes: const [],
-              ),
-            ]
-          : <Meal>[],
-    );
-  });
-}
-
-class _FakeCanteenProvider extends CanteenProvider {
-  final Map<DateTime, List<DailyMenu>> _menusByWeek;
+class _TrackingCanteenProvider extends CanteenProvider {
   final List<CanteenMenuUpdatedCallback> _callbacks = [];
+  final List<DateTime> cachedWeekRequests = [];
+  final List<DateTime> refreshWeekRequests = [];
+  final List<DateTime> refreshWeekIfStaleRequests = [];
 
-  _FakeCanteenProvider(this._menusByWeek)
+  _TrackingCanteenProvider()
       : super(CanteenMealRepository(_FakeDatabaseAccess()), CanteenScraper());
+
+  void clearRequests() {
+    cachedWeekRequests.clear();
+    refreshWeekRequests.clear();
+    refreshWeekIfStaleRequests.clear();
+  }
 
   @override
   void addMenuUpdatedCallback(CanteenMenuUpdatedCallback callback) {
@@ -92,7 +76,9 @@ class _FakeCanteenProvider extends CanteenProvider {
 
   @override
   Future<List<DailyMenu>> getCachedWeek(DateTime date) async {
-    return _menusForWeek(date);
+    final weekStart = toStartOfDay(toMonday(date));
+    cachedWeekRequests.add(weekStart);
+    return _menusForWeek(weekStart);
   }
 
   @override
@@ -106,13 +92,12 @@ class _FakeCanteenProvider extends CanteenProvider {
     CancellationToken? cancellationToken,
   ]) async {
     final weekStart = toStartOfDay(toMonday(date));
+    refreshWeekRequests.add(weekStart);
+    final menus = _menusForWeek(weekStart);
     final weekEnd = weekStart.add(const Duration(days: 5));
-    final menus = _menusForWeek(date);
-
     for (final callback in _callbacks) {
       await callback(menus, weekStart, weekEnd);
     }
-
     return menus;
   }
 
@@ -123,34 +108,46 @@ class _FakeCanteenProvider extends CanteenProvider {
     CancellationToken? cancellationToken,
     bool prefetchNextWeek = true,
   }) async {
+    final weekStart = toStartOfDay(toMonday(date));
+    refreshWeekIfStaleRequests.add(weekStart);
     return refreshWeek(date, cancellationToken);
   }
 
-  List<DailyMenu> _menusForWeek(DateTime date) {
-    final weekStart = toStartOfDay(toMonday(date));
-    return _menusByWeek[weekStart] ?? _emptyWeek(weekStart);
-  }
-
-  List<DailyMenu> _emptyWeek(DateTime weekStart) {
+  List<DailyMenu> _menusForWeek(DateTime weekStart) {
     return List.generate(5, (index) {
-      final date = toStartOfDay(weekStart.add(Duration(days: index)));
-      return DailyMenu(date: date, meals: <Meal>[]);
+      final day = toStartOfDay(weekStart.add(Duration(days: index)));
+      final meals = index == 0
+          ? <Meal>[
+              Meal(
+                date: day,
+                name: 'Meal_${day.day}',
+                category: 'Wahlessen 1',
+                price: 3.5,
+                notes: const <String>[],
+                mealTypes: const [],
+              ),
+            ]
+          : <Meal>[];
+
+      return DailyMenu(date: day, meals: meals);
     });
   }
 }
 
 class _FakeDatabaseAccess extends DatabaseAccess {
   @override
-  Future<List<Map<String, dynamic>>> queryRows(String table,
-      {bool? distinct,
-      List<String>? columns,
-      String? where,
-      List<dynamic>? whereArgs,
-      String? groupBy,
-      String? having,
-      String? orderBy,
-      int? limit,
-      int? offset}) async {
+  Future<List<Map<String, dynamic>>> queryRows(
+    String table, {
+    bool? distinct,
+    List<String>? columns,
+    String? where,
+    List<dynamic>? whereArgs,
+    String? groupBy,
+    String? having,
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) async {
     return <Map<String, dynamic>>[];
   }
 
@@ -162,9 +159,7 @@ class _FakeDatabaseAccess extends DatabaseAccess {
 
   @override
   Future<void> insertBatch(
-      String table, List<Map<String, dynamic>> rows) async {
-    return;
-  }
+      String table, List<Map<String, dynamic>> rows) async {}
 
   @override
   Future<int> deleteWhere(
