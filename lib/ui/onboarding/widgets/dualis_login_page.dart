@@ -3,6 +3,7 @@ import 'package:dualmate/ui/login_credentials_widget.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/dualis_login_view_model.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 
 ///
@@ -115,6 +116,10 @@ class _DualisLoginCredentialsPageState
       _usernameEditingController.text,
       _passwordEditingController.text,
     );
+
+    if (viewModel.loginSuccess) {
+      TextInput.finishAutofillContext(shouldSave: true);
+    }
   }
 
   List<Widget> _buildHeader() {
