@@ -16,6 +16,7 @@ class ScheduleWidget extends StatelessWidget {
   static const double _defaultOverlapColumnGap = 6;
   static const double _defaultEventVerticalGap = 4;
   static const double _minimumEventExtent = 6;
+  static const double _fullColumnThreshold = 0.999;
   static const double _compactColumnWidthThreshold = 64.0;
   static const double _compactWidthThreshold = 430.0;
 
@@ -111,6 +112,7 @@ class ScheduleWidget extends StatelessWidget {
         Padding(
           padding: EdgeInsets.fromLTRB(timeLabelsWidth, dayLabelsHeight, 0, 0),
           child: Stack(
+            clipBehavior: Clip.hardEdge,
             children: entryWidgets,
           ),
         ),
@@ -376,7 +378,7 @@ class ScheduleWidget extends StatelessWidget {
               ? layoutProfile.eventVerticalGap / 2
               : compactMinInset;
       final spansMultipleOverlapColumns =
-          (value.rightColumn - value.leftColumn) < 0.999;
+          (value.rightColumn - value.leftColumn) < _fullColumnThreshold;
       final overlapMinInset = layoutProfile.compactPhone ? 0.25 : 1.0;
       final horizontalInset = spansMultipleOverlapColumns
           ? (rawEntryWidth > (layoutProfile.overlapColumnGap + 10)
