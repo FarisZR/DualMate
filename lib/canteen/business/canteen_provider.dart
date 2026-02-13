@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
@@ -15,6 +17,8 @@ class CanteenProvider {
   final CanteenMealRepository _repository;
   final CanteenScraper _scraper;
   final List<CanteenMenuUpdatedCallback> _callbacks = [];
+  final Map<DateTime, Future<List<DailyMenu>>> _refreshInFlight = {};
+  final Map<DateTime, DateTime> _lastRefreshAtByWeek = {};
 
   CanteenProvider(this._repository, this._scraper);
 
@@ -44,10 +48,72 @@ class CanteenProvider {
     DateTime date, [
     CancellationToken? cancellationToken,
   ]) async {
+    return _refreshWeekInternal(
+      date,
+      cancellationToken: cancellationToken,
+      prefetchNextWeek: true,
+    );
+  }
+
+  Future<List<DailyMenu>> refreshWeekIfStale(
+    DateTime date, {
+    Duration staleAfter = const Duration(hours: 2),
+    CancellationToken? cancellationToken,
+    bool prefetchNextWeek = true,
+  }) async {
     var weekStart = toStartOfDay(toMonday(date));
+    final inFlight = _refreshInFlight[weekStart];
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final lastRefreshAt = _lastRefreshAtByWeek[weekStart];
+    final isFresh = lastRefreshAt != null &&
+        DateTime.now().difference(lastRefreshAt) < staleAfter;
+    if (isFresh) {
+      return getCachedWeek(weekStart);
+    }
+
+    return _refreshWeekInternal(
+      date,
+      cancellationToken: cancellationToken,
+      prefetchNextWeek: prefetchNextWeek,
+    );
+  }
+
+  Future<List<DailyMenu>> _refreshWeekInternal(
+    DateTime date, {
+    CancellationToken? cancellationToken,
+    required bool prefetchNextWeek,
+  }) async {
+    var weekStart = toStartOfDay(toMonday(date));
+    final inFlight = _refreshInFlight[weekStart];
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final refreshFuture = _doRefreshWeek(
+      weekStart,
+      cancellationToken: cancellationToken,
+      prefetchNextWeek: prefetchNextWeek,
+    );
+    _refreshInFlight[weekStart] = refreshFuture;
+
+    try {
+      return await refreshFuture;
+    } finally {
+      _refreshInFlight.remove(weekStart);
+    }
+  }
+
+  Future<List<DailyMenu>> _doRefreshWeek(
+    DateTime weekStart, {
+    CancellationToken? cancellationToken,
+    required bool prefetchNextWeek,
+  }) async {
     var weekEnd = weekStart.add(const Duration(days: 5));
 
-    var menus = await _scraper.loadWeek(date, cancellationToken);
+    var menus = await _scraper.loadWeek(weekStart, cancellationToken);
     var normalizedMenus = _normalizeMenus(weekStart, menus);
 
     await _repository.deleteMealsBetween(weekStart, weekEnd);
@@ -56,8 +122,11 @@ class CanteenProvider {
     );
 
     await _notifyCallbacks(normalizedMenus, weekStart, weekEnd);
+    _lastRefreshAtByWeek[weekStart] = DateTime.now();
 
-    await _prefetchNextWeek(weekStart, cancellationToken);
+    if (prefetchNextWeek) {
+      unawaited(_prefetchNextWeek(weekStart, cancellationToken));
+    }
 
     return normalizedMenus;
   }
@@ -79,6 +148,7 @@ class CanteenProvider {
       );
 
       await _notifyCallbacks(normalizedNextMenus, nextWeekStart, nextWeekEnd);
+      _lastRefreshAtByWeek[nextWeekStart] = DateTime.now();
     } catch (_) {
       // Prefetch failures should not affect the current week.
     }

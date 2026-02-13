@@ -116,6 +116,16 @@ class _FakeCanteenProvider extends CanteenProvider {
     return menus;
   }
 
+  @override
+  Future<List<DailyMenu>> refreshWeekIfStale(
+    DateTime date, {
+    Duration staleAfter = const Duration(hours: 2),
+    CancellationToken? cancellationToken,
+    bool prefetchNextWeek = true,
+  }) async {
+    return refreshWeek(date, cancellationToken);
+  }
+
   List<DailyMenu> _menusForWeek(DateTime date) {
     final weekStart = toStartOfDay(toMonday(date));
     return _menusByWeek[weekStart] ?? _emptyWeek(weekStart);

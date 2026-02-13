@@ -9,6 +9,10 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 class CanteenViewModel extends BaseViewModel {
+  static const Duration defaultStaleAfter = Duration(hours: 2);
+  static const Duration _adjacentPrefetchDebounceDelay =
+      Duration(milliseconds: 250);
+
   final CanteenProvider _provider;
 
   final DateTime todayWeekStart;
@@ -19,6 +23,7 @@ class CanteenViewModel extends BaseViewModel {
   final Set<DateTime> _loadingWeeks = {};
   final Map<DateTime, DateTime> _weekLastUpdated = {};
   bool _initialized = false;
+  Timer? _adjacentPrefetchDebounceTimer;
 
   CanteenViewModel(this._provider)
       : todayWeekStart = toStartOfDay(toMonday(DateTime.now()));
@@ -29,7 +34,7 @@ class CanteenViewModel extends BaseViewModel {
     _provider.addMenuUpdatedCallback(_onMenusUpdated);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_weeklyMenus.containsKey(todayWeekStart)) return;
-      loadWeek(todayWeekStart);
+      primeVisibleWeek(todayWeekStart);
     });
   }
 
@@ -107,7 +112,13 @@ class CanteenViewModel extends BaseViewModel {
     return nearest;
   }
 
-  Future<void> loadWeek(DateTime weekStart) async {
+  Future<void> loadWeek(
+    DateTime weekStart, {
+    bool forceRefresh = false,
+    bool allowNetworkRefresh = true,
+    bool prefetchNextWeek = true,
+    Duration staleAfter = defaultStaleAfter,
+  }) async {
     if (_loadingWeeks.contains(weekStart)) return;
 
     _loadingWeeks.add(weekStart);
@@ -121,14 +132,22 @@ class CanteenViewModel extends BaseViewModel {
     }
     notifyIfMounted("weeklyMenus");
 
-    try {
-      var menus = await _provider.refreshWeek(weekStart);
-      _weeklyMenus[weekStart] = menus;
-      _weekErrors[weekStart] = null;
-      _weekLastUpdated[weekStart] = DateTime.now();
-    } catch (exception) {
-      // keep cached data visible
-      _weekErrors[weekStart] = exception.toString();
+    if (allowNetworkRefresh) {
+      try {
+        final menus = forceRefresh
+            ? await _provider.refreshWeek(weekStart)
+            : await _provider.refreshWeekIfStale(
+                weekStart,
+                staleAfter: staleAfter,
+                prefetchNextWeek: prefetchNextWeek,
+              );
+        _weeklyMenus[weekStart] = menus;
+        _weekErrors[weekStart] = null;
+        _weekLastUpdated[weekStart] = DateTime.now();
+      } catch (exception) {
+        // keep cached data visible
+        _weekErrors[weekStart] = exception.toString();
+      }
     }
 
     _loadingWeeks.remove(weekStart);
@@ -137,13 +156,80 @@ class CanteenViewModel extends BaseViewModel {
     notifyIfMounted("loadingWeeks");
   }
 
-  void ensureWeekLoaded(DateTime weekStart) {
+  void ensureWeekLoaded(
+    DateTime weekStart, {
+    bool allowNetworkRefresh = true,
+    bool prefetchNextWeek = true,
+    Duration staleAfter = defaultStaleAfter,
+  }) {
     if (_weeklyMenus.containsKey(weekStart) ||
         _loadingWeeks.contains(weekStart)) {
       return;
     }
 
-    unawaited(loadWeek(weekStart));
+    unawaited(loadWeek(
+      weekStart,
+      allowNetworkRefresh: allowNetworkRefresh,
+      prefetchNextWeek: prefetchNextWeek,
+      staleAfter: staleAfter,
+    ));
+  }
+
+  void primeVisibleWeek(DateTime day) {
+    final weekStart = weekStartFor(day);
+    if (hasWeekData(weekStart)) {
+      refreshVisibleWeekIfStale(day);
+      return;
+    }
+    ensureWeekLoaded(
+      weekStart,
+      allowNetworkRefresh: true,
+      prefetchNextWeek: false,
+    );
+  }
+
+  void refreshVisibleWeekIfStale(
+    DateTime day, {
+    Duration staleAfter = defaultStaleAfter,
+  }) {
+    final weekStart = weekStartFor(day);
+    if (_loadingWeeks.contains(weekStart)) return;
+    unawaited(loadWeek(
+      weekStart,
+      allowNetworkRefresh: true,
+      prefetchNextWeek: false,
+      staleAfter: staleAfter,
+    ));
+  }
+
+  void prefetchAdjacentWeeksDebounced(DateTime centerDay) {
+    final centerWeekStart = weekStartFor(centerDay);
+    _adjacentPrefetchDebounceTimer?.cancel();
+    _adjacentPrefetchDebounceTimer = Timer(
+      _adjacentPrefetchDebounceDelay,
+      () {
+        if (isDisposed) return;
+        final previousWeekStart = centerWeekStart.subtract(
+          const Duration(days: 7),
+        );
+        final nextWeekStart = centerWeekStart.add(
+          const Duration(days: 7),
+        );
+        ensureWeekLoaded(
+          previousWeekStart,
+          allowNetworkRefresh: false,
+          prefetchNextWeek: false,
+        );
+        if (_loadingWeeks.contains(nextWeekStart)) {
+          return;
+        }
+        unawaited(loadWeek(
+          nextWeekStart,
+          allowNetworkRefresh: true,
+          prefetchNextWeek: false,
+        ));
+      },
+    );
   }
 
   void setFilter(CanteenFilter nextFilter) {
@@ -167,6 +253,7 @@ class CanteenViewModel extends BaseViewModel {
 
   @override
   void dispose() {
+    _adjacentPrefetchDebounceTimer?.cancel();
     _provider.removeMenuUpdatedCallback(_onMenusUpdated);
     super.dispose();
   }

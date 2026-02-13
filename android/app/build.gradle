@@ -48,6 +48,8 @@ android {
     namespace "com.fariszr.dualmate"
     compileSdkVersion 36
 
+    ndkVersion flutter.ndkVersion
+
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
     }
@@ -59,7 +61,7 @@ android {
     defaultConfig {
         applicationId "com.fariszr.dualmate"
         minSdkVersion flutter.minSdkVersion
-        targetSdkVersion 31
+        targetSdkVersion 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

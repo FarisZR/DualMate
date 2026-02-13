@@ -4,6 +4,7 @@ import 'package:dualmate/dualis/model/credentials.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/ui/login_credentials_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class EnterDualisCredentialsDialog {
   final PreferencesProvider _preferencesProvider;
@@ -78,6 +79,7 @@ class EnterDualisCredentialsDialog {
               _passwordEditingController.text,
             ),
           );
+          TextInput.finishAutofillContext(shouldSave: true);
           await _scheduleSourceProvider.setupForDualis();
 
           Navigator.of(context).pop();

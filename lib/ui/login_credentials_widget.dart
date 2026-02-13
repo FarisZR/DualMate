@@ -1,6 +1,9 @@
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:flutter/material.dart';
 
+const String _dualisAutofillHost = "dualis.dhbw.de";
+const String _dualisAutofillUrl = "https://dualis.dhbw.de/";
+
 class LoginCredentialsWidget extends StatefulWidget {
   final TextEditingController usernameEditingController;
   final TextEditingController passwordEditingController;
@@ -35,33 +38,51 @@ class _LoginCredentialsWidgetState extends State<LoginCredentialsWidget> {
   );
 
   @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        TextField(
-          controller: _usernameEditingController,
-          decoration: InputDecoration(
-            hintText: L.of(context).loginUsername,
-            icon: Icon(Icons.alternate_email),
+    return AutofillGroup(
+      child: Column(
+        children: <Widget>[
+          TextField(
+            controller: _usernameEditingController,
+            decoration: InputDecoration(
+              hintText: L.of(context).loginUsername,
+              icon: Icon(Icons.alternate_email),
+            ),
+            autofillHints: const [
+              AutofillHints.username,
+              _dualisAutofillHost,
+              _dualisAutofillUrl,
+            ],
+            onSubmitted: (v) {
+              FocusScope.of(context).requestFocus(_focus);
+            },
+            textInputAction: TextInputAction.next,
           ),
-          onSubmitted: (v) {
-            FocusScope.of(context).requestFocus(_focus);
-          },
-          textInputAction: TextInputAction.next,
-        ),
-        TextField(
-          controller: _passwordEditingController,
-          obscureText: true,
-          decoration: InputDecoration(
-            hintText: L.of(context).loginPassword,
-            icon: Icon(Icons.lock_outline),
+          TextField(
+            controller: _passwordEditingController,
+            obscureText: true,
+            decoration: InputDecoration(
+              hintText: L.of(context).loginPassword,
+              icon: Icon(Icons.lock_outline),
+            ),
+            autofillHints: const [
+              AutofillHints.password,
+              _dualisAutofillHost,
+              _dualisAutofillUrl,
+            ],
+            focusNode: _focus,
+            onSubmitted: (v) {
+              _onSubmitted();
+            },
           ),
-          focusNode: _focus,
-          onSubmitted: (v) {
-            _onSubmitted();
-          },
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

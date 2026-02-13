@@ -95,6 +95,7 @@ class MyNavigationDrawer extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
         ),
         child: InkWell(
+          key: ValueKey<String>("drawer_item_$index"),
           child: Container(
             height: 48,
             child: Padding(
@@ -129,6 +130,7 @@ class MyNavigationDrawer extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.end,
         children: <Widget>[
           InkWell(
+            key: const ValueKey<String>("drawer_settings"),
             child: Container(
               height: 56,
               margin: const EdgeInsets.fromLTRB(0, 0, 0, 20),

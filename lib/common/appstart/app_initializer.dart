@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:dualmate/canteen/business/canteen_provider.dart';
@@ -18,6 +19,7 @@ import 'package:timezone/data/latest.dart' as tz;
 bool isInitialized = false;
 bool isBaseInitialized = false;
 bool isForegroundHeavyInitialized = false;
+bool isForegroundCanteenPrewarmInitialized = false;
 
 Future<void> initializeAppBase(bool isBackground) async {
   if (isBaseInitialized) {
@@ -84,27 +86,76 @@ Future<void> initializeAppBackground(bool isBackground) async {
   print("Initialization finished ${stopwatch.elapsedMilliseconds}ms");
 }
 
-Future<void> initializeAppForegroundHeavy() async {
+Future<void> initializeAppForegroundHeavy({
+  Future<void> Function()? runCalendarSync,
+}) async {
   if (isForegroundHeavyInitialized) {
     return;
   }
 
   isForegroundHeavyInitialized = true;
 
+  final runCalendar = runCalendarSync ?? initializeForegroundCalendarSyncOnly;
+  await runCalendar();
+}
+
+Future<void> initializeForegroundCalendarSyncOnly() async {
   final stopwatch = Stopwatch()..start();
+  unawaited(_setupCalendarSyncInBackground(stopwatch));
+  print("Foreground heavy init scheduled ${stopwatch.elapsedMilliseconds}ms");
+}
+
+Future<void> prewarmCanteenIfStale({
+  Duration staleAfter = const Duration(hours: 2),
+  Future<void> Function()? runCanteenPrewarm,
+}) async {
+  if (isForegroundCanteenPrewarmInitialized) {
+    return;
+  }
+
+  isForegroundCanteenPrewarmInitialized = true;
+
+  final prewarm = runCanteenPrewarm ??
+      () async {
+        final stopwatch = Stopwatch()..start();
+        await _prewarmCanteenIfStaleInBackground(
+          stopwatch,
+          staleAfter: staleAfter,
+        );
+      };
+
+  await prewarm();
+}
+
+Future<void> _prewarmCanteenIfStaleInBackground(
+  Stopwatch stopwatch, {
+  required Duration staleAfter,
+}) async {
   try {
     await KiwiContainer()
         .resolve<CanteenProvider>()
-        .refreshWeek(DateTime.now());
+        .refreshWeekIfStale(
+          DateTime.now(),
+          staleAfter: staleAfter,
+          prefetchNextWeek: false,
+        );
     print(
-        "Foreground heavy init: canteen refresh ${stopwatch.elapsedMilliseconds}ms");
-  } catch (exception, trace) {
-    print("Foreground heavy init: canteen refresh failed");
+        "Foreground canteen prewarm: refresh ${stopwatch.elapsedMilliseconds}ms");
+  } on Exception catch (exception, trace) {
+    print(
+        "Foreground canteen prewarm failed (${exception.runtimeType})");
     print(exception);
     print(trace);
     // Swallowing here is intentional; we don't want to block startup.
+  } catch (error, trace) {
+    print("Foreground canteen prewarm failed");
+    print(error);
+    print(trace);
+    // Swallowing here is intentional; we don't want to block startup.
   }
+}
 
+Future<void> _setupCalendarSyncInBackground(Stopwatch stopwatch) async {
   try {
     CalendarSynchronizer calendarSynchronizer = CalendarSynchronizer(
       KiwiContainer().resolve<ScheduleProvider>(),
@@ -116,14 +167,18 @@ Future<void> initializeAppForegroundHeavy() async {
     calendarSynchronizer.scheduleSyncInAFewSeconds();
     print(
         "Foreground heavy init: calendar sync ${stopwatch.elapsedMilliseconds}ms");
-  } catch (exception, trace) {
-    print("Foreground heavy init: calendar sync failed");
+  } on Exception catch (exception, trace) {
+    print(
+        "Foreground heavy init: calendar sync failed (${exception.runtimeType})");
     print(exception);
     print(trace);
     // Swallowing here is intentional; we don't want to block startup.
+  } catch (error, trace) {
+    print("Foreground heavy init: calendar sync failed");
+    print(error);
+    print(trace);
+    // Swallowing here is intentional; we don't want to block startup.
   }
-
-  print("Foreground heavy init finished ${stopwatch.elapsedMilliseconds}ms");
 }
 
 ///

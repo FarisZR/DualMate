@@ -70,6 +70,51 @@ void main() {
       viewModel.dispose();
     },
   );
+
+  testWidgets(
+    'schedule filter changes apply immediately on source-changed callback',
+    (tester) async {
+      const hiddenTitle = 'FILTER_HIDE_NOW';
+      const keepTitle = 'FILTER_KEEP_NOW';
+      final entries = <ScheduleEntry>[
+        _entry(DateTime(2026, 2, 9), hiddenTitle),
+        _entry(DateTime(2026, 2, 10), keepTitle),
+      ];
+      final provider = _TrackingScheduleProvider(entries);
+      final sourceProvider = _FakeScheduleSourceProvider();
+      final viewModel = WeeklyScheduleViewModel(
+        provider,
+        sourceProvider,
+        nowProvider: () => DateTime(2026, 2, 10, 10, 0),
+      );
+
+      await viewModel.initialize();
+      await viewModel.updateSchedule(
+        DateTime(2026, 2, 9),
+        DateTime(2026, 2, 16),
+        force: true,
+      );
+
+      await tester.pumpWidget(_wrapWithApp(viewModel));
+      await tester.pump();
+
+      expect(find.text(hiddenTitle), findsOneWidget);
+      expect(find.text(keepTitle), findsOneWidget);
+
+      provider.setHiddenTitles({hiddenTitle});
+      sourceProvider.fireScheduleSourceChanged();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+
+      expect(find.text(hiddenTitle), findsNothing);
+      expect(find.text(keepTitle), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 220));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      viewModel.dispose();
+    },
+  );
 }
 
 Widget _wrapWithApp(WeeklyScheduleViewModel viewModel) {
@@ -105,8 +150,13 @@ ScheduleEntry _entry(DateTime day, String title) {
 class _TrackingScheduleProvider implements ScheduleProvider {
   final List<ScheduleEntry> _entries;
   final List<_RangeRequest> cachedRequests = <_RangeRequest>[];
+  Set<String> _hiddenTitles = <String>{};
 
   _TrackingScheduleProvider(this._entries);
+
+  void setHiddenTitles(Set<String> hiddenTitles) {
+    _hiddenTitles = hiddenTitles;
+  }
 
   @override
   Future<Schedule> getCachedSchedule(DateTime start, DateTime end) async {
@@ -124,14 +174,19 @@ class _TrackingScheduleProvider implements ScheduleProvider {
   }
 
   Schedule _trim(DateTime start, DateTime end) {
-    final entries = _entries.where((entry) {
-      return start.isBefore(entry.end) && end.isAfter(entry.start);
-    }).toList();
+    final entries = _entries
+        .where((entry) {
+          return start.isBefore(entry.end) && end.isAfter(entry.start);
+        })
+        .where((entry) => !_hiddenTitles.contains(entry.title))
+        .toList();
     return Schedule.fromList(entries);
   }
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(Invocation invocation) {
+    throw UnsupportedError('Unexpected ScheduleProvider call: $invocation');
+  }
 }
 
 class _RangeRequest {
@@ -143,6 +198,8 @@ class _RangeRequest {
 
 class _FakeScheduleSourceProvider implements ScheduleSourceProvider {
   final ScheduleSource _source = _FakeScheduleSource();
+  final List<OnDidChangeScheduleSource> _callbacks =
+      <OnDidChangeScheduleSource>[];
 
   @override
   ScheduleSource get currentScheduleSource => _source;
@@ -151,15 +208,29 @@ class _FakeScheduleSourceProvider implements ScheduleSourceProvider {
   bool didSetupCorrectly() => true;
 
   @override
-  void addDidChangeScheduleSourceCallback(OnDidChangeScheduleSource callback) {}
+  void addDidChangeScheduleSourceCallback(OnDidChangeScheduleSource callback) {
+    _callbacks.add(callback);
+  }
 
   @override
   void removeDidChangeScheduleSourceCallback(
     OnDidChangeScheduleSource callback,
-  ) {}
+  ) {
+    _callbacks.remove(callback);
+  }
+
+  void fireScheduleSourceChanged() {
+    for (final callback in List.of(_callbacks)) {
+      callback(_source, true);
+    }
+  }
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(Invocation invocation) {
+    throw UnsupportedError(
+      'Unexpected ScheduleSourceProvider call: $invocation',
+    );
+  }
 }
 
 class _FakeScheduleSource implements ScheduleSource {

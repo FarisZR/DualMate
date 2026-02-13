@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/schedule/business/schedule_diff_calculator.dart';
@@ -12,6 +14,7 @@ import 'package:dualmate/schedule/model/schedule_query_information.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
 import 'package:dualmate/schedule/service/schedule_prettifier.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
 typedef ScheduleUpdatedCallback = Future<void> Function(
@@ -66,12 +69,15 @@ class ScheduleProvider {
     var cachedSchedule =
         await _scheduleEntryRepository.queryScheduleBetweenDates(start, end);
 
-    print("Read cached schedule with ${cachedSchedule.entries.length} entries");
+    _debugLog(
+      "Read cached schedule with ${cachedSchedule.entries.length} entries",
+    );
 
     cachedSchedule = await _scheduleFilter.filter(cachedSchedule);
 
-    print(
-        "Filtered cached schedule has ${cachedSchedule.entries.length} entries");
+    _debugLog(
+      "Filtered cached schedule has ${cachedSchedule.entries.length} entries",
+    );
 
     _cachedSchedule = cachedSchedule;
     _cachedScheduleStart = start;
@@ -84,8 +90,9 @@ class ScheduleProvider {
     DateTime end,
     CancellationToken cancellationToken,
   ) async {
-    print(
-        "Fetching schedule for ${DateFormat.yMd().format(start)} - ${DateFormat.yMd().format(end)}");
+    _debugLog(
+      "Fetching schedule for ${DateFormat.yMd().format(start)} - ${DateFormat.yMd().format(end)}",
+    );
     try {
       var updatedSchedule = await _scheduleSource.currentScheduleSource
           .querySchedule(start, end, cancellationToken);
@@ -96,7 +103,7 @@ class ScheduleProvider {
         schedule = SchedulePrettifier().prettifySchedule(schedule);
       }
 
-      print("Schedule returned with ${schedule.entries.length} entries");
+      _debugLog("Schedule returned with ${schedule.entries.length} entries");
 
       await _diffToCache(start, end, schedule);
       await _scheduleEntryRepository.deleteScheduleEntriesBetween(start, end);
@@ -111,7 +118,7 @@ class ScheduleProvider {
       _cachedScheduleStart = start;
       _cachedScheduleEnd = end;
 
-      print("Filtered schedule has ${schedule.entries.length} entries");
+      _debugLog("Filtered schedule has ${schedule.entries.length} entries");
 
       for (var c in _scheduleUpdatedCallbacks) {
         await c(schedule, start, end);
@@ -121,9 +128,9 @@ class ScheduleProvider {
 
       return updatedSchedule;
     } on ScheduleQueryFailedException catch (e, trace) {
-      print("Failed to fetch schedule!");
-      print(e.innerException.toString());
-      print(trace);
+      _debugLog("Failed to fetch schedule!");
+      _debugLog(e.innerException.toString());
+      _debugLog('$trace');
       rethrow;
     }
   }
@@ -196,5 +203,10 @@ class ScheduleProvider {
     _cachedSchedule = null;
     _cachedScheduleStart = null;
     _cachedScheduleEnd = null;
+  }
+
+  void _debugLog(String message) {
+    if (!kDebugMode) return;
+    developer.log(message, name: 'schedule_provider');
   }
 }

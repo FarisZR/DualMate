@@ -451,6 +451,8 @@ class L {
   String get filterTitle => _getValue("filterTitle");
   String get filterSaveError => _getValue("filterSaveError");
 
+  String get filterLoadError => _getValue("filterLoadError");
+
   String get canteenFilterAll => _getValue("canteenFilterAll");
   String get canteenFilterNoPork => _getValue("canteenFilterNoPork");
   String get canteenFilterVegetarian => _getValue("canteenFilterVegetarian");

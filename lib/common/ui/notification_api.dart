@@ -1,7 +1,9 @@
 import 'dart:math';
+import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/services.dart';
 
 ///
 /// Provides methods to display native notifications
@@ -15,15 +17,13 @@ class NotificationApi {
   /// call this method
   ///
   Future<void> initialize() async {
-    var initializationSettingsAndroid = const AndroidInitializationSettings(
+    const initializationSettingsAndroid = AndroidInitializationSettings(
       'outline_event_note_24',
     );
 
-    var initializationSettingsIOS = DarwinInitializationSettings(
-      onDidReceiveLocalNotification: onDidReceiveLocalNotification,
-    );
+    const initializationSettingsIOS = DarwinInitializationSettings();
 
-    var initializationSettings = InitializationSettings(
+    final initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
     );
@@ -32,6 +32,36 @@ class NotificationApi {
       initializationSettings,
       onDidReceiveNotificationResponse: selectNotification,
     );
+    await _requestRuntimePermissions();
+  }
+
+  Future<void> _requestRuntimePermissions() async {
+    final androidPlugin =
+        _localNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    try {
+      final granted = await androidPlugin?.requestNotificationsPermission();
+      developer.log(
+        'Notification runtime permission requested: $granted',
+        name: 'notification_api',
+      );
+    } on PlatformException catch (error, trace) {
+      developer.log(
+        'Notification runtime permission request failed',
+        name: 'notification_api',
+        error: error,
+        stackTrace: trace,
+      );
+      rethrow;
+    } on Exception catch (error, trace) {
+      developer.log(
+        'Notification runtime permission request failed',
+        name: 'notification_api',
+        error: error,
+        stackTrace: trace,
+      );
+      rethrow;
+    }
   }
 
   ///
@@ -71,37 +101,20 @@ class NotificationApi {
     );
   }
 
-    void onDidReceiveLocalNotification(
-      int id, String? title, String? body, String? payload) {}
-
   void selectNotification(NotificationResponse notificationResponse) {}
 }
 
 ///
 /// This class implements the methods of the NotificationApi with empty stubs
 ///
-class VoidNotificationApi implements NotificationApi {
-  final FlutterLocalNotificationsPlugin _voidLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-
+class VoidNotificationApi extends NotificationApi {
   @override
-  FlutterLocalNotificationsPlugin get _localNotificationsPlugin =>
-      _voidLocalNotificationsPlugin;
-
-  @override
-  Future<void> initialize() {
-    return Future.value();
-  }
-
-  @override
-    void onDidReceiveLocalNotification(
-      int id, String? title, String? body, String? payload) {}
+  Future<void> initialize() => Future.value();
 
   @override
   void selectNotification(NotificationResponse notificationResponse) {}
 
   @override
-  Future<void> showNotification(String title, String message, [int? id]) {
-    return Future.value();
-  }
+  Future<void> showNotification(String title, String message, [int? id]) =>
+      Future.value();
 }

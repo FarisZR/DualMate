@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
+import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 import 'package:dualmate/schedule/ui/schedule_page.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_view_model.dart';
+import 'package:dualmate/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/filter/schedule_filter_page.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_help_dialog.dart';
 import 'package:dualmate/ui/navigation/navigation_entry.dart';
@@ -71,9 +76,37 @@ class ScheduleNavigationEntry extends NavigationEntry<ScheduleViewModel> {
                   ? IconButton(
                       icon: Icon(Icons.filter_alt),
                       onPressed: () async {
-                        Navigator.of(context).push(MaterialPageRoute(
-                          builder: (context) => ScheduleFilterPage(),
-                        ));
+                        unawaited(
+                          FilterViewModel.preloadStates(
+                            KiwiContainer().resolve<ScheduleEntryRepository>(),
+                            KiwiContainer().resolve<ScheduleFilterRepository>(),
+                          ),
+                        );
+                        await Navigator.of(context).push(
+                          PageRouteBuilder<void>(
+                            transitionDuration:
+                                const Duration(milliseconds: 240),
+                            reverseTransitionDuration:
+                                const Duration(milliseconds: 200),
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) =>
+                                    const ScheduleFilterPage(),
+                            transitionsBuilder: (context, animation,
+                                secondaryAnimation, child) {
+                              final offsetTween = Tween<Offset>(
+                                begin: const Offset(0.24, 0),
+                                end: Offset.zero,
+                              ).chain(
+                                CurveTween(curve: Curves.easeOutCubic),
+                              );
+
+                              return SlideTransition(
+                                position: animation.drive(offsetTween),
+                                child: child,
+                              );
+                            },
+                          ),
+                        );
                       },
                     )
                   : Container(),

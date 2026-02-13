@@ -16,10 +16,12 @@ import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:flutter/services.dart';
+import 'package:dualmate/ui/navigation/main_section_controller.dart';
 import 'package:dualmate/ui/navigation/navigator_key.dart';
 import 'package:dualmate/ui/navigation/router.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 
@@ -37,14 +39,19 @@ class RootPage extends StatefulWidget {
 }
 
 class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
+  static const Duration _deferredBackgroundInitDelay =
+      Duration(milliseconds: 900);
+  static const Duration _foregroundHeavyInitDelay =
+      Duration(milliseconds: 1400);
+  static const Duration _foregroundCanteenPrewarmDelay =
+      Duration(milliseconds: 4200);
+
   RootViewModel? _rootViewModel;
-  bool _isInitializing = true;
   bool _backgroundInitStarted = false;
   static const MethodChannel _navigationChannel =
       MethodChannel('com.fariszr.dualmate/navigation');
   String? _pendingRoute;
   developer.TimelineTask? _startupTask;
-  bool _pendingRouteScheduled = false;
   bool _perfOverlayLoaded = false;
 
   @override
@@ -180,6 +187,10 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     _rootViewModel = RootViewModel(
       KiwiContainer().resolve(),
     );
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
     WidgetsBinding.instance.allowFirstFrame();
     PerformanceTelemetry.instance.logInstant(
       'startup.allowFirstFrame',
@@ -202,10 +213,6 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       return;
     }
 
-    setState(() {
-      _isInitializing = false;
-    });
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_backgroundInitStarted) return;
       _backgroundInitStarted = true;
@@ -227,37 +234,18 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       print("Perf overlay load failed");
       print(error);
       print(trace);
-      rethrow;
+      if (!mounted) return;
+      setState(() {
+        _perfOverlayLoaded = true;
+      });
     }
   }
 
   void _applyPendingRoute() {
-    if (_pendingRoute == null) return;
-    final navigator = NavigatorKey.mainKey.currentState;
-    if (navigator == null) {
-      if (_pendingRouteScheduled) return;
-      _pendingRouteScheduled = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _pendingRouteScheduled = false;
-        _applyPendingRoute();
-      });
-      return;
-    }
-
-    var found = false;
-    navigator.popUntil((route) {
-      if (route.settings.name == _pendingRoute) {
-        found = true;
-        return true;
-      }
-      return route.isFirst;
-    });
-
-    if (!found) {
-      navigator.pushNamed(_pendingRoute!);
-    }
+    final route = _pendingRoute;
+    if (route == null) return;
+    MainSectionController.instance.openRoute(route);
     _pendingRoute = null;
-    _pendingRouteScheduled = false;
   }
 
   @override
@@ -321,12 +309,22 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
   Future<void> _runDeferredInitialization(Stopwatch stopwatch) async {
     try {
+      // Allow first-frame interaction and navigation transitions to settle.
+      await Future.delayed(_deferredBackgroundInitDelay);
+      if (!mounted) return;
       await initializeAppBackground(false);
       print(
           "Root init: deferred background ${stopwatch.elapsedMilliseconds}ms");
       unawaited(_prewarmScheduleCache());
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Delay foreground-heavy tasks to keep startup animations responsive.
+      Future.delayed(_foregroundHeavyInitDelay, () {
+        if (!mounted) return;
         _runForegroundHeavyInitialization();
+      });
+      // Defer canteen prewarm further and run at idle priority.
+      Future.delayed(_foregroundCanteenPrewarmDelay, () {
+        if (!mounted) return;
+        _scheduleIdleCanteenPrewarm();
       });
     } catch (error, trace) {
       print("Root init: deferred background failed");
@@ -340,6 +338,26 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       await initializeAppForegroundHeavy();
     } catch (error, trace) {
       print("Root init: foreground heavy failed");
+      print(error);
+      print(trace);
+    }
+  }
+
+  void _scheduleIdleCanteenPrewarm() {
+    SchedulerBinding.instance.scheduleTask<void>(
+      () {
+        unawaited(_runCanteenPrewarm());
+      },
+      Priority.idle,
+      debugLabel: 'startup.canteenPrewarm',
+    );
+  }
+
+  Future<void> _runCanteenPrewarm() async {
+    try {
+      await prewarmCanteenIfStale();
+    } catch (error, trace) {
+      print("Root init: canteen prewarm failed");
       print(error);
       print(trace);
     }

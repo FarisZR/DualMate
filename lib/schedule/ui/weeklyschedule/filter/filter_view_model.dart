@@ -3,6 +3,7 @@ import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
+import 'package:flutter/foundation.dart';
 
 class FilterValidationException implements Exception {
   final String message;
@@ -23,10 +24,14 @@ class FilterSaveException implements Exception {
 }
 
 class FilterViewModel extends BaseViewModel {
+  static List<ScheduleEntryFilterState>? _cachedStates;
+  static Future<List<ScheduleEntryFilterState>>? _cachedStatesFuture;
+
   final ScheduleEntryRepository _scheduleEntryRepository;
   final ScheduleFilterRepository _scheduleFilterRepository;
   final ScheduleSourceProvider _scheduleSource;
   final ScheduleProvider _scheduleProvider;
+  bool _initialized = false;
 
   List<ScheduleEntryFilterState> filterStates = [];
 
@@ -35,22 +40,48 @@ class FilterViewModel extends BaseViewModel {
     this._scheduleFilterRepository,
     this._scheduleSource,
     this._scheduleProvider,
-  ) {
-    loadFilterStates();
+  );
+
+  static Future<void> preloadStates(
+    ScheduleEntryRepository scheduleEntryRepository,
+    ScheduleFilterRepository scheduleFilterRepository,
+  ) async {
+    if (_cachedStates != null) return;
+    _cachedStatesFuture ??=
+        _loadStates(scheduleEntryRepository, scheduleFilterRepository);
+    _cachedStates = _cloneStates(await _cachedStatesFuture!);
   }
 
-  void loadFilterStates() async {
-    var allNames =
-        await _scheduleEntryRepository.queryAllNamesOfScheduleEntries();
+  /// Clears the static cache so the next load reflects latest repository data.
+  static void invalidateCache() {
+    _cachedStates = null;
+    _cachedStatesFuture = null;
+  }
 
-    var filteredNames = await _scheduleFilterRepository.queryAllHiddenNames();
+  @visibleForTesting
+  static void resetCachedStateForTesting() {
+    invalidateCache();
+  }
 
-    allNames.sort((s1, s2) => s1.compareTo(s2));
+  Future<void> initialize() async {
+    if (_initialized) return;
+    _initialized = true;
+    await loadFilterStates();
+  }
 
-    filterStates = allNames.map((e) {
-      var isFiltered = filteredNames.contains(e);
-      return ScheduleEntryFilterState(!isFiltered, e);
-    }).toList();
+  Future<void> loadFilterStates() async {
+    final cached = _cachedStates;
+    if (cached != null) {
+      filterStates = _cloneStates(cached);
+      notifyIfMounted("filterStates");
+      return;
+    }
+
+    _cachedStatesFuture ??=
+        _loadStates(_scheduleEntryRepository, _scheduleFilterRepository);
+    final loadedStates = await _cachedStatesFuture!;
+    _cachedStates = _cloneStates(loadedStates);
+    filterStates = _cloneStates(loadedStates);
 
     notifyIfMounted("filterStates");
   }
@@ -72,12 +103,41 @@ class FilterViewModel extends BaseViewModel {
 
     try {
       await _scheduleFilterRepository.saveAllHiddenNames(allFilteredNames);
+      _cachedStates = _cloneStates(filterStates);
+      _cachedStatesFuture = null;
 
       _scheduleProvider.invalidateScheduleCache();
       _scheduleSource.fireScheduleSourceChanged();
     } catch (e) {
       throw FilterSaveException(e);
     }
+  }
+
+  static Future<List<ScheduleEntryFilterState>> _loadStates(
+    ScheduleEntryRepository scheduleEntryRepository,
+    ScheduleFilterRepository scheduleFilterRepository,
+  ) async {
+    final allNames =
+        await scheduleEntryRepository.queryAllNamesOfScheduleEntries();
+    final filteredNames = await scheduleFilterRepository.queryAllHiddenNames();
+
+    allNames.sort((s1, s2) => s1.compareTo(s2));
+
+    return allNames.map((e) {
+      final isFiltered = filteredNames.contains(e);
+      return ScheduleEntryFilterState(!isFiltered, e);
+    }).toList();
+  }
+
+  static List<ScheduleEntryFilterState> _cloneStates(
+    List<ScheduleEntryFilterState> source,
+  ) {
+    return source
+        .map((state) => ScheduleEntryFilterState(
+              state.isDisplayed,
+              state.entryName,
+            ))
+        .toList();
   }
 }
 
