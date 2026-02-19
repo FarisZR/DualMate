@@ -239,3 +239,4 @@ Use real Android device runs for final verification of:
 - `android/build/...` contains generated artifacts; do not treat them as source docs.
 - There is no strict custom lint config (`analysis_options.yaml` absent).
 - Keep new UI work aligned with Material 3 patterns already used in current screens.
+- This is a hard cutover project, meaning there are no current users. Backwards compatibility isn't needed and it shouldn't be taken into account nor have any code written for it.
