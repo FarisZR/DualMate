@@ -22,7 +22,7 @@ When schedule data changes in background (WorkManager), users can receive a sche
 - Schedule change notifications are triggered from diff callbacks: `lib/common/appstart/notification_schedule_changed_initialize.dart:14`, `lib/schedule/business/schedule_provider.dart:151`.
 - Widget refresh callbacks are triggered after schedule persistence via `_scheduleUpdatedCallbacks`: `lib/schedule/business/schedule_provider.dart:123`, `lib/native/widget/widget_update_callback.dart:24`.
 - Flutter-side widget refresh uses method channel `com.fariszr.dualmate/widget`: `lib/native/widget/android_widget_helper.dart:8`.
-- Channel handler registration is currently in `MainActivity.configureFlutterEngine(...)`: `android/app/src/main/kotlin/com/fariszr/dualmate/MainActivity.kt:17`, `android/app/src/main/kotlin/com/fariszr/dualmate/flutter/AndroidScheduleTodayWidget.kt:20`.
+- Channel handler registration now lives in local plugin wiring: `third_party/dualmate_widget_bridge/android/src/main/kotlin/com/fariszr/dualmate/widgetbridge/DualmateWidgetBridgePlugin.kt:1`.
 - Institutional learnings indicate two relevant patterns:
   - Background tasks should isolate non-fatal failures and never crash the task: `docs/solutions/integration-issues/unhandled-background-exception-widget-logic-Schedule-20260124.md:88`.
   - Widget updates should be explicitly triggered on Android provider paths: `docs/solutions/ui-bugs/widget-resize-and-canteen-duplication-20260127.md:25`.
@@ -40,19 +40,19 @@ External research was added because this bug depends on Flutter background isola
 
 ## ✨ Proposed Solution
 
-Use an engine-level Android widget bridge plugin (best option) so the same `MethodChannel` works in both foreground and Workmanager headless background engines.
+Use a local Flutter plugin dependency (`dualmate_widget_bridge`) so the same `MethodChannel` is auto-registered for both foreground and Workmanager headless background engines.
 
 1. Keep schedule fetch/save/diff flow unchanged.
-2. Move widget channel handling from `MainActivity` to an engine-attached plugin (`FlutterPlugin`) and register it for background engines.
+2. Move widget channel handling out of `MainActivity` into an Android plugin package that Flutter auto-registers in every engine.
 3. Treat widget refresh as non-fatal side effect with explicit logging.
 4. Keep notification behavior intact and independent.
 
 ### Suggested implementation direction
 
 - Keep `WidgetHelper`/`AndroidWidgetHelper` API stable in Dart.
-- Replace Activity-bound registration with engine-level plugin registration for `com.fariszr.dualmate/widget`.
-- Ensure Workmanager background isolate initializes plugin registrant so the channel exists in headless execution.
-- Reuse existing native widget provider refresh functions (`ScheduleTodayWidget.requestWidgetRefresh`, `ScheduleNowWidget.requestWidgetRefresh`, `CanteenTodayWidget.requestWidgetRefresh`).
+- Keep `com.fariszr.dualmate/widget` channel API unchanged in Dart.
+- Register the bridge through Flutter plugin metadata (`pubspec.yaml` plugin entry) instead of manual activity wiring.
+- Trigger widget updates by broadcasting `ACTION_APPWIDGET_UPDATE` to existing provider classes from the plugin.
 
 ### Alternatives considered
 
@@ -109,8 +109,8 @@ Future<void> updateSchedule() async {
 
 - [x] Define background-safe refresh abstraction and inject where needed in `lib/common/appstart/service_injector.dart`.
 - [x] Update `lib/schedule/background/background_schedule_update.dart` to call the new background-safe refresh path after successful schedule update.
-- [x] Move channel handler wiring out of `android/app/src/main/kotlin/com/fariszr/dualmate/MainActivity.kt` into an engine-level Android plugin class under `android/app/src/main/kotlin/com/fariszr/dualmate/flutter/`.
-- [x] Ensure Workmanager background isolate/plugin registrant initializes that plugin (headless engine support).
+- [x] Move channel handler wiring out of `android/app/src/main/kotlin/com/fariszr/dualmate/MainActivity.kt` into a local plugin dependency: `third_party/dualmate_widget_bridge/android/src/main/kotlin/com/fariszr/dualmate/widgetbridge/DualmateWidgetBridgePlugin.kt`.
+- [x] Remove the vendored `workmanager_android` fork and use standard `workmanager` plugin registration.
 - [x] Update `lib/native/widget/android_widget_helper.dart` exception handling to catch non-`PlatformException` background/plugin failures safely.
 - [x] Keep `lib/native/widget/widget_update_callback.dart` behavior intact for foreground paths unless deduping refresh triggers is required.
 - [x] Keep Android-side refresh entrypoint provider-based and engine-agnostic under `android/app/src/main/kotlin/com/fariszr/dualmate/widget/...`.
@@ -160,8 +160,8 @@ Future<void> updateSchedule() async {
 - Notification callback setup: `lib/common/appstart/notification_schedule_changed_initialize.dart:14`
 - Widget callback glue: `lib/native/widget/widget_update_callback.dart:24`
 - Android widget helper (method channel): `lib/native/widget/android_widget_helper.dart:25`
-- MainActivity channel setup: `android/app/src/main/kotlin/com/fariszr/dualmate/MainActivity.kt:17`
-- Native widget channel handler: `android/app/src/main/kotlin/com/fariszr/dualmate/flutter/AndroidScheduleTodayWidget.kt:20`
+- MainActivity engine setup (without manual widget plugin add): `android/app/src/main/kotlin/com/fariszr/dualmate/MainActivity.kt:16`
+- Local widget bridge plugin: `third_party/dualmate_widget_bridge/android/src/main/kotlin/com/fariszr/dualmate/widgetbridge/DualmateWidgetBridgePlugin.kt:1`
 - Flutter platform channels (background isolate + plugin/engine patterns): `https://docs.flutter.dev/platform-integration/platform-channels`
 - Flutter isolates + plugin usage in background isolates: `https://docs.flutter.dev/perf/isolates`
 - Workmanager plugin docs (dedicated background isolate context): `https://github.com/fluttercommunity/flutter_workmanager/blob/main/README.md`

@@ -1,0 +1,19 @@
+name: dualmate_widget_bridge
+description: Android widget bridge plugin for DualMate.
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.fariszr.dualmate.widgetbridge
+        pluginClass: DualmateWidgetBridgePlugin

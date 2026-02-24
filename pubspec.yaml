@@ -45,6 +45,8 @@ dependencies:
   flutter_widgetkit: ^1.0.3
   flutter_app_group_directory: ^1.1.0
   timezone: ^0.9.2
+  dualmate_widget_bridge:
+    path: third_party/dualmate_widget_bridge
 
 dev_dependencies:
   flutter_test:
@@ -58,8 +60,6 @@ dependency_overrides:
   win32: 5.15.0
   path_provider_android:
     path: third_party/path_provider_android
-  workmanager_android:
-    path: third_party/workmanager_android
 
 
 

@@ -74,7 +74,7 @@ The filter dropdown (top-right) uses `CanteenFilter` to filter the list in-memor
 - Android widget shows today’s meals.
 - Data is read directly from SQLite via `CanteenProvider` on Android.
 - Widget layout uses the modern widget styling (same background as `ScheduleNowWidget`).
-- Refreshes are triggered together with schedule widgets via `WidgetUpdateCallback` and `AndroidScheduleTodayWidget`.
+- Refreshes are triggered together with schedule widgets via `WidgetUpdateCallback` and `dualmate_widget_bridge` (`DualmateWidgetBridgePlugin`).
 
 ## Performance Notes
 
@@ -126,7 +126,7 @@ The filter dropdown (top-right) uses `CanteenFilter` to filter the list in-memor
 
 5. **Widget rendering**
    - Ensure `CanteenProvider` on Android can open the database path.
-   - Confirm widget refresh is triggered via `WidgetUpdateCallback` and `AndroidScheduleTodayWidget`.
+   - Confirm widget refresh is triggered via `WidgetUpdateCallback` and `dualmate_widget_bridge`.
 
 6. **Performance regressions**
    - Confirm parsing still runs in an isolate (`Isolate.run`).

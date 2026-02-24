@@ -11,18 +11,20 @@ Background schedule updates could complete while widget refresh calls failed in 
 ## Root Cause
 
 - Widget channel handling was tied to foreground activity setup.
-- Background callback isolates may run in a different engine lifecycle where widget channel registration is not guaranteed.
-- The refresh path treated some platform/channel failures as fatal in update flows.
+- Background callback isolates run in a headless engine where manual `MainActivity` plugin wiring is not applied.
+- This left the widget channel unavailable in some background runs even when schedule-change notifications were delivered.
 
 ## Changes
 
-- Moved widget channel handler to engine-attached plugin implementation in `AndroidScheduleTodayWidget` (`FlutterPlugin` + `MethodCallHandler`).
+- Added a local plugin dependency `dualmate_widget_bridge` and implemented `DualmateWidgetBridgePlugin` as the channel handler for `com.fariszr.dualmate/widget`.
 - Removed activity-bound widget channel setup from `MainActivity`.
-- Added plugin registrant initialization in background task callback dispatcher:
+- Removed the vendored `workmanager_android` fork and switched back to the standard `workmanager` package path.
+- Kept background callback initialization with:
   - `WidgetsFlutterBinding.ensureInitialized()`
   - `DartPluginRegistrant.ensureInitialized()`
 - Added explicit, non-fatal widget refresh call in `BackgroundScheduleUpdate` after successful schedule persistence.
 - Hardened Android widget helper refresh call to swallow generic channel/plugin exceptions in addition to `PlatformException`.
+- Implemented provider broadcast refresh in the plugin (`ACTION_APPWIDGET_UPDATE`) for schedule/canteen widget providers.
 
 ## Validation
 
@@ -31,9 +33,9 @@ Automated tests added:
 - `test/native/widget/android_widget_helper_background_error_test.dart`
 - `test/schedule/business/schedule_provider_callback_ordering_test.dart`
 
-All tests pass in CI-local run:
-- targeted new tests
-- full test suite
+Verification run:
+- targeted Flutter tests for widget/background callback flows
+- Android debug APK build (`flutter build apk --debug`) to validate plugin wiring/compilation
 
 ## Notes
 
