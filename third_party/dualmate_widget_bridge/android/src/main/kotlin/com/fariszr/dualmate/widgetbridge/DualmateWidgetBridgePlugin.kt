@@ -3,12 +3,14 @@ package com.fariszr.dualmate.widgetbridge
 import android.app.AlarmManager
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -36,11 +38,7 @@ class DualmateWidgetBridgePlugin : FlutterPlugin, MethodChannel.MethodCallHandle
         }
 
         when (call.method) {
-            "requestWidgetRefresh" -> {
-                refreshAllWidgets(ctx)
-                result.success(null)
-            }
-            "requestWidgetLaunchIntent" -> {
+            "requestWidgetRefresh", "requestWidgetLaunchIntent" -> {
                 refreshAllWidgets(ctx)
                 result.success(null)
             }
@@ -71,7 +69,11 @@ class DualmateWidgetBridgePlugin : FlutterPlugin, MethodChannel.MethodCallHandle
                         Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
                         Uri.parse("package:${ctx.packageName}"),
                     ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    ctx.startActivity(intent)
+                    try {
+                        ctx.startActivity(intent)
+                    } catch (exception: ActivityNotFoundException) {
+                        Log.w(TAG, "Exact alarm permission screen unavailable", exception)
+                    }
                 }
                 result.success(null)
             }
@@ -125,5 +127,6 @@ class DualmateWidgetBridgePlugin : FlutterPlugin, MethodChannel.MethodCallHandle
 
     companion object {
         private const val CHANNEL_NAME = "com.fariszr.dualmate/widget"
+        private const val TAG = "DualmateWidgetBridge"
     }
 }

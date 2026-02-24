@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:dualmate/native/widget/android_widget_helper.dart';
-import 'package:dualmate/native/widget/ios_widget_helper.dart';
 
 ///
 /// Flutter part of the native widgets. This class calls the native platform
@@ -18,8 +17,6 @@ class WidgetHelper {
   static WidgetHelper _createInstance() {
     if (Platform.isAndroid) {
       return AndroidWidgetHelper();
-    } else if (Platform.isIOS) {
-      return IOSWidgetHelper();
     }
     return VoidWidgetHelper();
   }

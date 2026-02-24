@@ -15,8 +15,8 @@ tags: [android-widget, remoteviews, deeplink, navigation]
 
 # Troubleshooting: Widget taps not opening schedule/canteen
 
-Note: the `AndroidScheduleTodayWidget` wiring shown here was later replaced by the
-`dualmate_widget_bridge` plugin in the 2026-02-24 background refresh fix.
+> Note: the `AndroidScheduleTodayWidget` wiring shown here was later replaced by the
+> `dualmate_widget_bridge` plugin in the 2026-02-24 background refresh fix.
 
 ## Problem
 Android home screen widgets for schedule/canteen failed to open the correct page. The schedule widget also showed "Problem loading widget" after layout changes.
