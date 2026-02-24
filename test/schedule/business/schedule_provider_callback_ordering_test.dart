@@ -84,6 +84,13 @@ class _FakeScheduleSource implements ScheduleSource {
   ]) async {
     return ScheduleQueryResult(_schedule, const []);
   }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw UnsupportedError(
+      'Unexpected _FakeScheduleSource call: $invocation',
+    );
+  }
 }
 
 class _FakeScheduleEntryRepository implements ScheduleEntryRepository {

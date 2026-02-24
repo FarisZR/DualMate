@@ -1,3 +1,4 @@
+import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/native/widget/widget_helper.dart';
@@ -181,7 +182,7 @@ class _FakeWorkSchedulerService implements WorkSchedulerService {
       [bool needsNetwork = false]) async {}
 
   @override
-  void registerTask(task) {}
+  void registerTask(TaskCallback task) {}
 
   @override
   Future<void> executeTask(String id) async {}

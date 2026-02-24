@@ -58,6 +58,8 @@ dependency_overrides:
   win32: 5.15.0
   path_provider_android:
     path: third_party/path_provider_android
+  workmanager_android:
+    path: third_party/workmanager_android
 
 
 

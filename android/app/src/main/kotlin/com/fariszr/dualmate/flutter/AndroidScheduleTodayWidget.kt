@@ -21,7 +21,7 @@ class AndroidScheduleTodayWidget : FlutterPlugin, MethodChannel.MethodCallHandle
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         context = binding.applicationContext
-        channel = MethodChannel(binding.binaryMessenger, channelName)
+        channel = MethodChannel(binding.binaryMessenger, CHANNEL_NAME)
         channel?.setMethodCallHandler(this)
     }
 
@@ -90,7 +90,7 @@ class AndroidScheduleTodayWidget : FlutterPlugin, MethodChannel.MethodCallHandle
     }
 
     companion object {
-        const val channelName = "com.fariszr.dualmate/widget"
+        const val CHANNEL_NAME = "com.fariszr.dualmate/widget"
     }
 
 }
