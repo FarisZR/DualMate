@@ -1,6 +1,7 @@
 package com.fariszr.dualmate
 
 import androidx.annotation.NonNull
+import com.fariszr.dualmate.flutter.AndroidScheduleTodayWidget
 import com.fariszr.dualmate.widget.WidgetNavigationExtras
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -15,6 +16,7 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         GeneratedPluginRegistrant.registerWith(flutterEngine)
+        flutterEngine.plugins.add(AndroidScheduleTodayWidget())
 
         navigationChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
