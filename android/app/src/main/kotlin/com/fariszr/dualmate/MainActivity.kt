@@ -17,7 +17,9 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         GeneratedPluginRegistrant.registerWith(flutterEngine)
 
-        AndroidScheduleTodayWidget(applicationContext).setupMethodChannel(flutterEngine)
+        if (!flutterEngine.plugins.has(AndroidScheduleTodayWidget::class.java)) {
+            flutterEngine.plugins.add(AndroidScheduleTodayWidget())
+        }
 
         navigationChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
