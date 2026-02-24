@@ -26,7 +26,7 @@ class AndroidWidgetHelper implements WidgetHelper {
     try {
       await platform.invokeMethod('requestWidgetRefresh');
       await platform.invokeMethod('requestWidgetLaunchIntent');
-    } on PlatformException {}
+    } on Exception {}
   }
 
   @override

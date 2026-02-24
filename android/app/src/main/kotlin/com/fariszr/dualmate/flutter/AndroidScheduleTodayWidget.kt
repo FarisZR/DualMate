@@ -6,22 +6,28 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import androidx.annotation.NonNull
 import com.fariszr.dualmate.widget.WidgetHelper
 import com.fariszr.dualmate.widget.now.ScheduleNowWidget
 import com.fariszr.dualmate.widget.today.ScheduleTodayWidget
 import com.fariszr.dualmate.widget.canteen.CanteenTodayWidget
-import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
 
-class AndroidScheduleTodayWidget(private val context: Context) : MethodChannel.MethodCallHandler {
-    fun setupMethodChannel(@NonNull flutterEngine: FlutterEngine) {
-        MethodChannel(
-                flutterEngine.dartExecutor.binaryMessenger,
-                "com.fariszr.dualmate/widget")
-                .setMethodCallHandler(this)
+class AndroidScheduleTodayWidget : FlutterPlugin, MethodChannel.MethodCallHandler {
+    private lateinit var context: Context
+    private var channel: MethodChannel? = null
+
+    override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        context = binding.applicationContext
+        channel = MethodChannel(binding.binaryMessenger, channelName)
+        channel?.setMethodCallHandler(this)
+    }
+
+    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        channel?.setMethodCallHandler(null)
+        channel = null
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -83,5 +89,8 @@ class AndroidScheduleTodayWidget(private val context: Context) : MethodChannel.M
         CanteenTodayWidget.requestWidgetLaunchIntent(context)
     }
 
+    companion object {
+        const val channelName = "com.fariszr.dualmate/widget"
+    }
 
 }

@@ -2,6 +2,7 @@ import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
+import 'package:dualmate/native/widget/widget_helper.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
@@ -11,11 +12,13 @@ class BackgroundScheduleUpdate extends TaskCallback {
   final ScheduleProvider scheduleProvider;
   final ScheduleSourceProvider scheduleSource;
   final WorkSchedulerService scheduler;
+  final WidgetHelper widgetHelper;
 
   BackgroundScheduleUpdate(
     this.scheduleProvider,
     this.scheduleSource,
     this.scheduler,
+    this.widgetHelper,
   );
 
   Future updateSchedule() async {
@@ -51,6 +54,18 @@ class BackgroundScheduleUpdate extends TaskCallback {
       print(
           "Background schedule update next: retry in ${_updateInterval.inHours}h");
       return;
+    }
+
+    try {
+      await widgetHelper.requestWidgetRefresh();
+    } on Exception catch (e, trace) {
+      print("Background schedule widget refresh failed");
+      print(e);
+      print(trace);
+    } catch (e, trace) {
+      print("Background schedule widget refresh failed");
+      print(e);
+      print(trace);
     }
 
     print("Finished updating schedule");
