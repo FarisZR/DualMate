@@ -25,6 +25,11 @@ object MultiDayWidgetHelper {
         val overflowCount: Int
     )
 
+    data class LoadResult<T>(
+        val itemsByDate: Map<LocalDate, List<T>>,
+        val successful: Boolean
+    )
+
     fun weekDates(today: LocalDate): List<LocalDate> {
         return (0 until WEEK_WINDOW_DAYS).map { offset -> today.plusDays(offset.toLong()) }
     }

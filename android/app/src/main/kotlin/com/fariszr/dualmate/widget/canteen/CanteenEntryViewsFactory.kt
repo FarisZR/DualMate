@@ -73,7 +73,7 @@ class CanteenEntryViewsFactory(
         return views
     }
 
-    override fun buildEmptyView(isToday: Boolean): RemoteViews {
+    override fun buildEmptyView(isToday: Boolean, isDataUnavailable: Boolean): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_day_message_item)
         views.setTextViewText(R.id.day_message_text, context.getString(R.string.widget_canteen_empty_state))
         return views
@@ -86,11 +86,14 @@ class CanteenEntryViewsFactory(
     override fun loadItemsForWeek(
         startDate: LocalDate,
         endDate: LocalDate
-    ): Map<LocalDate, List<CanteenEntry>> {
+    ): MultiDayWidgetHelper.LoadResult<CanteenEntry> {
         val entries = CanteenProvider(context).queryMealsForWeek(startDate, endDate)
         val distinctEntries = deduplicateEntries(entries)
 
-        return distinctEntries.groupBy { entry -> entry.date }
+        return MultiDayWidgetHelper.LoadResult(
+            distinctEntries.groupBy { entry -> entry.date },
+            true
+        )
     }
 
     override fun prepareVisibleItems(

@@ -15,6 +15,11 @@ class ScheduleProvider(private val context: Context) {
 
     private val zoneOffset = OffsetDateTime.now().offset
 
+    data class QueryResult(
+        val entries: ArrayList<ScheduleEntry>,
+        val successful: Boolean
+    )
+
     
     fun hasScheduleEntriesForDay(date: LocalDate): Boolean {
         val start = date.atStartOfDay()
@@ -69,6 +74,10 @@ class ScheduleProvider(private val context: Context) {
     }
     
     fun queryScheduleEntriesBetween(start: LocalDateTime, end: LocalDateTime): ArrayList<ScheduleEntry> {
+        return queryScheduleEntriesBetweenWithStatus(start, end).entries
+    }
+
+    fun queryScheduleEntriesBetweenWithStatus(start: LocalDateTime, end: LocalDateTime): QueryResult {
         try {
             openDatabase()?.use { database ->
                 val startMillis = start.toEpochSecond(zoneOffset) * 1000
@@ -77,13 +86,13 @@ class ScheduleProvider(private val context: Context) {
                 database.rawQuery(
                         SCHEDULE_ENTRIES_BETWEEN_SQL,
                         arrayOf(startMillis.toString(), endMillis.toString())).use { result ->
-                    return readScheduleEntries(result)
+                    return QueryResult(readScheduleEntries(result), true)
                 }
             }
         }
         catch (ex: Exception) {
         }
-        return ArrayList()
+        return QueryResult(ArrayList(), false)
     }
 
     private fun openDatabase(): SQLiteDatabase? {

@@ -93,7 +93,6 @@ class DualmateWidgetBridgePlugin : FlutterPlugin, MethodChannel.MethodCallHandle
     }
 
     private fun refreshAllWidgets(context: Context) {
-        refreshWidgetProvider(context, "${context.packageName}.widget.today.ScheduleTodayWidget")
         refreshWidgetProvider(context, "${context.packageName}.widget.now.ScheduleNowWidget")
         refreshWidgetProvider(context, "${context.packageName}.widget.canteen.CanteenTodayWidget")
     }

@@ -102,9 +102,14 @@ class NowScheduleEntryViewsFactory(
         return MultiDayWidgetHelper.VisibleItems(items, 0)
     }
 
-    override fun buildEmptyView(isToday: Boolean): RemoteViews {
+    override fun buildEmptyView(isToday: Boolean, isDataUnavailable: Boolean): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_day_message_item)
-        views.setTextViewText(R.id.day_message_text, context.getString(R.string.widget_schedule_empty_state))
+        val message = if (isDataUnavailable) {
+            R.string.widget_schedule_unavailable_state
+        } else {
+            R.string.widget_schedule_empty_state
+        }
+        views.setTextViewText(R.id.day_message_text, context.getString(message))
         return views
     }
 
@@ -115,13 +120,16 @@ class NowScheduleEntryViewsFactory(
     override fun loadItemsForWeek(
         startDate: LocalDate,
         endDate: LocalDate
-    ): Map<LocalDate, List<ScheduleEntry>> {
-        val entries = ScheduleProvider(context).queryScheduleEntriesBetween(
+    ): MultiDayWidgetHelper.LoadResult<ScheduleEntry> {
+        val queryResult = ScheduleProvider(context).queryScheduleEntriesBetweenWithStatus(
             startDate.atStartOfDay(),
             endDate.plusDays(1).atStartOfDay()
         )
 
-        return entries.groupBy { entry -> entry.start.toLocalDate() }
+        return MultiDayWidgetHelper.LoadResult(
+            queryResult.entries.groupBy { entry -> entry.start.toLocalDate() },
+            queryResult.successful
+        )
     }
 
     companion object {

@@ -14,6 +14,7 @@ abstract class MultiDayViewsFactory<T>(
 ) : RemoteViewsService.RemoteViewsFactory {
 
     private var visibleRows: List<MultiDayWidgetHelper.DayRow<T>> = emptyList()
+    private var dataUnavailable = false
 
     override fun onCreate() {
         reloadRows()
@@ -43,7 +44,10 @@ abstract class MultiDayViewsFactory<T>(
 
         val visibleItems = prepareVisibleItems(row.items)
         if (visibleItems.items.isEmpty() && visibleItems.overflowCount == 0) {
-            views.addView(getRowItemsContainerId(), buildEmptyView(row.isToday))
+            views.addView(
+                getRowItemsContainerId(),
+                buildEmptyView(row.isToday, dataUnavailable && row.isToday)
+            )
             return views
         }
 
@@ -80,9 +84,12 @@ abstract class MultiDayViewsFactory<T>(
     protected abstract fun bindDayHeader(views: RemoteViews, date: LocalDate, isToday: Boolean)
     protected abstract fun buildItemView(item: T, state: WidgetItemState): RemoteViews
     protected abstract fun buildOverflowView(date: LocalDate, overflowCount: Int): RemoteViews
-    protected abstract fun buildEmptyView(isToday: Boolean): RemoteViews
+    protected abstract fun buildEmptyView(isToday: Boolean, isDataUnavailable: Boolean): RemoteViews
     protected abstract fun getItemState(item: T, now: LocalDateTime): WidgetItemState
-    protected abstract fun loadItemsForWeek(startDate: LocalDate, endDate: LocalDate): Map<LocalDate, List<T>>
+    protected abstract fun loadItemsForWeek(
+        startDate: LocalDate,
+        endDate: LocalDate
+    ): MultiDayWidgetHelper.LoadResult<T>
 
     protected open fun prepareVisibleItems(items: List<T>): MultiDayWidgetHelper.VisibleItems<T> {
         return MultiDayWidgetHelper.VisibleItems(items, 0)
@@ -92,14 +99,33 @@ abstract class MultiDayViewsFactory<T>(
         val today = LocalDate.now()
         val weekDates = MultiDayWidgetHelper.weekDates(today)
         val endDate = weekDates.last()
-        val itemsByDate = loadItemsForWeek(today, endDate)
+        val loadResult = loadItemsForWeek(today, endDate)
+
+        if (!loadResult.successful) {
+            if (visibleRows.isNotEmpty()) {
+                dataUnavailable = false
+                return
+            }
+
+            dataUnavailable = true
+            visibleRows = listOf(
+                MultiDayWidgetHelper.DayRow(today, emptyList(), true)
+            )
+            return
+        }
+
+        dataUnavailable = false
 
 
         val allRows = weekDates.map { date ->
-            MultiDayWidgetHelper.DayRow(date, itemsByDate[date].orEmpty(), date == today)
+            MultiDayWidgetHelper.DayRow(
+                date,
+                loadResult.itemsByDate[date].orEmpty(),
+                date == today
+            )
         }
 
         val filteredRows = MultiDayWidgetHelper.filterWeekRows(allRows)
-        visibleRows = filteredRows.ifEmpty { filteredRows.take(1) }
+        visibleRows = filteredRows.ifEmpty { allRows.take(1) }
     }
 }
