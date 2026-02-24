@@ -42,6 +42,10 @@ Background schedule updates (WorkManager) could persist new lesson data and trig
 - Broadened Android helper error handling to swallow generic exceptions for widget bridge calls:
   - `lib/native/widget/android_widget_helper.dart`
 
+### 4) Headless isolate plugin registrant initialization
+- Ensured background callback dispatcher initializes Dart plugin registrant before executing WorkManager tasks:
+  - `lib/common/background/background_work_scheduler.dart`
+
 ## Tests Added
 - `test/schedule/background/background_schedule_update_widget_refresh_test.dart`
   - verifies successful background update triggers widget refresh

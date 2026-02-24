@@ -94,7 +94,7 @@ Future<void> updateSchedule() async {
 - [x] Define background-safe refresh abstraction and inject where needed in `lib/common/appstart/service_injector.dart`.
 - [x] Update `lib/schedule/background/background_schedule_update.dart` to call the new background-safe refresh path after successful schedule update.
 - [x] Move channel handler wiring out of `android/app/src/main/kotlin/com/fariszr/dualmate/MainActivity.kt` into an engine-level Android plugin class under `android/app/src/main/kotlin/com/fariszr/dualmate/flutter/`.
-- [ ] Ensure Workmanager background isolate/plugin registrant initializes that plugin (headless engine support).
+- [x] Ensure Workmanager background isolate/plugin registrant initializes that plugin (headless engine support).
 - [x] Update `lib/native/widget/android_widget_helper.dart` exception handling to catch non-`PlatformException` background/plugin failures safely.
 - [x] Keep `lib/native/widget/widget_update_callback.dart` behavior intact for foreground paths unless deduping refresh triggers is required.
 - [x] Keep Android-side refresh entrypoint provider-based and engine-agnostic under `android/app/src/main/kotlin/com/fariszr/dualmate/widget/...`.
@@ -107,7 +107,7 @@ Future<void> updateSchedule() async {
   - `test/native/widget/android_widget_helper_background_error_test.dart`
   - `test/schedule/business/schedule_provider_callback_ordering_test.dart`
   - `test/schedule/ui/weeklyschedule/weekly_schedule_page_lifecycle_test.dart` (regression check)
-- [ ] Add/update solution note after implementation in `docs/solutions/integration-issues/`.
+- [x] Add/update solution note after implementation in `docs/solutions/integration-issues/`.
 
 ## Test & Verification Plan
 ### Automated
