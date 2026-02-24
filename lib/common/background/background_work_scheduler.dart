@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:dualmate/common/appstart/app_initializer.dart';
 import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
@@ -142,5 +144,6 @@ class BackgroundWorkScheduler extends WorkSchedulerService {
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
+  DartPluginRegistrant.ensureInitialized();
   Workmanager().executeTask(BackgroundWorkScheduler.backgroundTaskMain);
 }
