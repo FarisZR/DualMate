@@ -20,8 +20,11 @@ However, if you `import` this package directly, you should add it to your `pubsp
 
 ```yaml
 dependencies:
-  workmanager_android: ^0.8.0
+  workmanager_android: ^0.9.0
 ```
+
+If you enable debug notifications, add
+`android.permission.POST_NOTIFICATIONS` in your app manifest on Android 13+.
 
 ## Documentation
 

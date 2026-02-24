@@ -40,7 +40,7 @@
 
 ### Bug Fixes
 * Fixed NullPointerException when `isInDebugMode` was not properly initialized
-* Fixed inputData type handling - now properly supports all primitive types and lists
+* Fixed inputData type handling - now supports all primitive types and lists
 * Fixed v2 embedding import in BackgroundWorker
 
 ### Improvements

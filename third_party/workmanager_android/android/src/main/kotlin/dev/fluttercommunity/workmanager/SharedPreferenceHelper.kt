@@ -29,8 +29,8 @@ class SharedPreferenceHelper(
     private val preferences: SharedPreferences
         get() = context.getSharedPreferences(SHARED_PREFS_FILE_NAME, Context.MODE_PRIVATE)
 
-    private val preferenceListener: (sharedPreferences: SharedPreferences, key: String?) -> Unit =
-        { preferences, key ->
+    private val preferenceListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { preferences, key ->
             if (key == CALLBACK_DISPATCHER_HANDLE_KEY) {
                 dispatcherHandleListener.onDispatcherHandleChanged(
                     preferences.getLong(CALLBACK_DISPATCHER_HANDLE_KEY, -1L),
@@ -52,5 +52,9 @@ class SharedPreferenceHelper(
         preferences.edit {
             putLong(CALLBACK_DISPATCHER_HANDLE_KEY, callbackHandle)
         }
+    }
+
+    fun dispose() {
+        preferences.unregisterOnSharedPreferenceChangeListener(preferenceListener)
     }
 }

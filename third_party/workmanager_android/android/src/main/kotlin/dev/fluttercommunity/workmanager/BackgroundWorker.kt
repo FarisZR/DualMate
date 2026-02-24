@@ -84,7 +84,7 @@ class BackgroundWorker(
             if (callbackInfo == null) {
                 val exception = IllegalStateException("Failed to resolve Dart callback for handle $callbackHandle")
                 WorkmanagerDebug.onExceptionEncountered(applicationContext, null, exception)
-                completer?.set(Result.failure())
+                stopEngine(Result.failure(), exception.message)
                 return@ensureInitializationCompleteAsync
             }
 
@@ -93,7 +93,7 @@ class BackgroundWorker(
             if (localDartTask == null) {
                 val exception = IllegalStateException("Dart task is null")
                 WorkmanagerDebug.onExceptionEncountered(applicationContext, null, exception)
-                completer?.set(Result.failure())
+                stopEngine(Result.failure(), exception.message)
                 return@ensureInitializationCompleteAsync
             }
 
@@ -151,6 +151,13 @@ class BackgroundWorker(
         stopEngine(null)
     }
 
+    private fun destroyBackgroundEngine() {
+        Handler(Looper.getMainLooper()).post {
+            engine?.destroy()
+            engine = null
+        }
+    }
+
     private fun stopEngine(
         result: Result?,
         errorMessage: String? = null,
@@ -160,9 +167,10 @@ class BackgroundWorker(
         val localDartTask = dartTask
 
         if (localDartTask == null) {
-            val exception = IllegalStateException("Dart task is null")
-            WorkmanagerDebug.onExceptionEncountered(applicationContext, null, exception)
-            completer?.set(Result.failure())
+            if (result != null) {
+                completer?.set(result)
+            }
+            destroyBackgroundEngine()
             return
         }
 
@@ -198,11 +206,7 @@ class BackgroundWorker(
             this.completer?.set(result)
         }
 
-        // If stopEngine is called from `onStopped`, it may not be from the main thread.
-        Handler(Looper.getMainLooper()).post {
-            engine?.destroy()
-            engine = null
-        }
+        destroyBackgroundEngine()
     }
 
     private fun executeBackgroundTask() {

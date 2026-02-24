@@ -16,7 +16,7 @@ import io.flutter.plugin.common.MethodChannel
 
 
 class AndroidScheduleTodayWidget : FlutterPlugin, MethodChannel.MethodCallHandler {
-    private lateinit var context: Context
+    private var context: Context? = null
     private var channel: MethodChannel? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -28,26 +28,32 @@ class AndroidScheduleTodayWidget : FlutterPlugin, MethodChannel.MethodCallHandle
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel?.setMethodCallHandler(null)
         channel = null
+        context = null
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
+        val ctx = context ?: run {
+            result.error("NO_CONTEXT", "Widget plugin is not attached to an engine", null)
+            return
+        }
+
         when (call.method) {
             "requestWidgetRefresh" -> {
-                updateWidget()
+                updateWidget(ctx)
                 result.success(null)
             }
             "requestWidgetLaunchIntent" -> {
-                updateWidgetLaunchIntent()
+                updateWidgetLaunchIntent(ctx)
                 result.success(null)
             }
             "disableWidget" -> {
-                WidgetHelper(context).disableWidget()
-                updateWidget()
+                WidgetHelper(ctx).disableWidget()
+                updateWidget(ctx)
                 result.success(null)
             }
             "enableWidget" -> {
-                WidgetHelper(context).enableWidget()
-                updateWidget()
+                WidgetHelper(ctx).enableWidget()
+                updateWidget(ctx)
                 result.success(null)
             }
             "areWidgetsSupported" -> {
@@ -55,7 +61,7 @@ class AndroidScheduleTodayWidget : FlutterPlugin, MethodChannel.MethodCallHandle
             }
             "canScheduleExactAlarms" -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                    val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
                     result.success(alarmManager.canScheduleExactAlarms())
                 } else {
                     result.success(true)
@@ -65,9 +71,9 @@ class AndroidScheduleTodayWidget : FlutterPlugin, MethodChannel.MethodCallHandle
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     val intent = Intent(
                         Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                        Uri.parse("package:${context.packageName}")
+                        Uri.parse("package:${ctx.packageName}")
                     ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    context.startActivity(intent)
+                    ctx.startActivity(intent)
                 }
                 result.success(null)
             }
@@ -77,13 +83,13 @@ class AndroidScheduleTodayWidget : FlutterPlugin, MethodChannel.MethodCallHandle
         }
     }
 
-    private fun updateWidget() {
+    private fun updateWidget(context: Context) {
         ScheduleTodayWidget.requestWidgetRefresh(context)
         ScheduleNowWidget.requestWidgetRefresh(context)
         CanteenTodayWidget.requestWidgetRefresh(context)
     }
 
-    private fun updateWidgetLaunchIntent() {
+    private fun updateWidgetLaunchIntent(context: Context) {
         ScheduleNowWidget.requestWidgetLaunchIntent(context)
         ScheduleTodayWidget.requestWidgetLaunchIntent(context)
         CanteenTodayWidget.requestWidgetLaunchIntent(context)

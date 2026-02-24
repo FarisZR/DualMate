@@ -2,6 +2,7 @@ package dev.fluttercommunity.workmanager
 
 import android.content.Context
 import android.content.SharedPreferences
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -137,7 +138,7 @@ class SharedPreferenceHelperTest {
         val result = SharedPreferenceHelper.getCallbackHandle(mockContext)
 
         // Then: should return the stored handle
-        assert(result == TEST_HANDLE)
+        assertEquals(TEST_HANDLE, result)
     }
 
     @Test
@@ -150,6 +151,6 @@ class SharedPreferenceHelperTest {
         val result = SharedPreferenceHelper.getCallbackHandle(mockContext)
 
         // Then: should return -1
-        assert(result == INVALID_HANDLE)
+        assertEquals(INVALID_HANDLE, result)
     }
 }

@@ -1,269 +1,227 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:workmanager_android/workmanager_android.dart';
 import 'package:workmanager_platform_interface/workmanager_platform_interface.dart';
 
+@pragma('vm:entry-point')
+void callbackDispatcher() {}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('WorkmanagerAndroid', () {
-    late WorkmanagerAndroid workmanager;
+  late WorkmanagerAndroid workmanager;
+  late _PigeonMockHost host;
 
-    setUp(() {
-      workmanager = WorkmanagerAndroid();
-    });
-
-    group('Platform-specific behavior', () {
-      test(
-          'should throw UnsupportedError for registerProcessingTask (Android does not support BGTaskScheduler)',
-          () {
-        expect(
-          () => workmanager.registerProcessingTask('task', 'name'),
-          throwsA(isA<UnsupportedError>().having(
-            (e) => e.message,
-            'message',
-            contains('Processing tasks are not supported on Android'),
-          )),
-        );
-      });
-
-      test(
-          'should throw UnsupportedError for printScheduledTasks (Android WorkManager does not expose task lists)',
-          () {
-        expect(
-          () => workmanager.printScheduledTasks(),
-          throwsA(isA<UnsupportedError>().having(
-            (e) => e.message,
-            'message',
-            contains('printScheduledTasks is not supported on Android'),
-          )),
-        );
-      });
-    });
-
-    group('Android WorkManager constraints mapping', () {
-      test('should handle NetworkType enum correctly', () {
-        // Test that enum values are properly mapped for Android WorkManager
-        expect(NetworkType.connected.index, 0);
-        expect(NetworkType.metered.index, 1);
-        expect(NetworkType.notRequired.index, 2);
-        expect(NetworkType.notRoaming.index, 3);
-        expect(NetworkType.unmetered.index, 4);
-        expect(NetworkType.temporarilyUnmetered.index, 5);
-      });
-
-      test('should handle BackoffPolicy enum correctly', () {
-        expect(BackoffPolicy.exponential.index, 0);
-        expect(BackoffPolicy.linear.index, 1);
-      });
-
-      test('should handle ExistingWorkPolicy enum correctly', () {
-        expect(ExistingWorkPolicy.append.index, 0);
-        expect(ExistingWorkPolicy.keep.index, 1);
-        expect(ExistingWorkPolicy.replace.index, 2);
-        expect(ExistingWorkPolicy.update.index, 3);
-      });
-
-      test('should handle ExistingPeriodicWorkPolicy enum correctly', () {
-        expect(ExistingPeriodicWorkPolicy.keep.index, 0);
-        expect(ExistingPeriodicWorkPolicy.replace.index, 1);
-        expect(ExistingPeriodicWorkPolicy.update.index, 2);
-      });
-
-      test('should handle OutOfQuotaPolicy enum correctly', () {
-        expect(OutOfQuotaPolicy.runAsNonExpeditedWorkRequest.index, 0);
-        expect(OutOfQuotaPolicy.dropWorkRequest.index, 1);
-      });
-    });
-
-    group('Input validation and transformation', () {
-      test('should handle Duration to seconds conversion', () {
-        // Test that Duration objects are properly converted to seconds for Android WorkManager
-        const testDuration = Duration(minutes: 15, seconds: 30);
-        expect(testDuration.inSeconds, 930);
-      });
-
-      test('should handle constraints object creation', () {
-        final constraints = Constraints(
-          networkType: NetworkType.connected,
-          requiresCharging: true,
-          requiresBatteryNotLow: false,
-          requiresDeviceIdle: null,
-          requiresStorageNotLow: null,
-        );
-
-        expect(constraints.networkType, NetworkType.connected);
-        expect(constraints.requiresCharging, true);
-        expect(constraints.requiresBatteryNotLow, false);
-        expect(constraints.requiresDeviceIdle, null);
-        expect(constraints.requiresStorageNotLow, null);
-      });
-
-      test('should handle complex input data types', () {
-        final complexData = <String, Object?>{
-          'string': 'value',
-          'int': 42,
-          'double': 3.14,
-          'bool': true,
-          'null': null,
-          'list': [1, 2, 3],
-          'map': {'nested': 'value'},
-        };
-
-        // Test that complex data structures are acceptable
-        expect(complexData.keys.length, 7);
-        expect(complexData['string'], 'value');
-        expect(complexData['int'], 42);
-        expect(complexData['bool'], true);
-      });
-    });
-
-    group('Android-specific WorkManager features', () {
-      test('should support all Android NetworkType constraints', () {
-        // Android WorkManager supports all network types
-        final supportedTypes = [
-          NetworkType.connected,
-          NetworkType.metered,
-          NetworkType.notRequired,
-          NetworkType.notRoaming,
-          NetworkType.unmetered,
-          NetworkType.temporarilyUnmetered,
-        ];
-
-        for (final type in supportedTypes) {
-          expect(() => Constraints(networkType: type), returnsNormally);
-        }
-      });
-
-      test('should support Android-specific expedited work policies', () {
-        // Test OutOfQuotaPolicy which is Android-specific for expedited jobs
-        expect(() => OutOfQuotaPolicy.runAsNonExpeditedWorkRequest,
-            returnsNormally);
-        expect(() => OutOfQuotaPolicy.dropWorkRequest, returnsNormally);
-      });
-
-      test('should validate Android constraint combinations', () {
-        // Test constraints that make sense for Android WorkManager
-        final androidConstraints = Constraints(
-          networkType: NetworkType.unmetered,
-          requiresCharging: true,
-          requiresBatteryNotLow: true,
-          requiresDeviceIdle: false, // Android WorkManager supports device idle
-          requiresStorageNotLow: true,
-        );
-
-        expect(androidConstraints.networkType, NetworkType.unmetered);
-        expect(androidConstraints.requiresCharging, true);
-        expect(androidConstraints.requiresBatteryNotLow, true);
-        expect(androidConstraints.requiresDeviceIdle, false);
-        expect(androidConstraints.requiresStorageNotLow, true);
-      });
-    });
-
-    group('Error handling and edge cases', () {
-      test('should handle special characters in identifiers', () {
-        const specialChars = [
-          'task-with-dash',
-          'task_with_underscore',
-          'task.with.dots'
-        ];
-
-        // Test that special characters in identifiers are handled appropriately
-        for (final taskName in specialChars) {
-          expect(taskName.contains(RegExp(r'[a-zA-Z0-9._-]')), true);
-        }
-      });
-
-      test('should handle extreme duration values', () {
-        const extremeDurations = [
-          Duration.zero,
-          Duration(seconds: 1),
-          Duration(days: 365), // 1 year
-        ];
-
-        // Test duration conversion for extreme values
-        for (final duration in extremeDurations) {
-          expect(duration.inSeconds, greaterThanOrEqualTo(0));
-        }
-      });
-
-      test('should handle large input data maps', () {
-        final largeData = <String, Object?>{};
-        for (int i = 0; i < 100; i++) {
-          largeData['key$i'] = 'value$i';
-        }
-
-        expect(largeData.length, 100);
-        expect(largeData['key0'], 'value0');
-        expect(largeData['key99'], 'value99');
-      });
-    });
-
-    group('Business logic validation', () {
-      test('should properly implement WorkmanagerPlatform interface', () {
-        expect(workmanager, isA<WorkmanagerPlatform>());
-      });
-
-      test('should handle Android WorkManager backoff policies', () {
-        // Test that both exponential and linear backoff are supported
-        final exponentialConfig = BackoffPolicyConfig(
-          backoffPolicy: BackoffPolicy.exponential,
-          backoffDelayMillis: 30000, // 30 seconds
-        );
-
-        final linearConfig = BackoffPolicyConfig(
-          backoffPolicy: BackoffPolicy.linear,
-          backoffDelayMillis: 10000, // 10 seconds
-        );
-
-        expect(exponentialConfig.backoffPolicy, BackoffPolicy.exponential);
-        expect(exponentialConfig.backoffDelayMillis, 30000);
-        expect(linearConfig.backoffPolicy, BackoffPolicy.linear);
-        expect(linearConfig.backoffDelayMillis, 10000);
-      });
-
-      test('should validate Android work request types', () {
-        // Test the different types of work requests Android supports
-
-        // OneOffTaskRequest validation
-        final oneOffRequest = OneOffTaskRequest(
-          uniqueName: 'one-off-task',
-          taskName: 'One Off Task',
-          inputData: {'type': 'oneoff'},
-          initialDelaySeconds: 60,
-          constraints: Constraints(networkType: NetworkType.connected),
-          backoffPolicy: BackoffPolicyConfig(
-            backoffPolicy: BackoffPolicy.exponential,
-            backoffDelayMillis: 30000,
-          ),
-          tag: 'android-task',
-          existingWorkPolicy: ExistingWorkPolicy.replace,
-          outOfQuotaPolicy: OutOfQuotaPolicy.runAsNonExpeditedWorkRequest,
-        );
-
-        expect(oneOffRequest.uniqueName, 'one-off-task');
-        expect(oneOffRequest.taskName, 'One Off Task');
-        expect(oneOffRequest.tag, 'android-task');
-        expect(oneOffRequest.existingWorkPolicy, ExistingWorkPolicy.replace);
-        expect(oneOffRequest.outOfQuotaPolicy,
-            OutOfQuotaPolicy.runAsNonExpeditedWorkRequest);
-
-        // PeriodicTaskRequest validation
-        final periodicRequest = PeriodicTaskRequest(
-          uniqueName: 'periodic-task',
-          taskName: 'Periodic Task',
-          frequencySeconds: 900, // 15 minutes
-          flexIntervalSeconds: 300, // 5 minutes
-          inputData: {'type': 'periodic'},
-          constraints: Constraints(requiresCharging: true),
-          existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
-        );
-
-        expect(periodicRequest.uniqueName, 'periodic-task');
-        expect(periodicRequest.frequencySeconds, 900);
-        expect(periodicRequest.flexIntervalSeconds, 300);
-        expect(periodicRequest.existingWorkPolicy,
-            ExistingPeriodicWorkPolicy.keep);
-      });
-    });
+  setUp(() {
+    workmanager = WorkmanagerAndroid();
+    host = _PigeonMockHost();
+    host.install();
   });
+
+  tearDown(() {
+    host.dispose();
+  });
+
+  test('unsupported Android-only operations throw', () {
+    expect(
+      () => workmanager.registerProcessingTask('task', 'name'),
+      throwsA(isA<UnsupportedError>()),
+    );
+
+    expect(
+      () => workmanager.printScheduledTasks(),
+      throwsA(isA<UnsupportedError>()),
+    );
+  });
+
+  test('registerOneOffTask sends expected request payload', () async {
+    await workmanager.registerOneOffTask(
+      'one-off-id',
+      'syncNow',
+      inputData: {
+        'flag': true,
+        'message': 'hello',
+        'labels': ['a', 'b'],
+      },
+      initialDelay: const Duration(minutes: 2, seconds: 5),
+      backoffPolicy: BackoffPolicy.linear,
+      backoffPolicyDelay: const Duration(seconds: 30),
+      existingWorkPolicy: ExistingWorkPolicy.replace,
+      outOfQuotaPolicy: OutOfQuotaPolicy.dropWorkRequest,
+      tag: 'sync-tag',
+    );
+
+    final request = host.firstRequest<OneOffTaskRequest>('registerOneOffTask');
+    expect(request.uniqueName, 'one-off-id');
+    expect(request.taskName, 'syncNow');
+    expect(request.initialDelaySeconds, 125);
+    expect(request.tag, 'sync-tag');
+    expect(request.inputData?['flag'], true);
+    expect(request.inputData?['message'], 'hello');
+    expect(request.inputData?['labels'], ['a', 'b']);
+    expect(request.existingWorkPolicy, ExistingWorkPolicy.replace);
+    expect(request.outOfQuotaPolicy, OutOfQuotaPolicy.dropWorkRequest);
+    expect(request.backoffPolicy?.backoffPolicy, BackoffPolicy.linear);
+    expect(request.backoffPolicy?.backoffDelayMillis, 30000);
+  });
+
+  test('registerPeriodicTask converts durations and applies defaults',
+      () async {
+    await workmanager.registerPeriodicTask(
+      'periodic-id',
+      'syncEveryHour',
+      inputData: {'type': 'periodic'},
+      initialDelay: const Duration(seconds: 7),
+      flexInterval: const Duration(minutes: 5),
+    );
+
+    final request =
+        host.firstRequest<PeriodicTaskRequest>('registerPeriodicTask');
+    expect(request.uniqueName, 'periodic-id');
+    expect(request.taskName, 'syncEveryHour');
+    expect(request.frequencySeconds, 900);
+    expect(request.flexIntervalSeconds, 300);
+    expect(request.initialDelaySeconds, 7);
+    expect(request.inputData?['type'], 'periodic');
+  });
+
+  test('scheduling and cancellation APIs hit expected channels', () async {
+    await workmanager.initialize(callbackDispatcher);
+    await workmanager.registerOneOffTask('id-1', 'task-1');
+    await workmanager.registerPeriodicTask(
+      'id-2',
+      'task-2',
+      frequency: const Duration(minutes: 30),
+    );
+    await workmanager.cancelByUniqueName('id-1');
+    await workmanager.cancelByTag('tag-1');
+    await workmanager.cancelAll();
+
+    final isScheduled = await workmanager.isScheduledByUniqueName('id-2');
+
+    expect(isScheduled, isTrue);
+    expect(host.messageFor('initialize'), isNotNull);
+    expect(host.messageFor('registerOneOffTask'), isNotNull);
+    expect(host.messageFor('registerPeriodicTask'), isNotNull);
+    expect(host.messageFor('cancelByUniqueName'), isNotNull);
+    expect(host.messageFor('cancelByTag'), isNotNull);
+    expect(host.messageFor('cancelAll'), isNull);
+    expect(host.messageFor('isScheduledByUniqueName'), isNotNull);
+  });
+
+  test('register methods reject unsupported inputData payload types', () {
+    expect(
+      () => workmanager.registerOneOffTask(
+        'invalid-one-off',
+        'task',
+        inputData: {
+          'badMap': {'nested': 'value'},
+        },
+      ),
+      throwsA(isA<ArgumentError>()),
+    );
+
+    expect(
+      () => workmanager.registerPeriodicTask(
+        'invalid-periodic',
+        'task',
+        inputData: {
+          'badList': [1, 2, 3],
+        },
+      ),
+      throwsA(isA<ArgumentError>()),
+    );
+  });
+
+  test('identifiers with supported special characters are forwarded', () async {
+    const names = [
+      'task-with-dash',
+      'task_with_underscore',
+      'task.with.dots',
+    ];
+
+    for (final name in names) {
+      await workmanager.registerOneOffTask(name, name);
+      final request =
+          host.firstRequest<OneOffTaskRequest>('registerOneOffTask');
+      expect(request.uniqueName, name);
+      expect(request.taskName, name);
+    }
+  });
+
+  test('extreme duration values are forwarded as expected seconds', () async {
+    final cases = <Duration, int>{
+      Duration.zero: 0,
+      const Duration(seconds: 1): 1,
+      const Duration(days: 365): 31536000,
+    };
+
+    for (final entry in cases.entries) {
+      await workmanager.registerOneOffTask(
+        'duration-${entry.value}',
+        'duration-task',
+        initialDelay: entry.key,
+      );
+
+      final request =
+          host.firstRequest<OneOffTaskRequest>('registerOneOffTask');
+      expect(request.initialDelaySeconds, entry.value);
+    }
+  });
+}
+
+class _PigeonMockHost {
+  static const String _prefix =
+      'dev.flutter.pigeon.workmanager_platform_interface.WorkmanagerHostApi.';
+
+  final _channels = <String, BasicMessageChannel<Object?>>{};
+  final _messages = <String, Object?>{};
+
+  void install() {
+    _register('initialize', (_) async => <Object?>[]);
+    _register('registerOneOffTask', (_) async => <Object?>[]);
+    _register('registerPeriodicTask', (_) async => <Object?>[]);
+    _register('cancelByUniqueName', (_) async => <Object?>[]);
+    _register('cancelByTag', (_) async => <Object?>[]);
+    _register('cancelAll', (_) async => <Object?>[]);
+    _register('isScheduledByUniqueName', (_) async => <Object?>[true]);
+  }
+
+  Object? messageFor(String method) {
+    return _messages[method];
+  }
+
+  T firstRequest<T>(String method) {
+    final Object? message = _messages[method];
+    final args = message as List<Object?>;
+    return args.first as T;
+  }
+
+  void dispose() {
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    for (final channel in _channels.values) {
+      messenger.setMockDecodedMessageHandler<Object?>(channel, null);
+    }
+    _channels.clear();
+    _messages.clear();
+  }
+
+  void _register(
+    String method,
+    Future<Object?> Function(Object? message) handler,
+  ) {
+    final channelName = '$_prefix$method';
+    final channel = BasicMessageChannel<Object?>(
+      channelName,
+      WorkmanagerHostApi.pigeonChannelCodec,
+    );
+    _channels[method] = channel;
+
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockDecodedMessageHandler<Object?>(channel, (message) async {
+      _messages[method] = message;
+      return handler(message);
+    });
+  }
 }

@@ -5,7 +5,9 @@ import dev.fluttercommunity.workmanager.pigeon.OneOffTaskRequest
 import dev.fluttercommunity.workmanager.pigeon.PeriodicTaskRequest
 import dev.fluttercommunity.workmanager.pigeon.ProcessingTaskRequest
 import dev.fluttercommunity.workmanager.pigeon.WorkmanagerHostApi
+import androidx.work.WorkInfo
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import java.util.concurrent.Executor
 
 private const val INIT_REQUIRED =
     "You have not properly initialized the Flutter WorkManager Package. " +
@@ -19,7 +21,8 @@ class WorkmanagerPlugin :
     FlutterPlugin,
     WorkmanagerHostApi {
     private var workManagerWrapper: WorkManagerWrapper? = null
-    private lateinit var preferenceManager: SharedPreferenceHelper
+    private var preferenceManager: SharedPreferenceHelper? = null
+    private val directExecutor = Executor { runnable -> runnable.run() }
 
     private var currentDispatcherHandle: Long = -1L
 
@@ -39,6 +42,8 @@ class WorkmanagerPlugin :
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         WorkmanagerHostApi.setUp(binding.binaryMessenger, null)
+        preferenceManager?.dispose()
+        preferenceManager = null
         workManagerWrapper = null
     }
 
@@ -50,7 +55,7 @@ class WorkmanagerPlugin :
             val handle = request.callbackHandle
 
             // Save to SharedPreferences
-            preferenceManager.saveCallbackDispatcherHandleKey(handle)
+            preferenceManager?.saveCallbackDispatcherHandleKey(handle)
 
             // Update the local variable to match
             currentDispatcherHandle = handle
@@ -140,15 +145,24 @@ class WorkmanagerPlugin :
         uniqueName: String,
         callback: (Result<Boolean>) -> Unit,
     ) {
-        try {
-            val workInfos = workManagerWrapper!!.getWorkInfoByUniqueName(uniqueName).get()
-            val scheduled =
-                workInfos.isNotEmpty() &&
-                    workInfos.all { it.state == androidx.work.WorkInfo.State.ENQUEUED || it.state == androidx.work.WorkInfo.State.RUNNING }
-            callback(Result.success(scheduled))
-        } catch (e: Exception) {
-            callback(Result.failure(e))
-        }
+        val future = workManagerWrapper!!.getWorkInfoByUniqueName(uniqueName)
+        future.addListener(
+            {
+                try {
+                    val workInfos = future.get()
+                    val scheduled =
+                        workInfos.isNotEmpty() &&
+                            workInfos.all {
+                                it.state == WorkInfo.State.ENQUEUED ||
+                                    it.state == WorkInfo.State.RUNNING
+                            }
+                    callback(Result.success(scheduled))
+                } catch (e: Exception) {
+                    callback(Result.failure(e))
+                }
+            },
+            directExecutor,
+        )
     }
 
     override fun printScheduledTasks(callback: (Result<String>) -> Unit) {

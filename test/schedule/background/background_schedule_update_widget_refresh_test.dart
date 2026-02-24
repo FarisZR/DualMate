@@ -70,6 +70,24 @@ void main() {
     expect(scheduleProvider.updatedCalls, 0);
     expect(widgetHelper.refreshCalls, 0);
   });
+
+  test('schedule update failure does not trigger widget refresh', () async {
+    final scheduleProvider = _ThrowingScheduleProvider();
+    final scheduleSource =
+        _FakeScheduleSourceProvider(_QueryableScheduleSource());
+    final scheduler = _FakeWorkSchedulerService();
+    final widgetHelper = _FakeWidgetHelper();
+
+    final update = BackgroundScheduleUpdate(
+      scheduleProvider,
+      scheduleSource,
+      scheduler,
+      widgetHelper,
+    );
+
+    await expectLater(update.updateSchedule(), completes);
+    expect(widgetHelper.refreshCalls, 0);
+  });
 }
 
 class _FakeScheduleProvider implements ScheduleProvider {
@@ -83,6 +101,22 @@ class _FakeScheduleProvider implements ScheduleProvider {
   ) async {
     updatedCalls++;
     return ScheduleQueryResult(Schedule(), const []);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw UnsupportedError('Unexpected ScheduleProvider call: $invocation');
+  }
+}
+
+class _ThrowingScheduleProvider implements ScheduleProvider {
+  @override
+  Future<ScheduleQueryResult> getUpdatedSchedule(
+    DateTime start,
+    DateTime end,
+    CancellationToken cancellationToken,
+  ) async {
+    throw Exception('schedule update failed');
   }
 
   @override

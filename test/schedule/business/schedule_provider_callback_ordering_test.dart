@@ -126,7 +126,7 @@ class _FakeScheduleQueryInformationRepository
     DateTime end,
   ) async {
     return [
-      ScheduleQueryInformation(start, end, DateTime.now()),
+      ScheduleQueryInformation(start, end, start),
     ];
   }
 

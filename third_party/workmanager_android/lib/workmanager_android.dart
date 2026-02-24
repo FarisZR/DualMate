@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'dart:typed_data';
+
 import 'package:workmanager_platform_interface/workmanager_platform_interface.dart';
 
 /// Android implementation of [WorkmanagerPlatform].
@@ -14,6 +16,39 @@ class WorkmanagerAndroid extends WorkmanagerPlatform {
     WorkmanagerPlatform.instance = WorkmanagerAndroid();
   }
 
+  Map<String?, Object?>? _castAndValidateInputData(
+    Map<String, dynamic>? inputData,
+  ) {
+    if (inputData == null) {
+      return null;
+    }
+
+    for (final entry in inputData.entries) {
+      final value = entry.value;
+      if (value == null ||
+          value is String ||
+          value is bool ||
+          value is int ||
+          value is double ||
+          value is Uint8List) {
+        continue;
+      }
+
+      if (value is List && value.every((item) => item is String)) {
+        continue;
+      }
+
+      throw ArgumentError.value(
+        value,
+        entry.key,
+        'Unsupported inputData value type. '
+        'Use primitives, Uint8List, or List<String>.',
+      );
+    }
+
+    return inputData.cast<String?, Object?>();
+  }
+
   @override
   Future<void> initialize(
     Function callbackDispatcher, {
@@ -27,6 +62,12 @@ class WorkmanagerAndroid extends WorkmanagerPlatform {
     ));
   }
 
+  /// Registers a one-off WorkManager task on Android.
+  ///
+  /// Converts [initialDelay] to seconds, casts [inputData] to
+  /// `Map<String?, Object?>`, and forwards [constraints], [existingWorkPolicy],
+  /// [tag], and [outOfQuotaPolicy]. A [BackoffPolicyConfig] is sent only when
+  /// both [backoffPolicy] and [backoffPolicyDelay] are provided.
   @override
   Future<void> registerOneOffTask(
     String uniqueName,
@@ -43,7 +84,7 @@ class WorkmanagerAndroid extends WorkmanagerPlatform {
     await _api.registerOneOffTask(OneOffTaskRequest(
       uniqueName: uniqueName,
       taskName: taskName,
-      inputData: inputData?.cast<String?, Object?>(),
+      inputData: _castAndValidateInputData(inputData),
       initialDelaySeconds: initialDelay?.inSeconds,
       constraints: constraints,
       existingWorkPolicy: existingWorkPolicy,
@@ -58,6 +99,13 @@ class WorkmanagerAndroid extends WorkmanagerPlatform {
     ));
   }
 
+  /// Registers a periodic WorkManager task on Android.
+  ///
+  /// Converts [frequency], [flexInterval], and [initialDelay] to seconds,
+  /// defaults frequency to 900 seconds when omitted, casts [inputData] to
+  /// `Map<String?, Object?>`, and forwards [constraints] and
+  /// [existingWorkPolicy]. A [BackoffPolicyConfig] is sent only when both
+  /// [backoffPolicy] and [backoffPolicyDelay] are provided.
   @override
   Future<void> registerPeriodicTask(
     String uniqueName,
@@ -77,7 +125,7 @@ class WorkmanagerAndroid extends WorkmanagerPlatform {
       taskName: taskName,
       frequencySeconds: frequency?.inSeconds ?? 900, // Default 15 minutes
       flexIntervalSeconds: flexInterval?.inSeconds,
-      inputData: inputData?.cast<String?, Object?>(),
+      inputData: _castAndValidateInputData(inputData),
       initialDelaySeconds: initialDelay?.inSeconds,
       constraints: constraints,
       existingWorkPolicy: existingWorkPolicy,

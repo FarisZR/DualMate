@@ -1,10 +1,13 @@
 package dev.fluttercommunity.workmanager
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import dev.fluttercommunity.workmanager.pigeon.TaskStatus
 import java.text.DateFormat
 import java.util.Date
@@ -24,8 +27,6 @@ class NotificationDebugHandler(
     private val channelName: String = "Workmanager Debug",
     private val groupKey: String? = null,
 ) : WorkmanagerDebug() {
-    private val isUsingDefaultChannel = channelId == "WorkmanagerDebugChannelId"
-
     companion object {
         private val debugDateFormatter =
             DateFormat.getTimeInstance(DateFormat.SHORT)
@@ -125,12 +126,14 @@ class NotificationDebugHandler(
         title: String,
         contentText: String,
     ) {
+        if (!canPostNotifications(context)) {
+            return
+        }
+
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Only create notification channel if using default parameters
-        if (isUsingDefaultChannel) {
-            createNotificationChannel(notificationManager)
-        }
+        // Ensure channel exists (idempotent on API 26+)
+        createNotificationChannel(notificationManager)
 
         val notificationBuilder =
             NotificationCompat
@@ -152,6 +155,17 @@ class NotificationDebugHandler(
         val notification = notificationBuilder.build()
 
         notificationManager.notify(notificationId, notification)
+    }
+
+    private fun canPostNotifications(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return true
+        }
+
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun createNotificationChannel(notificationManager: NotificationManager) {
