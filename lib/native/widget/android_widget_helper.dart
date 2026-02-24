@@ -11,14 +11,14 @@ class AndroidWidgetHelper implements WidgetHelper {
   Future<void> disableWidget() async {
     try {
       await platform.invokeMethod('disableWidget');
-    } on PlatformException catch (_) {}
+    } on Exception catch (_) {}
   }
 
   @override
   Future<void> enableWidget() async {
     try {
       await platform.invokeMethod('enableWidget');
-    } on PlatformException catch (_) {}
+    } on Exception catch (_) {}
   }
 
   @override
@@ -26,7 +26,7 @@ class AndroidWidgetHelper implements WidgetHelper {
     try {
       await platform.invokeMethod('requestWidgetRefresh');
       await platform.invokeMethod('requestWidgetLaunchIntent');
-    } on PlatformException {}
+    } on Exception catch (_) {}
   }
 
   @override
@@ -51,6 +51,6 @@ class AndroidWidgetHelper implements WidgetHelper {
   Future<void> requestExactAlarmPermission() async {
     try {
       await platform.invokeMethod('requestExactAlarmPermission');
-    } on PlatformException catch (_) {}
+    } on Exception catch (_) {}
   }
 }

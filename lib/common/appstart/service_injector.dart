@@ -14,6 +14,7 @@ import 'package:dualmate/dualis/service/cache_dualis_service_decorator.dart';
 import 'package:dualmate/dualis/service/dualis_scraper.dart';
 import 'package:dualmate/dualis/service/dualis_service.dart';
 import 'package:dualmate/dualis/service/fake_account_dualis_scraper_decorator.dart';
+import 'package:dualmate/native/widget/background_widget_refresher.dart';
 import 'package:dualmate/native/widget/widget_helper.dart';
 import 'package:dualmate/schedule/background/calendar_synchronizer.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
@@ -86,6 +87,7 @@ void injectServices(bool isBackground) {
     c.resolve<ScheduleSourceProvider>(),
   ));
   c.registerInstance(WidgetHelper());
+  c.registerInstance(BackgroundWidgetRefresher(c.resolve<WidgetHelper>()));
   c.registerInstance(ListDateEntries30d(List<DateEntry>.empty(growable: true)));
 
   _isInjected = true;
