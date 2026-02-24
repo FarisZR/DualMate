@@ -1,6 +1,9 @@
+import 'dart:ui';
+
 import 'package:dualmate/common/appstart/app_initializer.dart';
 import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
+import 'package:flutter/widgets.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -142,5 +145,7 @@ class BackgroundWorkScheduler extends WorkSchedulerService {
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
+  WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
   Workmanager().executeTask(BackgroundWorkScheduler.backgroundTaskMain);
 }

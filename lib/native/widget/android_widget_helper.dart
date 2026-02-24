@@ -1,4 +1,5 @@
 import 'package:dualmate/native/widget/widget_helper.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 ///
@@ -26,7 +27,13 @@ class AndroidWidgetHelper implements WidgetHelper {
     try {
       await platform.invokeMethod('requestWidgetRefresh');
       await platform.invokeMethod('requestWidgetLaunchIntent');
-    } on PlatformException {}
+    } on Exception catch (exception, trace) {
+      if (kDebugMode) {
+        debugPrint(
+          'AndroidWidgetHelper.requestWidgetRefresh failed: $exception\n$trace',
+        );
+      }
+    }
   }
 
   @override

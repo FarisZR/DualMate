@@ -32,6 +32,7 @@ class BackgroundInitialize {
         KiwiContainer().resolve(),
         KiwiContainer().resolve(),
         KiwiContainer().resolve(),
+        KiwiContainer().resolve(),
       ),
       NextDayInformationNotification(
         KiwiContainer().resolve(),
