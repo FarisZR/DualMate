@@ -3,6 +3,7 @@ package com.fariszr.dualmate.database
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import android.util.Log
 import com.fariszr.dualmate.model.ScheduleEntry
 import io.flutter.util.PathUtils
 import org.threeten.bp.LocalDate
@@ -91,6 +92,7 @@ class ScheduleProvider(private val context: Context) {
             }
         }
         catch (ex: Exception) {
+            Log.w("ScheduleProvider", "queryScheduleEntriesBetweenWithStatus failed", ex)
         }
         return QueryResult(ArrayList(), false)
     }

@@ -1,11 +1,12 @@
 <resources>
     <string name="widget_schedule_empty_state">Keine anstehenden Termine heute</string>
-    <string name="widget_schedule_unavailable_state">Stundenplan voruebergehend nicht verfuegbar</string>
+    <string name="widget_schedule_unavailable_state">Stundenplan vorübergehend nicht verfügbar</string>
     <string name="widget_schedule_overflow">+%1$d weitere</string>
     <string name="widget_schedule_title">Vorlesungsplan</string>
     <string name="widget_schedule_not_purchased">Widgets sind über den Homescreen verfügbar</string>
     <string name="widget_canteen_title">Mensa</string>
     <string name="widget_canteen_empty_state">Keine Speisen für heute</string>
+    <string name="widget_canteen_unavailable_state">Mensa-Daten vorübergehend nicht verfügbar</string>
     <string name="widget_canteen_overflow">+%1$d weitere - tippen fuer Details</string>
     <string name="widget_canteen_not_purchased">Widgets sind über den Homescreen verfügbar</string>
 </resources>

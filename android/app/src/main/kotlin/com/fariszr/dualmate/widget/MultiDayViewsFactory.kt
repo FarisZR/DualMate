@@ -46,7 +46,7 @@ abstract class MultiDayViewsFactory<T>(
         if (visibleItems.items.isEmpty() && visibleItems.overflowCount == 0) {
             views.addView(
                 getRowItemsContainerId(),
-                buildEmptyView(row.isToday, dataUnavailable && row.isToday)
+                buildEmptyView(row.isToday, dataUnavailable)
             )
             return views
         }
@@ -103,7 +103,6 @@ abstract class MultiDayViewsFactory<T>(
 
         if (!loadResult.successful) {
             if (visibleRows.isNotEmpty()) {
-                dataUnavailable = false
                 return
             }
 
