@@ -3,6 +3,7 @@ package com.fariszr.dualmate.database
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import android.util.Log
 import com.fariszr.dualmate.model.CanteenEntry
 import io.flutter.util.PathUtils
 import org.threeten.bp.LocalDate
@@ -13,6 +14,11 @@ import java.io.File
 class CanteenProvider(private val context: Context) {
 
     private val zoneOffset = OffsetDateTime.now().offset
+
+    data class QueryResult(
+        val entries: ArrayList<CanteenEntry>,
+        val successful: Boolean
+    )
 
     fun hasMealsForDay(date: LocalDate): Boolean {
         val start = date.atStartOfDay()
@@ -25,10 +31,10 @@ class CanteenProvider(private val context: Context) {
         val startMillis = date.atStartOfDay().toEpochSecond(zoneOffset) * 1000
         val endMillis = date.plusDays(1).atStartOfDay().toEpochSecond(zoneOffset) * 1000
 
-        return queryMealsBetween(startMillis, endMillis)
+        return queryMealsBetween(startMillis, endMillis).entries
     }
 
-    fun queryMealsForWeek(startDate: LocalDate, endDate: LocalDate): ArrayList<CanteenEntry> {
+    fun queryMealsForWeek(startDate: LocalDate, endDate: LocalDate): QueryResult {
         val startMillis = startDate.atStartOfDay().toEpochSecond(zoneOffset) * 1000
         val endMillis = endDate.plusDays(1).atStartOfDay().toEpochSecond(zoneOffset) * 1000
 
@@ -51,20 +57,21 @@ class CanteenProvider(private val context: Context) {
         return false
     }
 
-    private fun queryMealsBetween(startMillis: Long, endMillis: Long): ArrayList<CanteenEntry> {
+    private fun queryMealsBetween(startMillis: Long, endMillis: Long): QueryResult {
         try {
             openDatabase()?.use { database ->
                 database.rawQuery(
                     CANTEEN_ENTRIES_BETWEEN_SQL,
                     arrayOf(startMillis.toString(), endMillis.toString())
                 ).use { result ->
-                    return readMeals(result)
+                    return QueryResult(readMeals(result), true)
                 }
             }
         } catch (ex: Exception) {
+            Log.w("CanteenProvider", "queryMealsBetween failed", ex)
         }
 
-        return ArrayList()
+        return QueryResult(ArrayList(), false)
     }
 
     private fun openDatabase(): SQLiteDatabase? {
