@@ -44,9 +44,7 @@ Color colorScheduleInPastOverlay(BuildContext context) =>
         : const Color(0x2B000000);
 
 Color colorCurrentTimeIndicator(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.light
-        ? const Color(0xffffa500)
-        : const Color(0xffb37300);
+    Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88);
 
 Color colorOnboardingDecorationForeground(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
