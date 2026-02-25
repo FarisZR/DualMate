@@ -10,6 +10,10 @@ void main() {
     FilterViewModel.resetCachedStateForTesting();
   });
 
+  tearDown(() {
+    FilterViewModel.resetCachedStateForTesting();
+  });
+
   test('preload does not keep empty states as final cache', () async {
     final entryRepository = _FakeScheduleEntryRepository([]);
     final filterRepository = _FakeScheduleFilterRepository([]);
@@ -27,7 +31,9 @@ void main() {
     await viewModel.initialize();
 
     expect(
-        viewModel.filterStates.map((e) => e.entryName), ['Class A', 'Class B']);
+      viewModel.filterStates.map((e) => e.entryName),
+      ['Class A', 'Class B'],
+    );
     expect(entryRepository.queryAllNamesCallCount, 2);
   });
 
@@ -50,6 +56,23 @@ void main() {
     expect(viewModel.filterStates.map((e) => e.entryName), ['Class A']);
     expect(entryRepository.queryAllNamesCallCount, 1);
   });
+
+  test('loadFilterStates handles empty results without preload', () async {
+    final entryRepository = _FakeScheduleEntryRepository([]);
+    final filterRepository = _FakeScheduleFilterRepository([]);
+
+    final viewModel = FilterViewModel(
+      entryRepository,
+      filterRepository,
+      _FakeScheduleSourceProvider(),
+      _FakeScheduleProvider(),
+    );
+
+    await viewModel.initialize();
+
+    expect(viewModel.filterStates, isEmpty);
+    expect(entryRepository.queryAllNamesCallCount, 1);
+  });
 }
 
 class _FakeScheduleEntryRepository implements ScheduleEntryRepository {
@@ -67,7 +90,8 @@ class _FakeScheduleEntryRepository implements ScheduleEntryRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) {
     throw UnsupportedError(
-        'Unexpected ScheduleEntryRepository call: $invocation');
+      'Unexpected ScheduleEntryRepository call: $invocation',
+    );
   }
 }
 
@@ -84,7 +108,8 @@ class _FakeScheduleFilterRepository implements ScheduleFilterRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) {
     throw UnsupportedError(
-        'Unexpected ScheduleFilterRepository call: $invocation');
+      'Unexpected ScheduleFilterRepository call: $invocation',
+    );
   }
 }
 
@@ -92,7 +117,8 @@ class _FakeScheduleSourceProvider implements ScheduleSourceProvider {
   @override
   dynamic noSuchMethod(Invocation invocation) {
     throw UnsupportedError(
-        'Unexpected ScheduleSourceProvider call: $invocation');
+      'Unexpected ScheduleSourceProvider call: $invocation',
+    );
   }
 }
 

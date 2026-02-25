@@ -181,9 +181,15 @@ class _SchedulePageState extends State<SchedulePage> {
         KiwiContainer().resolve<ScheduleEntryRepository>(),
         KiwiContainer().resolve<ScheduleFilterRepository>(),
       );
-    } catch (error, trace) {
+    } on ProviderNotFoundException {
+      rethrow;
+    } on FlutterError catch (error, trace) {
       debugPrint('Failed to warm filter state: $error');
       debugPrint('$trace');
+    } catch (error, trace) {
+      debugPrint('Unexpected error while warming filter state: $error');
+      debugPrint('$trace');
+      rethrow;
     }
   }
 }
