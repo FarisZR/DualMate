@@ -75,6 +75,9 @@ void main() {
       ),
     );
 
+    await tester.pumpAndSettle();
+    expect(find.byType(ScheduleCurrentTimeIndicator), findsOneWidget);
+
     await tester.tap(find.text('Operating Systems'));
     await tester.pump();
 
