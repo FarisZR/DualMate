@@ -168,15 +168,28 @@ class _SchedulePageState extends State<SchedulePage> {
 
   Future<void> _warmFilterPageState() async {
     try {
-      await Future.delayed(const Duration(milliseconds: 250));
+      final scheduleViewModel =
+          Provider.of<ScheduleViewModel>(context, listen: false);
+      final deadline = DateTime.now().add(const Duration(seconds: 3));
+      while (mounted &&
+          scheduleViewModel.isInitializingScheduleSource &&
+          DateTime.now().isBefore(deadline)) {
+        await Future.delayed(const Duration(milliseconds: 120));
+      }
       if (!mounted) return;
       await FilterViewModel.preloadStates(
         KiwiContainer().resolve<ScheduleEntryRepository>(),
         KiwiContainer().resolve<ScheduleFilterRepository>(),
       );
-    } catch (error, trace) {
+    } on ProviderNotFoundException {
+      rethrow;
+    } on FlutterError catch (error, trace) {
       debugPrint('Failed to warm filter state: $error');
       debugPrint('$trace');
+    } catch (error, trace) {
+      debugPrint('Unexpected error while warming filter state: $error');
+      debugPrint('$trace');
+      rethrow;
     }
   }
 }
