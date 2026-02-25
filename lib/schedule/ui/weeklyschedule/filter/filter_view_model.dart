@@ -49,7 +49,13 @@ class FilterViewModel extends BaseViewModel {
     if (_cachedStates != null) return;
     _cachedStatesFuture ??=
         _loadStates(scheduleEntryRepository, scheduleFilterRepository);
-    _cachedStates = _cloneStates(await _cachedStatesFuture!);
+    final loadedStates = await _cachedStatesFuture!;
+    if (loadedStates.isEmpty) {
+      _cachedStates = null;
+      _cachedStatesFuture = null;
+      return;
+    }
+    _cachedStates = _cloneStates(loadedStates);
   }
 
   /// Clears the static cache so the next load reflects latest repository data.
@@ -80,7 +86,12 @@ class FilterViewModel extends BaseViewModel {
     _cachedStatesFuture ??=
         _loadStates(_scheduleEntryRepository, _scheduleFilterRepository);
     final loadedStates = await _cachedStatesFuture!;
-    _cachedStates = _cloneStates(loadedStates);
+    if (loadedStates.isEmpty) {
+      _cachedStates = null;
+      _cachedStatesFuture = null;
+    } else {
+      _cachedStates = _cloneStates(loadedStates);
+    }
     filterStates = _cloneStates(loadedStates);
 
     notifyIfMounted("filterStates");
