@@ -32,6 +32,18 @@ void main() {
     expect(find.byType(ScheduleCurrentTimeIndicator), findsNothing);
   });
 
+  testWidgets('shows weekly current-time indicator at visible start hour', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildApp(
+        now: DateTime(2026, 2, 11, 7, 0),
+      ),
+    );
+
+    expect(find.byType(ScheduleCurrentTimeIndicator), findsOneWidget);
+  });
+
   testWidgets('hides weekly current-time indicator after visible hours', (
     tester,
   ) async {
