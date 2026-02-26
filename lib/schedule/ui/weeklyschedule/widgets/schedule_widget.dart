@@ -6,6 +6,7 @@ import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_entry_alignment.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_entry_widget.dart';
+import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_current_time_indicator.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_grid.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_past_overlay.dart';
 import 'package:flutter/material.dart';
@@ -76,6 +77,10 @@ class ScheduleWidget extends StatelessWidget {
     final visibleHours = (displayEndHour - displayStartHour).clamp(1.0, 24.0);
     var hourHeight = (height - dayLabelsHeight) / visibleHours;
     var minuteHeight = hourHeight / 60;
+    final currentTimeIndicatorGeometry = _resolveCurrentTimeIndicatorGeometry(
+      days,
+      minuteHeight,
+    );
 
     var labelWidgets = buildLabelWidgets(
       context,
@@ -130,8 +135,53 @@ class ScheduleWidget extends StatelessWidget {
             now,
             days,
           ),
-        )
+        ),
+        if (currentTimeIndicatorGeometry != null)
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              timeLabelsWidth,
+              dayLabelsHeight,
+              0,
+              0,
+            ),
+            child: ScheduleCurrentTimeIndicator(
+              dayIndex: currentTimeIndicatorGeometry.dayIndex,
+              columns: days,
+              yOffset: currentTimeIndicatorGeometry.yOffset,
+              color: colorCurrentTimeIndicator(context),
+            ),
+          ),
       ],
+    );
+  }
+
+  _CurrentTimeIndicatorGeometry? _resolveCurrentTimeIndicatorGeometry(
+    int days,
+    double minuteHeight,
+  ) {
+    final visibleStartDay = toStartOfDay(displayStart);
+    final visibleEndDay = toStartOfDay(displayEnd);
+    final currentDay = toStartOfDay(now);
+
+    if (currentDay.isBefore(visibleStartDay) ||
+        currentDay.isAfter(visibleEndDay)) {
+      return null;
+    }
+
+    final dayIndex = currentDay.difference(visibleStartDay).inDays;
+    if (dayIndex < 0 || dayIndex >= days) return null;
+
+    final nowMinutes = (now.hour * 60) + now.minute;
+    final startMinutes = displayStartHour * 60;
+    final endMinutes = displayEndHour * 60;
+    if (nowMinutes < startMinutes || nowMinutes >= endMinutes) {
+      return null;
+    }
+
+    final yOffset = (nowMinutes - startMinutes) * minuteHeight;
+    return _CurrentTimeIndicatorGeometry(
+      dayIndex: dayIndex,
+      yOffset: yOffset,
     );
   }
 
@@ -461,5 +511,15 @@ class _ScheduleWidgetLayoutProfile {
     required this.eventVerticalGap,
     required this.dayLabelHorizontalPadding,
     required this.dayBoundaryInset,
+  });
+}
+
+class _CurrentTimeIndicatorGeometry {
+  final int dayIndex;
+  final double yOffset;
+
+  const _CurrentTimeIndicatorGeometry({
+    required this.dayIndex,
+    required this.yOffset,
   });
 }
