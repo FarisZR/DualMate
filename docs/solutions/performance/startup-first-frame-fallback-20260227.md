@@ -10,6 +10,13 @@ initialization did not reach the normal `allowFirstFrame` path quickly enough.
 This fix adds an explicit first-frame fallback release and error-path guards so
 the app always presents UI instead of lingering on splash.
 
+## Follow-up (same day)
+
+This strategy was later superseded by removing startup first-frame deferral in
+`main.dart` entirely, because any pre-`runApp` stall can still hold the Android
+native splash. See
+`docs/solutions/performance/s21-splash-startup-unblock-20260227.md`.
+
 # Findings
 
 1. Startup currently defers first frame in `main.dart`, and relies on root

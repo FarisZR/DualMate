@@ -45,7 +45,6 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       Duration(milliseconds: 2800);
   static const Duration _foregroundCanteenPrewarmDelay =
       Duration(milliseconds: 7000);
-  static const Duration _firstFrameFallbackDelay = Duration(seconds: 2);
 
   RootViewModel? _rootViewModel;
   bool _backgroundInitStarted = false;
@@ -54,8 +53,6 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   String? _pendingRoute;
   developer.TimelineTask? _startupTask;
   bool _perfOverlayLoaded = false;
-  Timer? _firstFrameFallbackTimer;
-  bool _firstFrameAllowed = false;
 
   @override
   void initState() {
@@ -70,13 +67,11 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     PerformanceTelemetry.instance.ensureFrameTimingListenerAttached();
     _startupTask =
         PerformanceTelemetry.instance.startTask('startup.initialize');
-    _scheduleFirstFrameFallback();
     _initializeApp();
   }
 
   @override
   void dispose() {
-    _firstFrameFallbackTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -166,29 +161,6 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     }
   }
 
-  void _scheduleFirstFrameFallback() {
-    _firstFrameFallbackTimer?.cancel();
-    _firstFrameFallbackTimer = Timer(_firstFrameFallbackDelay, () {
-      _allowFirstFrame('fallback_timeout');
-    });
-  }
-
-  void _allowFirstFrame(String reason) {
-    if (_firstFrameAllowed) {
-      return;
-    }
-    _firstFrameAllowed = true;
-    _firstFrameFallbackTimer?.cancel();
-    WidgetsBinding.instance.allowFirstFrame();
-    PerformanceTelemetry.instance.logInstant(
-      'startup.allowFirstFrame',
-      args: {
-        'elapsedMs': widget.startupStopwatch.elapsedMilliseconds,
-        'reason': reason,
-      },
-    );
-  }
-
   Future<void> _initializeApp() async {
     final stopwatch = Stopwatch()..start();
     PerformanceTelemetry.instance.logInstant(
@@ -199,7 +171,6 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       'startup.root.init.start',
       args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
     );
-    _allowFirstFrame('root_init_shell');
     try {
       await initializeAppBase(false);
       print("Root init: base ${stopwatch.elapsedMilliseconds}ms");
@@ -218,11 +189,9 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         KiwiContainer().resolve(),
       );
       if (!mounted) {
-        _allowFirstFrame('root_init_unmounted');
         return;
       }
       setState(() {});
-      _allowFirstFrame('root_init_ready');
 
       _applyPendingRoute();
 
@@ -259,7 +228,6 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       if (mounted) {
         setState(() {});
       }
-      _allowFirstFrame('root_init_error');
     }
   }
 
