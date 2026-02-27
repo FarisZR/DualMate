@@ -40,11 +40,35 @@ void main() {
     provider.clearRequests();
 
     model.prefetchAdjacentWeeksDebounced(monday);
+    model.prefetchAdjacentWeeksDebounced(monday);
     await Future<void>.delayed(const Duration(milliseconds: 320));
 
     expect(provider.cachedWeekRequests.toSet(), <DateTime>{previous, next});
     expect(provider.refreshWeekIfStaleRequests, <DateTime>[next]);
     expect(model.visibleContentDays, <DateTime>[weekStart, next]);
+  });
+
+  test('refreshVisibleWeekIfStale throttles repeated same-week requests',
+      () async {
+    final monday = DateTime(2026, 2, 9);
+    final weekStart = toStartOfDay(toMonday(monday));
+    final provider = _TrackingCanteenProvider();
+    final model = CanteenViewModel(provider);
+    addTearDown(model.dispose);
+
+    model.primeVisibleWeek(monday);
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    provider.clearRequests();
+
+    model.refreshVisibleWeekIfStale(
+      monday,
+      staleAfter: Duration.zero,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 40));
+    model.refreshVisibleWeekIfStale(monday);
+    await Future<void>.delayed(const Duration(milliseconds: 40));
+
+    expect(provider.refreshWeekIfStaleRequests, <DateTime>[weekStart]);
   });
 }
 

@@ -408,9 +408,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     final nowValue = now;
     final shouldForceFetch = cachedSchedule.entries.isEmpty &&
         scheduleSourceProvider.currentScheduleSource.canQuery();
-    final isStale = shouldForceFetch ||
-        _freshnessGate.isStale(start, end, nowValue) ||
-        _isWindowStale(start, end, nowValue);
+    final isStale = shouldForceFetch || _isWindowStale(start, end, nowValue);
 
     if (!isStale) {
       print("Schedule fresh; skip network fetch");
@@ -642,7 +640,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   void _debounceVisibleRefresh(DateTime start, DateTime end) {
     _visibleRefreshDebounce?.cancel();
-    _visibleRefreshDebounce = Timer(const Duration(milliseconds: 180), () {
+    _visibleRefreshDebounce = Timer(const Duration(milliseconds: 420), () {
       if (_isDisposed) return;
       unawaited(updateSchedule(start, end));
     });

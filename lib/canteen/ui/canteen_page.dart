@@ -236,11 +236,21 @@ class _CanteenPageState extends State<CanteenPage> {
         allowImplicitScrolling: true,
         itemCount: visibleDays.length,
         onPageChanged: (index) {
+          final previousDate = _selectedDate;
+          final nextDate = visibleDays[index];
           pageNotifier.value = index;
-          _selectedDate = visibleDays[index];
-          PerformanceTelemetry.instance.markNavEvent(name: "canteen.pageChanged");
-          viewModel.refreshVisibleWeekIfStale(visibleDays[index]);
-          viewModel.prefetchAdjacentWeeksDebounced(visibleDays[index]);
+          _selectedDate = nextDate;
+          PerformanceTelemetry.instance
+              .markNavEvent(name: "canteen.pageChanged");
+
+          final previousWeekStart = previousDate == null
+              ? null
+              : viewModel.weekStartFor(previousDate);
+          final nextWeekStart = viewModel.weekStartFor(nextDate);
+          if (previousWeekStart != nextWeekStart) {
+            viewModel.refreshVisibleWeekIfStale(nextDate);
+          }
+          viewModel.prefetchAdjacentWeeksDebounced(nextDate);
         },
         itemBuilder: (context, index) {
           return _CanteenDayView(date: visibleDays[index]);
