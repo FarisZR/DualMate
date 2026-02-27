@@ -138,10 +138,13 @@ class CanteenViewModel extends BaseViewModel {
         forceRefresh || !_weeklyMenus.containsKey(weekStart);
 
     if (shouldReloadFromDatabase) {
-      var cachedMenus = await _provider.getCachedWeek(weekStart);
+      final cachedMenusFuture = _provider.getCachedWeek(weekStart);
+      final lastUpdatedFuture = _provider.lastUpdatedForWeek(weekStart);
+
+      var cachedMenus = await cachedMenusFuture;
       _weeklyMenus[weekStart] = cachedMenus;
       _markVisibleContentDaysDirty();
-      var lastUpdated = await _provider.lastUpdatedForWeek(weekStart);
+      var lastUpdated = await lastUpdatedFuture;
       if (lastUpdated != null) {
         _weekLastUpdated[weekStart] = lastUpdated;
       }
@@ -237,27 +240,40 @@ class CanteenViewModel extends BaseViewModel {
       _adjacentPrefetchDebounceDelay,
       () {
         if (isDisposed) return;
-        final previousWeekStart = centerWeekStart.subtract(
-          const Duration(days: 7),
-        );
-        final nextWeekStart = centerWeekStart.add(
-          const Duration(days: 7),
-        );
-        ensureWeekLoaded(
-          previousWeekStart,
-          allowNetworkRefresh: false,
-          prefetchNextWeek: false,
-        );
-        if (_loadingWeeks.contains(nextWeekStart)) {
-          return;
-        }
-        unawaited(loadWeek(
-          nextWeekStart,
-          allowNetworkRefresh: true,
-          prefetchNextWeek: false,
-        ));
+        _prefetchAdjacentWeeks(centerWeekStart);
       },
     );
+  }
+
+  void prefetchAdjacentWeeks(DateTime centerDay) {
+    final centerWeekStart = weekStartFor(centerDay);
+    if (_lastAdjacentPrefetchCenterWeekStart == centerWeekStart) {
+      return;
+    }
+    _lastAdjacentPrefetchCenterWeekStart = centerWeekStart;
+    _prefetchAdjacentWeeks(centerWeekStart);
+  }
+
+  void _prefetchAdjacentWeeks(DateTime centerWeekStart) {
+    final previousWeekStart = centerWeekStart.subtract(
+      const Duration(days: 7),
+    );
+    final nextWeekStart = centerWeekStart.add(
+      const Duration(days: 7),
+    );
+    ensureWeekLoaded(
+      previousWeekStart,
+      allowNetworkRefresh: false,
+      prefetchNextWeek: false,
+    );
+    if (_loadingWeeks.contains(nextWeekStart)) {
+      return;
+    }
+    unawaited(loadWeek(
+      nextWeekStart,
+      allowNetworkRefresh: true,
+      prefetchNextWeek: false,
+    ));
   }
 
   void setFilter(CanteenFilter nextFilter) {

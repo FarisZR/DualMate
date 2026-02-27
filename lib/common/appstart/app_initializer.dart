@@ -41,11 +41,14 @@ Future<void> initializeAppBase(bool isBackground) async {
     await LocalizationInitialize.fromPreferences(
       KiwiContainer().resolve<PreferencesProvider>(),
     ).setupLocalizations();
+    print("Base init: localizations ${stopwatch.elapsedMilliseconds}ms");
   } else {
-    await LocalizationInitialize.fromLanguageCode(Platform.localeName)
-        .setupLocalizations();
+    // Foreground UI localizations are provided by LocalizationDelegate.
+    // Registering a second localization object in Kiwi here causes avoidable
+    // startup work on the first frame path.
+    print(
+        "Base init: localizations deferred ${stopwatch.elapsedMilliseconds}ms");
   }
-  print("Base init: localizations ${stopwatch.elapsedMilliseconds}ms");
   print("Base init finished ${stopwatch.elapsedMilliseconds}ms");
 
   isBaseInitialized = true;
@@ -132,9 +135,7 @@ Future<void> _prewarmCanteenIfStaleInBackground(
   required Duration staleAfter,
 }) async {
   try {
-    await KiwiContainer()
-        .resolve<CanteenProvider>()
-        .refreshWeekIfStale(
+    await KiwiContainer().resolve<CanteenProvider>().refreshWeekIfStale(
           DateTime.now(),
           staleAfter: staleAfter,
           prefetchNextWeek: false,
@@ -142,8 +143,7 @@ Future<void> _prewarmCanteenIfStaleInBackground(
     print(
         "Foreground canteen prewarm: refresh ${stopwatch.elapsedMilliseconds}ms");
   } on Exception catch (exception, trace) {
-    print(
-        "Foreground canteen prewarm failed (${exception.runtimeType})");
+    print("Foreground canteen prewarm failed (${exception.runtimeType})");
     print(exception);
     print(trace);
     // Swallowing here is intentional; we don't want to block startup.

@@ -40,11 +40,11 @@ class RootPage extends StatefulWidget {
 
 class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   static const Duration _deferredBackgroundInitDelay =
-      Duration(milliseconds: 900);
+      Duration(milliseconds: 1800);
   static const Duration _foregroundHeavyInitDelay =
-      Duration(milliseconds: 1400);
+      Duration(milliseconds: 2800);
   static const Duration _foregroundCanteenPrewarmDelay =
-      Duration(milliseconds: 4200);
+      Duration(milliseconds: 7000);
   static const Duration _firstFrameFallbackDelay = Duration(seconds: 2);
 
   RootViewModel? _rootViewModel;
@@ -199,6 +199,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       'startup.root.init.start',
       args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
     );
+    _allowFirstFrame('root_init_shell');
     try {
       await initializeAppBase(false);
       print("Root init: base ${stopwatch.elapsedMilliseconds}ms");
@@ -359,10 +360,23 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       // Allow first-frame interaction and navigation transitions to settle.
       await Future.delayed(_deferredBackgroundInitDelay);
       if (!mounted) return;
-      await initializeAppBackground(false);
+      await SchedulerBinding.instance.scheduleTask<void>(
+        () async {
+          if (!mounted) return;
+          await initializeAppBackground(false);
+        },
+        Priority.idle,
+        debugLabel: 'startup.backgroundInit',
+      );
       print(
           "Root init: deferred background ${stopwatch.elapsedMilliseconds}ms");
-      unawaited(_prewarmScheduleCache());
+      SchedulerBinding.instance.scheduleTask<void>(
+        () {
+          unawaited(_prewarmScheduleCache());
+        },
+        Priority.idle,
+        debugLabel: 'startup.scheduleCachePrewarm',
+      );
       // Delay foreground-heavy tasks to keep startup animations responsive.
       Future.delayed(_foregroundHeavyInitDelay, () {
         if (!mounted) return;

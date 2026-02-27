@@ -40,9 +40,11 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   bool _isApplyingWidgetPayload = false;
   bool _pagerInitialized = false;
   bool _didBindViewModel = false;
+  bool _isPagerScrolling = false;
   late DateTime _anchorWeekStart;
   int _currentPageIndex = _initialPageIndex;
   int _weekOpenRequestId = 0;
+  _HourViewport? _lockedViewport;
 
   @override
   void initState() {
@@ -294,7 +296,12 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     BuildContext context,
     WeeklyScheduleViewModel model,
   ) {
-    final targetViewport = _resolveTargetViewport(model);
+    final modelViewport = _resolveTargetViewport(model);
+    _lockedViewport ??= modelViewport;
+    if (!_isPagerScrolling) {
+      _lockedViewport = modelViewport;
+    }
+    final targetViewport = _isPagerScrolling ? _lockedViewport! : modelViewport;
     final displayedDays = _resolveDisplayedDays(model);
 
     return LayoutBuilder(
@@ -343,7 +350,11 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   ) {
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
+        if (notification is ScrollStartNotification) {
+          _setPagerScrolling(true);
+        }
         if (notification is ScrollEndNotification) {
+          _setPagerScrolling(false);
           unawaited(_commitVisibleWeekFromPager());
         }
         return false;
@@ -399,6 +410,19 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     }
 
     await _openVisibleWeek(targetWeekStart);
+  }
+
+  void _setPagerScrolling(bool value) {
+    if (_isPagerScrolling == value) {
+      return;
+    }
+    if (!mounted) {
+      _isPagerScrolling = value;
+      return;
+    }
+    setState(() {
+      _isPagerScrolling = value;
+    });
   }
 
   Future<void> _openVisibleWeek(DateTime weekStart) async {

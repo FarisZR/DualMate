@@ -25,6 +25,7 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   bool _appLaunchDialogsShown = false;
+  bool _isDrawerOpen = false;
   final ValueNotifier<int> _currentEntryIndex = ValueNotifier<int>(0);
   final Map<int, Widget> _sectionCache = {};
   final Set<int> _loadedSections = <int>{};
@@ -108,6 +109,14 @@ class _MainPageState extends State<MainPage> {
     return PopScope(
       canPop: true,
       child: Scaffold(
+        onDrawerChanged: (isOpen) {
+          if (_isDrawerOpen == isOpen) {
+            return;
+          }
+          setState(() {
+            _isDrawerOpen = isOpen;
+          });
+        },
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           actionsIconTheme: Theme.of(context).iconTheme,
@@ -118,7 +127,12 @@ class _MainPageState extends State<MainPage> {
           toolbarTextStyle: Theme.of(context).textTheme.bodyMedium,
           titleTextStyle: Theme.of(context).textTheme.titleLarge,
         ),
-        body: RepaintBoundary(child: body),
+        body: RepaintBoundary(
+          child: TickerMode(
+            enabled: !_isDrawerOpen,
+            child: body,
+          ),
+        ),
         drawer: RepaintBoundary(
           child: MyNavigationDrawer(
             selectedIndex: _currentEntryIndex.value,

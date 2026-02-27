@@ -10,6 +10,7 @@ import 'package:dualmate/date_management/ui/widgets/important_event_section_card
 import 'package:dualmate/schedule/ui/widgets/select_source_dialog.dart';
 import 'package:dualmate/ui/banner_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:intl/intl.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
@@ -30,7 +31,11 @@ class _DateManagementPageState extends State<DateManagementPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       var viewModel =
           Provider.of<DateManagementViewModel>(context, listen: false);
-      viewModel.initialize();
+      SchedulerBinding.instance.scheduleTask<void>(
+        viewModel.initialize,
+        Priority.idle,
+        debugLabel: 'dates.initialize',
+      );
     });
   }
 

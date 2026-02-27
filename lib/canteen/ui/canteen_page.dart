@@ -6,6 +6,7 @@ import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:intl/intl.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:provider/provider.dart';
@@ -16,11 +17,14 @@ class CanteenPage extends StatefulWidget {
 }
 
 class _CanteenPageState extends State<CanteenPage> {
+  static const Duration _initialLoadDelay = Duration(milliseconds: 220);
+
   late CanteenViewModel viewModel;
   late PageController pageController;
   late ValueNotifier<int> pageNotifier;
   late DateTime baseDate;
   DateTime? _selectedDate;
+  DateTime? _lastInteractionWeekStart;
   bool _isApplyingWidgetPayload = false;
 
   @override
@@ -35,9 +39,19 @@ class _CanteenPageState extends State<CanteenPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       PerformanceTelemetry.instance.markNavEvent(name: "canteen.entry");
-      viewModel.primeVisibleWeek(baseDate);
-      viewModel.prefetchAdjacentWeeksDebounced(baseDate);
-      _applyWidgetPayload();
+      Future.delayed(_initialLoadDelay, () {
+        if (!mounted) return;
+        SchedulerBinding.instance.scheduleTask<void>(
+          () {
+            if (!mounted) return;
+            viewModel.primeVisibleWeek(baseDate);
+            viewModel.prefetchAdjacentWeeks(baseDate);
+            _applyWidgetPayload();
+          },
+          Priority.idle,
+          debugLabel: 'canteen.initialLoad',
+        );
+      });
     });
   }
 
@@ -236,21 +250,18 @@ class _CanteenPageState extends State<CanteenPage> {
         allowImplicitScrolling: true,
         itemCount: visibleDays.length,
         onPageChanged: (index) {
-          final previousDate = _selectedDate;
           final nextDate = visibleDays[index];
           pageNotifier.value = index;
           _selectedDate = nextDate;
           PerformanceTelemetry.instance
               .markNavEvent(name: "canteen.pageChanged");
 
-          final previousWeekStart = previousDate == null
-              ? null
-              : viewModel.weekStartFor(previousDate);
           final nextWeekStart = viewModel.weekStartFor(nextDate);
-          if (previousWeekStart != nextWeekStart) {
+          if (_lastInteractionWeekStart != nextWeekStart) {
+            _lastInteractionWeekStart = nextWeekStart;
             viewModel.refreshVisibleWeekIfStale(nextDate);
+            viewModel.prefetchAdjacentWeeksDebounced(nextDate);
           }
-          viewModel.prefetchAdjacentWeeksDebounced(nextDate);
         },
         itemBuilder: (context, index) {
           return _CanteenDayView(date: visibleDays[index]);
@@ -426,7 +437,15 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
         var lastUpdated = model.lastUpdatedForWeek(weekStart);
 
         if ((!hasWeekData || isLoading) && meals.isEmpty) {
-          return const _MealLoadingList();
+          return AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            child: const SizedBox(
+              key: ValueKey<String>('canteen_loading'),
+              child: _MealLoadingList(),
+            ),
+          );
         }
 
         if (meals.isEmpty) {
@@ -534,35 +553,8 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
   }
 }
 
-class _MealLoadingList extends StatefulWidget {
+class _MealLoadingList extends StatelessWidget {
   const _MealLoadingList();
-
-  @override
-  State<_MealLoadingList> createState() => _MealLoadingListState();
-}
-
-class _MealLoadingListState extends State<_MealLoadingList>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _opacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
-    _opacity = Tween(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -571,8 +563,13 @@ class _MealLoadingListState extends State<_MealLoadingList>
     var highlightColor =
         isDark ? const Color(0xFF3A3A3A) : const Color(0xFFF2F2F2);
 
-    return FadeTransition(
-      opacity: _opacity,
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.75, end: 1.0),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      builder: (context, opacity, child) {
+        return Opacity(opacity: opacity, child: child);
+      },
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         itemCount: 6,

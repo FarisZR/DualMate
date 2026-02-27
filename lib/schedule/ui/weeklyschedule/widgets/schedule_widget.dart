@@ -20,6 +20,8 @@ class ScheduleWidget extends StatelessWidget {
   static const double _fullColumnThreshold = 0.999;
   static const double _compactColumnWidthThreshold = 64.0;
   static const double _compactWidthThreshold = 430.0;
+  static final Map<String, _ScheduleDateFormatters> _formatterCacheByLocale =
+      <String, _ScheduleDateFormatters>{};
 
   final Schedule schedule;
   final DateTime displayStart;
@@ -210,6 +212,11 @@ class ScheduleWidget extends StatelessWidget {
     _ScheduleWidgetLayoutProfile layoutProfile,
   ) {
     var labelWidgets = <Widget>[];
+    final locale = L.of(context).locale;
+    final formatters = _formatterCacheByLocale.putIfAbsent(
+      locale.toLanguageTag(),
+      () => _ScheduleDateFormatters(locale),
+    );
 
     final firstHourLabel = displayStartHour.floor();
     final lastHourLabel = displayEndHour.ceil();
@@ -234,18 +241,14 @@ class ScheduleWidget extends StatelessWidget {
 
     var i = 0;
 
-    var dayFormatter = DateFormat("E", L.of(context).locale.languageCode);
-    var dayNumberFormatter = DateFormat("d", L.of(context).locale.languageCode);
-    var monthFormatter = DateFormat("MMM", L.of(context).locale.languageCode);
-
     var loopEnd = toStartOfDay(tomorrow(displayEnd));
 
     for (var columnDate = toStartOfDay(displayStart);
         columnDate.isBefore(loopEnd);
         columnDate = tomorrow(columnDate)) {
       final isToday = isAtSameDay(columnDate, now);
-      final dayNumber = dayNumberFormatter.format(columnDate);
-      final monthShort = monthFormatter.format(columnDate);
+      final dayNumber = formatters.dayNumber.format(columnDate);
+      final monthShort = formatters.monthShort.format(columnDate);
       labelWidgets.add(
         Positioned(
           top: 0,
@@ -264,7 +267,7 @@ class ScheduleWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 Text(
-                  dayFormatter.format(columnDate).toUpperCase(),
+                  formatters.dayShort.format(columnDate).toUpperCase(),
                   style:
                       textStyleScheduleWidgetColumnTitleDay(context).copyWith(
                     letterSpacing: 0.6,
@@ -512,6 +515,17 @@ class _ScheduleWidgetLayoutProfile {
     required this.dayLabelHorizontalPadding,
     required this.dayBoundaryInset,
   });
+}
+
+class _ScheduleDateFormatters {
+  final DateFormat dayShort;
+  final DateFormat dayNumber;
+  final DateFormat monthShort;
+
+  _ScheduleDateFormatters(Locale locale)
+      : dayShort = DateFormat("E", locale.languageCode),
+        dayNumber = DateFormat("d", locale.languageCode),
+        monthShort = DateFormat("MMM", locale.languageCode);
 }
 
 class _CurrentTimeIndicatorGeometry {
