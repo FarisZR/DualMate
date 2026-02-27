@@ -62,12 +62,13 @@ class _MainPageState extends State<MainPage> {
       child: Consumer<ValueNotifier<int>>(
         builder: (BuildContext context, value, Widget? child) {
           final body = _buildSectionStack(context);
+          final drawerEntries = _buildDrawerEntries();
           Widget content;
 
           if (PlatformUtil.isTablet()) {
-            content = buildTabletLayout(context, body);
+            content = buildTabletLayout(context, body, drawerEntries);
           } else {
-            content = buildPhoneLayout(context, body);
+            content = buildPhoneLayout(context, body, drawerEntries);
           }
 
           return content;
@@ -99,7 +100,11 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  Widget buildPhoneLayout(BuildContext context, Widget body) {
+  Widget buildPhoneLayout(
+    BuildContext context,
+    Widget body,
+    List<DrawerNavigationEntry> drawerEntries,
+  ) {
     return PopScope(
       canPop: true,
       child: Scaffold(
@@ -113,17 +118,23 @@ class _MainPageState extends State<MainPage> {
           toolbarTextStyle: Theme.of(context).textTheme.bodyMedium,
           titleTextStyle: Theme.of(context).textTheme.titleLarge,
         ),
-        body: body,
-        drawer: MyNavigationDrawer(
-          selectedIndex: _currentEntryIndex.value,
-          onTap: _onNavigationTapped,
-          entries: _buildDrawerEntries(),
+        body: RepaintBoundary(child: body),
+        drawer: RepaintBoundary(
+          child: MyNavigationDrawer(
+            selectedIndex: _currentEntryIndex.value,
+            onTap: _onNavigationTapped,
+            entries: drawerEntries,
+          ),
         ),
       ),
     );
   }
 
-  Widget buildTabletLayout(BuildContext context, Widget body) {
+  Widget buildTabletLayout(
+    BuildContext context,
+    Widget body,
+    List<DrawerNavigationEntry> drawerEntries,
+  ) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -143,7 +154,7 @@ class _MainPageState extends State<MainPage> {
             child: MyNavigationDrawer(
               selectedIndex: _currentEntryIndex.value,
               onTap: _onNavigationTapped,
-              entries: _buildDrawerEntries(),
+              entries: drawerEntries,
               isInDrawer: false,
             ),
           ),
@@ -152,7 +163,7 @@ class _MainPageState extends State<MainPage> {
             width: 1,
           ),
           Expanded(
-            child: body,
+            child: RepaintBoundary(child: body),
             flex: 3,
           ),
         ],

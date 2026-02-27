@@ -88,30 +88,12 @@ class MyNavigationDrawer extends StatelessWidget {
   }) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-      child: Card(
+      child: Material(
         color: isSelected ? Theme.of(context).focusColor : Colors.transparent,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        borderRadius: BorderRadius.circular(8),
         child: InkWell(
           key: ValueKey<String>("drawer_item_$index"),
-          child: Container(
-            height: 48,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-                  icon,
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 0, 0),
-                    child: Text(text),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          borderRadius: BorderRadius.circular(8),
           onTap: () {
             onTap(index);
 
@@ -119,6 +101,20 @@ class MyNavigationDrawer extends StatelessWidget {
               Navigator.of(context).pop();
             }
           },
+          child: SizedBox(
+            height: 48,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  icon,
+                  const SizedBox(width: 16),
+                  Text(text),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

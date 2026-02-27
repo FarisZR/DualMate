@@ -46,10 +46,23 @@ class StudyGradesViewModel extends BaseViewModel {
 
   String _currentLoadingSemesterName = "";
 
+  bool _isLoadingStudyGrades = false;
+  bool get isLoadingStudyGrades => _isLoadingStudyGrades;
+
+  bool _isLoadingAllModules = false;
+  bool get isLoadingAllModules => _isLoadingAllModules;
+
+  bool _isLoadingSemesterNames = false;
+  bool get isLoadingSemesterNames => _isLoadingSemesterNames;
+
+  bool _isLoadingCurrentSemester = false;
+  bool get isLoadingCurrentSemester => _isLoadingCurrentSemester;
+
   StudyGradesViewModel(this._preferencesProvider, this._dualisService);
 
   Future<bool> login(Credentials credentials) async {
-    print("Logging into dualis...");
+    _loginState = LoginState.LoggingIn;
+    notifyListeners("loginState");
 
     bool success;
 
@@ -69,11 +82,8 @@ class StudyGradesViewModel extends BaseViewModel {
     notifyListeners("loginState");
 
     if (!success) {
-      print("Login failed!");
       return false;
     }
-
-    print("Login successful");
 
     loadStudyGrades();
     loadSemesterNames();
@@ -109,26 +119,27 @@ class StudyGradesViewModel extends BaseViewModel {
   }
 
   Future<void> loadStudyGrades() async {
-    print("Loading study grades...");
+    _isLoadingStudyGrades = true;
+    notifyListeners("isLoadingStudyGrades");
 
     await _studyGradesCancellationToken.acquireAndCancelOther();
 
     try {
       _studyGrades = await _dualisService
           .queryStudyGrades(_studyGradesCancellationToken.token);
-
-      print("Loaded study grades");
     } on OperationCancelledException catch (_) {
-      print("Loading study grades cancelled");
     } finally {
       _studyGradesCancellationToken.release();
+      _isLoadingStudyGrades = false;
     }
 
     notifyListeners("studyGrades");
+    notifyListeners("isLoadingStudyGrades");
   }
 
   Future<void> loadAllModules() async {
-    print("Loading all modules...");
+    _isLoadingAllModules = true;
+    notifyListeners("isLoadingAllModules");
 
     await _allModulesCancellationToken.acquireAndCancelOther();
 
@@ -136,20 +147,18 @@ class StudyGradesViewModel extends BaseViewModel {
       _allModules = await _dualisService.queryAllModules(
         _allModulesCancellationToken.token,
       );
-
-      print("Loaded all modules");
     } on OperationCancelledException catch (_) {
-      print("Loading all modules cancelled");
     } finally {
       _allModulesCancellationToken.release();
+      _isLoadingAllModules = false;
     }
 
     notifyListeners("allModules");
+    notifyListeners("isLoadingAllModules");
   }
 
   Future<void> loadSemester(String semesterName) async {
-    if (_currentSemesterName == semesterName)
-      return Future.value();
+    if (_currentSemesterName == semesterName) return Future.value();
 
     if (_currentLoadingSemesterName == semesterName) return Future.value();
 
@@ -157,11 +166,11 @@ class StudyGradesViewModel extends BaseViewModel {
 
     _currentLoadingSemesterName = semesterName;
     _currentSemesterName = semesterName;
+    _isLoadingCurrentSemester = true;
     _currentSemester = Semester("", []);
     notifyListeners("currentSemesterName");
     notifyListeners("currentSemester");
-
-    print("Loading semester $semesterName...");
+    notifyListeners("isLoadingCurrentSemester");
 
     await _currentSemesterCancellationToken.acquireAndCancelOther();
 
@@ -170,19 +179,20 @@ class StudyGradesViewModel extends BaseViewModel {
         semesterName,
         _currentSemesterCancellationToken.token,
       );
-
-      print("Loaded semester $semesterName");
     } on OperationCancelledException catch (_) {
-      print("Loading semester $semesterName cancelled");
     } finally {
       _currentSemesterCancellationToken.release();
+      _currentLoadingSemesterName = "";
+      _isLoadingCurrentSemester = false;
     }
 
     notifyListeners("currentSemester");
+    notifyListeners("isLoadingCurrentSemester");
   }
 
   Future<void> loadSemesterNames() async {
-    print("Loading semester names...");
+    _isLoadingSemesterNames = true;
+    notifyListeners("isLoadingSemesterNames");
 
     await _semesterNamesCancellationToken.acquireAndCancelOther();
 
@@ -190,15 +200,14 @@ class StudyGradesViewModel extends BaseViewModel {
       _semesterNames = await _dualisService.querySemesterNames(
         _semesterNamesCancellationToken.token,
       );
-
-      print("Loaded semester names");
     } on OperationCancelledException catch (_) {
-      print("Loading semester names cancelled");
     } finally {
       _semesterNamesCancellationToken.release();
+      _isLoadingSemesterNames = false;
     }
 
     notifyListeners("semesterNames");
+    notifyListeners("isLoadingSemesterNames");
 
     await _loadInitialSemester();
   }
@@ -216,8 +225,6 @@ class StudyGradesViewModel extends BaseViewModel {
   }
 
   Future<void> logout() async {
-    print("Logging out...");
-
     _loginState = LoginState.LoggingOut;
     notifyListeners("loginState");
 
@@ -235,9 +242,11 @@ class StudyGradesViewModel extends BaseViewModel {
     _currentSemester = Semester("", []);
     _currentSemesterName = "";
     _currentLoadingSemesterName = "";
+    _isLoadingStudyGrades = false;
+    _isLoadingAllModules = false;
+    _isLoadingSemesterNames = false;
+    _isLoadingCurrentSemester = false;
 
     notifyListeners();
-
-    print("Logged out");
   }
 }

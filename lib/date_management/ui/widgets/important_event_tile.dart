@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class ImportantEventTile extends StatelessWidget {
+  static final Map<String, DateFormat> _dateFormats = <String, DateFormat>{};
+  static final Map<String, DateFormat> _timeFormats = <String, DateFormat>{};
+
   final ImportantEvent event;
   final EdgeInsets contentPadding;
   final VisualDensity? visualDensity;
@@ -58,11 +61,16 @@ class ImportantEventTile extends StatelessWidget {
 
   String _formatEventDate(BuildContext context, ImportantEvent event) {
     final locale = L.of(context).locale.languageCode;
-    final dateFormat = DateFormat('dd/MM/yyyy', locale);
+    final dateFormat = _dateFormats.putIfAbsent(
+      locale,
+      () => DateFormat('dd/MM/yyyy', locale),
+    );
     if (event.isSingleDay) {
       final dateText = dateFormat.format(event.start);
       if (event.hasTime) {
-        final timeText = DateFormat.Hm(locale).format(event.start);
+        final timeText = _timeFormats
+            .putIfAbsent(locale, () => DateFormat.Hm(locale))
+            .format(event.start);
         return "$dateText · $timeText";
       }
       return dateText;

@@ -22,6 +22,7 @@ class DateManagementPage extends StatefulWidget {
 
 class _DateManagementPageState extends State<DateManagementPage> {
   final ScrollController _raplaScrollController = ScrollController();
+  bool _raplaAutoloadScheduled = false;
 
   @override
   void initState() {
@@ -42,7 +43,7 @@ class _DateManagementPageState extends State<DateManagementPage> {
   @override
   Widget build(BuildContext context) {
     DateManagementViewModel viewModel =
-        Provider.of<DateManagementViewModel>(context);
+        Provider.of<DateManagementViewModel>(context, listen: false);
 
     return PropertyChangeProvider<DateManagementViewModel, String>(
       value: viewModel,
@@ -76,16 +77,27 @@ class _DateManagementPageState extends State<DateManagementPage> {
       child: Stack(
         children: <Widget>[
           PropertyChangeConsumer<DateManagementViewModel, String>(
+            properties: const [
+              "allDates",
+              "importantEventSections",
+              "useDhMineForDates",
+              "raplaUrlValid",
+              "bothSourcesUnconfigured",
+              "isLoading",
+              "isLoadingNextRaplaPage",
+              "nextRaplaPageFailed",
+              "hasMoreRaplaPages",
+              "showOutOfStudyEvents",
+              "currentDateDatabase",
+              "currentSelectedYear",
+            ],
             builder: (
               BuildContext context,
               DateManagementViewModel? model,
               Set<String>? properties,
             ) {
               if (model == null) return Container();
-              return AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: _buildContent(model, context),
-              );
+              return _buildContent(model, context);
             },
           ),
           Align(
@@ -236,11 +248,19 @@ class _DateManagementPageState extends State<DateManagementPage> {
       child: ListView.separated(
         controller: _raplaScrollController,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        cacheExtent: 1400,
         itemBuilder: (context, index) {
           if (index < sections.length) {
-            return ImportantEventSectionCard(
-              key: ValueKey('section_$index'),
-              section: sections[index],
+            final section = sections[index];
+            final sectionKey = section.header?.start.toIso8601String() ??
+                (section.events.isNotEmpty
+                    ? section.events.first.start.toIso8601String()
+                    : 'section_$index');
+            return RepaintBoundary(
+              child: ImportantEventSectionCard(
+                key: ValueKey('section_$sectionKey'),
+                section: section,
+              ),
             );
           }
           return _buildRaplaFooter(model, context);
@@ -252,7 +272,13 @@ class _DateManagementPageState extends State<DateManagementPage> {
   }
 
   void _scheduleRaplaAutoload(DateManagementViewModel model) {
+    if (_raplaAutoloadScheduled) {
+      return;
+    }
+    _raplaAutoloadScheduled = true;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _raplaAutoloadScheduled = false;
       if (!mounted) return;
       if (!_raplaScrollController.hasClients) return;
       if (model.isLoadingNextRaplaPage ||
