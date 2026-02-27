@@ -45,6 +45,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       Duration(milliseconds: 1400);
   static const Duration _foregroundCanteenPrewarmDelay =
       Duration(milliseconds: 4200);
+  static const Duration _firstFrameFallbackDelay = Duration(seconds: 2);
 
   RootViewModel? _rootViewModel;
   bool _backgroundInitStarted = false;
@@ -53,6 +54,8 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   String? _pendingRoute;
   developer.TimelineTask? _startupTask;
   bool _perfOverlayLoaded = false;
+  Timer? _firstFrameFallbackTimer;
+  bool _firstFrameAllowed = false;
 
   @override
   void initState() {
@@ -67,11 +70,13 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     PerformanceTelemetry.instance.ensureFrameTimingListenerAttached();
     _startupTask =
         PerformanceTelemetry.instance.startTask('startup.initialize');
+    _scheduleFirstFrameFallback();
     _initializeApp();
   }
 
   @override
   void dispose() {
+    _firstFrameFallbackTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -161,6 +166,29 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     }
   }
 
+  void _scheduleFirstFrameFallback() {
+    _firstFrameFallbackTimer?.cancel();
+    _firstFrameFallbackTimer = Timer(_firstFrameFallbackDelay, () {
+      _allowFirstFrame('fallback_timeout');
+    });
+  }
+
+  void _allowFirstFrame(String reason) {
+    if (_firstFrameAllowed) {
+      return;
+    }
+    _firstFrameAllowed = true;
+    _firstFrameFallbackTimer?.cancel();
+    WidgetsBinding.instance.allowFirstFrame();
+    PerformanceTelemetry.instance.logInstant(
+      'startup.allowFirstFrame',
+      args: {
+        'elapsedMs': widget.startupStopwatch.elapsedMilliseconds,
+        'reason': reason,
+      },
+    );
+  }
+
   Future<void> _initializeApp() async {
     final stopwatch = Stopwatch()..start();
     PerformanceTelemetry.instance.logInstant(
@@ -171,53 +199,67 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       'startup.root.init.start',
       args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
     );
-    await initializeAppBase(false);
-    print("Root init: base ${stopwatch.elapsedMilliseconds}ms");
-    PerformanceTelemetry.instance.logInstant(
-      'startup.root.base.done',
-      args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
-    );
+    try {
+      await initializeAppBase(false);
+      print("Root init: base ${stopwatch.elapsedMilliseconds}ms");
+      PerformanceTelemetry.instance.logInstant(
+        'startup.root.base.done',
+        args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
+      );
 
-    await saveLastStartLanguage();
-    print("Root init: save language ${stopwatch.elapsedMilliseconds}ms");
-    PerformanceTelemetry.instance.logInstant(
-      'startup.root.language.done',
-      args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
-    );
-    _rootViewModel = RootViewModel(
-      KiwiContainer().resolve(),
-    );
-    if (!mounted) {
-      return;
+      await saveLastStartLanguage();
+      print("Root init: save language ${stopwatch.elapsedMilliseconds}ms");
+      PerformanceTelemetry.instance.logInstant(
+        'startup.root.language.done',
+        args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
+      );
+      _rootViewModel ??= RootViewModel(
+        KiwiContainer().resolve(),
+      );
+      if (!mounted) {
+        _allowFirstFrame('root_init_unmounted');
+        return;
+      }
+      setState(() {});
+      _allowFirstFrame('root_init_ready');
+
+      _applyPendingRoute();
+
+      print("Root init: allow first frame ${stopwatch.elapsedMilliseconds}ms");
+      _startupTask?.finish();
+
+      await _rootViewModel?.loadFromPreferences();
+      print("Root init: prefs ${stopwatch.elapsedMilliseconds}ms");
+      PerformanceTelemetry.instance.logInstant(
+        'startup.root.preferences.done',
+        args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_backgroundInitStarted) return;
+        _backgroundInitStarted = true;
+        _runDeferredInitialization(stopwatch);
+      });
+    } catch (error, trace) {
+      print("Root init failed");
+      print(error);
+      print(trace);
+
+      if (_rootViewModel == null) {
+        _rootViewModel = RootViewModel(
+          KiwiContainer().resolve(),
+        );
+      }
+
+      if (mounted) {
+        setState(() {});
+      }
+      _allowFirstFrame('root_init_error');
     }
-    setState(() {});
-    WidgetsBinding.instance.allowFirstFrame();
-    PerformanceTelemetry.instance.logInstant(
-      'startup.allowFirstFrame',
-      args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
-    );
-
-    _applyPendingRoute();
-
-    print("Root init: allow first frame ${stopwatch.elapsedMilliseconds}ms");
-    _startupTask?.finish();
-
-    await _rootViewModel?.loadFromPreferences();
-    print("Root init: prefs ${stopwatch.elapsedMilliseconds}ms");
-    PerformanceTelemetry.instance.logInstant(
-      'startup.root.preferences.done',
-      args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_backgroundInitStarted) return;
-      _backgroundInitStarted = true;
-      _runDeferredInitialization(stopwatch);
-    });
   }
 
   Future<void> _loadPerfOverlayPreference() async {
@@ -252,7 +294,12 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     if (_rootViewModel == null) {
       return MaterialApp(
-        home: const SizedBox.shrink(),
+        home: const ColoredBox(
+          color: Color(0xFFFFFFFF),
+          child: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
       );
     }
 
