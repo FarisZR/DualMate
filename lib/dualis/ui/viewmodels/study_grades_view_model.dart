@@ -58,6 +58,11 @@ class StudyGradesViewModel extends BaseViewModel {
   bool _isLoadingCurrentSemester = false;
   bool get isLoadingCurrentSemester => _isLoadingCurrentSemester;
 
+  int _studyGradesLoadEpoch = 0;
+  int _allModulesLoadEpoch = 0;
+  int _semesterNamesLoadEpoch = 0;
+  int _currentSemesterLoadEpoch = 0;
+
   StudyGradesViewModel(this._preferencesProvider, this._dualisService);
 
   Future<bool> login(Credentials credentials) async {
@@ -74,6 +79,8 @@ class StudyGradesViewModel extends BaseViewModel {
 
       success = result == LoginResult.LoggedIn;
     } on OperationCancelledException catch (_) {
+      success = false;
+    } catch (_) {
       success = false;
     }
 
@@ -119,10 +126,15 @@ class StudyGradesViewModel extends BaseViewModel {
   }
 
   Future<void> loadStudyGrades() async {
+    final epoch = ++_studyGradesLoadEpoch;
     _isLoadingStudyGrades = true;
     notifyListeners("isLoadingStudyGrades");
 
     await _studyGradesCancellationToken.acquireAndCancelOther();
+    if (epoch != _studyGradesLoadEpoch) {
+      _studyGradesCancellationToken.release();
+      return;
+    }
 
     try {
       _studyGrades = await _dualisService
@@ -130,6 +142,9 @@ class StudyGradesViewModel extends BaseViewModel {
     } on OperationCancelledException catch (_) {
     } finally {
       _studyGradesCancellationToken.release();
+      if (epoch != _studyGradesLoadEpoch) {
+        return;
+      }
       _isLoadingStudyGrades = false;
     }
 
@@ -138,10 +153,15 @@ class StudyGradesViewModel extends BaseViewModel {
   }
 
   Future<void> loadAllModules() async {
+    final epoch = ++_allModulesLoadEpoch;
     _isLoadingAllModules = true;
     notifyListeners("isLoadingAllModules");
 
     await _allModulesCancellationToken.acquireAndCancelOther();
+    if (epoch != _allModulesLoadEpoch) {
+      _allModulesCancellationToken.release();
+      return;
+    }
 
     try {
       _allModules = await _dualisService.queryAllModules(
@@ -150,6 +170,9 @@ class StudyGradesViewModel extends BaseViewModel {
     } on OperationCancelledException catch (_) {
     } finally {
       _allModulesCancellationToken.release();
+      if (epoch != _allModulesLoadEpoch) {
+        return;
+      }
       _isLoadingAllModules = false;
     }
 
@@ -164,6 +187,7 @@ class StudyGradesViewModel extends BaseViewModel {
 
     await _preferencesProvider.setLastViewedSemester(semesterName);
 
+    final epoch = ++_currentSemesterLoadEpoch;
     _currentLoadingSemesterName = semesterName;
     _currentSemesterName = semesterName;
     _isLoadingCurrentSemester = true;
@@ -173,6 +197,10 @@ class StudyGradesViewModel extends BaseViewModel {
     notifyListeners("isLoadingCurrentSemester");
 
     await _currentSemesterCancellationToken.acquireAndCancelOther();
+    if (epoch != _currentSemesterLoadEpoch) {
+      _currentSemesterCancellationToken.release();
+      return;
+    }
 
     try {
       _currentSemester = await _dualisService.querySemester(
@@ -182,6 +210,9 @@ class StudyGradesViewModel extends BaseViewModel {
     } on OperationCancelledException catch (_) {
     } finally {
       _currentSemesterCancellationToken.release();
+      if (epoch != _currentSemesterLoadEpoch) {
+        return;
+      }
       _currentLoadingSemesterName = "";
       _isLoadingCurrentSemester = false;
     }
@@ -191,10 +222,15 @@ class StudyGradesViewModel extends BaseViewModel {
   }
 
   Future<void> loadSemesterNames() async {
+    final epoch = ++_semesterNamesLoadEpoch;
     _isLoadingSemesterNames = true;
     notifyListeners("isLoadingSemesterNames");
 
     await _semesterNamesCancellationToken.acquireAndCancelOther();
+    if (epoch != _semesterNamesLoadEpoch) {
+      _semesterNamesCancellationToken.release();
+      return;
+    }
 
     try {
       _semesterNames = await _dualisService.querySemesterNames(
@@ -203,13 +239,18 @@ class StudyGradesViewModel extends BaseViewModel {
     } on OperationCancelledException catch (_) {
     } finally {
       _semesterNamesCancellationToken.release();
+      if (epoch != _semesterNamesLoadEpoch) {
+        return;
+      }
       _isLoadingSemesterNames = false;
     }
 
     notifyListeners("semesterNames");
     notifyListeners("isLoadingSemesterNames");
 
-    await _loadInitialSemester();
+    if (epoch == _semesterNamesLoadEpoch) {
+      await _loadInitialSemester();
+    }
   }
 
   Future _loadInitialSemester() async {

@@ -220,7 +220,8 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                         if (model == null) return const SizedBox.shrink();
                         final showOverlay = model.isUpdating &&
                             (model.weekSchedule?.entries.isEmpty ?? true);
-                        return IgnorePointer(
+                        return AbsorbPointer(
+                          absorbing: showOverlay,
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 220),
                             switchInCurve: Curves.easeOutCubic,

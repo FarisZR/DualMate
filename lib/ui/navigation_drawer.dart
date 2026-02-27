@@ -125,40 +125,48 @@ class MyNavigationDrawer extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: <Widget>[
-          InkWell(
-            key: const ValueKey<String>("drawer_settings"),
-            child: Container(
-              height: 56,
-              margin: const EdgeInsets.fromLTRB(0, 0, 0, 20),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 15, 0, 10),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: <Widget>[
-                    Icon(
-                      Icons.settings,
-                      color: Theme.of(context).disabledColor,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 0, 0),
-                      child: Text(
-                        L.of(context).settingsPageTitle,
-                        style: TextStyle(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 20),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                key: const ValueKey<String>("drawer_settings"),
+                borderRadius: BorderRadius.circular(8),
+                onTap: () {
+                  if (isInDrawer) {
+                    Navigator.of(context).pop();
+                  }
+
+                  Navigator.pushNamed(context, "settings");
+                },
+                child: SizedBox(
+                  height: 56,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 15, 0, 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        Icon(
+                          Icons.settings,
                           color: Theme.of(context).disabledColor,
                         ),
-                      ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 0, 0),
+                          child: Text(
+                            L.of(context).settingsPageTitle,
+                            style: TextStyle(
+                              color: Theme.of(context).disabledColor,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
-            onTap: () {
-              if (isInDrawer) {
-                Navigator.of(context).pop();
-              }
-
-              Navigator.pushNamed(context, "settings");
-            },
           ),
         ],
       ),

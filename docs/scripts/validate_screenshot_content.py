@@ -66,20 +66,30 @@ def main() -> int:
 
     failing = []
     for png in png_files:
-        mean_luma, near_black_ratio = _score_image(png)
+        try:
+            mean_luma, near_black_ratio = _score_image(png)
+        except Exception as error:
+            print(f"{png.name}: INVALID (read/parse failed: {error})")
+            failing.append((png, None, None))
+            continue
+
         print(
             f"{png.name}: mean_luma={mean_luma:.2f}, near_black_ratio={near_black_ratio:.4f}"
         )
 
         if near_black_ratio > args.max_near_black_ratio or mean_luma < args.min_mean_luma:
+            print(f"{png.name}: INVALID (below quality threshold)")
             failing.append((png, mean_luma, near_black_ratio))
 
     if failing:
         print("\ninvalid screenshots detected:")
         for png, mean_luma, near_black_ratio in failing:
-            print(
-                f"- {png}: mean_luma={mean_luma:.2f}, near_black_ratio={near_black_ratio:.4f}"
-            )
+            if mean_luma is None or near_black_ratio is None:
+                print(f"- {png}: unreadable image")
+            else:
+                print(
+                    f"- {png}: mean_luma={mean_luma:.2f}, near_black_ratio={near_black_ratio:.4f}"
+                )
         return 2
 
     print("\nall screenshots look non-blank.")

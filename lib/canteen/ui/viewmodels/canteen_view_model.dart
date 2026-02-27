@@ -81,7 +81,7 @@ class CanteenViewModel extends BaseViewModel {
 
   List<DateTime> get visibleContentDays {
     if (!_visibleContentDaysDirty) {
-      return _visibleContentDaysCache;
+      return List.unmodifiable(_visibleContentDaysCache);
     }
 
     final days = <DateTime>{};
@@ -95,9 +95,9 @@ class CanteenViewModel extends BaseViewModel {
 
     final sortedDays = days.toList();
     sortedDays.sort((a, b) => a.compareTo(b));
-    _visibleContentDaysCache = sortedDays;
+    _visibleContentDaysCache = List.unmodifiable(sortedDays);
     _visibleContentDaysDirty = false;
-    return _visibleContentDaysCache;
+    return List.unmodifiable(_visibleContentDaysCache);
   }
 
   DateTime? nearestVisibleContentDay(
@@ -149,6 +149,7 @@ class CanteenViewModel extends BaseViewModel {
     }
 
     if (allowNetworkRefresh) {
+      _weekLastRefreshRequestAt[weekStart] = DateTime.now();
       try {
         final menus = forceRefresh
             ? await _provider.refreshWeek(weekStart)
@@ -167,7 +168,6 @@ class CanteenViewModel extends BaseViewModel {
       }
     }
 
-    _weekLastRefreshRequestAt[weekStart] = DateTime.now();
     _loadingWeeks.remove(weekStart);
     notifyIfMounted("weeklyMenus");
     notifyIfMounted("weekErrors");
@@ -217,7 +217,6 @@ class CanteenViewModel extends BaseViewModel {
         DateTime.now().difference(lastRefreshRequestAt) < staleAfter) {
       return;
     }
-    _weekLastRefreshRequestAt[weekStart] = DateTime.now();
     unawaited(loadWeek(
       weekStart,
       allowNetworkRefresh: true,

@@ -65,7 +65,7 @@ does not pop in abruptly.
 - `flutter test test/date_management/ui/date_management_page_test.dart test/canteen/ui/viewmodels/canteen_startup_loading_policy_test.dart test/schedule/ui/weeklyschedule/weekly_schedule_page_swipe_test.dart test/schedule/ui/weeklyschedule/weekly_schedule_page_lifecycle_test.dart test/schedule/ui/viewmodels/weekly_schedule_background_refresh_test.dart`
 - `python3 docs/scripts/validate_screenshot_content.py`
 - Attempted device integration smoke run:
-  - `flutter test integration_test/performance_smoke_test.dart -d RFCR31468LJ`
+- `flutter test integration_test/performance_smoke_test.dart -d <device-id>`
   - Runner returned a harness issue (`No tests were found`) after build/install;
     targeted widget/unit regressions still passed.
 
