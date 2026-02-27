@@ -249,11 +249,14 @@ class CanteenViewModel extends BaseViewModel {
           allowNetworkRefresh: false,
           prefetchNextWeek: false,
         );
-        ensureWeekLoaded(
+        if (_loadingWeeks.contains(nextWeekStart)) {
+          return;
+        }
+        unawaited(loadWeek(
           nextWeekStart,
-          allowNetworkRefresh: false,
+          allowNetworkRefresh: true,
           prefetchNextWeek: false,
-        );
+        ));
       },
     );
   }

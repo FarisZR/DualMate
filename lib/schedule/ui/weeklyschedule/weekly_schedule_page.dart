@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:developer' as developer;
+import 'dart:ui' show lerpDouble;
 
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/widgets/error_display.dart';
@@ -302,26 +303,33 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
           displayedDays,
         );
 
-        return Row(
-          children: [
-            SizedBox(
-              key: const ValueKey<String>('weekly_fixed_hour_axis'),
-              width: axisMetrics.axisWidth,
-              child: _FixedHourAxis(
-                dayLabelsHeight: axisMetrics.dayLabelsHeight,
-                startHour: targetViewport.startHour,
-                endHour: targetViewport.endHour,
-                compactPhone: axisMetrics.compactPhone,
-              ),
-            ),
-            Expanded(
-              child: _buildWeeklyPager(
-                context,
-                model,
-                targetViewport,
-              ),
-            ),
-          ],
+        return TweenAnimationBuilder<_HourViewport>(
+          tween: _HourViewportTween(end: targetViewport),
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          builder: (context, viewport, child) {
+            return Row(
+              children: [
+                SizedBox(
+                  key: const ValueKey<String>('weekly_fixed_hour_axis'),
+                  width: axisMetrics.axisWidth,
+                  child: _FixedHourAxis(
+                    dayLabelsHeight: axisMetrics.dayLabelsHeight,
+                    startHour: viewport.startHour,
+                    endHour: viewport.endHour,
+                    compactPhone: axisMetrics.compactPhone,
+                  ),
+                ),
+                Expanded(
+                  child: _buildWeeklyPager(
+                    context,
+                    model,
+                    viewport,
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -720,6 +728,24 @@ class _HourViewport {
     required this.startHour,
     required this.endHour,
   });
+}
+
+class _HourViewportTween extends Tween<_HourViewport> {
+  _HourViewportTween({_HourViewport? begin, required _HourViewport end})
+      : super(begin: begin, end: end);
+
+  @override
+  _HourViewport lerp(double t) {
+    final beginValue = begin ?? end!;
+    final endValue = end!;
+
+    return _HourViewport(
+      startHour: lerpDouble(beginValue.startHour, endValue.startHour, t) ??
+          endValue.startHour,
+      endHour: lerpDouble(beginValue.endHour, endValue.endHour, t) ??
+          endValue.endHour,
+    );
+  }
 }
 
 class _AxisLayoutMetrics {

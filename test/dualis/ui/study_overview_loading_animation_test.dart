@@ -6,6 +6,7 @@ import 'package:dualmate/common/data/preferences/secure_storage_access.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/dualis/model/exam.dart';
+import 'package:dualmate/dualis/model/exam_grade.dart';
 import 'package:dualmate/dualis/model/module.dart';
 import 'package:dualmate/dualis/model/semester.dart';
 import 'package:dualmate/dualis/model/study_grades.dart';
@@ -108,6 +109,59 @@ void main() {
       findsNothing,
     );
     expect(find.byType(DataTable), findsOneWidget);
+  });
+
+  testWidgets('exam rows do not overflow with long wrapped labels', (
+    tester,
+  ) async {
+    final dualisService = _BlockingDualisService();
+    final preferences = PreferencesProvider(
+      _FakePreferencesAccess(),
+      _FakeSecureStorageAccess(),
+    );
+    final viewModel = StudyGradesViewModel(preferences, dualisService);
+    addTearDown(viewModel.dispose);
+
+    await tester.pumpWidget(_wrapWithExamResultsApp(viewModel));
+
+    unawaited(viewModel.loadSemester('SoSe 2026'));
+    await tester.pump();
+
+    dualisService.completeSemester(
+      'SoSe 2026',
+      Semester(
+        'SoSe 2026',
+        [
+          Module(
+            [
+              Exam(
+                'Kombinierte Pruefung mit Klausur (<50 %) (100%)',
+                ExamGrade.graded('1,7'),
+                ExamState.Passed,
+                'SoSe 2026',
+              ),
+            ],
+            'M3',
+            'Schluesselqualifikationen',
+            '5,0',
+            '1,7',
+            ExamState.Passed,
+          ),
+        ],
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final exceptions = <Object>[];
+    Object? exception;
+    while ((exception = tester.takeException()) != null) {
+      exceptions.add(exception!);
+    }
+
+    expect(exceptions, isEmpty);
+    expect(find.byType(DataTable), findsOneWidget);
+    expect(find.textContaining('Kombinierte Pruefung'), findsOneWidget);
   });
 }
 

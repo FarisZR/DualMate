@@ -14,6 +14,46 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 void main() {
+  testWidgets('animates hour viewport transitions instead of hard jumps', (
+    tester,
+  ) async {
+    final viewModel = _buildViewModel(
+      now: DateTime(2026, 2, 10, 10),
+      entries: <ScheduleEntry>[
+        _entry(DateTime(2026, 2, 9), 'CURRENT_WEEK'),
+      ],
+    );
+    await viewModel.updateSchedule(
+      DateTime(2026, 2, 9),
+      DateTime(2026, 2, 16),
+      force: true,
+    );
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump();
+
+    final hourLabel = find.text('9:00').first;
+    final before = tester.getTopLeft(hourLabel).dy;
+
+    viewModel.displayEndHour = 21;
+    viewModel.notifyListeners('weekSchedule');
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+    final during = tester.getTopLeft(hourLabel).dy;
+
+    await tester.pumpAndSettle();
+    final after = tester.getTopLeft(hourLabel).dy;
+
+    expect(after, lessThan(before - 0.5));
+    expect(during, lessThan(before - 0.5));
+    expect(during, greaterThan(after + 0.5));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
+
   testWidgets('dragging weekly pager updates page progress before release', (
     tester,
   ) async {

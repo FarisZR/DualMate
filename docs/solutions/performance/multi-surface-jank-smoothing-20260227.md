@@ -63,6 +63,7 @@ does not pop in abruptly.
 
 - `flutter test test/dualis/ui/study_overview_loading_animation_test.dart`
 - `flutter test test/date_management/ui/date_management_page_test.dart test/canteen/ui/viewmodels/canteen_startup_loading_policy_test.dart test/schedule/ui/weeklyschedule/weekly_schedule_page_swipe_test.dart test/schedule/ui/weeklyschedule/weekly_schedule_page_lifecycle_test.dart test/schedule/ui/viewmodels/weekly_schedule_background_refresh_test.dart`
+- `python3 docs/scripts/validate_screenshot_content.py`
 - Attempted device integration smoke run:
   - `flutter test integration_test/performance_smoke_test.dart -d RFCR31468LJ`
   - Runner returned a harness issue (`No tests were found`) after build/install;
@@ -70,7 +71,6 @@ does not pop in abruptly.
 
 # Screenshots
 
-- `docs/screenshots/performance/schedule-page-20260227.png`
-- `docs/screenshots/performance/menu-open-20260227.png`
-- `docs/screenshots/performance/dates-page-20260227.png`
-- `docs/screenshots/performance/dualis-page-20260227.png`
+Previous captures in `docs/screenshots/performance/` were invalid black-frame
+renders and should not be used as verification evidence. Use
+`docs/scripts/validate_screenshot_content.py` before uploading new captures.

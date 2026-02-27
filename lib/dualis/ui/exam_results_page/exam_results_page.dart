@@ -123,7 +123,8 @@ class ExamResultsPage extends StatelessWidget {
       dataTables.add(DataTable(
         horizontalMargin: 24,
         columnSpacing: 0,
-        dataRowHeight: 45,
+        dataRowMinHeight: 45,
+        dataRowMaxHeight: 72,
         headingRowHeight: 65,
         rows: buildModuleDataRows(context, module),
         columns: buildModuleColumns(context, module,
@@ -142,18 +143,23 @@ class ExamResultsPage extends StatelessWidget {
         DataRow(
           cells: <DataCell>[
             DataCell(Column(
+              mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
                   exam.name ?? "",
                   style: Theme.of(context).textTheme.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                Text(
-                  exam.semester ?? "",
-                  style: Theme.of(context).textTheme.bodySmall,
-                  textScaleFactor: exam.semester == "" ? 0 : 1,
-                ),
+                if ((exam.semester ?? '').isNotEmpty)
+                  Text(
+                    exam.semester ?? "",
+                    style: Theme.of(context).textTheme.bodySmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
               ],
             )),
             DataCell.empty,
