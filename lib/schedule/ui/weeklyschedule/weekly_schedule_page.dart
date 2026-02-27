@@ -207,77 +207,8 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                         Set<String>? properties,
                       ) {
                         if (model == null) return const SizedBox.shrink();
-                        return model.isUpdating
-                            ? const LinearProgressIndicator()
-                            : const SizedBox.shrink();
-                      },
-                    ),
-                    PropertyChangeConsumer<WeeklyScheduleViewModel, String>(
-                      properties: const ['isUpdating', 'weekSchedule'],
-                      builder: (
-                        BuildContext context,
-                        WeeklyScheduleViewModel? model,
-                        Set<String>? properties,
-                      ) {
-                        if (model == null) return const SizedBox.shrink();
-                        final showOverlay = model.isUpdating &&
-                            (model.weekSchedule?.entries.isEmpty ?? true);
-                        return AbsorbPointer(
-                          absorbing: showOverlay,
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 220),
-                            switchInCurve: Curves.easeOutCubic,
-                            switchOutCurve: Curves.easeInCubic,
-                            child: showOverlay
-                                ? Container(
-                                    key: const ValueKey<String>(
-                                      'weekly_schedule_loading_overlay',
-                                    ),
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .surface
-                                        .withValues(alpha: 0.68),
-                                    alignment: Alignment.center,
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .surfaceContainerHigh,
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.fromLTRB(
-                                          20,
-                                          14,
-                                          20,
-                                          14,
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2.8,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Text(
-                                              L
-                                                  .of(context)
-                                                  .scheduleLoadingLatest,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyMedium,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
-                          ),
+                        return _TopLoadingIndicator(
+                          isUpdating: model.isUpdating,
                         );
                       },
                     ),
@@ -753,6 +684,86 @@ class _HourViewport {
     required this.startHour,
     required this.endHour,
   });
+}
+
+class _TopLoadingIndicator extends StatefulWidget {
+  static const Duration _showDelay = Duration(milliseconds: 220);
+
+  final bool isUpdating;
+
+  const _TopLoadingIndicator({required this.isUpdating});
+
+  @override
+  State<_TopLoadingIndicator> createState() => _TopLoadingIndicatorState();
+}
+
+class _TopLoadingIndicatorState extends State<_TopLoadingIndicator> {
+  Timer? _showTimer;
+  bool _showIndicator = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFromState();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TopLoadingIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isUpdating == widget.isUpdating) {
+      return;
+    }
+    _syncFromState();
+  }
+
+  @override
+  void dispose() {
+    _showTimer?.cancel();
+    super.dispose();
+  }
+
+  void _syncFromState() {
+    if (widget.isUpdating) {
+      if (_showIndicator || _showTimer != null) {
+        return;
+      }
+      _showTimer = Timer(_TopLoadingIndicator._showDelay, () {
+        if (!mounted || !widget.isUpdating) {
+          _showTimer = null;
+          return;
+        }
+        setState(() {
+          _showIndicator = true;
+          _showTimer = null;
+        });
+      });
+      return;
+    }
+
+    _showTimer?.cancel();
+    _showTimer = null;
+    if (!_showIndicator) {
+      return;
+    }
+    setState(() {
+      _showIndicator = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 160),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      child: _showIndicator
+          ? const SizedBox(
+              key: ValueKey<String>('weekly_schedule_loading_line'),
+              child: LinearProgressIndicator(),
+            )
+          : const SizedBox.shrink(),
+    );
+  }
 }
 
 class _HourViewportTween extends Tween<_HourViewport> {

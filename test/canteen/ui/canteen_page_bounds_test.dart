@@ -29,8 +29,7 @@ void main() {
     await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 300));
+    await _pumpFor(tester, const Duration(milliseconds: 700));
 
     final pageView = tester.widget<PageView>(find.byType(PageView));
     final delegate = pageView.childrenDelegate as SliverChildBuilderDelegate;
@@ -50,8 +49,7 @@ void main() {
     await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 300));
+    await _pumpFor(tester, const Duration(milliseconds: 700));
 
     expect(
       find.byWidgetPredicate(
@@ -76,17 +74,16 @@ void main() {
     await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 300));
+    await _pumpFor(tester, const Duration(milliseconds: 700));
 
     expect(find.text(_mealNameFor(today)), findsOneWidget);
 
     await tester.drag(find.byType(PageView), const Offset(-400, 0));
-    await tester.pumpAndSettle();
+    await _pumpFor(tester, const Duration(milliseconds: 600));
     expect(find.text(_mealNameFor(today)), findsOneWidget);
 
     await tester.drag(find.byType(PageView), const Offset(400, 0));
-    await tester.pumpAndSettle();
+    await _pumpFor(tester, const Duration(milliseconds: 600));
     expect(find.text(_mealNameFor(today)), findsOneWidget);
   });
 
@@ -111,13 +108,20 @@ void main() {
     await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 500));
+    await _pumpFor(tester, const Duration(milliseconds: 900));
 
     final pageView = tester.widget<PageView>(find.byType(PageView));
     final delegate = pageView.childrenDelegate as SliverChildBuilderDelegate;
     expect(delegate.childCount, 2);
   });
+}
+
+Future<void> _pumpFor(WidgetTester tester, Duration total) async {
+  const step = Duration(milliseconds: 16);
+  final iterations = (total.inMilliseconds / step.inMilliseconds).ceil();
+  for (var i = 0; i < iterations; i++) {
+    await tester.pump(step);
+  }
 }
 
 Widget _wrapWithApp(CanteenViewModel viewModel) {

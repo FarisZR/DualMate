@@ -436,57 +436,61 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
         var hasWeekData = model.hasWeekData(weekStart);
         var lastUpdated = model.lastUpdatedForWeek(weekStart);
 
-        if ((!hasWeekData || isLoading) && meals.isEmpty) {
-          return AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
-            child: const SizedBox(
-              key: ValueKey<String>('canteen_loading'),
-              child: _MealLoadingList(),
-            ),
-          );
-        }
+        late final String stateKey;
+        late final Widget stateChild;
 
-        if (meals.isEmpty) {
-          return AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
-            child: SizedBox(
-              key: ValueKey("canteen_empty_${showError}"),
-              child: _buildEmptyState(
-                context,
-                showError: showError,
-                lastUpdated: lastUpdated,
-              ),
+        if ((!hasWeekData || isLoading) && meals.isEmpty) {
+          stateKey = 'loading';
+          stateChild = const _MealLoadingList();
+        } else if (meals.isEmpty) {
+          stateKey = 'empty_${showError ? 'error' : 'plain'}';
+          stateChild = _buildEmptyState(
+            context,
+            showError: showError,
+            lastUpdated: lastUpdated,
+          );
+        } else {
+          stateKey = 'ready_${meals.length}';
+          stateChild = RefreshIndicator(
+            onRefresh: () => model.loadWeek(weekStart),
+            child: ListView.builder(
+              key: PageStorageKey("canteen_${widget.date.toIso8601String()}"),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              itemCount: meals.length,
+              addAutomaticKeepAlives: false,
+              cacheExtent: 720,
+              itemBuilder: (context, index) {
+                var meal = meals[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: MealCard(meal: meal),
+                );
+              },
             ),
           );
         }
 
         return AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
-          switchInCurve: Curves.easeOut,
-          switchOutCurve: Curves.easeIn,
-          child: SizedBox(
-            key: ValueKey("canteen_ready_${meals.length}"),
-            child: RefreshIndicator(
-              onRefresh: () => model.loadWeek(weekStart),
-              child: ListView.builder(
-                key: PageStorageKey("canteen_${widget.date.toIso8601String()}"),
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                itemCount: meals.length,
-                addAutomaticKeepAlives: false,
-                cacheExtent: MediaQuery.of(context).size.height * 2.5,
-                itemBuilder: (context, index) {
-                  var meal = meals[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: MealCard(meal: meal),
-                  );
-                },
+          duration: const Duration(milliseconds: 260),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            final offsetAnimation = Tween<Offset>(
+              begin: const Offset(0, 0.03),
+              end: Offset.zero,
+            ).animate(animation);
+
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: offsetAnimation,
+                child: child,
               ),
-            ),
+            );
+          },
+          child: KeyedSubtree(
+            key: ValueKey<String>('canteen_state_$stateKey'),
+            child: stateChild,
           ),
         );
       },

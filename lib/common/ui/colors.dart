@@ -199,6 +199,12 @@ class ColorPalettes {
     );
 
     return themeData.copyWith(
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: isDark ? ColorPalettes.main[300] : ColorPalettes.main[500],
+        linearTrackColor:
+            (isDark ? ColorPalettes.main[900] : ColorPalettes.main[800])
+                ?.withValues(alpha: isDark ? 0.45 : 0.22),
+      ),
       snackBarTheme: themeData.snackBarTheme.copyWith(
         backgroundColor: isDark ? Color(0xff363635) : Color(0xfffafafa),
         contentTextStyle:

@@ -119,7 +119,7 @@ void main() {
   );
 
   testWidgets(
-    'shows loading overlay for empty visible week while refresh is running',
+    'shows delayed loading line while refresh is running',
     (tester) async {
       final provider = _BlockingTrackingScheduleProvider(
         const <ScheduleEntry>[],
@@ -141,7 +141,14 @@ void main() {
       await tester.pump();
 
       expect(
-        find.byKey(const ValueKey<String>('weekly_schedule_loading_overlay')),
+        find.byKey(const ValueKey<String>('weekly_schedule_loading_line')),
+        findsNothing,
+      );
+
+      await tester.pump(const Duration(milliseconds: 260));
+
+      expect(
+        find.byKey(const ValueKey<String>('weekly_schedule_loading_line')),
         findsOneWidget,
       );
 
