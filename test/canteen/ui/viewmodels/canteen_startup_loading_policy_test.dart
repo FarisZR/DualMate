@@ -26,7 +26,7 @@ void main() {
     expect(provider.refreshWeekIfStaleRequests, <DateTime>[weekStart]);
   });
 
-  test('prefetchAdjacentWeeksDebounced warms next week from network', () async {
+  test('prefetchAdjacentWeeksDebounced warms adjacent cache only', () async {
     final monday = DateTime(2026, 2, 9);
     final weekStart = toStartOfDay(toMonday(monday));
     final previous = toStartOfDay(weekStart.subtract(const Duration(days: 7)));
@@ -44,8 +44,8 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 320));
 
     expect(provider.cachedWeekRequests.toSet(), <DateTime>{previous, next});
-    expect(provider.refreshWeekIfStaleRequests, <DateTime>[next]);
-    expect(model.visibleContentDays, <DateTime>[weekStart, next]);
+    expect(provider.refreshWeekIfStaleRequests, isEmpty);
+    expect(model.visibleContentDays, <DateTime>[weekStart]);
   });
 
   test('refreshVisibleWeekIfStale throttles repeated same-week requests',

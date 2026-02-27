@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
@@ -115,6 +117,43 @@ void main() {
       viewModel.dispose();
     },
   );
+
+  testWidgets(
+    'shows loading overlay for empty visible week while refresh is running',
+    (tester) async {
+      final provider = _BlockingTrackingScheduleProvider(
+        const <ScheduleEntry>[],
+      );
+      final sourceProvider = _FakeScheduleSourceProvider();
+      final viewModel = WeeklyScheduleViewModel(
+        provider,
+        sourceProvider,
+        nowProvider: () => DateTime(2026, 2, 10, 11, 0),
+      );
+
+      await viewModel.updateSchedule(
+        DateTime(2026, 2, 9),
+        DateTime(2026, 2, 16),
+        force: true,
+      );
+
+      await tester.pumpWidget(_wrapWithApp(viewModel));
+      await tester.pump();
+
+      expect(
+        find.byKey(const ValueKey<String>('weekly_schedule_loading_overlay')),
+        findsOneWidget,
+      );
+
+      provider.completePendingUpdate();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(viewModel.isUpdating, isFalse);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      viewModel.dispose();
+    },
+  );
 }
 
 Widget _wrapWithApp(WeeklyScheduleViewModel viewModel) {
@@ -186,6 +225,31 @@ class _TrackingScheduleProvider implements ScheduleProvider {
   @override
   dynamic noSuchMethod(Invocation invocation) {
     throw UnsupportedError('Unexpected ScheduleProvider call: $invocation');
+  }
+}
+
+class _BlockingTrackingScheduleProvider extends _TrackingScheduleProvider {
+  final Completer<ScheduleQueryResult> _updatedScheduleCompleter =
+      Completer<ScheduleQueryResult>();
+
+  _BlockingTrackingScheduleProvider(super.entries);
+
+  @override
+  Future<ScheduleQueryResult> getUpdatedSchedule(
+    DateTime start,
+    DateTime end,
+    CancellationToken cancellationToken,
+  ) {
+    return _updatedScheduleCompleter.future;
+  }
+
+  void completePendingUpdate() {
+    if (_updatedScheduleCompleter.isCompleted) {
+      return;
+    }
+    _updatedScheduleCompleter.complete(
+      ScheduleQueryResult(Schedule(), const []),
+    );
   }
 }
 

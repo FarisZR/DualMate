@@ -36,7 +36,6 @@ class _CanteenPageState extends State<CanteenPage> {
       if (!mounted) return;
       PerformanceTelemetry.instance.markNavEvent(name: "canteen.entry");
       viewModel.primeVisibleWeek(baseDate);
-      viewModel.prefetchAdjacentWeeksDebounced(baseDate);
       _applyWidgetPayload();
     });
   }

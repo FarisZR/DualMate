@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
@@ -154,6 +156,26 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 30));
     expect(provider.updatedScheduleRequests, 2);
   });
+
+  test('isUpdating stays true while visible background refresh is in flight',
+      () async {
+    final provider = _BlockingScheduleProvider();
+    final sourceProvider = _FakeScheduleSourceProvider();
+    final viewModel = WeeklyScheduleViewModel(provider, sourceProvider);
+
+    final weekStart = DateTime(2026, 2, 9);
+    final weekEnd = DateTime(2026, 2, 16);
+
+    await viewModel.updateSchedule(weekStart, weekEnd, force: true);
+    expect(viewModel.isUpdating, isTrue);
+
+    provider.complete(
+      ScheduleQueryResult(Schedule(), const []),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+
+    expect(viewModel.isUpdating, isFalse);
+  });
 }
 
 ScheduleEntry _entry(DateTime start, String suffix) {
@@ -213,6 +235,29 @@ class _CountingScheduleProvider extends _FakeScheduleProvider {
   ) async {
     updatedScheduleRequests += 1;
     return super.getUpdatedSchedule(start, end, cancellationToken);
+  }
+}
+
+class _BlockingScheduleProvider extends _FakeScheduleProvider {
+  final Completer<ScheduleQueryResult> _updatedScheduleCompleter =
+      Completer<ScheduleQueryResult>();
+
+  _BlockingScheduleProvider() : super(const <ScheduleEntry>[]);
+
+  @override
+  Future<ScheduleQueryResult> getUpdatedSchedule(
+    DateTime start,
+    DateTime end,
+    CancellationToken cancellationToken,
+  ) {
+    return _updatedScheduleCompleter.future;
+  }
+
+  void complete(ScheduleQueryResult result) {
+    if (_updatedScheduleCompleter.isCompleted) {
+      return;
+    }
+    _updatedScheduleCompleter.complete(result);
   }
 }
 

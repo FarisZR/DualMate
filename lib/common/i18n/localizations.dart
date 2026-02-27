@@ -352,6 +352,8 @@ class L {
   String get scheduleQueryFailedOpenInBrowser =>
       _getValue("scheduleQueryFailedOpenInBrowser");
 
+  String get scheduleLoadingLatest => _getValue("scheduleLoadingLatest");
+
   String get onboardingScheduleSourceTitle =>
       _getValue("onboardingScheduleSourceTitle");
 

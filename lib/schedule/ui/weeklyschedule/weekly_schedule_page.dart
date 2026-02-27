@@ -210,6 +210,74 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                             : const SizedBox.shrink();
                       },
                     ),
+                    PropertyChangeConsumer<WeeklyScheduleViewModel, String>(
+                      properties: const ['isUpdating', 'weekSchedule'],
+                      builder: (
+                        BuildContext context,
+                        WeeklyScheduleViewModel? model,
+                        Set<String>? properties,
+                      ) {
+                        if (model == null) return const SizedBox.shrink();
+                        final showOverlay = model.isUpdating &&
+                            (model.weekSchedule?.entries.isEmpty ?? true);
+                        return IgnorePointer(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 220),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeInCubic,
+                            child: showOverlay
+                                ? Container(
+                                    key: const ValueKey<String>(
+                                      'weekly_schedule_loading_overlay',
+                                    ),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .surface
+                                        .withValues(alpha: 0.68),
+                                    alignment: Alignment.center,
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .surfaceContainerHigh,
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                          20,
+                                          14,
+                                          20,
+                                          14,
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2.8,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Text(
+                                              L
+                                                  .of(context)
+                                                  .scheduleLoadingLatest,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
