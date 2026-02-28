@@ -350,22 +350,37 @@ class DateManagementViewModel extends BaseViewModel {
     _notifySafely("allDates");
   }
 
-  void _setImportantEvents(List<ImportantEvent> events) {
+  void _setImportantEvents(
+    List<ImportantEvent> events, {
+    bool notify = true,
+  }) {
     _importantEvents = events;
     _updateLastNonHolidayEventEnd(events);
-    _setImportantEventSections();
-    _notifySafely("importantEvents");
+    _setImportantEventSections(notify: notify);
+    if (notify) {
+      _notifySafely("importantEvents");
+    }
   }
 
-  void _appendImportantEvents(DateRange window, List<ImportantEvent> events) {
+  void _appendImportantEvents(
+    DateRange window,
+    List<ImportantEvent> events, {
+    bool notify = true,
+  }) {
     _trackRaplaWindow(window);
     _importantEvents = _mergeImportantEvents(_importantEvents, events);
     _updateLastNonHolidayEventEnd(_importantEvents);
-    _setImportantEventSections();
-    _notifySafely("importantEvents");
+    _setImportantEventSections(notify: notify);
+    if (notify) {
+      _notifySafely("importantEvents");
+    }
   }
 
-  void _replaceImportantEvents(DateRange window, List<ImportantEvent> events) {
+  void _replaceImportantEvents(
+    DateRange window,
+    List<ImportantEvent> events, {
+    bool notify = true,
+  }) {
     _trackRaplaWindow(window);
     var trimmed = _importantEvents.where((event) {
       var endsBefore = event.end.isBefore(window.start) ||
@@ -376,8 +391,10 @@ class DateManagementViewModel extends BaseViewModel {
     }).toList(growable: false);
     _importantEvents = _mergeImportantEvents(trimmed, events);
     _updateLastNonHolidayEventEnd(_importantEvents);
-    _setImportantEventSections();
-    _notifySafely("importantEvents");
+    _setImportantEventSections(notify: notify);
+    if (notify) {
+      _notifySafely("importantEvents");
+    }
   }
 
   void _trackRaplaWindow(DateRange window) {
@@ -408,12 +425,14 @@ class DateManagementViewModel extends BaseViewModel {
     return deduped;
   }
 
-  void _setImportantEventSections() {
+  void _setImportantEventSections({bool notify = true}) {
     _importantEventSections = _importantEventOrganizer.buildSections(
       _importantEvents,
       includeOutsideStudy: _showOutOfStudyEvents,
     );
-    _notifySafely("importantEventSections");
+    if (notify) {
+      _notifySafely("importantEventSections");
+    }
   }
 
   void _addEvent(
@@ -641,6 +660,7 @@ class DateManagementViewModel extends BaseViewModel {
     CancellationToken token, {
     required bool advanceWindow,
     required bool refresh,
+    bool notify = true,
   }) async {
     try {
       var cached = await _raplaImportantEventsProvider.getCachedImportantEvents(
@@ -649,7 +669,7 @@ class DateManagementViewModel extends BaseViewModel {
       );
 
       if (cached.isNotEmpty) {
-        _appendImportantEvents(window, cached);
+        _appendImportantEvents(window, cached, notify: notify);
       }
 
       if (refresh) {
@@ -791,6 +811,7 @@ class DateManagementViewModel extends BaseViewModel {
 
     var windowStart = start;
     var lastWindowEnd = start;
+    var didChangeEvents = false;
     while (windowStart.isBefore(end)) {
       var window =
           DateRange(start: windowStart, end: _addMonths(windowStart, 3));
@@ -799,10 +820,17 @@ class DateManagementViewModel extends BaseViewModel {
         _updateMutex.token,
         advanceWindow: false,
         refresh: false,
+        notify: false,
       );
       if (_isDisposed) return;
+      didChangeEvents = true;
       lastWindowEnd = window.end;
       windowStart = window.end;
+    }
+
+    if (didChangeEvents) {
+      _setImportantEventSections();
+      _notifySafely("importantEvents");
     }
 
     _nextRaplaWindow = DateRange(

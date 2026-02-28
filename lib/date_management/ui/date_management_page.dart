@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/widgets/error_display.dart';
 import 'package:dualmate/common/util/date_utils.dart';
@@ -22,25 +24,33 @@ class DateManagementPage extends StatefulWidget {
 }
 
 class _DateManagementPageState extends State<DateManagementPage> {
+  static const Duration _initialLoadDelay = Duration(milliseconds: 320);
+
   final ScrollController _raplaScrollController = ScrollController();
+  Timer? _initializeTimer;
   bool _raplaAutoloadScheduled = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      var viewModel =
-          Provider.of<DateManagementViewModel>(context, listen: false);
-      SchedulerBinding.instance.scheduleTask<void>(
-        viewModel.initialize,
-        Priority.idle,
-        debugLabel: 'dates.initialize',
-      );
+      _initializeTimer?.cancel();
+      _initializeTimer = Timer(_initialLoadDelay, () {
+        if (!mounted) return;
+        var viewModel =
+            Provider.of<DateManagementViewModel>(context, listen: false);
+        SchedulerBinding.instance.scheduleTask<void>(
+          viewModel.initialize,
+          Priority.idle,
+          debugLabel: 'dates.initialize',
+        );
+      });
     });
   }
 
   @override
   void dispose() {
+    _initializeTimer?.cancel();
     _raplaScrollController.dispose();
     super.dispose();
   }
