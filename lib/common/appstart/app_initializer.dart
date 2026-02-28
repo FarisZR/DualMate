@@ -70,10 +70,32 @@ Future<void> initializeAppBackground(bool isBackground) async {
 
   NotificationsInitialize().setupNotifications();
   print("Background init: notifications ${stopwatch.elapsedMilliseconds}ms");
-  BackgroundInitialize().setupBackgroundScheduling();
-  print("Background init: workmanager ${stopwatch.elapsedMilliseconds}ms");
-  NotificationScheduleChangedInitialize().setupNotification();
-  print("Background init: schedule notify ${stopwatch.elapsedMilliseconds}ms");
+  try {
+    await BackgroundInitialize().setupBackgroundScheduling();
+    print("Background init: workmanager ${stopwatch.elapsedMilliseconds}ms");
+  } on Exception catch (exception, trace) {
+    print("Background init: workmanager failed (${exception.runtimeType})");
+    print(exception);
+    print(trace);
+  } catch (error, trace) {
+    print("Background init: workmanager failed");
+    print(error);
+    print(trace);
+  }
+
+  try {
+    NotificationScheduleChangedInitialize().setupNotification();
+    print(
+        "Background init: schedule notify ${stopwatch.elapsedMilliseconds}ms");
+  } on Exception catch (exception, trace) {
+    print("Background init: schedule notify failed (${exception.runtimeType})");
+    print(exception);
+    print(trace);
+  } catch (error, trace) {
+    print("Background init: schedule notify failed");
+    print(error);
+    print(trace);
+  }
 
   tz.initializeTimeZones();
   print("Background init: time zones ${stopwatch.elapsedMilliseconds}ms");
