@@ -121,7 +121,7 @@ void main() {
   testWidgets(
     'shows delayed loading line while refresh is running',
     (tester) async {
-      final provider = _BlockingTrackingScheduleProvider(
+      final provider = _QueuedBlockingTrackingScheduleProvider(
         const <ScheduleEntry>[],
       );
       final sourceProvider = _FakeScheduleSourceProvider();
@@ -130,6 +130,15 @@ void main() {
         sourceProvider,
         nowProvider: () => DateTime(2026, 2, 10, 11, 0),
       );
+
+      await viewModel.updateSchedule(
+        DateTime(2026, 2, 9),
+        DateTime(2026, 2, 16),
+        force: true,
+      );
+      expect(viewModel.isUpdating, isTrue);
+      provider.completeNextUpdate();
+      await tester.pump(const Duration(milliseconds: 40));
 
       await viewModel.updateSchedule(
         DateTime(2026, 2, 9),
@@ -152,9 +161,52 @@ void main() {
         findsOneWidget,
       );
 
-      provider.completePendingUpdate();
+      provider.completeNextUpdate();
       await tester.pump(const Duration(milliseconds: 300));
       expect(viewModel.isUpdating, isFalse);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      viewModel.dispose();
+    },
+  );
+
+  testWidgets(
+    'shows loading line immediately for an unfetched week',
+    (tester) async {
+      final provider = _QueuedBlockingTrackingScheduleProvider(
+        const <ScheduleEntry>[],
+      );
+      final sourceProvider = _FakeScheduleSourceProvider();
+      final viewModel = WeeklyScheduleViewModel(
+        provider,
+        sourceProvider,
+        nowProvider: () => DateTime(2026, 2, 10, 11, 0),
+      );
+
+      await viewModel.updateSchedule(
+        DateTime(2026, 2, 9),
+        DateTime(2026, 2, 16),
+        force: true,
+      );
+      expect(viewModel.isUpdating, isTrue);
+      provider.completeNextUpdate();
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(viewModel.isUpdating, isFalse);
+
+      await tester.pumpWidget(_wrapWithApp(viewModel));
+      await tester.pump();
+
+      unawaited(viewModel.openWeekContaining(DateTime(2026, 2, 17)));
+      await tester.pump(const Duration(milliseconds: 40));
+
+      expect(
+        find.byKey(const ValueKey<String>('weekly_schedule_loading_line')),
+        findsOneWidget,
+      );
+
+      provider.completeNextUpdate();
+      await tester.pump(const Duration(milliseconds: 300));
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
@@ -235,11 +287,12 @@ class _TrackingScheduleProvider implements ScheduleProvider {
   }
 }
 
-class _BlockingTrackingScheduleProvider extends _TrackingScheduleProvider {
-  final Completer<ScheduleQueryResult> _updatedScheduleCompleter =
-      Completer<ScheduleQueryResult>();
+class _QueuedBlockingTrackingScheduleProvider
+    extends _TrackingScheduleProvider {
+  final List<Completer<ScheduleQueryResult>> _pendingUpdates =
+      <Completer<ScheduleQueryResult>>[];
 
-  _BlockingTrackingScheduleProvider(super.entries);
+  _QueuedBlockingTrackingScheduleProvider(super.entries);
 
   @override
   Future<ScheduleQueryResult> getUpdatedSchedule(
@@ -247,16 +300,20 @@ class _BlockingTrackingScheduleProvider extends _TrackingScheduleProvider {
     DateTime end,
     CancellationToken cancellationToken,
   ) {
-    return _updatedScheduleCompleter.future;
+    final completer = Completer<ScheduleQueryResult>();
+    _pendingUpdates.add(completer);
+    return completer.future;
   }
 
-  void completePendingUpdate() {
-    if (_updatedScheduleCompleter.isCompleted) {
+  void completeNextUpdate() {
+    if (_pendingUpdates.isEmpty) {
       return;
     }
-    _updatedScheduleCompleter.complete(
-      ScheduleQueryResult(Schedule(), const []),
-    );
+    final completer = _pendingUpdates.removeAt(0);
+    if (completer.isCompleted) {
+      return;
+    }
+    completer.complete(ScheduleQueryResult(Schedule(), const []));
   }
 }
 

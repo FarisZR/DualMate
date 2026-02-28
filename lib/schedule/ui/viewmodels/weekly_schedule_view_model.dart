@@ -65,6 +65,13 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   DateTime get now => _nowProvider();
 
+  bool get visibleWeekNeedsInitialFetch {
+    if (!_hasCurrentDateRange) {
+      return false;
+    }
+    return _needsInitialFetchForWindow(currentDateStart, currentDateEnd);
+  }
+
   Timer? _errorResetTimer;
   Timer? _updateNowTimer;
   Timer? _visibleRefreshDebounce;
@@ -282,7 +289,12 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   Future openWeekContaining(DateTime date) async {
     final weekStart = toStartOfDay(toDayOfWeek(date, DateTime.monday));
     final weekEnd = toNextWeek(weekStart);
+    final needsInitialFetch = _needsInitialFetchForWindow(weekStart, weekEnd);
     await _openWeekFromCache(weekStart, weekEnd);
+    if (needsInitialFetch) {
+      unawaited(updateSchedule(weekStart, weekEnd, force: true));
+      return;
+    }
     _debounceVisibleRefresh(weekStart, weekEnd);
   }
 
@@ -564,6 +576,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   bool _isWindowStale(DateTime start, DateTime end, DateTime now) {
     var gate = _windowFreshnessGates[_windowKey(start, end)];
     return gate == null || gate.isStale(start, end, now);
+  }
+
+  bool _needsInitialFetchForWindow(DateTime start, DateTime end) {
+    return !_windowFreshnessGates.containsKey(_windowKey(start, end));
   }
 
   void _markWindowFetched(DateTime start, DateTime end, DateTime now) {

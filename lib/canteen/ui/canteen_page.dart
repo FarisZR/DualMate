@@ -163,7 +163,33 @@ class _CanteenPageState extends State<CanteenPage> {
               Expanded(
                 child: Stack(
                   children: [
-                    _buildPageContent(model, visibleDays),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 320),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, animation) {
+                        final offsetAnimation = Tween<Offset>(
+                          begin: const Offset(0, 0.04),
+                          end: Offset.zero,
+                        ).animate(animation);
+
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: offsetAnimation,
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: KeyedSubtree(
+                        key: ValueKey<String>(
+                          visibleDays.isEmpty
+                              ? 'canteen_page_content_single'
+                              : 'canteen_page_content_paged_${visibleDays.length}',
+                        ),
+                        child: _buildPageContent(model, visibleDays),
+                      ),
+                    ),
                     ValueListenableBuilder<int>(
                       valueListenable: pageNotifier,
                       builder: (context, page, _) {
@@ -438,19 +464,20 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
 
         late final String stateKey;
         late final Widget stateChild;
+        final dayKey = toStartOfDay(widget.date).millisecondsSinceEpoch;
 
         if ((!hasWeekData || isLoading) && meals.isEmpty) {
-          stateKey = 'loading';
+          stateKey = 'loading_$dayKey';
           stateChild = const _MealLoadingList();
         } else if (meals.isEmpty) {
-          stateKey = 'empty_${showError ? 'error' : 'plain'}';
+          stateKey = 'empty_${showError ? 'error' : 'plain'}_$dayKey';
           stateChild = _buildEmptyState(
             context,
             showError: showError,
             lastUpdated: lastUpdated,
           );
         } else {
-          stateKey = 'ready_${meals.length}';
+          stateKey = 'ready_${meals.length}_$dayKey';
           stateChild = RefreshIndicator(
             onRefresh: () => model.loadWeek(weekStart),
             child: ListView.builder(
@@ -471,12 +498,12 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
         }
 
         return AnimatedSwitcher(
-          duration: const Duration(milliseconds: 260),
+          duration: const Duration(milliseconds: 320),
           switchInCurve: Curves.easeOutCubic,
           switchOutCurve: Curves.easeInCubic,
           transitionBuilder: (child, animation) {
             final offsetAnimation = Tween<Offset>(
-              begin: const Offset(0, 0.03),
+              begin: const Offset(0, 0.06),
               end: Offset.zero,
             ).animate(animation);
 

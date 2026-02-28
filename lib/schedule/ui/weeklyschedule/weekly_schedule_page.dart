@@ -209,6 +209,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                         if (model == null) return const SizedBox.shrink();
                         return _TopLoadingIndicator(
                           isUpdating: model.isUpdating,
+                          showWithoutDelay: model.visibleWeekNeedsInitialFetch,
                         );
                       },
                     ),
@@ -688,10 +689,15 @@ class _HourViewport {
 
 class _TopLoadingIndicator extends StatefulWidget {
   static const Duration _showDelay = Duration(milliseconds: 220);
+  static const Duration _minimumVisibleDuration = Duration(milliseconds: 180);
 
   final bool isUpdating;
+  final bool showWithoutDelay;
 
-  const _TopLoadingIndicator({required this.isUpdating});
+  const _TopLoadingIndicator({
+    required this.isUpdating,
+    required this.showWithoutDelay,
+  });
 
   @override
   State<_TopLoadingIndicator> createState() => _TopLoadingIndicatorState();
@@ -700,6 +706,7 @@ class _TopLoadingIndicator extends StatefulWidget {
 class _TopLoadingIndicatorState extends State<_TopLoadingIndicator> {
   Timer? _showTimer;
   bool _showIndicator = false;
+  DateTime? _shownAt;
 
   @override
   void initState() {
@@ -710,7 +717,8 @@ class _TopLoadingIndicatorState extends State<_TopLoadingIndicator> {
   @override
   void didUpdateWidget(covariant _TopLoadingIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.isUpdating == widget.isUpdating) {
+    if (oldWidget.isUpdating == widget.isUpdating &&
+        oldWidget.showWithoutDelay == widget.showWithoutDelay) {
       return;
     }
     _syncFromState();
@@ -724,6 +732,19 @@ class _TopLoadingIndicatorState extends State<_TopLoadingIndicator> {
 
   void _syncFromState() {
     if (widget.isUpdating) {
+      if (widget.showWithoutDelay) {
+        _showTimer?.cancel();
+        _showTimer = null;
+        if (_showIndicator) {
+          return;
+        }
+        setState(() {
+          _showIndicator = true;
+          _shownAt = DateTime.now();
+        });
+        return;
+      }
+
       if (_showIndicator || _showTimer != null) {
         return;
       }
@@ -734,6 +755,7 @@ class _TopLoadingIndicatorState extends State<_TopLoadingIndicator> {
         }
         setState(() {
           _showIndicator = true;
+          _shownAt = DateTime.now();
           _showTimer = null;
         });
       });
@@ -745,8 +767,30 @@ class _TopLoadingIndicatorState extends State<_TopLoadingIndicator> {
     if (!_showIndicator) {
       return;
     }
+
+    final shownAt = _shownAt;
+    if (shownAt != null) {
+      final elapsed = DateTime.now().difference(shownAt);
+      final remaining = _TopLoadingIndicator._minimumVisibleDuration - elapsed;
+      if (remaining > Duration.zero) {
+        _showTimer = Timer(remaining, () {
+          if (!mounted || widget.isUpdating) {
+            _showTimer = null;
+            return;
+          }
+          setState(() {
+            _showIndicator = false;
+            _shownAt = null;
+            _showTimer = null;
+          });
+        });
+        return;
+      }
+    }
+
     setState(() {
       _showIndicator = false;
+      _shownAt = null;
     });
   }
 
