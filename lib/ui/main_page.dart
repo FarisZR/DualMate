@@ -24,8 +24,12 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
+  static const Duration _drawerCloseNavigationDelay =
+      Duration(milliseconds: 260);
+
   bool _appLaunchDialogsShown = false;
   bool _isDrawerOpen = false;
+  int? _pendingDrawerNavigationIndex;
   final ValueNotifier<int> _currentEntryIndex = ValueNotifier<int>(0);
   final Map<int, Widget> _sectionCache = {};
   final Set<int> _loadedSections = <int>{};
@@ -116,6 +120,9 @@ class _MainPageState extends State<MainPage> {
           setState(() {
             _isDrawerOpen = isOpen;
           });
+          if (!isOpen) {
+            _applyPendingDrawerNavigation();
+          }
         },
         appBar: AppBar(
           backgroundColor: Colors.transparent,
@@ -201,7 +208,26 @@ class _MainPageState extends State<MainPage> {
   void _onNavigationTapped(int index) {
     PerformanceTelemetry.instance
         .markNavEvent(name: "drawer.tab.${navigationEntries[index].route}");
+
+    if (!PlatformUtil.isTablet() && _isDrawerOpen) {
+      _pendingDrawerNavigationIndex = index;
+      return;
+    }
+
     _setCurrentEntryIndex(index);
+  }
+
+  void _applyPendingDrawerNavigation() {
+    final pendingIndex = _pendingDrawerNavigationIndex;
+    _pendingDrawerNavigationIndex = null;
+    if (pendingIndex == null || pendingIndex == _currentEntryIndex.value) {
+      return;
+    }
+
+    Future<void>.delayed(_drawerCloseNavigationDelay, () {
+      if (!mounted) return;
+      _setCurrentEntryIndex(pendingIndex);
+    });
   }
 
   void _setCurrentEntryFromRoute(String? route) {
