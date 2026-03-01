@@ -48,6 +48,8 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
   RootViewModel? _rootViewModel;
   bool _backgroundInitStarted = false;
+  bool _onboardingDeferredInitListenerAttached = false;
+  Stopwatch? _deferredInitStopwatch;
   static const MethodChannel _navigationChannel =
       MethodChannel('com.fariszr.dualmate/navigation');
   String? _pendingRoute;
@@ -72,6 +74,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _detachOnboardingDeferredInitListener();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -209,10 +212,14 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         return;
       }
 
+      _deferredInitStopwatch = stopwatch;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_backgroundInitStarted) return;
-        _backgroundInitStarted = true;
-        _runDeferredInitialization(stopwatch);
+        if (!mounted || _backgroundInitStarted) return;
+        if (_rootViewModel?.isOnboarding ?? false) {
+          _attachOnboardingDeferredInitListener();
+          return;
+        }
+        _startDeferredInitialization();
       });
     } catch (error, trace) {
       print("Root init failed");
@@ -403,5 +410,45 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       print(error);
       print(trace);
     }
+  }
+
+  void _attachOnboardingDeferredInitListener() {
+    if (_onboardingDeferredInitListenerAttached || _rootViewModel == null) {
+      return;
+    }
+
+    _onboardingDeferredInitListenerAttached = true;
+    _rootViewModel!.addListener(
+      _onOnboardingStateChanged,
+      const ["isOnboarding"],
+    );
+  }
+
+  void _detachOnboardingDeferredInitListener() {
+    if (!_onboardingDeferredInitListenerAttached || _rootViewModel == null) {
+      return;
+    }
+
+    _onboardingDeferredInitListenerAttached = false;
+    _rootViewModel!.removeListener(_onOnboardingStateChanged);
+  }
+
+  void _onOnboardingStateChanged() {
+    if (!mounted || _backgroundInitStarted) return;
+    if (_rootViewModel?.isOnboarding ?? true) return;
+
+    _detachOnboardingDeferredInitListener();
+    _startDeferredInitialization();
+  }
+
+  void _startDeferredInitialization() {
+    if (!mounted || _backgroundInitStarted) return;
+
+    _backgroundInitStarted = true;
+    final stopwatch = _deferredInitStopwatch ?? (Stopwatch()..start());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_runDeferredInitialization(stopwatch));
+    });
   }
 }
