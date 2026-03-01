@@ -16,7 +16,7 @@ class NotificationApi {
   /// Initialize the notifications. You can't show any notifications before you
   /// call this method
   ///
-  Future<void> initialize() async {
+  Future<void> initialize({bool requestRuntimePermission = true}) async {
     const initializationSettingsAndroid = AndroidInitializationSettings(
       'outline_event_note_24',
     );
@@ -32,7 +32,9 @@ class NotificationApi {
       initializationSettings,
       onDidReceiveNotificationResponse: selectNotification,
     );
-    await _requestRuntimePermissions();
+    if (requestRuntimePermission) {
+      await _requestRuntimePermissions();
+    }
   }
 
   Future<void> _requestRuntimePermissions() async {
@@ -109,7 +111,8 @@ class NotificationApi {
 ///
 class VoidNotificationApi extends NotificationApi {
   @override
-  Future<void> initialize() => Future.value();
+  Future<void> initialize({bool requestRuntimePermission = true}) =>
+      Future.value();
 
   @override
   void selectNotification(NotificationResponse notificationResponse) {}

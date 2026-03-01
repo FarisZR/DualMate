@@ -131,13 +131,21 @@ class ScheduleSourceProvider {
     return InvalidScheduleSource();
   }
 
-  Future<void> setupForRapla(String url) async {
+  Future<void> setupForRapla(
+    String url, {
+    bool clearCachedEntries = true,
+    bool setupSource = true,
+  }) async {
     await _preferencesProvider.setRaplaUrl(url);
     await _preferencesProvider
         .setScheduleSourceType(ScheduleSourceType.Rapla.index);
 
-    await _clearEntryCache();
-    await setupScheduleSource();
+    if (clearCachedEntries) {
+      await _clearEntryCache();
+    }
+    if (setupSource) {
+      await setupScheduleSource();
+    }
 
     await analytics.setUserProperty(
       name: "schedule_source",
