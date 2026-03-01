@@ -19,6 +19,31 @@ void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
+    'builds without transient exception before weekly initialization',
+    (tester) async {
+      final provider = _TrackingScheduleProvider(const <ScheduleEntry>[]);
+      final sourceProvider = _FakeScheduleSourceProvider();
+      final viewModel = WeeklyScheduleViewModel(
+        provider,
+        sourceProvider,
+        nowProvider: () => DateTime(2026, 2, 10, 10, 0),
+      );
+
+      await tester.pumpWidget(_wrapWithApp(viewModel));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      await tester.pump(const Duration(milliseconds: 120));
+      expect(tester.takeException(), isNull);
+      expect(find.byType(WeeklySchedulePage), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      viewModel.dispose();
+    },
+  );
+
+  testWidgets(
     'resume-triggered background refresh keeps monday lessons visible',
     (tester) async {
       const mondayTitle = 'MONDAY_ANCHOR';

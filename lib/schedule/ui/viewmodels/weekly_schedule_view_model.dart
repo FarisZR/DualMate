@@ -27,8 +27,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   final ScheduleSourceProvider scheduleSourceProvider;
   final DateTime Function() _nowProvider;
 
-  late DateTime currentDateStart;
-  late DateTime currentDateEnd;
+  DateTime currentDateStart;
+  DateTime currentDateEnd;
 
   bool _hasCurrentDateRange = false;
 
@@ -95,7 +95,14 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     this.scheduleProvider,
     this.scheduleSourceProvider, {
     DateTime Function()? nowProvider,
-  }) : _nowProvider = nowProvider ?? DateTime.now;
+  })  : _nowProvider = nowProvider ?? DateTime.now,
+        currentDateStart = _resolveInitialWeekStart(nowProvider),
+        currentDateEnd = toNextWeek(_resolveInitialWeekStart(nowProvider));
+
+  static DateTime _resolveInitialWeekStart(DateTime Function()? nowProvider) {
+    final now = (nowProvider ?? DateTime.now)();
+    return toStartOfDay(toDayOfWeek(now, DateTime.monday));
+  }
 
   Future<void> initialize() async {
     if (_initialized) return;
