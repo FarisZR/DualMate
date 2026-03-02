@@ -41,9 +41,7 @@ void main() {
     expect(prewarmCalls, 1);
   });
 
-  test('notification runtime permission is deferred on first launch', () {
-    expect(shouldRequestNotificationPermissionForLaunchCount(0), isFalse);
-    expect(shouldRequestNotificationPermissionForLaunchCount(1), isFalse);
-    expect(shouldRequestNotificationPermissionForLaunchCount(2), isTrue);
+  test('notification runtime permission is not auto-requested at startup', () {
+    expect(shouldAutoRequestNotificationPermissionAtStartup(), isFalse);
   });
 }

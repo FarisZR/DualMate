@@ -21,8 +21,8 @@ bool isBaseInitialized = false;
 bool isForegroundHeavyInitialized = false;
 bool isForegroundCanteenPrewarmInitialized = false;
 
-bool shouldRequestNotificationPermissionForLaunchCount(int launchCount) {
-  return launchCount > 1;
+bool shouldAutoRequestNotificationPermissionAtStartup() {
+  return false;
 }
 
 Future<void> initializeAppBase(bool isBackground) async {
@@ -73,9 +73,7 @@ Future<void> initializeAppBackground(bool isBackground) async {
   print("Background init: widgets ${stopwatch.elapsedMilliseconds}ms");
 
   final shouldRequestNotificationPermission =
-      await _shouldRequestNotificationRuntimePermission(
-    isBackground: isBackground,
-  );
+      shouldAutoRequestNotificationPermissionAtStartup();
   await NotificationsInitialize().setupNotifications(
     requestRuntimePermission: shouldRequestNotificationPermission,
   );
@@ -210,24 +208,6 @@ Future<void> _setupCalendarSyncInBackground(Stopwatch stopwatch) async {
     print(error);
     print(trace);
     // Swallowing here is intentional; we don't want to block startup.
-  }
-}
-
-Future<bool> _shouldRequestNotificationRuntimePermission({
-  required bool isBackground,
-}) async {
-  if (isBackground) {
-    return false;
-  }
-
-  try {
-    final appLaunchCounter = await KiwiContainer()
-        .resolve<PreferencesProvider>()
-        .getAppLaunchCounter();
-    return shouldRequestNotificationPermissionForLaunchCount(appLaunchCounter);
-  } catch (_) {
-    // Best effort; if we cannot read preferences we keep current behavior.
-    return true;
   }
 }
 

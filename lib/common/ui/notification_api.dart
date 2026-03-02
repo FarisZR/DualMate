@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:developer' as developer;
 
@@ -8,9 +9,30 @@ import 'package:flutter/services.dart';
 ///
 /// Provides methods to display native notifications
 ///
+typedef NotificationPluginInitializer = Future<bool?> Function(
+  FlutterLocalNotificationsPlugin plugin,
+  InitializationSettings settings,
+  DidReceiveNotificationResponseCallback onDidReceiveNotificationResponse,
+);
+
+typedef NotificationRuntimePermissionRequester = Future<bool?> Function(
+  FlutterLocalNotificationsPlugin plugin,
+);
+
 class NotificationApi {
-  final FlutterLocalNotificationsPlugin _localNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _localNotificationsPlugin;
+  final NotificationPluginInitializer _pluginInitializer;
+  final NotificationRuntimePermissionRequester _runtimePermissionRequester;
+
+  NotificationApi({
+    FlutterLocalNotificationsPlugin? localNotificationsPlugin,
+    NotificationPluginInitializer? pluginInitializer,
+    NotificationRuntimePermissionRequester? runtimePermissionRequester,
+  })  : _localNotificationsPlugin =
+            localNotificationsPlugin ?? FlutterLocalNotificationsPlugin(),
+        _pluginInitializer = pluginInitializer ?? _defaultPluginInitializer,
+        _runtimePermissionRequester =
+            runtimePermissionRequester ?? _defaultRuntimePermissionRequester;
 
   ///
   /// Initialize the notifications. You can't show any notifications before you
@@ -28,25 +50,29 @@ class NotificationApi {
       iOS: initializationSettingsIOS,
     );
 
-    await _localNotificationsPlugin.initialize(
+    await _pluginInitializer(
+      _localNotificationsPlugin,
       initializationSettings,
-      onDidReceiveNotificationResponse: selectNotification,
+      selectNotification,
     );
     if (requestRuntimePermission) {
-      await _requestRuntimePermissions();
+      unawaited(this.requestRuntimePermission());
     }
   }
 
-  Future<void> _requestRuntimePermissions() async {
-    final androidPlugin =
-        _localNotificationsPlugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+  Future<bool?> requestRuntimePermission() async {
+    return _requestRuntimePermissionsBestEffort();
+  }
+
+  Future<bool?> _requestRuntimePermissionsBestEffort() async {
     try {
-      final granted = await androidPlugin?.requestNotificationsPermission();
+      final granted =
+          await _runtimePermissionRequester(_localNotificationsPlugin);
       developer.log(
         'Notification runtime permission requested: $granted',
         name: 'notification_api',
       );
+      return granted;
     } on PlatformException catch (error, trace) {
       developer.log(
         'Notification runtime permission request failed',
@@ -54,7 +80,7 @@ class NotificationApi {
         error: error,
         stackTrace: trace,
       );
-      rethrow;
+      return null;
     } on Exception catch (error, trace) {
       developer.log(
         'Notification runtime permission request failed',
@@ -62,8 +88,35 @@ class NotificationApi {
         error: error,
         stackTrace: trace,
       );
-      rethrow;
+      return null;
+    } catch (error, trace) {
+      developer.log(
+        'Notification runtime permission request failed',
+        name: 'notification_api',
+        error: error,
+        stackTrace: trace,
+      );
+      return null;
     }
+  }
+
+  static Future<bool?> _defaultPluginInitializer(
+    FlutterLocalNotificationsPlugin plugin,
+    InitializationSettings settings,
+    DidReceiveNotificationResponseCallback onDidReceiveNotificationResponse,
+  ) {
+    return plugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: onDidReceiveNotificationResponse,
+    );
+  }
+
+  static Future<bool?> _defaultRuntimePermissionRequester(
+    FlutterLocalNotificationsPlugin plugin,
+  ) async {
+    final androidPlugin = plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    return androidPlugin?.requestNotificationsPermission();
   }
 
   ///
@@ -113,6 +166,9 @@ class VoidNotificationApi extends NotificationApi {
   @override
   Future<void> initialize({bool requestRuntimePermission = true}) =>
       Future.value();
+
+  @override
+  Future<bool?> requestRuntimePermission() => Future.value(null);
 
   @override
   void selectNotification(NotificationResponse notificationResponse) {}
