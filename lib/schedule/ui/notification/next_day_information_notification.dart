@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
@@ -14,13 +16,11 @@ class NextDayInformationNotification extends TaskCallback {
   final NotificationApi _notificationApi;
   final ScheduleEntryRepository _scheduleEntryRepository;
   final WorkSchedulerService _scheduler;
-  final L _localization;
 
   NextDayInformationNotification(
     this._notificationApi,
     this._scheduleEntryRepository,
     this._scheduler,
-    this._localization,
     this._preferencesProvider,
   );
 
@@ -47,24 +47,31 @@ class NextDayInformationNotification extends TaskCallback {
 
     if (daysToNextEntry > 1) return;
 
+    final localization = await _loadLocalization();
+
     var message = _getNotificationMessage(
       daysToNextEntry,
       nextScheduleEntry,
       format,
+      localization,
     );
 
     await _notificationApi.showNotification(
-      _localization.notificationNextClassTitle,
+      localization.notificationNextClassTitle,
       message,
     );
   }
 
   String _getNotificationMessage(
-      int daysToNextEntry, ScheduleEntry nextScheduleEntry, DateFormat format) {
+    int daysToNextEntry,
+    ScheduleEntry nextScheduleEntry,
+    DateFormat format,
+    L localization,
+  ) {
     String message = "";
     if (daysToNextEntry == 0) {
       message = interpolate(
-        _localization.notificationNextClassNextClassAtMessage,
+        localization.notificationNextClassNextClassAtMessage,
         [
           nextScheduleEntry.title,
           format.format(nextScheduleEntry.start),
@@ -72,7 +79,7 @@ class NextDayInformationNotification extends TaskCallback {
       );
     } else if (daysToNextEntry == 1) {
       message = interpolate(
-        _localization.notificationNextClassTomorrow,
+        localization.notificationNextClassTomorrow,
         [
           nextScheduleEntry.title,
           format.format(nextScheduleEntry.start),
@@ -80,6 +87,11 @@ class NextDayInformationNotification extends TaskCallback {
       );
     }
     return message;
+  }
+
+  Future<L> _loadLocalization() async {
+    final languageCode = await _preferencesProvider.getLastUsedLanguageCode();
+    return L(Locale(languageCode ?? 'en'));
   }
 
   @override
