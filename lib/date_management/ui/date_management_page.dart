@@ -25,6 +25,7 @@ class DateManagementPage extends StatefulWidget {
 
 class _DateManagementPageState extends State<DateManagementPage> {
   static const Duration _initialLoadDelay = Duration(milliseconds: 320);
+  static const double _importantEventsCacheExtent = 560;
 
   final ScrollController _raplaScrollController = ScrollController();
   Timer? _initializeTimer;
@@ -263,7 +264,7 @@ class _DateManagementPageState extends State<DateManagementPage> {
       child: ListView.separated(
         controller: _raplaScrollController,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        cacheExtent: 1400,
+        cacheExtent: _importantEventsCacheExtent,
         itemBuilder: (context, index) {
           if (index < sections.length) {
             final section = sections[index];

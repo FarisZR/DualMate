@@ -28,9 +28,9 @@ class _MainPageState extends State<MainPage> {
       Duration(milliseconds: 260);
 
   bool _appLaunchDialogsShown = false;
-  bool _isDrawerOpen = false;
   int? _pendingDrawerNavigationIndex;
   final ValueNotifier<int> _currentEntryIndex = ValueNotifier<int>(0);
+  final ValueNotifier<bool> _isDrawerOpen = ValueNotifier<bool>(false);
   final Map<int, Widget> _sectionCache = {};
   final Set<int> _loadedSections = <int>{};
 
@@ -54,6 +54,7 @@ class _MainPageState extends State<MainPage> {
   void dispose() {
     MainSectionController.instance.routeSignal
         .removeListener(_handleExternalRouteRequest);
+    _isDrawerOpen.dispose();
     _currentEntryIndex.dispose();
     super.dispose();
   }
@@ -114,12 +115,10 @@ class _MainPageState extends State<MainPage> {
       canPop: true,
       child: Scaffold(
         onDrawerChanged: (isOpen) {
-          if (_isDrawerOpen == isOpen) {
+          if (_isDrawerOpen.value == isOpen) {
             return;
           }
-          setState(() {
-            _isDrawerOpen = isOpen;
-          });
+          _isDrawerOpen.value = isOpen;
           if (!isOpen) {
             _applyPendingDrawerNavigation();
           }
@@ -134,11 +133,17 @@ class _MainPageState extends State<MainPage> {
           toolbarTextStyle: Theme.of(context).textTheme.bodyMedium,
           titleTextStyle: Theme.of(context).textTheme.titleLarge,
         ),
-        body: RepaintBoundary(
-          child: TickerMode(
-            enabled: !_isDrawerOpen,
-            child: body,
-          ),
+        body: ValueListenableBuilder<bool>(
+          valueListenable: _isDrawerOpen,
+          child: body,
+          builder: (context, isDrawerOpen, child) {
+            return RepaintBoundary(
+              child: TickerMode(
+                enabled: !isDrawerOpen,
+                child: child ?? const SizedBox.shrink(),
+              ),
+            );
+          },
         ),
         drawer: RepaintBoundary(
           child: MyNavigationDrawer(
@@ -209,7 +214,7 @@ class _MainPageState extends State<MainPage> {
     PerformanceTelemetry.instance
         .markNavEvent(name: "drawer.tab.${navigationEntries[index].route}");
 
-    if (!PlatformUtil.isTablet() && _isDrawerOpen) {
+    if (!PlatformUtil.isTablet() && _isDrawerOpen.value) {
       _pendingDrawerNavigationIndex = index;
       return;
     }
