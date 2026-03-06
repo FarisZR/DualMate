@@ -139,6 +139,41 @@ void main() {
     delegate = pageView.childrenDelegate as SliverChildBuilderDelegate;
     expect(delegate.childCount, 2);
   });
+
+  test('defers page sync while pager is transitioning or scrolling', () {
+    expect(
+      shouldDeferCanteenPageSync(
+        hasClients: false,
+        attachedPositions: 0,
+        isScrolling: false,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldDeferCanteenPageSync(
+        hasClients: true,
+        attachedPositions: 2,
+        isScrolling: false,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldDeferCanteenPageSync(
+        hasClients: true,
+        attachedPositions: 1,
+        isScrolling: true,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldDeferCanteenPageSync(
+        hasClients: true,
+        attachedPositions: 1,
+        isScrolling: false,
+      ),
+      isFalse,
+    );
+  });
 }
 
 Future<void> _pumpFor(WidgetTester tester, Duration total) async {
@@ -171,7 +206,14 @@ List<DailyMenu> _buildWeekMenusWithSingleDayMeal(
   DateTime weekStart,
   DateTime mealDay,
 ) {
-  final normalizedMealDay = toStartOfDay(mealDay);
+  return _buildWeekMenusWithMealDays(weekStart, {mealDay});
+}
+
+List<DailyMenu> _buildWeekMenusWithMealDays(
+  DateTime weekStart,
+  Set<DateTime> mealDays,
+) {
+  final normalizedMealDays = mealDays.map(toStartOfDay).toSet();
   final dailyMenus = <DailyMenu>[];
 
   for (var i = 0; i < 5; i++) {
@@ -179,7 +221,7 @@ List<DailyMenu> _buildWeekMenusWithSingleDayMeal(
     dailyMenus.add(
       DailyMenu(
         date: day,
-        meals: day == normalizedMealDay ? [_mealForDay(day)] : <Meal>[],
+        meals: normalizedMealDays.contains(day) ? [_mealForDay(day)] : <Meal>[],
       ),
     );
   }

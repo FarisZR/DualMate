@@ -13,6 +13,22 @@ import 'package:intl/intl.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:provider/provider.dart';
 
+bool shouldDeferCanteenPageSync({
+  required bool hasClients,
+  required int attachedPositions,
+  required bool isScrolling,
+}) {
+  if (!hasClients) {
+    return true;
+  }
+
+  if (attachedPositions != 1) {
+    return true;
+  }
+
+  return isScrolling;
+}
+
 class CanteenPage extends StatefulWidget {
   @override
   _CanteenPageState createState() => _CanteenPageState();
@@ -31,6 +47,9 @@ class _CanteenPageState extends State<CanteenPage> {
   late ValueNotifier<int> pageNotifier;
   late DateTime baseDate;
   Timer? _initialAdjacentPrefetchTimer;
+  Timer? _deferredPageSyncTimer;
+  bool _pageSyncPending = false;
+  bool _pageScrollListenerAttached = false;
   DateTime? _selectedDate;
   DateTime? _lastInteractionWeekStart;
   bool _isApplyingWidgetPayload = false;
@@ -65,6 +84,8 @@ class _CanteenPageState extends State<CanteenPage> {
   @override
   void dispose() {
     _initialAdjacentPrefetchTimer?.cancel();
+    _deferredPageSyncTimer?.cancel();
+    _detachPageScrollListener();
     WidgetNavigationPayloadStore.instance.removeListener(_handleWidgetPayload);
     pageController.dispose();
     pageNotifier.dispose();
@@ -388,9 +409,105 @@ class _CanteenPageState extends State<CanteenPage> {
 
     _selectedDate = syncedDate;
     if (pageNotifier.value == targetIndex) return;
-    if (!pageController.hasClients) return;
+    if (_shouldDeferPageSync()) {
+      _pageSyncPending = true;
+      return;
+    }
+
+    _pageSyncPending = false;
     pageController.jumpToPage(targetIndex);
     pageNotifier.value = targetIndex;
+  }
+
+  bool _shouldDeferPageSync() {
+    final hasClients = pageController.hasClients;
+    final attachedPositions = pageController.positions.length;
+    final isScrolling = hasClients && attachedPositions == 1
+        ? pageController.position.isScrollingNotifier.value
+        : false;
+
+    if (!hasClients || attachedPositions != 1) {
+      _scheduleDeferredPageSyncRetry();
+      return true;
+    }
+
+    _attachPageScrollListener();
+
+    if (shouldDeferCanteenPageSync(
+      hasClients: hasClients,
+      attachedPositions: attachedPositions,
+      isScrolling: isScrolling,
+    )) {
+      return true;
+    }
+
+    return false;
+  }
+
+  void _scheduleDeferredPageSyncRetry() {
+    _deferredPageSyncTimer?.cancel();
+    _deferredPageSyncTimer = Timer(const Duration(milliseconds: 360), () {
+      if (!mounted) {
+        return;
+      }
+
+      _retryPendingPageSync();
+    });
+  }
+
+  void _retryPendingPageSync() {
+    if (!_pageSyncPending || !mounted) {
+      return;
+    }
+
+    final model = Provider.of<CanteenViewModel>(context, listen: false);
+    _syncPageForVisibleDays(model, model.visibleContentDays);
+  }
+
+  void _attachPageScrollListener() {
+    if (_pageScrollListenerAttached || !pageController.hasClients) {
+      return;
+    }
+
+    if (pageController.positions.length != 1) {
+      return;
+    }
+
+    pageController.position.isScrollingNotifier
+        .addListener(_handlePageScrollStateChanged);
+    _pageScrollListenerAttached = true;
+  }
+
+  void _detachPageScrollListener() {
+    if (!_pageScrollListenerAttached || !pageController.hasClients) {
+      _pageScrollListenerAttached = false;
+      return;
+    }
+
+    if (pageController.positions.length == 1) {
+      pageController.position.isScrollingNotifier
+          .removeListener(_handlePageScrollStateChanged);
+    }
+
+    _pageScrollListenerAttached = false;
+  }
+
+  void _handlePageScrollStateChanged() {
+    if (!mounted || !pageController.hasClients) {
+      return;
+    }
+
+    if (pageController.positions.length != 1) {
+      _detachPageScrollListener();
+      _scheduleDeferredPageSyncRetry();
+      return;
+    }
+
+    if (pageController.position.isScrollingNotifier.value) {
+      return;
+    }
+
+    _retryPendingPageSync();
   }
 
   void _goToVisibleDay(
