@@ -1,5 +1,3 @@
-import 'package:dualmate/schedule/business/schedule_provider.dart';
-import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
@@ -24,8 +22,6 @@ void main() {
     final viewModel = FilterViewModel(
       entryRepository,
       filterRepository,
-      _FakeScheduleSourceProvider(),
-      _FakeScheduleProvider(),
     );
 
     await viewModel.initialize();
@@ -47,8 +43,6 @@ void main() {
     final viewModel = FilterViewModel(
       entryRepository,
       filterRepository,
-      _FakeScheduleSourceProvider(),
-      _FakeScheduleProvider(),
     );
 
     await viewModel.initialize();
@@ -64,14 +58,56 @@ void main() {
     final viewModel = FilterViewModel(
       entryRepository,
       filterRepository,
-      _FakeScheduleSourceProvider(),
-      _FakeScheduleProvider(),
     );
 
     await viewModel.initialize();
 
     expect(viewModel.filterStates, isEmpty);
     expect(entryRepository.queryAllNamesCallCount, 1);
+  });
+
+  test('applyFilter returns false when hidden names stay unchanged', () async {
+    final entryRepository = _FakeScheduleEntryRepository(['Class A']);
+    final filterRepository = _FakeScheduleFilterRepository([]);
+
+    final viewModel = FilterViewModel(
+      entryRepository,
+      filterRepository,
+    );
+
+    await viewModel.initialize();
+
+    final didChange = await viewModel.applyFilter();
+
+    expect(didChange, isFalse);
+    expect(filterRepository.savedHiddenNames, isEmpty);
+  });
+
+  test('applyFilter persists hidden names and updates cache', () async {
+    final entryRepository = _FakeScheduleEntryRepository(['Class A']);
+    final filterRepository = _FakeScheduleFilterRepository([]);
+
+    final viewModel = FilterViewModel(
+      entryRepository,
+      filterRepository,
+    );
+
+    await viewModel.initialize();
+    viewModel.filterStates.first.isDisplayed = false;
+
+    final didChange = await viewModel.applyFilter();
+
+    expect(didChange, isTrue);
+    expect(filterRepository.savedHiddenNames, [
+      ['Class A'],
+    ]);
+
+    final cachedViewModel = FilterViewModel(
+      entryRepository,
+      filterRepository,
+    );
+    await cachedViewModel.initialize();
+    expect(cachedViewModel.filterStates.first.isDisplayed, isFalse);
   });
 }
 
@@ -84,7 +120,8 @@ class _FakeScheduleEntryRepository implements ScheduleEntryRepository {
   @override
   Future<List<String>> queryAllNamesOfScheduleEntries() async {
     queryAllNamesCallCount += 1;
-    return List<String>.from(names);
+    final sortedNames = List<String>.from(names)..sort();
+    return sortedNames;
   }
 
   @override
@@ -97,6 +134,7 @@ class _FakeScheduleEntryRepository implements ScheduleEntryRepository {
 
 class _FakeScheduleFilterRepository implements ScheduleFilterRepository {
   final List<String> hiddenNames;
+  final List<List<String>> savedHiddenNames = <List<String>>[];
 
   _FakeScheduleFilterRepository(this.hiddenNames);
 
@@ -106,25 +144,14 @@ class _FakeScheduleFilterRepository implements ScheduleFilterRepository {
   }
 
   @override
+  Future<void> saveAllHiddenNames(List<String> hiddenNames) async {
+    savedHiddenNames.add(List<String>.from(hiddenNames));
+  }
+
+  @override
   dynamic noSuchMethod(Invocation invocation) {
     throw UnsupportedError(
       'Unexpected ScheduleFilterRepository call: $invocation',
     );
-  }
-}
-
-class _FakeScheduleSourceProvider implements ScheduleSourceProvider {
-  @override
-  dynamic noSuchMethod(Invocation invocation) {
-    throw UnsupportedError(
-      'Unexpected ScheduleSourceProvider call: $invocation',
-    );
-  }
-}
-
-class _FakeScheduleProvider implements ScheduleProvider {
-  @override
-  dynamic noSuchMethod(Invocation invocation) {
-    throw UnsupportedError('Unexpected ScheduleProvider call: $invocation');
   }
 }

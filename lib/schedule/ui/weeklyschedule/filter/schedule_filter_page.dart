@@ -1,6 +1,4 @@
 import 'package:dualmate/common/i18n/localizations.dart';
-import 'package:dualmate/schedule/business/schedule_provider.dart';
-import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
@@ -9,7 +7,9 @@ import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 
 class ScheduleFilterPage extends StatefulWidget {
-  const ScheduleFilterPage({super.key});
+  final Future<void>? preloadFuture;
+
+  const ScheduleFilterPage({super.key, this.preloadFuture});
 
   @override
   State<ScheduleFilterPage> createState() => _ScheduleFilterPageState();
@@ -17,8 +17,8 @@ class ScheduleFilterPage extends StatefulWidget {
 
 class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
   late final FilterViewModel _viewModel;
-  bool _isLoading = true;
-  bool _showLoadedList = false;
+  bool _isLoading = !FilterViewModel.hasCachedStates;
+  bool _showLoadedList = FilterViewModel.hasCachedStates;
   bool _hasInitError = false;
   bool _isHandlingPop = false;
 
@@ -28,8 +28,6 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
     _viewModel = FilterViewModel(
       KiwiContainer().resolve<ScheduleEntryRepository>(),
       KiwiContainer().resolve<ScheduleFilterRepository>(),
-      KiwiContainer().resolve<ScheduleSourceProvider>(),
-      KiwiContainer().resolve<ScheduleProvider>(),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeDeferred();
@@ -39,7 +37,7 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
   Future<void> _initializeDeferred() async {
     var initSucceeded = false;
     try {
-      await Future.delayed(const Duration(milliseconds: 320));
+      await widget.preloadFuture;
       if (!mounted) return;
       await _viewModel.initialize();
       initSucceeded = true;
@@ -60,12 +58,7 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
       }
       setState(() {
         _isLoading = false;
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        setState(() {
-          _showLoadedList = true;
-        });
+        _showLoadedList = true;
       });
     }
   }
@@ -197,9 +190,10 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
   Future<void> _handlePopRequested(BuildContext context) async {
     if (_isHandlingPop) return;
     _isHandlingPop = true;
+    var didChangeFilters = false;
     var applySucceeded = false;
     try {
-      await _viewModel.applyFilter();
+      didChangeFilters = await _viewModel.applyFilter();
       applySucceeded = true;
     } on FilterValidationException catch (e, trace) {
       debugPrint('Failed to validate schedule filter: $e');
@@ -227,7 +221,7 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
       );
     } finally {
       if (applySucceeded && mounted) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(didChangeFilters);
       }
       _isHandlingPop = false;
     }

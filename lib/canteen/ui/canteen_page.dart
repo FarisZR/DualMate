@@ -5,6 +5,8 @@ import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:intl/intl.dart';
@@ -18,11 +20,17 @@ class CanteenPage extends StatefulWidget {
 
 class _CanteenPageState extends State<CanteenPage> {
   static const Duration _initialLoadDelay = Duration(milliseconds: 220);
+  static const Duration _initialAdjacentPrefetchDelay =
+      Duration(milliseconds: 1200);
+  static const double _mealListCacheExtent = 240;
+  static final Map<String, DateFormat> _headerDateFormats =
+      <String, DateFormat>{};
 
   late CanteenViewModel viewModel;
   late PageController pageController;
   late ValueNotifier<int> pageNotifier;
   late DateTime baseDate;
+  Timer? _initialAdjacentPrefetchTimer;
   DateTime? _selectedDate;
   DateTime? _lastInteractionWeekStart;
   bool _isApplyingWidgetPayload = false;
@@ -39,13 +47,12 @@ class _CanteenPageState extends State<CanteenPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       PerformanceTelemetry.instance.markNavEvent(name: "canteen.entry");
+      _scheduleInitialAdjacentPrefetch();
       Future.delayed(_initialLoadDelay, () {
         if (!mounted) return;
         SchedulerBinding.instance.scheduleTask<void>(
           () {
             if (!mounted) return;
-            viewModel.primeVisibleWeek(baseDate);
-            viewModel.prefetchAdjacentWeeks(baseDate);
             _applyWidgetPayload();
           },
           Priority.idle,
@@ -57,6 +64,7 @@ class _CanteenPageState extends State<CanteenPage> {
 
   @override
   void dispose() {
+    _initialAdjacentPrefetchTimer?.cancel();
     WidgetNavigationPayloadStore.instance.removeListener(_handleWidgetPayload);
     pageController.dispose();
     pageNotifier.dispose();
@@ -66,7 +74,11 @@ class _CanteenPageState extends State<CanteenPage> {
   @override
   Widget build(BuildContext context) {
     viewModel = Provider.of<CanteenViewModel>(context, listen: false);
-    var dateFormat = DateFormat.yMMMMEEEEd(L.of(context).locale.toString());
+    final locale = L.of(context).locale.toString();
+    final dateFormat = _headerDateFormats.putIfAbsent(
+      locale,
+      () => DateFormat.yMMMMEEEEd(locale),
+    );
 
     return PropertyChangeProvider<CanteenViewModel, String>(
       value: viewModel,
@@ -273,7 +285,7 @@ class _CanteenPageState extends State<CanteenPage> {
       axisDirection: AxisDirection.right,
       child: PageView.builder(
         controller: pageController,
-        allowImplicitScrolling: true,
+        allowImplicitScrolling: false,
         itemCount: visibleDays.length,
         onPageChanged: (index) {
           final nextDate = visibleDays[index];
@@ -300,6 +312,21 @@ class _CanteenPageState extends State<CanteenPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _applyWidgetPayload();
+    });
+  }
+
+  void _scheduleInitialAdjacentPrefetch() {
+    _initialAdjacentPrefetchTimer?.cancel();
+    _initialAdjacentPrefetchTimer = Timer(_initialAdjacentPrefetchDelay, () {
+      if (!mounted || viewModel.isDisposed) return;
+      SchedulerBinding.instance.scheduleTask<void>(
+        () {
+          if (!mounted || viewModel.isDisposed) return;
+          viewModel.prefetchAdjacentWeeks(baseDate);
+        },
+        Priority.idle,
+        debugLabel: 'canteen.initialAdjacentPrefetch',
+      );
     });
   }
 
@@ -485,7 +512,7 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               itemCount: meals.length,
               addAutomaticKeepAlives: false,
-              cacheExtent: 720,
+              cacheExtent: _CanteenPageState._mealListCacheExtent,
               itemBuilder: (context, index) {
                 var meal = meals[index];
                 return Padding(

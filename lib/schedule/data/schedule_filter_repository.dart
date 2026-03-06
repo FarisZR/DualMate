@@ -14,9 +14,9 @@ class ScheduleFilterRepository {
 
   Future<void> saveAllHiddenNames(List<String> hiddenNames) async {
     await _database.deleteWhere("ScheduleEntryFilters");
-
-    for (var name in hiddenNames) {
-      await _database.insert("ScheduleEntryFilters", {'title': name});
-    }
+    await _database.insertBatch(
+      "ScheduleEntryFilters",
+      hiddenNames.map((name) => {'title': name}).toList(),
+    );
   }
 }

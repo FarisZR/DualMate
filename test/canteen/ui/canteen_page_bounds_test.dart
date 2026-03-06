@@ -61,6 +61,25 @@ void main() {
     );
   });
 
+  testWidgets('disables implicit page prebuild on canteen pager',
+      (tester) async {
+    final now = DateTime.now();
+    final today = _normalizeToWeekday(now);
+    final weekStart = toStartOfDay(toMonday(today));
+    final menus = _buildWeekMenusWithSingleDayMeal(weekStart, today);
+
+    final provider = _FakeCanteenProvider({weekStart: menus});
+    final viewModel = CanteenViewModel(provider);
+    addTearDown(viewModel.dispose);
+    await viewModel.loadWeek(weekStart);
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await _pumpFor(tester, const Duration(milliseconds: 700));
+
+    final pageView = tester.widget<PageView>(find.byType(PageView));
+    expect(pageView.allowImplicitScrolling, isFalse);
+  });
+
   testWidgets('does not allow paging to empty days before/after content',
       (tester) async {
     final now = DateTime.now();
@@ -87,7 +106,7 @@ void main() {
     expect(find.text(_mealNameFor(today)), findsOneWidget);
   });
 
-  testWidgets('warms next week so forward pages become available',
+  testWidgets('delays next week warmup until first-load settles',
       (tester) async {
     final now = DateTime.now();
     final today = _normalizeToWeekday(now);
@@ -110,8 +129,14 @@ void main() {
     await tester.pumpWidget(_wrapWithApp(viewModel));
     await _pumpFor(tester, const Duration(milliseconds: 900));
 
-    final pageView = tester.widget<PageView>(find.byType(PageView));
-    final delegate = pageView.childrenDelegate as SliverChildBuilderDelegate;
+    var pageView = tester.widget<PageView>(find.byType(PageView));
+    var delegate = pageView.childrenDelegate as SliverChildBuilderDelegate;
+    expect(delegate.childCount, 1);
+
+    await _pumpFor(tester, const Duration(milliseconds: 900));
+
+    pageView = tester.widget<PageView>(find.byType(PageView));
+    delegate = pageView.childrenDelegate as SliverChildBuilderDelegate;
     expect(delegate.childCount, 2);
   });
 }
