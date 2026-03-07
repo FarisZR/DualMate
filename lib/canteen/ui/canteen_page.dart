@@ -76,6 +76,20 @@ String canteenPageContentModeKey(List<DateTime> visibleDays) {
       : 'canteen_page_content_paged';
 }
 
+int? findCanteenDayIndexByKey(Key key, List<DateTime> visibleDays) {
+  if (key is! ValueKey<String>) {
+    return null;
+  }
+
+  for (var index = 0; index < visibleDays.length; index++) {
+    if (canteenDayViewKey(visibleDays[index]) == key) {
+      return index;
+    }
+  }
+
+  return null;
+}
+
 class CanteenPage extends StatefulWidget {
   @override
   _CanteenPageState createState() => _CanteenPageState();
@@ -83,8 +97,6 @@ class CanteenPage extends StatefulWidget {
 
 class _CanteenPageState extends State<CanteenPage> {
   static const Duration _initialLoadDelay = Duration(milliseconds: 220);
-  static const Duration _initialAdjacentPrefetchDelay =
-      Duration(milliseconds: 1200);
   static const double _mealListCacheExtent = 240;
   static final Map<String, DateFormat> _headerDateFormats =
       <String, DateFormat>{};
@@ -93,7 +105,6 @@ class _CanteenPageState extends State<CanteenPage> {
   late PageController pageController;
   late ValueNotifier<int> pageNotifier;
   late DateTime baseDate;
-  Timer? _initialAdjacentPrefetchTimer;
   Timer? _deferredPageSyncTimer;
   bool _pageSyncPending = false;
   bool _pageScrollListenerAttached = false;
@@ -107,18 +118,20 @@ class _CanteenPageState extends State<CanteenPage> {
     viewModel = Provider.of<CanteenViewModel>(context, listen: false);
     viewModel.initialize();
     baseDate = _normalizeToWeekday(DateTime.now());
+    _lastInteractionWeekStart = viewModel.weekStartFor(baseDate);
     pageController = PageController(initialPage: 0);
     pageNotifier = ValueNotifier<int>(0);
     WidgetNavigationPayloadStore.instance.addListener(_handleWidgetPayload);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       PerformanceTelemetry.instance.markNavEvent(name: "canteen.entry");
-      _scheduleInitialAdjacentPrefetch();
       Future.delayed(_initialLoadDelay, () {
         if (!mounted) return;
         SchedulerBinding.instance.scheduleTask<void>(
           () {
             if (!mounted) return;
+            viewModel.primeVisibleWeek(baseDate);
+            viewModel.prefetchAdjacentWeeks(baseDate);
             _applyWidgetPayload();
           },
           Priority.idle,
@@ -130,7 +143,6 @@ class _CanteenPageState extends State<CanteenPage> {
 
   @override
   void dispose() {
-    _initialAdjacentPrefetchTimer?.cancel();
     _deferredPageSyncTimer?.cancel();
     _detachPageScrollListener();
     WidgetNavigationPayloadStore.instance.removeListener(_handleWidgetPayload);
@@ -356,6 +368,9 @@ class _CanteenPageState extends State<CanteenPage> {
       child: PageView.builder(
         controller: pageController,
         allowImplicitScrolling: false,
+        findChildIndexCallback: (key) {
+          return findCanteenDayIndexByKey(key, visibleDays);
+        },
         itemCount: visibleDays.length,
         onPageChanged: (index) {
           final nextDate = visibleDays[index];
@@ -386,21 +401,6 @@ class _CanteenPageState extends State<CanteenPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _applyWidgetPayload();
-    });
-  }
-
-  void _scheduleInitialAdjacentPrefetch() {
-    _initialAdjacentPrefetchTimer?.cancel();
-    _initialAdjacentPrefetchTimer = Timer(_initialAdjacentPrefetchDelay, () {
-      if (!mounted || viewModel.isDisposed) return;
-      SchedulerBinding.instance.scheduleTask<void>(
-        () {
-          if (!mounted || viewModel.isDisposed) return;
-          viewModel.prefetchAdjacentWeeks(baseDate);
-        },
-        Priority.idle,
-        debugLabel: 'canteen.initialAdjacentPrefetch',
-      );
     });
   }
 

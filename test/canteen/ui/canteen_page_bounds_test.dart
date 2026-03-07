@@ -106,8 +106,7 @@ void main() {
     expect(find.text(_mealNameFor(today)), findsOneWidget);
   });
 
-  testWidgets('delays next week warmup until first-load settles',
-      (tester) async {
+  testWidgets('preloads next week before the first swipe', (tester) async {
     final now = DateTime.now();
     final today = _normalizeToWeekday(now);
     final weekStart = toStartOfDay(toMonday(today));
@@ -129,14 +128,8 @@ void main() {
     await tester.pumpWidget(_wrapWithApp(viewModel));
     await _pumpFor(tester, const Duration(milliseconds: 900));
 
-    var pageView = tester.widget<PageView>(find.byType(PageView));
-    var delegate = pageView.childrenDelegate as SliverChildBuilderDelegate;
-    expect(delegate.childCount, 1);
-
-    await _pumpFor(tester, const Duration(milliseconds: 900));
-
-    pageView = tester.widget<PageView>(find.byType(PageView));
-    delegate = pageView.childrenDelegate as SliverChildBuilderDelegate;
+    final pageView = tester.widget<PageView>(find.byType(PageView));
+    final delegate = pageView.childrenDelegate as SliverChildBuilderDelegate;
     expect(delegate.childCount, 2);
   });
 
@@ -275,6 +268,18 @@ void main() {
         'canteen_page_content_paged');
     expect(canteenPageContentModeKey(<DateTime>[monday, tuesday]),
         'canteen_page_content_paged');
+  });
+
+  test('finds a canteen day index from its stable key', () {
+    final monday = DateTime(2026, 2, 9);
+    final tuesday = monday.add(const Duration(days: 1));
+    final wednesday = monday.add(const Duration(days: 2));
+    final days = <DateTime>[monday, tuesday, wednesday];
+
+    expect(findCanteenDayIndexByKey(canteenDayViewKey(monday), days), 0);
+    expect(findCanteenDayIndexByKey(canteenDayViewKey(tuesday), days), 1);
+    expect(findCanteenDayIndexByKey(const ValueKey<String>('unknown'), days),
+        isNull);
   });
 }
 
