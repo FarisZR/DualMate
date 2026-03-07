@@ -53,3 +53,6 @@ update_icon.bat
 android/key.properties
 ios/Flutter/.last_build_id
 ios/build
+
+# Local debugging artifacts
+debugging-files/

@@ -26,6 +26,9 @@ page, and sometimes throw a `Concurrent modification during iteration` error in
 5. Another remaining edge existed before `onPageChanged`: any fractional pager
    offset still counted as the committed page, so a rebuild could correct the
    controller back to the old page while the first swipe was mid-flight.
+6. The per-day canteen body also reused the same subtree identity across day
+   changes, so the day-level `AnimatedSwitcher` could briefly animate the
+   previous day over the newly swiped day.
 
 # Changes
 
@@ -42,6 +45,8 @@ page, and sometimes throw a `Concurrent modification during iteration` error in
     to the user-visible day.
   - treat any fractional or otherwise uncommitted pager offset as pending and
     defer page correction until the swipe fully commits.
+  - give each canteen day page a stable date key so the body transition cannot
+    replay the previous day overlay after the first swipe.
 - `test/canteen/business/canteen_provider_refresh_policy_test.dart`
   - added regression coverage for listeners removing callbacks mid-notify.
 - `test/canteen/ui/canteen_page_bounds_test.dart`
@@ -49,6 +54,7 @@ page, and sometimes throw a `Concurrent modification during iteration` error in
   - added coverage for preserving the active page over the stale first-day
     fallback during first-open sync.
   - added coverage that any non-committed pager offset blocks corrective sync.
+  - added coverage that day-page keys stay stable per date.
 
 # Validation
 

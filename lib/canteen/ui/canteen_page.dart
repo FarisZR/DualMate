@@ -64,6 +64,12 @@ bool hasPendingCommittedCanteenPage({
   return (currentPage - committedPage).abs() > 0.01;
 }
 
+ValueKey<String> canteenDayViewKey(DateTime date) {
+  return ValueKey<String>(
+    'canteen_day_${toStartOfDay(date).toIso8601String()}',
+  );
+}
+
 class CanteenPage extends StatefulWidget {
   @override
   _CanteenPageState createState() => _CanteenPageState();
@@ -334,7 +340,11 @@ class _CanteenPageState extends State<CanteenPage> {
     List<DateTime> visibleDays,
   ) {
     if (visibleDays.isEmpty) {
-      return _CanteenDayView(date: _selectedDate ?? baseDate);
+      final date = _selectedDate ?? baseDate;
+      return _CanteenDayView(
+        key: canteenDayViewKey(date),
+        date: date,
+      );
     }
 
     return StretchingOverscrollIndicator(
@@ -358,7 +368,11 @@ class _CanteenPageState extends State<CanteenPage> {
           }
         },
         itemBuilder: (context, index) {
-          return _CanteenDayView(date: visibleDays[index]);
+          final date = visibleDays[index];
+          return _CanteenDayView(
+            key: canteenDayViewKey(date),
+            date: date,
+          );
         },
       ),
     );

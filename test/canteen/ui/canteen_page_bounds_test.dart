@@ -254,6 +254,16 @@ void main() {
       wednesday,
     );
   });
+
+  test('gives each canteen day a stable key', () {
+    final monday = DateTime(2026, 2, 9);
+    final tuesday = monday.add(const Duration(days: 1));
+    expect(canteenDayViewKey(monday), isNot(canteenDayViewKey(tuesday)));
+    expect(
+      canteenDayViewKey(monday),
+      canteenDayViewKey(DateTime(2026, 2, 9, 15, 30)),
+    );
+  });
 }
 
 Future<void> _pumpFor(WidgetTester tester, Duration total) async {
