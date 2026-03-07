@@ -131,13 +131,24 @@ class ScheduleSourceProvider {
     return InvalidScheduleSource();
   }
 
-  Future<void> setupForRapla(String url) async {
+  /// Onboarding stores the Rapla URL first and defers full source setup plus
+  /// cache clearing to post-onboarding initialization. Other setup flows run
+  /// after onboarding and therefore keep the default immediate setup behavior.
+  Future<void> setupForRapla(
+    String url, {
+    bool clearCachedEntries = true,
+    bool setupSource = true,
+  }) async {
     await _preferencesProvider.setRaplaUrl(url);
     await _preferencesProvider
         .setScheduleSourceType(ScheduleSourceType.Rapla.index);
 
-    await _clearEntryCache();
-    await setupScheduleSource();
+    if (clearCachedEntries) {
+      await _clearEntryCache();
+    }
+    if (setupSource) {
+      await setupScheduleSource();
+    }
 
     await analytics.setUserProperty(
       name: "schedule_source",

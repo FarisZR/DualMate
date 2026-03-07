@@ -21,6 +21,10 @@ bool isBaseInitialized = false;
 bool isForegroundHeavyInitialized = false;
 bool isForegroundCanteenPrewarmInitialized = false;
 
+bool shouldAutoRequestNotificationPermissionAtStartup() {
+  return false;
+}
+
 Future<void> initializeAppBase(bool isBackground) async {
   if (isBaseInitialized) {
     return;
@@ -41,11 +45,14 @@ Future<void> initializeAppBase(bool isBackground) async {
     await LocalizationInitialize.fromPreferences(
       KiwiContainer().resolve<PreferencesProvider>(),
     ).setupLocalizations();
+    print("Base init: localizations ${stopwatch.elapsedMilliseconds}ms");
   } else {
-    await LocalizationInitialize.fromLanguageCode(Platform.localeName)
-        .setupLocalizations();
+    // Foreground UI localizations are provided by LocalizationDelegate.
+    // Registering a second localization object in Kiwi here causes avoidable
+    // startup work on the first frame path.
+    print(
+        "Base init: localizations deferred ${stopwatch.elapsedMilliseconds}ms");
   }
-  print("Base init: localizations ${stopwatch.elapsedMilliseconds}ms");
   print("Base init finished ${stopwatch.elapsedMilliseconds}ms");
 
   isBaseInitialized = true;
@@ -65,12 +72,38 @@ Future<void> initializeAppBackground(bool isBackground) async {
   widgetUpdateCallback.registerCanteenCallback(KiwiContainer().resolve());
   print("Background init: widgets ${stopwatch.elapsedMilliseconds}ms");
 
-  NotificationsInitialize().setupNotifications();
+  final shouldRequestNotificationPermission =
+      shouldAutoRequestNotificationPermissionAtStartup();
+  await NotificationsInitialize().setupNotifications(
+    requestRuntimePermission: shouldRequestNotificationPermission,
+  );
   print("Background init: notifications ${stopwatch.elapsedMilliseconds}ms");
-  BackgroundInitialize().setupBackgroundScheduling();
-  print("Background init: workmanager ${stopwatch.elapsedMilliseconds}ms");
-  NotificationScheduleChangedInitialize().setupNotification();
-  print("Background init: schedule notify ${stopwatch.elapsedMilliseconds}ms");
+  try {
+    await BackgroundInitialize().setupBackgroundScheduling();
+    print("Background init: workmanager ${stopwatch.elapsedMilliseconds}ms");
+  } on Exception catch (exception, trace) {
+    print("Background init: workmanager failed (${exception.runtimeType})");
+    print(exception);
+    print(trace);
+  } catch (error, trace) {
+    print("Background init: workmanager failed");
+    print(error);
+    print(trace);
+  }
+
+  try {
+    NotificationScheduleChangedInitialize().setupNotification();
+    print(
+        "Background init: schedule notify ${stopwatch.elapsedMilliseconds}ms");
+  } on Exception catch (exception, trace) {
+    print("Background init: schedule notify failed (${exception.runtimeType})");
+    print(exception);
+    print(trace);
+  } catch (error, trace) {
+    print("Background init: schedule notify failed");
+    print(error);
+    print(trace);
+  }
 
   tz.initializeTimeZones();
   print("Background init: time zones ${stopwatch.elapsedMilliseconds}ms");
@@ -132,9 +165,7 @@ Future<void> _prewarmCanteenIfStaleInBackground(
   required Duration staleAfter,
 }) async {
   try {
-    await KiwiContainer()
-        .resolve<CanteenProvider>()
-        .refreshWeekIfStale(
+    await KiwiContainer().resolve<CanteenProvider>().refreshWeekIfStale(
           DateTime.now(),
           staleAfter: staleAfter,
           prefetchNextWeek: false,
@@ -142,8 +173,7 @@ Future<void> _prewarmCanteenIfStaleInBackground(
     print(
         "Foreground canteen prewarm: refresh ${stopwatch.elapsedMilliseconds}ms");
   } on Exception catch (exception, trace) {
-    print(
-        "Foreground canteen prewarm failed (${exception.runtimeType})");
+    print("Foreground canteen prewarm failed (${exception.runtimeType})");
     print(exception);
     print(trace);
     // Swallowing here is intentional; we don't want to block startup.

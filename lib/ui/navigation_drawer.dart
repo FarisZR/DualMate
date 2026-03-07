@@ -36,6 +36,7 @@ class MyNavigationDrawer extends StatelessWidget {
       widgets.add(_createDrawerItem(context,
           icon: entry.icon,
           text: entry.title,
+          drawerKeyName: entry.keyName,
           index: i,
           isSelected: i == selectedIndex));
 
@@ -83,35 +84,18 @@ class MyNavigationDrawer extends StatelessWidget {
     BuildContext context, {
     required Widget icon,
     required String text,
+    required String drawerKeyName,
     required bool isSelected,
     required int index,
   }) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-      child: Card(
+      child: Material(
         color: isSelected ? Theme.of(context).focusColor : Colors.transparent,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        borderRadius: BorderRadius.circular(8),
         child: InkWell(
-          key: ValueKey<String>("drawer_item_$index"),
-          child: Container(
-            height: 48,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-                  icon,
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 0, 0),
-                    child: Text(text),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          key: ValueKey<String>("drawer_item_$drawerKeyName"),
+          borderRadius: BorderRadius.circular(8),
           onTap: () {
             onTap(index);
 
@@ -119,6 +103,20 @@ class MyNavigationDrawer extends StatelessWidget {
               Navigator.of(context).pop();
             }
           },
+          child: SizedBox(
+            height: 48,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  icon,
+                  const SizedBox(width: 16),
+                  Text(text),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -129,40 +127,48 @@ class MyNavigationDrawer extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: <Widget>[
-          InkWell(
-            key: const ValueKey<String>("drawer_settings"),
-            child: Container(
-              height: 56,
-              margin: const EdgeInsets.fromLTRB(0, 0, 0, 20),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 15, 0, 10),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: <Widget>[
-                    Icon(
-                      Icons.settings,
-                      color: Theme.of(context).disabledColor,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 0, 0),
-                      child: Text(
-                        L.of(context).settingsPageTitle,
-                        style: TextStyle(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 20),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                key: const ValueKey<String>("drawer_settings"),
+                borderRadius: BorderRadius.circular(8),
+                onTap: () {
+                  if (isInDrawer) {
+                    Navigator.of(context).pop();
+                  }
+
+                  Navigator.pushNamed(context, "settings");
+                },
+                child: SizedBox(
+                  height: 56,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 15, 0, 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        Icon(
+                          Icons.settings,
                           color: Theme.of(context).disabledColor,
                         ),
-                      ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 0, 0),
+                          child: Text(
+                            L.of(context).settingsPageTitle,
+                            style: TextStyle(
+                              color: Theme.of(context).disabledColor,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
-            onTap: () {
-              if (isInDrawer) {
-                Navigator.of(context).pop();
-              }
-
-              Navigator.pushNamed(context, "settings");
-            },
           ),
         ],
       ),
@@ -173,6 +179,7 @@ class MyNavigationDrawer extends StatelessWidget {
 class DrawerNavigationEntry {
   final Widget icon;
   final String title;
+  final String keyName;
 
-  DrawerNavigationEntry(this.icon, this.title);
+  DrawerNavigationEntry(this.icon, this.title, this.keyName);
 }

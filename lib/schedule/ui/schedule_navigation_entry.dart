@@ -1,6 +1,6 @@
-import 'dart:async';
-
 import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/schedule/business/schedule_provider.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 import 'package:dualmate/schedule/ui/schedule_page.dart';
@@ -76,37 +76,50 @@ class ScheduleNavigationEntry extends NavigationEntry<ScheduleViewModel> {
                   ? IconButton(
                       icon: Icon(Icons.filter_alt),
                       onPressed: () async {
-                        unawaited(
-                          FilterViewModel.preloadStates(
-                            KiwiContainer().resolve<ScheduleEntryRepository>(),
-                            KiwiContainer().resolve<ScheduleFilterRepository>(),
-                          ),
+                        final scheduleEntryRepository =
+                            KiwiContainer().resolve<ScheduleEntryRepository>();
+                        final scheduleFilterRepository =
+                            KiwiContainer().resolve<ScheduleFilterRepository>();
+                        final preloadFuture = FilterViewModel.preloadStates(
+                          scheduleEntryRepository,
+                          scheduleFilterRepository,
                         );
-                        await Navigator.of(context).push(
-                          PageRouteBuilder<void>(
+                        final didChangeFilters =
+                            await Navigator.of(context).push<bool>(
+                          PageRouteBuilder<bool>(
                             transitionDuration:
-                                const Duration(milliseconds: 240),
+                                const Duration(milliseconds: 180),
                             reverseTransitionDuration:
-                                const Duration(milliseconds: 200),
+                                const Duration(milliseconds: 160),
                             pageBuilder:
                                 (context, animation, secondaryAnimation) =>
-                                    const ScheduleFilterPage(),
+                                    ScheduleFilterPage(
+                              preloadFuture: preloadFuture,
+                            ),
                             transitionsBuilder: (context, animation,
                                 secondaryAnimation, child) {
-                              final offsetTween = Tween<Offset>(
-                                begin: const Offset(0.24, 0),
-                                end: Offset.zero,
+                              final opacityTween = Tween<double>(
+                                begin: 0,
+                                end: 1,
                               ).chain(
                                 CurveTween(curve: Curves.easeOutCubic),
                               );
 
-                              return SlideTransition(
-                                position: animation.drive(offsetTween),
+                              return FadeTransition(
+                                opacity: animation.drive(opacityTween),
                                 child: child,
                               );
                             },
                           ),
                         );
+                        if (didChangeFilters == true) {
+                          final scheduleProvider =
+                              KiwiContainer().resolve<ScheduleProvider>();
+                          final scheduleSourceProvider =
+                              KiwiContainer().resolve<ScheduleSourceProvider>();
+                          scheduleProvider.invalidateScheduleCache();
+                          scheduleSourceProvider.fireScheduleSourceChanged();
+                        }
                       },
                     )
                   : Container(),

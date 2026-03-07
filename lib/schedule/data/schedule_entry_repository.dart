@@ -72,7 +72,7 @@ class ScheduleEntryRepository {
 
   Future<List<String>> queryAllNamesOfScheduleEntries() async {
     var allNames = await _database.rawQuery(
-      "SELECT DISTINCT title FROM  ScheduleEntries",
+      "SELECT DISTINCT title FROM ScheduleEntries ORDER BY title ASC",
       [],
     );
 

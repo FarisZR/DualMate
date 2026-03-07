@@ -8,6 +8,7 @@ import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 
 class BackgroundScheduleUpdate extends TaskCallback {
+  static const String name = 'BackgroundScheduleUpdate';
   static const Duration _updateInterval = Duration(hours: 4);
   final ScheduleProvider scheduleProvider;
   final ScheduleSourceProvider scheduleSource;
@@ -93,6 +94,6 @@ class BackgroundScheduleUpdate extends TaskCallback {
 
   @override
   String getName() {
-    return "BackgroundScheduleUpdate";
+    return name;
   }
 }

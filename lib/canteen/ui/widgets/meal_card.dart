@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class MealCard extends StatelessWidget {
+  static final Map<String, NumberFormat> _priceFormatters =
+      <String, NumberFormat>{};
+
   final Meal meal;
 
   const MealCard({
@@ -14,10 +17,14 @@ class MealCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var priceFormatter = NumberFormat.currency(
-      locale: L.of(context).locale.toString(),
-      symbol: "€",
-      decimalDigits: 2,
+    final locale = L.of(context).locale.toString();
+    final priceFormatter = _priceFormatters.putIfAbsent(
+      locale,
+      () => NumberFormat.currency(
+        locale: locale,
+        symbol: "€",
+        decimalDigits: 2,
+      ),
     );
 
     var cardColor = Theme.of(context).brightness == Brightness.light

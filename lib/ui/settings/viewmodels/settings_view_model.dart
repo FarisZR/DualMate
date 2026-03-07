@@ -1,7 +1,8 @@
+import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/logging/perf_overlay_controller.dart';
-import 'package:dualmate/schedule/ui/notification/next_day_information_notification.dart';
 import 'package:kiwi/kiwi.dart';
 
 import '../../../common/util/cancellation_token.dart';
@@ -14,7 +15,8 @@ class SettingsViewModel extends BaseViewModel {
   static const int DeveloperTapThreshold = 6;
 
   final PreferencesProvider _preferencesProvider;
-  final NextDayInformationNotification _nextDayInformationNotification;
+  final TaskCallback _nextDayInformationNotification;
+  final NotificationApi _notificationApi;
 
   bool _notifyAboutNextDay = false;
 
@@ -47,6 +49,7 @@ class SettingsViewModel extends BaseViewModel {
   SettingsViewModel(
     this._preferencesProvider,
     this._nextDayInformationNotification,
+    this._notificationApi,
   ) {
     _loadPreferences();
   }
@@ -76,6 +79,16 @@ class SettingsViewModel extends BaseViewModel {
   }
 
   Future<void> setNotifyAboutScheduleChanges(bool value) async {
+    if (value) {
+      final granted = await _notificationApi.requestRuntimePermission();
+      if (granted != true) {
+        _notifyAboutScheduleChanges = false;
+        notifyIfMounted("notifyAboutScheduleChanges");
+        await _preferencesProvider.setNotifyAboutScheduleChanges(false);
+        return;
+      }
+    }
+
     _notifyAboutScheduleChanges = value;
 
     notifyIfMounted("notifyAboutScheduleChanges");
@@ -92,6 +105,17 @@ class SettingsViewModel extends BaseViewModel {
   }
 
   Future<void> setNotifyAboutNextDay(bool value) async {
+    if (value) {
+      final granted = await _notificationApi.requestRuntimePermission();
+      if (granted != true) {
+        _notifyAboutNextDay = false;
+        notifyIfMounted("notifyAboutNextDay");
+        await _preferencesProvider.setNotifyAboutNextDay(false);
+        await _nextDayInformationNotification.cancel();
+        return;
+      }
+    }
+
     _notifyAboutNextDay = value;
 
     notifyIfMounted("notifyAboutNextDay");

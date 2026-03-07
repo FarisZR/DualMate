@@ -40,4 +40,8 @@ void main() {
 
     expect(prewarmCalls, 1);
   });
+
+  test('notification runtime permission is not auto-requested at startup', () {
+    expect(shouldAutoRequestNotificationPermissionAtStartup(), isFalse);
+  });
 }

@@ -67,7 +67,10 @@ class ExamResultsPage extends StatelessWidget {
               ),
             ),
             PropertyChangeConsumer<StudyGradesViewModel, String>(
-              properties: const ["currentSemester"],
+              properties: const [
+                "currentSemester",
+                "isLoadingCurrentSemester",
+              ],
               builder: (
                 BuildContext context,
                 StudyGradesViewModel? model,
@@ -85,6 +88,9 @@ class ExamResultsPage extends StatelessWidget {
 
   Widget buildModulesColumn(
       BuildContext context, StudyGradesViewModel viewModel) {
+    final showLoading = viewModel.isLoadingCurrentSemester &&
+        viewModel.currentSemester.modules.isEmpty;
+
     return AnimatedSwitcher(
       layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
         List<Widget> children = previousChildren;
@@ -96,10 +102,14 @@ class ExamResultsPage extends StatelessWidget {
           alignment: Alignment.topCenter,
         );
       },
-      child: Column(
-        key: ValueKey("semester_${viewModel.currentSemester.name}"),
-        children: buildModulesDataTables(context, viewModel),
-      ),
+      child: showLoading
+          ? const _SemesterLoadingPlaceholder(
+              key: ValueKey<String>('dualis_semester_loading'),
+            )
+          : Column(
+              key: ValueKey("semester_${viewModel.currentSemester.name}"),
+              children: buildModulesDataTables(context, viewModel),
+            ),
       duration: const Duration(milliseconds: 200),
     );
   }
@@ -113,7 +123,8 @@ class ExamResultsPage extends StatelessWidget {
       dataTables.add(DataTable(
         horizontalMargin: 24,
         columnSpacing: 0,
-        dataRowHeight: 45,
+        dataRowMinHeight: 45,
+        dataRowMaxHeight: 72,
         headingRowHeight: 65,
         rows: buildModuleDataRows(context, module),
         columns: buildModuleColumns(context, module,
@@ -132,18 +143,23 @@ class ExamResultsPage extends StatelessWidget {
         DataRow(
           cells: <DataCell>[
             DataCell(Column(
+              mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
                   exam.name ?? "",
                   style: Theme.of(context).textTheme.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                Text(
-                  exam.semester ?? "",
-                  style: Theme.of(context).textTheme.bodySmall,
-                  textScaleFactor: exam.semester == "" ? 0 : 1,
-                ),
+                if ((exam.semester ?? '').isNotEmpty)
+                  Text(
+                    exam.semester ?? "",
+                    style: Theme.of(context).textTheme.bodySmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
               ],
             )),
             DataCell.empty,
@@ -236,5 +252,35 @@ class ExamResultsPage extends StatelessWidget {
         numeric: true,
       ),
     ];
+  }
+}
+
+class _SemesterLoadingPlaceholder extends StatelessWidget {
+  const _SemesterLoadingPlaceholder({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context)
+        .colorScheme
+        .surfaceContainerHighest
+        .withValues(alpha: 0.78);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+      child: Column(
+        children: List.generate(4, (index) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Container(
+              height: 54,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/schedule/business/schedule_diff_calculator.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/ui/notification/schedule_changed_notification.dart';
@@ -15,16 +16,16 @@ class NotificationScheduleChangedInitialize {
   }
 
   Future<void> _scheduleChangedCallback(ScheduleDiff scheduleDiff) async {
-    PreferencesProvider preferences = KiwiContainer().resolve();
+    final preferences = KiwiContainer().resolve<PreferencesProvider>();
     var doNotify = await preferences.getNotifyAboutScheduleChanges();
 
     if (!doNotify) return;
 
     var notification = ScheduleChangedNotification(
-      KiwiContainer().resolve(),
-      KiwiContainer().resolve(),
+      KiwiContainer().resolve<NotificationApi>(),
+      preferences,
     );
-    notification.showNotification(scheduleDiff);
+    await notification.showNotification(scheduleDiff);
 
     return Future.value();
   }

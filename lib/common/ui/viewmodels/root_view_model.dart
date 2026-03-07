@@ -11,19 +11,33 @@ class RootViewModel extends BaseViewModel {
   late bool _isOnboarding;
   bool get isOnboarding => _isOnboarding;
 
+  // Preference loading fails open so startup can continue with defaults if the
+  // persisted values cannot be read.
+  bool _hasLoadedPreferences = false;
+  bool get hasLoadedPreferences => _hasLoadedPreferences;
+
   RootViewModel(this._preferencesProvider) {
     _appTheme = AppTheme.System;
     _isOnboarding = false;
   }
 
   Future<void> loadFromPreferences() async {
-    var darkMode = await _preferencesProvider.appTheme();
+    try {
+      final darkMode = await _preferencesProvider.appTheme();
+      final isOnboarding = await _preferencesProvider.isFirstStart();
 
-    _appTheme = darkMode;
-    _isOnboarding = await _preferencesProvider.isFirstStart();
+      _appTheme = darkMode;
+      _isOnboarding = isOnboarding;
 
-    notifyListeners("appTheme");
-    notifyListeners("isOnboarding");
+      notifyListeners("appTheme");
+      notifyListeners("isOnboarding");
+    } finally {
+      // Mark the attempt as finished even on failure to unblock the UI.
+      if (_hasLoadedPreferences) return;
+
+      _hasLoadedPreferences = true;
+      notifyListeners("hasLoadedPreferences");
+    }
   }
 
   Future<void> setAppTheme(AppTheme value) async {

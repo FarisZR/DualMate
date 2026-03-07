@@ -36,19 +36,19 @@ void main() {
       useDhMineForDates: false,
       raplaUrl: '',
     );
-    addTearDown(viewModel.dispose);
-
-    await viewModel.reloadUseDhMineSetting();
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump(const Duration(milliseconds: 420));
     await tester.pumpAndSettle();
 
     expect(find.byType(DatesEmptyState), findsOneWidget);
-    await tester.pump(const Duration(seconds: 6));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
   });
 
-  testWidgets('uses list layout on tablets',
-      (WidgetTester tester) async {
+  testWidgets('uses list layout on tablets', (WidgetTester tester) async {
     final binding = TestWidgetsFlutterBinding.ensureInitialized();
     binding.window.physicalSizeTestValue = const Size(1200, 800);
     binding.window.devicePixelRatioTestValue = 1.0;
@@ -60,15 +60,42 @@ void main() {
       raplaUrl: 'https://rapla.dhbw-stuttgart.de/rapla?key=abc',
       importantEvents: _sampleEvents(),
     );
-    addTearDown(viewModel.dispose);
-
-    await viewModel.reloadUseDhMineSetting();
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump(const Duration(milliseconds: 420));
     await tester.pumpAndSettle();
 
     expect(find.byType(GridView), findsNothing);
     expect(find.byType(ListView), findsWidgets);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
+
+  testWidgets('defers dates initialization to keep first drawer open smooth',
+      (WidgetTester tester) async {
+    final viewModel = _buildTrackingViewModel(
+      useDhMineForDates: false,
+      raplaUrl: 'https://rapla.dhbw-stuttgart.de/rapla?key=abc',
+      importantEvents: _sampleEvents(),
+    );
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump();
+
+    expect(viewModel.initializeCalls, 0);
+
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(viewModel.initializeCalls, 0);
+
+    await tester.pump(const Duration(milliseconds: 180));
+    await tester.pump();
+    expect(viewModel.initializeCalls, 1);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
   });
 }
 
@@ -117,6 +144,54 @@ DateManagementViewModel _buildViewModel({
     preferencesProvider,
     raplaProvider,
   );
+}
+
+_TrackingDateManagementViewModel _buildTrackingViewModel({
+  required bool useDhMineForDates,
+  required String raplaUrl,
+  List<ImportantEvent> importantEvents = const [],
+}) {
+  final preferencesAccess = _FakePreferencesAccess({
+    PreferencesProvider.UseDhMineForDates: useDhMineForDates,
+    PreferencesProvider.RaplaUrlKey: raplaUrl,
+    PreferencesProvider.LastViewedDateEntryDatabase: '',
+    PreferencesProvider.LastViewedDateEntryYear: DateTime.now().year.toString(),
+  });
+  final preferencesProvider = PreferencesProvider(
+    preferencesAccess,
+    _FakeSecureStorageAccess(),
+  );
+
+  final dateEntryProvider = _FakeDateEntryProvider();
+  final raplaProvider = _FakeRaplaImportantEventsProvider(
+    preferencesProvider,
+    importantEvents,
+  );
+
+  return _TrackingDateManagementViewModel(
+    dateEntryProvider,
+    preferencesProvider,
+    raplaProvider,
+  );
+}
+
+class _TrackingDateManagementViewModel extends DateManagementViewModel {
+  int initializeCalls = 0;
+
+  _TrackingDateManagementViewModel(
+    DateEntryProvider dateEntryProvider,
+    PreferencesProvider preferencesProvider,
+    RaplaImportantEventsProvider raplaImportantEventsProvider,
+  ) : super(
+          dateEntryProvider,
+          preferencesProvider,
+          raplaImportantEventsProvider,
+        );
+
+  @override
+  void initialize() {
+    initializeCalls += 1;
+  }
 }
 
 List<ImportantEvent> _sampleEvents() {
@@ -168,10 +243,12 @@ class _FakeSecureStorageAccess extends SecureStorageAccess {
 }
 
 class _FakeDateEntryProvider extends DateEntryProvider {
-  _FakeDateEntryProvider() : super(_FakeDateManagementService(), _FakeDateEntryRepository());
+  _FakeDateEntryProvider()
+      : super(_FakeDateManagementService(), _FakeDateEntryRepository());
 
   @override
-  Future<List<DateEntry>> getCachedDateEntries(DateSearchParameters parameters) async {
+  Future<List<DateEntry>> getCachedDateEntries(
+      DateSearchParameters parameters) async {
     return <DateEntry>[];
   }
 

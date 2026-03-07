@@ -5,10 +5,92 @@ import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:intl/intl.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:provider/provider.dart';
+
+const double kMealListCacheExtent = 240;
+
+bool shouldDeferCanteenPageSync({
+  required bool hasClients,
+  required int attachedPositions,
+  required bool isScrolling,
+  required bool hasPendingPageDelta,
+}) {
+  if (!hasClients) {
+    return true;
+  }
+
+  if (attachedPositions != 1) {
+    return true;
+  }
+
+  if (hasPendingPageDelta) {
+    return true;
+  }
+
+  return isScrolling;
+}
+
+DateTime resolveCanteenPageSyncTarget({
+  required DateTime baseDate,
+  required List<DateTime> visibleDays,
+  DateTime? selectedDate,
+  double? currentPage,
+}) {
+  if (visibleDays.isNotEmpty && currentPage != null) {
+    final roundedPage = currentPage.round().clamp(0, visibleDays.length - 1);
+    final controllerTarget = visibleDays[roundedPage];
+    final selectedIsFallback =
+        selectedDate == null || isAtSameDay(selectedDate, baseDate);
+    if (selectedIsFallback && !isAtSameDay(controllerTarget, baseDate)) {
+      return controllerTarget;
+    }
+  }
+
+  return selectedDate ?? baseDate;
+}
+
+bool hasPendingCommittedCanteenPage({
+  required int committedPage,
+  double? currentPage,
+}) {
+  if (currentPage == null) {
+    return false;
+  }
+
+  return (currentPage - committedPage).abs() > 0.01;
+}
+
+ValueKey<String> canteenDayViewKey(DateTime date) {
+  return ValueKey<String>(
+    'canteen_day_${toStartOfDay(date).toIso8601String()}',
+  );
+}
+
+String canteenPageContentModeKey(List<DateTime> visibleDays) {
+  return visibleDays.isEmpty
+      ? 'canteen_page_content_single'
+      : 'canteen_page_content_paged';
+}
+
+int? findCanteenDayIndexByKey(Key key, List<DateTime> visibleDays) {
+  if (key is! ValueKey<String>) {
+    return null;
+  }
+
+  for (var index = 0; index < visibleDays.length; index++) {
+    if (canteenDayViewKey(visibleDays[index]) == key) {
+      return index;
+    }
+  }
+
+  return null;
+}
 
 class CanteenPage extends StatefulWidget {
   @override
@@ -16,11 +98,19 @@ class CanteenPage extends StatefulWidget {
 }
 
 class _CanteenPageState extends State<CanteenPage> {
+  static const Duration _initialLoadDelay = Duration(milliseconds: 220);
+  static final Map<String, DateFormat> _headerDateFormats =
+      <String, DateFormat>{};
+
   late CanteenViewModel viewModel;
   late PageController pageController;
   late ValueNotifier<int> pageNotifier;
   late DateTime baseDate;
+  Timer? _deferredPageSyncTimer;
+  bool _pageSyncPending = false;
+  bool _pageScrollListenerAttached = false;
   DateTime? _selectedDate;
+  DateTime? _lastInteractionWeekStart;
   bool _isApplyingWidgetPayload = false;
 
   @override
@@ -29,20 +119,33 @@ class _CanteenPageState extends State<CanteenPage> {
     viewModel = Provider.of<CanteenViewModel>(context, listen: false);
     viewModel.initialize();
     baseDate = _normalizeToWeekday(DateTime.now());
+    _lastInteractionWeekStart = viewModel.weekStartFor(baseDate);
     pageController = PageController(initialPage: 0);
     pageNotifier = ValueNotifier<int>(0);
     WidgetNavigationPayloadStore.instance.addListener(_handleWidgetPayload);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       PerformanceTelemetry.instance.markNavEvent(name: "canteen.entry");
-      viewModel.primeVisibleWeek(baseDate);
-      viewModel.prefetchAdjacentWeeksDebounced(baseDate);
-      _applyWidgetPayload();
+      Future.delayed(_initialLoadDelay, () {
+        if (!mounted) return;
+        SchedulerBinding.instance.scheduleTask<void>(
+          () {
+            if (!mounted) return;
+            viewModel.primeVisibleWeek(baseDate);
+            viewModel.prefetchAdjacentWeeks(baseDate);
+            _applyWidgetPayload();
+          },
+          Priority.idle,
+          debugLabel: 'canteen.initialLoad',
+        );
+      });
     });
   }
 
   @override
   void dispose() {
+    _deferredPageSyncTimer?.cancel();
+    _detachPageScrollListener();
     WidgetNavigationPayloadStore.instance.removeListener(_handleWidgetPayload);
     pageController.dispose();
     pageNotifier.dispose();
@@ -52,7 +155,11 @@ class _CanteenPageState extends State<CanteenPage> {
   @override
   Widget build(BuildContext context) {
     viewModel = Provider.of<CanteenViewModel>(context, listen: false);
-    var dateFormat = DateFormat.yMMMMEEEEd(L.of(context).locale.toString());
+    final locale = L.of(context).locale.toString();
+    final dateFormat = _headerDateFormats.putIfAbsent(
+      locale,
+      () => DateFormat.yMMMMEEEEd(locale),
+    );
 
     return PropertyChangeProvider<CanteenViewModel, String>(
       value: viewModel,
@@ -149,7 +256,31 @@ class _CanteenPageState extends State<CanteenPage> {
               Expanded(
                 child: Stack(
                   children: [
-                    _buildPageContent(model, visibleDays),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 320),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, animation) {
+                        final offsetAnimation = Tween<Offset>(
+                          begin: const Offset(0, 0.04),
+                          end: Offset.zero,
+                        ).animate(animation);
+
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: offsetAnimation,
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: KeyedSubtree(
+                        key: ValueKey<String>(
+                          canteenPageContentModeKey(visibleDays),
+                        ),
+                        child: _buildPageContent(model, visibleDays),
+                      ),
+                    ),
                     ValueListenableBuilder<int>(
                       valueListenable: pageNotifier,
                       builder: (context, page, _) {
@@ -226,24 +357,42 @@ class _CanteenPageState extends State<CanteenPage> {
     List<DateTime> visibleDays,
   ) {
     if (visibleDays.isEmpty) {
-      return _CanteenDayView(date: _selectedDate ?? baseDate);
+      final date = _selectedDate ?? baseDate;
+      return _CanteenDayView(
+        key: canteenDayViewKey(date),
+        date: date,
+      );
     }
 
     return StretchingOverscrollIndicator(
       axisDirection: AxisDirection.right,
       child: PageView.builder(
         controller: pageController,
-        allowImplicitScrolling: true,
+        allowImplicitScrolling: false,
+        findChildIndexCallback: (key) {
+          return findCanteenDayIndexByKey(key, visibleDays);
+        },
         itemCount: visibleDays.length,
         onPageChanged: (index) {
+          final nextDate = visibleDays[index];
           pageNotifier.value = index;
-          _selectedDate = visibleDays[index];
-          PerformanceTelemetry.instance.markNavEvent(name: "canteen.pageChanged");
-          viewModel.refreshVisibleWeekIfStale(visibleDays[index]);
-          viewModel.prefetchAdjacentWeeksDebounced(visibleDays[index]);
+          _selectedDate = nextDate;
+          PerformanceTelemetry.instance
+              .markNavEvent(name: "canteen.pageChanged");
+
+          final nextWeekStart = viewModel.weekStartFor(nextDate);
+          if (_lastInteractionWeekStart != nextWeekStart) {
+            _lastInteractionWeekStart = nextWeekStart;
+            viewModel.refreshVisibleWeekIfStale(nextDate);
+            viewModel.prefetchAdjacentWeeksDebounced(nextDate);
+          }
         },
         itemBuilder: (context, index) {
-          return _CanteenDayView(date: visibleDays[index]);
+          final date = visibleDays[index];
+          return _CanteenDayView(
+            key: canteenDayViewKey(date),
+            date: date,
+          );
         },
       ),
     );
@@ -304,8 +453,20 @@ class _CanteenPageState extends State<CanteenPage> {
   ) {
     if (visibleDays.isEmpty) return;
 
-    final currentTarget = _selectedDate ?? baseDate;
-    final syncedDate = model.nearestVisibleContentDay(currentTarget);
+    final currentPage =
+        pageController.hasClients && pageController.positions.length == 1
+            ? pageController.page
+            : null;
+    final currentTarget = resolveCanteenPageSyncTarget(
+      baseDate: baseDate,
+      visibleDays: visibleDays,
+      selectedDate: _selectedDate,
+      currentPage: currentPage,
+    );
+    final syncedDate = model.nearestVisibleContentDay(
+      currentTarget,
+      precomputedDays: visibleDays,
+    );
     if (syncedDate == null) return;
 
     final targetIndex =
@@ -314,9 +475,115 @@ class _CanteenPageState extends State<CanteenPage> {
 
     _selectedDate = syncedDate;
     if (pageNotifier.value == targetIndex) return;
-    if (!pageController.hasClients) return;
+    if (_shouldDeferPageSync()) {
+      _pageSyncPending = true;
+      return;
+    }
+
+    _pageSyncPending = false;
     pageController.jumpToPage(targetIndex);
     pageNotifier.value = targetIndex;
+  }
+
+  bool _shouldDeferPageSync() {
+    final hasClients = pageController.hasClients;
+    final attachedPositions = pageController.positions.length;
+    final currentPage =
+        hasClients && attachedPositions == 1 ? pageController.page : null;
+    final hasPendingPageDelta = hasPendingCommittedCanteenPage(
+      committedPage: pageNotifier.value,
+      currentPage: currentPage,
+    );
+    final isScrolling = hasClients && attachedPositions == 1
+        ? pageController.position.isScrollingNotifier.value
+        : false;
+
+    if (!hasClients || attachedPositions != 1) {
+      _scheduleDeferredPageSyncRetry();
+      return true;
+    }
+
+    _attachPageScrollListener();
+
+    if (shouldDeferCanteenPageSync(
+      hasClients: hasClients,
+      attachedPositions: attachedPositions,
+      isScrolling: isScrolling,
+      hasPendingPageDelta: hasPendingPageDelta,
+    )) {
+      if (hasPendingPageDelta) {
+        _scheduleDeferredPageSyncRetry();
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  void _scheduleDeferredPageSyncRetry() {
+    _deferredPageSyncTimer?.cancel();
+    _deferredPageSyncTimer = Timer(const Duration(milliseconds: 360), () {
+      if (!mounted) {
+        return;
+      }
+
+      _retryPendingPageSync();
+    });
+  }
+
+  void _retryPendingPageSync() {
+    if (!_pageSyncPending || !mounted) {
+      return;
+    }
+
+    final model = Provider.of<CanteenViewModel>(context, listen: false);
+    _syncPageForVisibleDays(model, model.visibleContentDays);
+  }
+
+  void _attachPageScrollListener() {
+    if (_pageScrollListenerAttached || !pageController.hasClients) {
+      return;
+    }
+
+    if (pageController.positions.length != 1) {
+      return;
+    }
+
+    pageController.position.isScrollingNotifier
+        .addListener(_handlePageScrollStateChanged);
+    _pageScrollListenerAttached = true;
+  }
+
+  void _detachPageScrollListener() {
+    if (!_pageScrollListenerAttached || !pageController.hasClients) {
+      _pageScrollListenerAttached = false;
+      return;
+    }
+
+    if (pageController.positions.length == 1) {
+      pageController.position.isScrollingNotifier
+          .removeListener(_handlePageScrollStateChanged);
+    }
+
+    _pageScrollListenerAttached = false;
+  }
+
+  void _handlePageScrollStateChanged() {
+    if (!mounted || !pageController.hasClients) {
+      return;
+    }
+
+    if (pageController.positions.length != 1) {
+      _detachPageScrollListener();
+      _scheduleDeferredPageSyncRetry();
+      return;
+    }
+
+    if (pageController.position.isScrollingNotifier.value) {
+      return;
+    }
+
+    _retryPendingPageSync();
   }
 
   void _goToVisibleDay(
@@ -415,49 +682,62 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
         var hasWeekData = model.hasWeekData(weekStart);
         var lastUpdated = model.lastUpdatedForWeek(weekStart);
 
-        if ((!hasWeekData || isLoading) && meals.isEmpty) {
-          return const _MealLoadingList();
-        }
+        late final String stateKey;
+        late final Widget stateChild;
+        final dayKey = toStartOfDay(widget.date).millisecondsSinceEpoch;
 
-        if (meals.isEmpty) {
-          return AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
-            child: SizedBox(
-              key: ValueKey("canteen_empty_${showError}"),
-              child: _buildEmptyState(
-                context,
-                showError: showError,
-                lastUpdated: lastUpdated,
-              ),
+        if ((!hasWeekData || isLoading) && meals.isEmpty) {
+          stateKey = 'loading_$dayKey';
+          stateChild = const _MealLoadingList();
+        } else if (meals.isEmpty) {
+          stateKey = 'empty_${showError ? 'error' : 'plain'}_$dayKey';
+          stateChild = _buildEmptyState(
+            context,
+            showError: showError,
+            lastUpdated: lastUpdated,
+          );
+        } else {
+          stateKey = 'ready_${meals.length}_$dayKey';
+          stateChild = RefreshIndicator(
+            onRefresh: () => model.loadWeek(weekStart),
+            child: ListView.builder(
+              key: PageStorageKey("canteen_${widget.date.toIso8601String()}"),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              itemCount: meals.length,
+              addAutomaticKeepAlives: false,
+              cacheExtent: kMealListCacheExtent,
+              itemBuilder: (context, index) {
+                var meal = meals[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: MealCard(meal: meal),
+                );
+              },
             ),
           );
         }
 
         return AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
-          switchInCurve: Curves.easeOut,
-          switchOutCurve: Curves.easeIn,
-          child: SizedBox(
-            key: ValueKey("canteen_ready_${meals.length}"),
-            child: RefreshIndicator(
-              onRefresh: () => model.loadWeek(weekStart),
-              child: ListView.builder(
-                key: PageStorageKey("canteen_${widget.date.toIso8601String()}"),
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                itemCount: meals.length,
-                addAutomaticKeepAlives: false,
-                cacheExtent: MediaQuery.of(context).size.height * 2.5,
-                itemBuilder: (context, index) {
-                  var meal = meals[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: MealCard(meal: meal),
-                  );
-                },
+          duration: const Duration(milliseconds: 320),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            final offsetAnimation = Tween<Offset>(
+              begin: const Offset(0, 0.06),
+              end: Offset.zero,
+            ).animate(animation);
+
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: offsetAnimation,
+                child: child,
               ),
-            ),
+            );
+          },
+          child: KeyedSubtree(
+            key: ValueKey<String>('canteen_state_$stateKey'),
+            child: stateChild,
           ),
         );
       },
@@ -524,35 +804,8 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
   }
 }
 
-class _MealLoadingList extends StatefulWidget {
+class _MealLoadingList extends StatelessWidget {
   const _MealLoadingList();
-
-  @override
-  State<_MealLoadingList> createState() => _MealLoadingListState();
-}
-
-class _MealLoadingListState extends State<_MealLoadingList>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _opacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
-    _opacity = Tween(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -561,8 +814,13 @@ class _MealLoadingListState extends State<_MealLoadingList>
     var highlightColor =
         isDark ? const Color(0xFF3A3A3A) : const Color(0xFFF2F2F2);
 
-    return FadeTransition(
-      opacity: _opacity,
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.75, end: 1.0),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      builder: (context, opacity, child) {
+        return Opacity(opacity: opacity, child: child);
+      },
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         itemCount: 6,

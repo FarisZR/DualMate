@@ -29,8 +29,7 @@ void main() {
     await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 300));
+    await _pumpFor(tester, const Duration(milliseconds: 700));
 
     final pageView = tester.widget<PageView>(find.byType(PageView));
     final delegate = pageView.childrenDelegate as SliverChildBuilderDelegate;
@@ -50,8 +49,7 @@ void main() {
     await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 300));
+    await _pumpFor(tester, const Duration(milliseconds: 700));
 
     expect(
       find.byWidgetPredicate(
@@ -61,6 +59,25 @@ void main() {
       ),
       findsWidgets,
     );
+  });
+
+  testWidgets('disables implicit page prebuild on canteen pager',
+      (tester) async {
+    final now = DateTime.now();
+    final today = _normalizeToWeekday(now);
+    final weekStart = toStartOfDay(toMonday(today));
+    final menus = _buildWeekMenusWithSingleDayMeal(weekStart, today);
+
+    final provider = _FakeCanteenProvider({weekStart: menus});
+    final viewModel = CanteenViewModel(provider);
+    addTearDown(viewModel.dispose);
+    await viewModel.loadWeek(weekStart);
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await _pumpFor(tester, const Duration(milliseconds: 700));
+
+    final pageView = tester.widget<PageView>(find.byType(PageView));
+    expect(pageView.allowImplicitScrolling, isFalse);
   });
 
   testWidgets('does not allow paging to empty days before/after content',
@@ -76,22 +93,20 @@ void main() {
     await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 300));
+    await _pumpFor(tester, const Duration(milliseconds: 700));
 
     expect(find.text(_mealNameFor(today)), findsOneWidget);
 
     await tester.drag(find.byType(PageView), const Offset(-400, 0));
-    await tester.pumpAndSettle();
+    await _pumpFor(tester, const Duration(milliseconds: 600));
     expect(find.text(_mealNameFor(today)), findsOneWidget);
 
     await tester.drag(find.byType(PageView), const Offset(400, 0));
-    await tester.pumpAndSettle();
+    await _pumpFor(tester, const Duration(milliseconds: 600));
     expect(find.text(_mealNameFor(today)), findsOneWidget);
   });
 
-  testWidgets('warms next week so forward pages become available',
-      (tester) async {
+  testWidgets('preloads next week before the first swipe', (tester) async {
     final now = DateTime.now();
     final today = _normalizeToWeekday(now);
     final weekStart = toStartOfDay(toMonday(today));
@@ -111,13 +126,169 @@ void main() {
     await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 500));
+    await _pumpFor(tester, const Duration(milliseconds: 900));
 
     final pageView = tester.widget<PageView>(find.byType(PageView));
     final delegate = pageView.childrenDelegate as SliverChildBuilderDelegate;
     expect(delegate.childCount, 2);
   });
+
+  test('defers page sync while pager is transitioning or scrolling', () {
+    expect(
+      shouldDeferCanteenPageSync(
+        hasClients: false,
+        attachedPositions: 0,
+        isScrolling: false,
+        hasPendingPageDelta: false,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldDeferCanteenPageSync(
+        hasClients: true,
+        attachedPositions: 2,
+        isScrolling: false,
+        hasPendingPageDelta: false,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldDeferCanteenPageSync(
+        hasClients: true,
+        attachedPositions: 1,
+        isScrolling: true,
+        hasPendingPageDelta: false,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldDeferCanteenPageSync(
+        hasClients: true,
+        attachedPositions: 1,
+        isScrolling: false,
+        hasPendingPageDelta: true,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldDeferCanteenPageSync(
+        hasClients: true,
+        attachedPositions: 1,
+        isScrolling: false,
+        hasPendingPageDelta: false,
+      ),
+      isFalse,
+    );
+  });
+
+  test('treats an uncommitted page move as pending', () {
+    expect(
+      hasPendingCommittedCanteenPage(
+        committedPage: 0,
+        currentPage: null,
+      ),
+      isFalse,
+    );
+    expect(
+      hasPendingCommittedCanteenPage(
+        committedPage: 0,
+        currentPage: 0.2,
+      ),
+      isTrue,
+    );
+    expect(
+      hasPendingCommittedCanteenPage(
+        committedPage: 0,
+        currentPage: 0.6,
+      ),
+      isTrue,
+    );
+    expect(
+      hasPendingCommittedCanteenPage(
+        committedPage: 1,
+        currentPage: 1.0,
+      ),
+      isFalse,
+    );
+  });
+
+  test('prefers the active page over the base-date fallback on first sync', () {
+    final monday = DateTime(2026, 2, 9);
+    final tuesday = monday.add(const Duration(days: 1));
+    final wednesday = monday.add(const Duration(days: 2));
+
+    expect(
+      resolveCanteenPageSyncTarget(
+        baseDate: monday,
+        visibleDays: <DateTime>[monday, tuesday],
+        selectedDate: null,
+        currentPage: 1,
+      ),
+      tuesday,
+    );
+
+    expect(
+      resolveCanteenPageSyncTarget(
+        baseDate: monday,
+        visibleDays: <DateTime>[monday, tuesday],
+        selectedDate: monday,
+        currentPage: 1,
+      ),
+      tuesday,
+    );
+
+    expect(
+      resolveCanteenPageSyncTarget(
+        baseDate: monday,
+        visibleDays: <DateTime>[monday, tuesday, wednesday],
+        selectedDate: wednesday,
+        currentPage: 0,
+      ),
+      wednesday,
+    );
+  });
+
+  test('gives each canteen day a stable key', () {
+    final monday = DateTime(2026, 2, 9);
+    final tuesday = monday.add(const Duration(days: 1));
+    expect(canteenDayViewKey(monday), isNot(canteenDayViewKey(tuesday)));
+    expect(
+      canteenDayViewKey(monday),
+      canteenDayViewKey(DateTime(2026, 2, 9, 15, 30)),
+    );
+  });
+
+  test('keeps the page-content mode key stable for paged content', () {
+    final monday = DateTime(2026, 2, 9);
+    final tuesday = monday.add(const Duration(days: 1));
+
+    expect(canteenPageContentModeKey(const <DateTime>[]),
+        'canteen_page_content_single');
+    expect(canteenPageContentModeKey(<DateTime>[monday]),
+        'canteen_page_content_paged');
+    expect(canteenPageContentModeKey(<DateTime>[monday, tuesday]),
+        'canteen_page_content_paged');
+  });
+
+  test('finds a canteen day index from its stable key', () {
+    final monday = DateTime(2026, 2, 9);
+    final tuesday = monday.add(const Duration(days: 1));
+    final wednesday = monday.add(const Duration(days: 2));
+    final days = <DateTime>[monday, tuesday, wednesday];
+
+    expect(findCanteenDayIndexByKey(canteenDayViewKey(monday), days), 0);
+    expect(findCanteenDayIndexByKey(canteenDayViewKey(tuesday), days), 1);
+    expect(findCanteenDayIndexByKey(const ValueKey<String>('unknown'), days),
+        isNull);
+  });
+}
+
+Future<void> _pumpFor(WidgetTester tester, Duration total) async {
+  const step = Duration(milliseconds: 16);
+  final iterations = (total.inMilliseconds / step.inMilliseconds).ceil();
+  for (var i = 0; i < iterations; i++) {
+    await tester.pump(step);
+  }
 }
 
 Widget _wrapWithApp(CanteenViewModel viewModel) {
@@ -142,7 +313,14 @@ List<DailyMenu> _buildWeekMenusWithSingleDayMeal(
   DateTime weekStart,
   DateTime mealDay,
 ) {
-  final normalizedMealDay = toStartOfDay(mealDay);
+  return _buildWeekMenusWithMealDays(weekStart, {mealDay});
+}
+
+List<DailyMenu> _buildWeekMenusWithMealDays(
+  DateTime weekStart,
+  Set<DateTime> mealDays,
+) {
+  final normalizedMealDays = mealDays.map(toStartOfDay).toSet();
   final dailyMenus = <DailyMenu>[];
 
   for (var i = 0; i < 5; i++) {
@@ -150,7 +328,7 @@ List<DailyMenu> _buildWeekMenusWithSingleDayMeal(
     dailyMenus.add(
       DailyMenu(
         date: day,
-        meals: day == normalizedMealDay ? [_mealForDay(day)] : <Meal>[],
+        meals: normalizedMealDays.contains(day) ? [_mealForDay(day)] : <Meal>[],
       ),
     );
   }

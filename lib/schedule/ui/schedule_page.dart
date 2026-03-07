@@ -17,6 +17,7 @@ import 'package:dualmate/schedule/ui/widgets/select_source_dialog.dart';
 import 'package:dualmate/ui/banner_widget.dart';
 import 'package:dualmate/ui/pager_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:provider/provider.dart';
 
@@ -36,6 +37,9 @@ class SchedulePage extends StatefulWidget {
 }
 
 class _SchedulePageState extends State<SchedulePage> {
+  static const Duration _weeklyInitDelay = Duration(milliseconds: 520);
+  static const Duration _filterWarmDelay = Duration(milliseconds: 1200);
+
   WeeklyScheduleViewModel get weeklyScheduleViewModel {
     SchedulePage._sharedWeeklyScheduleViewModel ??= WeeklyScheduleViewModel(
       KiwiContainer().resolve(),
@@ -52,6 +56,8 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   final ValueNotifier<int?> _forcedPage = ValueNotifier<int?>(null);
+  Timer? _weeklyInitTimer;
+  Timer? _filterWarmTimer;
 
   @override
   void initState() {
@@ -67,14 +73,16 @@ class _SchedulePageState extends State<SchedulePage> {
       final scheduleViewModel =
           Provider.of<ScheduleViewModel>(context, listen: false);
       scheduleViewModel.initialize();
-      unawaited(weeklyScheduleViewModel.initialize());
-      unawaited(_warmFilterPageState());
+      _scheduleDeferredWeeklyInitialization();
+      _scheduleDeferredFilterWarmup();
     });
   }
 
   @override
   void dispose() {
     WidgetNavigationPayloadStore.instance.removeListener(_handleWidgetPayload);
+    _weeklyInitTimer?.cancel();
+    _filterWarmTimer?.cancel();
     _forcedPage.dispose();
     super.dispose();
   }
@@ -85,9 +93,6 @@ class _SchedulePageState extends State<SchedulePage> {
       providers: [
         ChangeNotifierProvider<WeeklyScheduleViewModel>.value(
           value: weeklyScheduleViewModel,
-        ),
-        ChangeNotifierProvider<DailyScheduleViewModel>.value(
-          value: dailyScheduleViewModel,
         ),
       ],
       child: Builder(
@@ -106,6 +111,13 @@ class _SchedulePageState extends State<SchedulePage> {
             }
             return ScheduleEmptyState();
           } else {
+            if (!hasCachedSchedule) {
+              return Padding(
+                padding: const EdgeInsets.all(32),
+                child: ScheduleEmptyStatePlaceholder(),
+              );
+            }
+
             final pager = PagerWidget(
               forcedPage: _forcedPage,
               pages: <PageDefinition>[
@@ -117,7 +129,11 @@ class _SchedulePageState extends State<SchedulePage> {
                 PageDefinition(
                   icon: Icon(Icons.view_day),
                   text: L.of(context).pageDayOverviewTitle,
-                  builder: (_) => DailySchedulePage(),
+                  builder: (_) =>
+                      ChangeNotifierProvider<DailyScheduleViewModel>.value(
+                    value: dailyScheduleViewModel,
+                    child: DailySchedulePage(),
+                  ),
                 ),
               ],
             );
@@ -191,5 +207,34 @@ class _SchedulePageState extends State<SchedulePage> {
       debugPrint('$trace');
       rethrow;
     }
+  }
+
+  void _scheduleDeferredWeeklyInitialization() {
+    _weeklyInitTimer?.cancel();
+    _weeklyInitTimer = Timer(_weeklyInitDelay, () {
+      if (!mounted) return;
+      SchedulerBinding.instance.scheduleTask<void>(
+        () async {
+          if (!mounted) return;
+          await weeklyScheduleViewModel.initialize();
+        },
+        Priority.idle,
+        debugLabel: 'schedule.weeklyInit',
+      );
+    });
+  }
+
+  void _scheduleDeferredFilterWarmup() {
+    _filterWarmTimer?.cancel();
+    _filterWarmTimer = Timer(_filterWarmDelay, () {
+      if (!mounted) return;
+      SchedulerBinding.instance.scheduleTask<void>(
+        () {
+          unawaited(_warmFilterPageState());
+        },
+        Priority.idle,
+        debugLabel: 'schedule.filterWarmup',
+      );
+    });
   }
 }

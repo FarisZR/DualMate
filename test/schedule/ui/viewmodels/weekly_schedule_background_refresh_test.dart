@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
@@ -119,6 +121,61 @@ void main() {
     expect(viewModel.currentDateStart, updatedStart);
     expect(viewModel.currentDateEnd, updatedEnd);
   });
+
+  test('switching back to a recently fetched week does not refetch immediately',
+      () async {
+    var nowValue = DateTime(2026, 2, 9, 8, 0);
+    final entries = <ScheduleEntry>[
+      _entry(DateTime(2026, 2, 9), 'Mon_A'),
+      _entry(DateTime(2026, 2, 16), 'Mon_B'),
+    ];
+    final provider = _CountingScheduleProvider(entries);
+    final sourceProvider = _FakeScheduleSourceProvider();
+    final viewModel = WeeklyScheduleViewModel(
+      provider,
+      sourceProvider,
+      nowProvider: () => nowValue,
+    );
+
+    final weekAStart = DateTime(2026, 2, 9);
+    final weekAEnd = DateTime(2026, 2, 16);
+    final weekBStart = DateTime(2026, 2, 16);
+    final weekBEnd = DateTime(2026, 2, 23);
+
+    await viewModel.updateSchedule(weekAStart, weekAEnd, force: true);
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    expect(provider.updatedScheduleRequests, 1);
+
+    nowValue = nowValue.add(const Duration(seconds: 2));
+    await viewModel.updateSchedule(weekBStart, weekBEnd, force: true);
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    expect(provider.updatedScheduleRequests, 2);
+
+    nowValue = nowValue.add(const Duration(seconds: 2));
+    await viewModel.updateSchedule(weekAStart, weekAEnd);
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    expect(provider.updatedScheduleRequests, 2);
+  });
+
+  test('isUpdating stays true while visible background refresh is in flight',
+      () async {
+    final provider = _BlockingScheduleProvider();
+    final sourceProvider = _FakeScheduleSourceProvider();
+    final viewModel = WeeklyScheduleViewModel(provider, sourceProvider);
+
+    final weekStart = DateTime(2026, 2, 9);
+    final weekEnd = DateTime(2026, 2, 16);
+
+    await viewModel.updateSchedule(weekStart, weekEnd, force: true);
+    expect(viewModel.isUpdating, isTrue);
+
+    provider.complete(
+      ScheduleQueryResult(Schedule(), const []),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+
+    expect(viewModel.isUpdating, isFalse);
+  });
 }
 
 ScheduleEntry _entry(DateTime start, String suffix) {
@@ -162,6 +219,45 @@ class _FakeScheduleProvider implements ScheduleProvider {
   @override
   dynamic noSuchMethod(Invocation invocation) {
     throw UnsupportedError('Unexpected ScheduleProvider call: $invocation');
+  }
+}
+
+class _CountingScheduleProvider extends _FakeScheduleProvider {
+  int updatedScheduleRequests = 0;
+
+  _CountingScheduleProvider(super.entries);
+
+  @override
+  Future<ScheduleQueryResult> getUpdatedSchedule(
+    DateTime start,
+    DateTime end,
+    CancellationToken cancellationToken,
+  ) async {
+    updatedScheduleRequests += 1;
+    return super.getUpdatedSchedule(start, end, cancellationToken);
+  }
+}
+
+class _BlockingScheduleProvider extends _FakeScheduleProvider {
+  final Completer<ScheduleQueryResult> _updatedScheduleCompleter =
+      Completer<ScheduleQueryResult>();
+
+  _BlockingScheduleProvider() : super(const <ScheduleEntry>[]);
+
+  @override
+  Future<ScheduleQueryResult> getUpdatedSchedule(
+    DateTime start,
+    DateTime end,
+    CancellationToken cancellationToken,
+  ) {
+    return _updatedScheduleCompleter.future;
+  }
+
+  void complete(ScheduleQueryResult result) {
+    if (_updatedScheduleCompleter.isCompleted) {
+      return;
+    }
+    _updatedScheduleCompleter.complete(result);
   }
 }
 

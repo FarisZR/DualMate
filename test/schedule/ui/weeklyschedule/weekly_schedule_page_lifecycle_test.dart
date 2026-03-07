@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
@@ -15,6 +17,31 @@ import 'package:provider/provider.dart';
 
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets(
+    'builds without transient exception before weekly initialization',
+    (tester) async {
+      final provider = _TrackingScheduleProvider(const <ScheduleEntry>[]);
+      final sourceProvider = _FakeScheduleSourceProvider();
+      final viewModel = WeeklyScheduleViewModel(
+        provider,
+        sourceProvider,
+        nowProvider: () => DateTime(2026, 2, 10, 10, 0),
+      );
+
+      await tester.pumpWidget(_wrapWithApp(viewModel));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      await tester.pump(const Duration(milliseconds: 120));
+      expect(tester.takeException(), isNull);
+      expect(find.byType(WeeklySchedulePage), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      viewModel.dispose();
+    },
+  );
 
   testWidgets(
     'resume-triggered background refresh keeps monday lessons visible',
@@ -115,6 +142,102 @@ void main() {
       viewModel.dispose();
     },
   );
+
+  testWidgets(
+    'shows delayed loading line while refresh is running',
+    (tester) async {
+      final provider = _QueuedBlockingTrackingScheduleProvider(
+        const <ScheduleEntry>[],
+      );
+      final sourceProvider = _FakeScheduleSourceProvider();
+      final viewModel = WeeklyScheduleViewModel(
+        provider,
+        sourceProvider,
+        nowProvider: () => DateTime(2026, 2, 10, 11, 0),
+      );
+
+      await viewModel.updateSchedule(
+        DateTime(2026, 2, 9),
+        DateTime(2026, 2, 16),
+        force: true,
+      );
+      expect(viewModel.isUpdating, isTrue);
+      provider.completeNextUpdate();
+      await tester.pump(const Duration(milliseconds: 40));
+
+      await viewModel.updateSchedule(
+        DateTime(2026, 2, 9),
+        DateTime(2026, 2, 16),
+        force: true,
+      );
+
+      await tester.pumpWidget(_wrapWithApp(viewModel));
+      await tester.pump();
+
+      expect(
+        find.byKey(const ValueKey<String>('weekly_schedule_loading_line')),
+        findsNothing,
+      );
+
+      await tester.pump(const Duration(milliseconds: 260));
+
+      expect(
+        find.byKey(const ValueKey<String>('weekly_schedule_loading_line')),
+        findsOneWidget,
+      );
+
+      provider.completeNextUpdate();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(viewModel.isUpdating, isFalse);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      viewModel.dispose();
+    },
+  );
+
+  testWidgets(
+    'shows loading line immediately for an unfetched week',
+    (tester) async {
+      final provider = _QueuedBlockingTrackingScheduleProvider(
+        const <ScheduleEntry>[],
+      );
+      final sourceProvider = _FakeScheduleSourceProvider();
+      final viewModel = WeeklyScheduleViewModel(
+        provider,
+        sourceProvider,
+        nowProvider: () => DateTime(2026, 2, 10, 11, 0),
+      );
+
+      await viewModel.updateSchedule(
+        DateTime(2026, 2, 9),
+        DateTime(2026, 2, 16),
+        force: true,
+      );
+      expect(viewModel.isUpdating, isTrue);
+      provider.completeNextUpdate();
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(viewModel.isUpdating, isFalse);
+
+      await tester.pumpWidget(_wrapWithApp(viewModel));
+      await tester.pump();
+
+      unawaited(viewModel.openWeekContaining(DateTime(2026, 2, 17)));
+      await tester.pump(const Duration(milliseconds: 40));
+
+      expect(
+        find.byKey(const ValueKey<String>('weekly_schedule_loading_line')),
+        findsOneWidget,
+      );
+
+      provider.completeNextUpdate();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      viewModel.dispose();
+    },
+  );
 }
 
 Widget _wrapWithApp(WeeklyScheduleViewModel viewModel) {
@@ -186,6 +309,36 @@ class _TrackingScheduleProvider implements ScheduleProvider {
   @override
   dynamic noSuchMethod(Invocation invocation) {
     throw UnsupportedError('Unexpected ScheduleProvider call: $invocation');
+  }
+}
+
+class _QueuedBlockingTrackingScheduleProvider
+    extends _TrackingScheduleProvider {
+  final List<Completer<ScheduleQueryResult>> _pendingUpdates =
+      <Completer<ScheduleQueryResult>>[];
+
+  _QueuedBlockingTrackingScheduleProvider(super.entries);
+
+  @override
+  Future<ScheduleQueryResult> getUpdatedSchedule(
+    DateTime start,
+    DateTime end,
+    CancellationToken cancellationToken,
+  ) {
+    final completer = Completer<ScheduleQueryResult>();
+    _pendingUpdates.add(completer);
+    return completer.future;
+  }
+
+  void completeNextUpdate() {
+    if (_pendingUpdates.isEmpty) {
+      return;
+    }
+    final completer = _pendingUpdates.removeAt(0);
+    if (completer.isCompleted) {
+      return;
+    }
+    completer.complete(ScheduleQueryResult(Schedule(), const []));
   }
 }
 

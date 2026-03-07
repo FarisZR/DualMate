@@ -140,6 +140,7 @@ final en = {
   "dateManagementRaplaEmpty": "No Rapla events found for this period.",
   "scheduleQueryFailedMessage":
       "Oops, something went wrong. It is possible that the schedule is incomplete. To ensure that you do not miss something, view the schedule in the browser.",
+  "scheduleLoadingLatest": "Loading latest schedule...",
   "retry": "Retry",
   "noMoreEvents": "No more events",
   "scheduleQueryFailedOpenInBrowser": "View in browser",

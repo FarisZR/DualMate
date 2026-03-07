@@ -4,6 +4,10 @@ import 'package:dualmate/common/ui/rate_in_store_dialog.dart';
 import 'package:dualmate/common/ui/widget_help_dialog.dart';
 import 'package:flutter/material.dart';
 
+bool shouldShowExactAlarmDialogForLaunchCount(int appLaunchCounter) {
+  return appLaunchCounter >= 1;
+}
+
 ///
 /// Helper class which manages the dialogs which are shown when the app is
 /// launched
@@ -18,13 +22,14 @@ class AppLaunchDialog {
 
     await _preferencesProvider.setAppLaunchCounter(appLaunchCounter + 1);
 
-    RateInStoreDialog(_preferencesProvider, appLaunchCounter)
+    await RateInStoreDialog(_preferencesProvider, appLaunchCounter)
         .showIfNeeded(context);
 
-    WidgetHelpDialog(_preferencesProvider, appLaunchCounter)
+    await WidgetHelpDialog(_preferencesProvider, appLaunchCounter)
         .showIfNeeded(context);
 
-    ExactAlarmPermissionDialog().showIfNeeded(context);
-
+    if (shouldShowExactAlarmDialogForLaunchCount(appLaunchCounter)) {
+      await ExactAlarmPermissionDialog().showIfNeeded(context);
+    }
   }
 }

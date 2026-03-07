@@ -159,7 +159,7 @@ class CanteenProvider {
     DateTime start,
     DateTime end,
   ) async {
-    for (var callback in _callbacks) {
+    for (var callback in List<CanteenMenuUpdatedCallback>.from(_callbacks)) {
       await callback(menus, start, end);
     }
   }

@@ -1,3 +1,7 @@
+import 'dart:developer' as developer;
+import 'dart:ui';
+
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/common/util/string_utils.dart';
@@ -6,45 +10,52 @@ import 'package:intl/intl.dart';
 
 class ScheduleChangedNotification {
   final NotificationApi notificationApi;
-  final L _localization;
+  final PreferencesProvider _preferencesProvider;
 
-  ScheduleChangedNotification(this.notificationApi, this._localization);
+  ScheduleChangedNotification(this.notificationApi, this._preferencesProvider);
 
-  void showNotification(ScheduleDiff scheduleDiff) {
-    showEntriesAddedNotifications(scheduleDiff);
-    showEntriesRemovedNotifications(scheduleDiff);
-    showEntriesChangedNotifications(scheduleDiff);
+  Future<void> showNotification(ScheduleDiff scheduleDiff) async {
+    final localization = await _loadLocalization();
+    await showEntriesAddedNotifications(scheduleDiff, localization);
+    await showEntriesRemovedNotifications(scheduleDiff, localization);
+    await showEntriesChangedNotifications(scheduleDiff, localization);
   }
 
-  void showEntriesChangedNotifications(ScheduleDiff scheduleDiff) {
+  Future<void> showEntriesChangedNotifications(
+    ScheduleDiff scheduleDiff,
+    L localization,
+  ) async {
     if (scheduleDiff.updatedEntries.length > 4) {
       return;
     }
 
     for (var entry in scheduleDiff.updatedEntries) {
       var message = interpolate(
-        _localization.notificationScheduleChangedClass,
+        localization.notificationScheduleChangedClass,
         [
           entry.entry.title,
           DateFormat.yMd().format(entry.entry.start),
         ],
       );
 
-      notificationApi.showNotification(
-        _localization.notificationScheduleChangedClassTitle,
+      await notificationApi.showNotification(
+        localization.notificationScheduleChangedClassTitle,
         message,
       );
     }
   }
 
-  void showEntriesRemovedNotifications(ScheduleDiff scheduleDiff) {
+  Future<void> showEntriesRemovedNotifications(
+    ScheduleDiff scheduleDiff,
+    L localization,
+  ) async {
     if (scheduleDiff.removedEntries.length > 4) {
       return;
     }
 
     for (var entry in scheduleDiff.removedEntries) {
       var message = interpolate(
-        _localization.notificationScheduleChangedRemovedClass,
+        localization.notificationScheduleChangedRemovedClass,
         [
           entry.title,
           DateFormat.yMd().format(entry.start),
@@ -52,21 +63,24 @@ class ScheduleChangedNotification {
         ],
       );
 
-      notificationApi.showNotification(
-        _localization.notificationScheduleChangedRemovedClassTitle,
+      await notificationApi.showNotification(
+        localization.notificationScheduleChangedRemovedClassTitle,
         message,
       );
     }
   }
 
-  void showEntriesAddedNotifications(ScheduleDiff scheduleDiff) {
+  Future<void> showEntriesAddedNotifications(
+    ScheduleDiff scheduleDiff,
+    L localization,
+  ) async {
     if (scheduleDiff.addedEntries.length > 4) {
       return;
     }
 
     for (var entry in scheduleDiff.addedEntries) {
       var message = interpolate(
-        _localization.notificationScheduleChangedNewClass,
+        localization.notificationScheduleChangedNewClass,
         [
           entry.title,
           DateFormat.yMd().format(entry.start),
@@ -74,10 +88,48 @@ class ScheduleChangedNotification {
         ],
       );
 
-      notificationApi.showNotification(
-        _localization.notificationScheduleChangedNewClassTitle,
+      await notificationApi.showNotification(
+        localization.notificationScheduleChangedNewClassTitle,
         message,
       );
+    }
+  }
+
+  Future<L> _loadLocalization() async {
+    try {
+      final languageCode = await _preferencesProvider.getLastUsedLanguageCode();
+      if (languageCode == null || languageCode.trim().isEmpty) {
+        return L(const Locale('en'));
+      }
+
+      final normalized = languageCode.replaceAll('_', '-').trim();
+      final segments = normalized.split('-');
+      final primaryLanguage = segments.first;
+      if (primaryLanguage.isEmpty) {
+        return L(const Locale('en'));
+      }
+
+      final scriptCode =
+          segments.length > 1 && segments[1].length == 4 ? segments[1] : null;
+      final countryCode = segments.length > 2
+          ? segments[2]
+          : (segments.length > 1 && segments[1].length != 4
+              ? segments[1]
+              : null);
+
+      return L(Locale.fromSubtags(
+        languageCode: primaryLanguage,
+        scriptCode: scriptCode,
+        countryCode: countryCode,
+      ));
+    } catch (error, trace) {
+      developer.log(
+        'Failed to load schedule notification localization',
+        name: 'schedule_changed_notification',
+        error: error,
+        stackTrace: trace,
+      );
+      return L(const Locale('en'));
     }
   }
 }

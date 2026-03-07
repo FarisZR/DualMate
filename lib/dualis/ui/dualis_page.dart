@@ -12,36 +12,45 @@ class DualisPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     StudyGradesViewModel viewModel =
-        Provider.of<StudyGradesViewModel>(context);
+        Provider.of<StudyGradesViewModel>(context, listen: false);
 
-    Widget widget;
+    return PropertyChangeProvider<StudyGradesViewModel, String>(
+      value: viewModel,
+      child: PropertyChangeConsumer<StudyGradesViewModel, String>(
+        properties: const ["loginState"],
+        builder: (
+          BuildContext context,
+          StudyGradesViewModel? model,
+          Set<String>? properties,
+        ) {
+          final current = model ?? viewModel;
+          final child = current.loginState == LoginState.LoggedIn
+              ? PagerWidget(
+                  key: const ValueKey<String>('dualis_logged_in_pager'),
+                  pagesId: "dualis_pager",
+                  pages: <PageDefinition>[
+                    PageDefinition(
+                      text: L.of(context).pageDualisOverview,
+                      icon: const Icon(Icons.dashboard),
+                      builder: (BuildContext context) => StudyOverviewPage(),
+                    ),
+                    PageDefinition(
+                      text: L.of(context).pageDualisExams,
+                      icon: const Icon(Icons.book),
+                      builder: (BuildContext context) => ExamResultsPage(),
+                    ),
+                  ],
+                )
+              : const DualisLoginPage(
+                  key: ValueKey<String>('dualis_login_page'),
+                );
 
-    if (viewModel.loginState != LoginState.LoggedIn) {
-      widget = DualisLoginPage();
-    } else {
-      widget = PropertyChangeProvider<StudyGradesViewModel, String>(
-        value: viewModel,
-        child: PagerWidget(
-          pagesId: "dualis_pager",
-          pages: <PageDefinition>[
-            PageDefinition(
-              text: L.of(context).pageDualisOverview,
-              icon: Icon(Icons.dashboard),
-              builder: (BuildContext context) => StudyOverviewPage(),
-            ),
-            PageDefinition(
-              text: L.of(context).pageDualisExams,
-              icon: Icon(Icons.book),
-              builder: (BuildContext context) => ExamResultsPage(),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 200),
-      child: widget,
+          return AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: child,
+          );
+        },
+      ),
     );
   }
 }

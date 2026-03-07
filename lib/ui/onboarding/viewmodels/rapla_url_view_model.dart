@@ -44,6 +44,10 @@ class RaplaUrlViewModel extends OnboardingStepViewModel {
 
   @override
   Future<void> save() async {
-    await scheduleSourceProvider.setupForRapla(_raplaUrl);
+    await scheduleSourceProvider.setupForRapla(
+      _raplaUrl,
+      clearCachedEntries: false,
+      setupSource: false,
+    );
   }
 }

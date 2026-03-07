@@ -40,14 +40,16 @@ class RootPage extends StatefulWidget {
 
 class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   static const Duration _deferredBackgroundInitDelay =
-      Duration(milliseconds: 900);
+      Duration(milliseconds: 1800);
   static const Duration _foregroundHeavyInitDelay =
-      Duration(milliseconds: 1400);
+      Duration(milliseconds: 2800);
   static const Duration _foregroundCanteenPrewarmDelay =
-      Duration(milliseconds: 4200);
+      Duration(milliseconds: 7000);
 
   RootViewModel? _rootViewModel;
   bool _backgroundInitStarted = false;
+  bool _onboardingDeferredInitListenerAttached = false;
+  Stopwatch? _deferredInitStopwatch;
   static const MethodChannel _navigationChannel =
       MethodChannel('com.fariszr.dualmate/navigation');
   String? _pendingRoute;
@@ -72,6 +74,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _detachOnboardingDeferredInitListener();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -171,52 +174,78 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       'startup.root.init.start',
       args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
     );
-    await initializeAppBase(false);
-    print("Root init: base ${stopwatch.elapsedMilliseconds}ms");
-    PerformanceTelemetry.instance.logInstant(
-      'startup.root.base.done',
-      args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
-    );
+    try {
+      await initializeAppBase(false);
+      print("Root init: base ${stopwatch.elapsedMilliseconds}ms");
+      PerformanceTelemetry.instance.logInstant(
+        'startup.root.base.done',
+        args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
+      );
 
-    await saveLastStartLanguage();
-    print("Root init: save language ${stopwatch.elapsedMilliseconds}ms");
-    PerformanceTelemetry.instance.logInstant(
-      'startup.root.language.done',
-      args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
-    );
-    _rootViewModel = RootViewModel(
-      KiwiContainer().resolve(),
-    );
+      unawaited(_saveLastStartLanguage());
+      print(
+          "Root init: save language deferred ${stopwatch.elapsedMilliseconds}ms");
+      PerformanceTelemetry.instance.logInstant(
+        'startup.root.language.done',
+        args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
+      );
+      _rootViewModel ??= RootViewModel(
+        KiwiContainer().resolve(),
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {});
+
+      _applyPendingRoute();
+
+      print("Root init: allow first frame ${stopwatch.elapsedMilliseconds}ms");
+      _startupTask?.finish();
+      unawaited(_loadRootPreferences(stopwatch));
+    } catch (error, trace) {
+      print("Root init failed");
+      print(error);
+      print(trace);
+
+      if (_rootViewModel == null) {
+        _rootViewModel = RootViewModel(
+          KiwiContainer().resolve(),
+        );
+      }
+
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  Future<void> _loadRootPreferences(Stopwatch stopwatch) async {
+    try {
+      await _rootViewModel?.loadFromPreferences();
+      print("Root init: prefs ${stopwatch.elapsedMilliseconds}ms");
+      PerformanceTelemetry.instance.logInstant(
+        'startup.root.preferences.done',
+        args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
+      );
+    } catch (error, trace) {
+      print("Root init: prefs failed");
+      print(error);
+      print(trace);
+    }
+
     if (!mounted) {
       return;
     }
-    setState(() {});
-    WidgetsBinding.instance.allowFirstFrame();
-    PerformanceTelemetry.instance.logInstant(
-      'startup.allowFirstFrame',
-      args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
-    );
 
-    _applyPendingRoute();
-
-    print("Root init: allow first frame ${stopwatch.elapsedMilliseconds}ms");
-    _startupTask?.finish();
-
-    await _rootViewModel?.loadFromPreferences();
-    print("Root init: prefs ${stopwatch.elapsedMilliseconds}ms");
-    PerformanceTelemetry.instance.logInstant(
-      'startup.root.preferences.done',
-      args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
-    );
-
-    if (!mounted) {
-      return;
-    }
-
+    _deferredInitStopwatch = stopwatch;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_backgroundInitStarted) return;
-      _backgroundInitStarted = true;
-      _runDeferredInitialization(stopwatch);
+      if (!mounted || _backgroundInitStarted) return;
+      if (!(_rootViewModel?.hasLoadedPreferences ?? false)) return;
+      if (_rootViewModel?.isOnboarding ?? false) {
+        _attachOnboardingDeferredInitListener();
+        return;
+      }
+      _startDeferredInitialization();
     });
   }
 
@@ -226,18 +255,22 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       final preferencesProvider =
           KiwiContainer().resolve<PreferencesProvider>();
       await PerformanceOverlayController.load(preferencesProvider);
-      if (!mounted) return;
-      setState(() {
-        _perfOverlayLoaded = true;
-      });
+      _perfOverlayLoaded = true;
     } catch (error, trace) {
       print("Perf overlay load failed");
       print(error);
       print(trace);
-      if (!mounted) return;
-      setState(() {
-        _perfOverlayLoaded = true;
-      });
+      _perfOverlayLoaded = true;
+    }
+  }
+
+  Future<void> _saveLastStartLanguage() async {
+    try {
+      await saveLastStartLanguage();
+    } catch (error, trace) {
+      print("Root init: save language failed");
+      print(error);
+      print(trace);
     }
   }
 
@@ -251,20 +284,21 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     if (_rootViewModel == null) {
-      return MaterialApp(
-        home: const SizedBox.shrink(),
-      );
+      return _buildStartupPlaceholder();
     }
 
     return PropertyChangeProvider<RootViewModel, String>(
       child: PropertyChangeConsumer<RootViewModel, String>(
-        properties: const ["appTheme", "isOnboarding"],
+        properties: const ["appTheme", "isOnboarding", "hasLoadedPreferences"],
         builder: (
           BuildContext context,
           RootViewModel? model,
           Set<String>? properties,
         ) {
           if (model == null) return Container();
+          if (!model.hasLoadedPreferences) {
+            return _buildStartupPlaceholder();
+          }
           return ValueListenableBuilder<bool>(
             valueListenable: PerformanceOverlayController.enabled,
             builder: (context, perfEnabled, _) => MaterialApp(
@@ -294,6 +328,17 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     );
   }
 
+  Widget _buildStartupPlaceholder() {
+    return MaterialApp(
+      home: const ColoredBox(
+        color: Color(0xFFFFFFFF),
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
+    );
+  }
+
   String _resolveInitialRoute() {
     var defaultRoute = "main";
     if (WidgetsBinding.instance.platformDispatcher.defaultRouteName ==
@@ -312,10 +357,23 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       // Allow first-frame interaction and navigation transitions to settle.
       await Future.delayed(_deferredBackgroundInitDelay);
       if (!mounted) return;
-      await initializeAppBackground(false);
+      await SchedulerBinding.instance.scheduleTask<void>(
+        () async {
+          if (!mounted) return;
+          await initializeAppBackground(false);
+        },
+        Priority.idle,
+        debugLabel: 'startup.backgroundInit',
+      );
       print(
           "Root init: deferred background ${stopwatch.elapsedMilliseconds}ms");
-      unawaited(_prewarmScheduleCache());
+      SchedulerBinding.instance.scheduleTask<void>(
+        () {
+          unawaited(_prewarmScheduleCache());
+        },
+        Priority.idle,
+        debugLabel: 'startup.scheduleCachePrewarm',
+      );
       // Delay foreground-heavy tasks to keep startup animations responsive.
       Future.delayed(_foregroundHeavyInitDelay, () {
         if (!mounted) return;
@@ -374,5 +432,48 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       print(error);
       print(trace);
     }
+  }
+
+  void _attachOnboardingDeferredInitListener() {
+    if (_onboardingDeferredInitListenerAttached || _rootViewModel == null) {
+      return;
+    }
+
+    _onboardingDeferredInitListenerAttached = true;
+    _rootViewModel!.addListener(
+      _onOnboardingStateChanged,
+      const ["isOnboarding"],
+    );
+  }
+
+  void _detachOnboardingDeferredInitListener() {
+    if (!_onboardingDeferredInitListenerAttached || _rootViewModel == null) {
+      return;
+    }
+
+    _onboardingDeferredInitListenerAttached = false;
+    _rootViewModel!.removeListener(
+      _onOnboardingStateChanged,
+      const ["isOnboarding"],
+    );
+  }
+
+  void _onOnboardingStateChanged() {
+    if (!mounted || _backgroundInitStarted) return;
+    if (_rootViewModel?.isOnboarding ?? true) return;
+
+    _detachOnboardingDeferredInitListener();
+    _startDeferredInitialization();
+  }
+
+  void _startDeferredInitialization() {
+    if (!mounted || _backgroundInitStarted) return;
+
+    _backgroundInitStarted = true;
+    final stopwatch = _deferredInitStopwatch ?? (Stopwatch()..start());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_runDeferredInitialization(stopwatch));
+    });
   }
 }

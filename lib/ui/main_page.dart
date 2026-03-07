@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/ui/app_launch_dialogs.dart';
 import 'package:dualmate/common/util/platform_util.dart';
 import 'package:dualmate/ui/navigation/navigation_entry.dart';
@@ -16,16 +18,29 @@ import 'package:provider/provider.dart';
 ///
 class MainPage extends StatefulWidget {
   final String? initialRoute;
+  final bool showAppLaunchDialogs;
 
-  const MainPage({Key? key, this.initialRoute}) : super(key: key);
+  const MainPage({
+    Key? key,
+    this.initialRoute,
+    this.showAppLaunchDialogs = true,
+  }) : super(key: key);
 
   @override
   _MainPageState createState() => _MainPageState();
 }
 
 class _MainPageState extends State<MainPage> {
+  static const Duration _drawerCloseNavigationDelay =
+      Duration(milliseconds: 260);
+  static const Duration _initialSectionLoadDelay = Duration(milliseconds: 220);
+
   bool _appLaunchDialogsShown = false;
+  int? _pendingDrawerNavigationIndex;
+  Timer? _initialSectionLoadTimer;
+  Timer? _pendingNavigationTimer;
   final ValueNotifier<int> _currentEntryIndex = ValueNotifier<int>(0);
+  final ValueNotifier<bool> _isDrawerOpen = ValueNotifier<bool>(false);
   final Map<int, Widget> _sectionCache = {};
   final Set<int> _loadedSections = <int>{};
 
@@ -35,12 +50,19 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
-    _setCurrentEntryFromRoute(widget.initialRoute);
-    _loadedSections.add(_currentEntryIndex.value);
+    final initialIndex = _targetIndexForRoute(widget.initialRoute);
+    if (initialIndex != null) {
+      _currentEntryIndex.value = initialIndex;
+    }
     MainSectionController.instance.routeSignal
         .addListener(_handleExternalRouteRequest);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _initialSectionLoadTimer?.cancel();
+      _initialSectionLoadTimer = Timer(_initialSectionLoadDelay, () {
+        if (!mounted) return;
+        _ensureCurrentSectionLoaded();
+      });
       _handleExternalRouteRequest();
     });
   }
@@ -49,6 +71,9 @@ class _MainPageState extends State<MainPage> {
   void dispose() {
     MainSectionController.instance.routeSignal
         .removeListener(_handleExternalRouteRequest);
+    _initialSectionLoadTimer?.cancel();
+    _pendingNavigationTimer?.cancel();
+    _isDrawerOpen.dispose();
     _currentEntryIndex.dispose();
     super.dispose();
   }
@@ -62,12 +87,13 @@ class _MainPageState extends State<MainPage> {
       child: Consumer<ValueNotifier<int>>(
         builder: (BuildContext context, value, Widget? child) {
           final body = _buildSectionStack(context);
+          final drawerEntries = _buildDrawerEntries();
           Widget content;
 
           if (PlatformUtil.isTablet()) {
-            content = buildTabletLayout(context, body);
+            content = buildTabletLayout(context, body, drawerEntries);
           } else {
-            content = buildPhoneLayout(context, body);
+            content = buildPhoneLayout(context, body, drawerEntries);
           }
 
           return content;
@@ -77,6 +103,14 @@ class _MainPageState extends State<MainPage> {
   }
 
   Widget _buildSectionStack(BuildContext context) {
+    if (!_loadedSections.contains(_currentEntryIndex.value)) {
+      return const Center(
+        child: CircularProgressIndicator(
+          key: ValueKey<String>('main_page_initial_placeholder'),
+        ),
+      );
+    }
+
     return IndexedStack(
       index: _currentEntryIndex.value,
       children: List.generate(
@@ -99,31 +133,63 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  Widget buildPhoneLayout(BuildContext context, Widget body) {
+  Widget buildPhoneLayout(
+    BuildContext context,
+    Widget body,
+    List<DrawerNavigationEntry> drawerEntries,
+  ) {
     return PopScope(
       canPop: true,
       child: Scaffold(
+        onDrawerChanged: (isOpen) {
+          if (_isDrawerOpen.value == isOpen) {
+            return;
+          }
+          _isDrawerOpen.value = isOpen;
+          if (!isOpen) {
+            _applyPendingDrawerNavigation();
+          }
+        },
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           actionsIconTheme: Theme.of(context).iconTheme,
           elevation: 0,
           iconTheme: Theme.of(context).iconTheme,
           title: Text(currentEntry.title(context)),
-          actions: currentEntry.appBarActions(context),
+          actions: _loadedSections.contains(_currentEntryIndex.value)
+              ? currentEntry.appBarActions(context)
+              : const <Widget>[],
           toolbarTextStyle: Theme.of(context).textTheme.bodyMedium,
           titleTextStyle: Theme.of(context).textTheme.titleLarge,
         ),
-        body: body,
-        drawer: MyNavigationDrawer(
-          selectedIndex: _currentEntryIndex.value,
-          onTap: _onNavigationTapped,
-          entries: _buildDrawerEntries(),
+        body: ValueListenableBuilder<bool>(
+          valueListenable: _isDrawerOpen,
+          child: body,
+          builder: (context, isDrawerOpen, child) {
+            return RepaintBoundary(
+              child: TickerMode(
+                enabled: !isDrawerOpen,
+                child: child ?? const SizedBox.shrink(),
+              ),
+            );
+          },
+        ),
+        drawer: RepaintBoundary(
+          child: MyNavigationDrawer(
+            selectedIndex: _currentEntryIndex.value,
+            onTap: _onNavigationTapped,
+            entries: drawerEntries,
+          ),
         ),
       ),
     );
   }
 
-  Widget buildTabletLayout(BuildContext context, Widget body) {
+  Widget buildTabletLayout(
+    BuildContext context,
+    Widget body,
+    List<DrawerNavigationEntry> drawerEntries,
+  ) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -131,7 +197,9 @@ class _MainPageState extends State<MainPage> {
         elevation: 0,
         iconTheme: Theme.of(context).iconTheme,
         title: Text(currentEntry.title(context)),
-        actions: currentEntry.appBarActions(context),
+        actions: _loadedSections.contains(_currentEntryIndex.value)
+            ? currentEntry.appBarActions(context)
+            : const <Widget>[],
         toolbarTextStyle: Theme.of(context).textTheme.bodyMedium,
         titleTextStyle: Theme.of(context).textTheme.titleLarge,
       ),
@@ -143,7 +211,7 @@ class _MainPageState extends State<MainPage> {
             child: MyNavigationDrawer(
               selectedIndex: _currentEntryIndex.value,
               onTap: _onNavigationTapped,
-              entries: _buildDrawerEntries(),
+              entries: drawerEntries,
               isInDrawer: false,
             ),
           ),
@@ -152,7 +220,7 @@ class _MainPageState extends State<MainPage> {
             width: 1,
           ),
           Expanded(
-            child: body,
+            child: RepaintBoundary(child: body),
             flex: 3,
           ),
         ],
@@ -167,6 +235,7 @@ class _MainPageState extends State<MainPage> {
       drawerEntries.add(DrawerNavigationEntry(
         entry.icon(context),
         entry.title(context),
+        entry.route,
       ));
     }
 
@@ -176,15 +245,45 @@ class _MainPageState extends State<MainPage> {
   void _onNavigationTapped(int index) {
     PerformanceTelemetry.instance
         .markNavEvent(name: "drawer.tab.${navigationEntries[index].route}");
+
+    if (!PlatformUtil.isTablet() && _isDrawerOpen.value) {
+      _pendingDrawerNavigationIndex = index;
+      return;
+    }
+
     _setCurrentEntryIndex(index);
   }
 
+  void _applyPendingDrawerNavigation() {
+    final pendingIndex = _pendingDrawerNavigationIndex;
+    _pendingDrawerNavigationIndex = null;
+    _pendingNavigationTimer?.cancel();
+    if (pendingIndex == null || pendingIndex == _currentEntryIndex.value) {
+      return;
+    }
+
+    _pendingNavigationTimer = Timer(_drawerCloseNavigationDelay, () {
+      if (!mounted) return;
+      _setCurrentEntryIndex(pendingIndex);
+    });
+  }
+
   void _setCurrentEntryFromRoute(String? route) {
-    if (route == null) return;
+    final targetIndex = _targetIndexForRoute(route);
+    if (targetIndex == null) return;
+    _setCurrentEntryIndex(targetIndex);
+  }
+
+  int? _targetIndexForRoute(String? route) {
+    if (route == null) return null;
+
     final targetIndex =
         navigationEntries.indexWhere((entry) => entry.route == route);
-    if (targetIndex < 0) return;
-    _setCurrentEntryIndex(targetIndex);
+    if (targetIndex < 0) {
+      return null;
+    }
+
+    return targetIndex;
   }
 
   void _setCurrentEntryIndex(int index) {
@@ -195,6 +294,16 @@ class _MainPageState extends State<MainPage> {
     _currentEntryIndex.value = index;
   }
 
+  void _ensureCurrentSectionLoaded() {
+    if (_loadedSections.contains(_currentEntryIndex.value)) {
+      return;
+    }
+
+    setState(() {
+      _loadedSections.add(_currentEntryIndex.value);
+    });
+  }
+
   void _handleExternalRouteRequest() {
     final route = MainSectionController.instance.consumePendingRoute();
     if (route == null) return;
@@ -202,6 +311,10 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _showAppLaunchDialogsIfNeeded(BuildContext context) {
+    if (!widget.showAppLaunchDialogs) {
+      return;
+    }
+
     if (!_appLaunchDialogsShown) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future.delayed(const Duration(milliseconds: 1200), () {

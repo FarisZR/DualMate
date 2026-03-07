@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/text_styles.dart';
 import 'package:dualmate/schedule/ui/dailyschedule/widgets/current_time_indicator_widget.dart';
@@ -17,11 +19,22 @@ class DailySchedulePage extends StatefulWidget {
 
 class _DailySchedulePageState extends State<DailySchedulePage> {
   late DailyScheduleViewModel viewModel;
+  bool _didInitializeViewModel = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didInitializeViewModel) {
+      return;
+    }
+
+    viewModel = Provider.of<DailyScheduleViewModel>(context, listen: false);
+    _didInitializeViewModel = true;
+    unawaited(viewModel.initialize());
+  }
 
   @override
   Widget build(BuildContext context) {
-    viewModel = Provider.of<DailyScheduleViewModel>(context);
-
     return PropertyChangeProvider<DailyScheduleViewModel, String>(
       value: viewModel,
       child: SingleChildScrollView(

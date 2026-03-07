@@ -36,7 +36,8 @@ void main() {
     expect(scraper.loadWeekCalls, 1);
   });
 
-  test('refreshWeekIfStale deduplicates concurrent same-week refresh', () async {
+  test('refreshWeekIfStale deduplicates concurrent same-week refresh',
+      () async {
     final database = _InMemoryDatabaseAccess();
     final repository = CanteenMealRepository(database);
     final scraper = _FakeCanteenScraper();
@@ -62,6 +63,41 @@ void main() {
     blocker.complete();
     await Future.wait([first, second]);
     expect(scraper.loadWeekCalls, 1);
+  });
+
+  test('refreshWeek tolerates callbacks removing listeners mid-notify',
+      () async {
+    final database = _InMemoryDatabaseAccess();
+    final repository = CanteenMealRepository(database);
+    final scraper = _FakeCanteenScraper();
+    final provider = CanteenProvider(repository, scraper);
+    final monday = DateTime(2026, 2, 9);
+    final callbackOrder = <String>[];
+
+    late final CanteenMenuUpdatedCallback secondCallback;
+    secondCallback = (_, __, ___) async {
+      callbackOrder.add('second');
+    };
+
+    provider.addMenuUpdatedCallback((_, __, ___) async {
+      callbackOrder.add('first');
+      provider.removeMenuUpdatedCallback(secondCallback);
+    });
+    provider.addMenuUpdatedCallback(secondCallback);
+
+    await provider.refreshWeekIfStale(
+      monday,
+      staleAfter: Duration.zero,
+      prefetchNextWeek: false,
+    );
+
+    expect(callbackOrder, ['first', 'second']);
+
+    callbackOrder.clear();
+    await provider.refreshWeek(
+      monday.add(const Duration(days: 7)),
+    );
+    expect(callbackOrder, ['first']);
   });
 }
 
@@ -134,8 +170,8 @@ class _InMemoryDatabaseAccess extends DatabaseAccess {
     filtered.sort((a, b) {
       final byDate = (a['date'] as int).compareTo(b['date'] as int);
       if (byDate != 0) return byDate;
-      final byCategory = (a['category'] as String)
-          .compareTo(b['category'] as String);
+      final byCategory =
+          (a['category'] as String).compareTo(b['category'] as String);
       if (byCategory != 0) return byCategory;
       return (a['name'] as String).compareTo(b['name'] as String);
     });

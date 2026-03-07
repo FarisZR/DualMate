@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:dualmate/ui/root_page.dart';
@@ -14,17 +15,12 @@ final Stopwatch _startupStopwatch = Stopwatch()..start();
 ///
 /// Main entry point for the app
 ///
-void main() async {
+void main() {
   // Setup the flutter bindings and the error reporting as early as possible
-  final binding = WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
   PerformanceTelemetry.instance.ensureFrameTimingListenerAttached();
   PerformanceTelemetry.instance.logInstant(
     'startup.binding.ready',
-    args: {'elapsedMs': _startupStopwatch.elapsedMilliseconds},
-  );
-  binding.deferFirstFrame();
-  PerformanceTelemetry.instance.logInstant(
-    'startup.deferFirstFrame',
     args: {'elapsedMs': _startupStopwatch.elapsedMilliseconds},
   );
   FlutterError.onError = (FlutterErrorDetails details) {
@@ -32,9 +28,16 @@ void main() async {
     reportException(details.exception, details.stack ?? StackTrace.current);
   };
 
-  await PlatformUtil.initializePortraitLandscapeMode();
-
   runApp(RootPage(startupStopwatch: _startupStopwatch));
+
+  // Keep startup non-blocking so Android splash is never held by async setup.
+  unawaited(() async {
+    try {
+      await PlatformUtil.initializePortraitLandscapeMode();
+    } catch (error, trace) {
+      await reportException(error, trace);
+    }
+  }());
 }
 
 ///

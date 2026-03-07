@@ -1,6 +1,4 @@
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
-import 'package:dualmate/schedule/business/schedule_source_provider.dart';
-import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 import 'package:flutter/foundation.dart';
@@ -29,17 +27,14 @@ class FilterViewModel extends BaseViewModel {
 
   final ScheduleEntryRepository _scheduleEntryRepository;
   final ScheduleFilterRepository _scheduleFilterRepository;
-  final ScheduleSourceProvider _scheduleSource;
-  final ScheduleProvider _scheduleProvider;
   bool _initialized = false;
+  bool get isInitialized => _initialized;
 
   List<ScheduleEntryFilterState> filterStates = [];
 
   FilterViewModel(
     this._scheduleEntryRepository,
     this._scheduleFilterRepository,
-    this._scheduleSource,
-    this._scheduleProvider,
   );
 
   static Future<void> preloadStates(
@@ -58,6 +53,8 @@ class FilterViewModel extends BaseViewModel {
     _cachedStates = _cloneStates(loadedStates);
   }
 
+  static bool get hasCachedStates => _cachedStates != null;
+
   /// Clears the static cache so the next load reflects latest repository data.
   static void invalidateCache() {
     _cachedStates = null;
@@ -71,8 +68,8 @@ class FilterViewModel extends BaseViewModel {
 
   Future<void> initialize() async {
     if (_initialized) return;
-    _initialized = true;
     await loadFilterStates();
+    _initialized = true;
   }
 
   Future<void> loadFilterStates() async {
@@ -97,8 +94,8 @@ class FilterViewModel extends BaseViewModel {
     notifyIfMounted("filterStates");
   }
 
-  Future<void> applyFilter() async {
-    var allFilteredNames = filterStates
+  Future<bool> applyFilter() async {
+    final allFilteredNames = filterStates
         .where((element) => !element.isDisplayed)
         .map((e) => e.entryName)
         .toList();
@@ -112,13 +109,20 @@ class FilterViewModel extends BaseViewModel {
       throw FilterValidationException("Filter entry names must be unique");
     }
 
+    final previousHiddenNames = _cachedStates
+            ?.where((state) => !state.isDisplayed)
+            .map((state) => state.entryName)
+            .toSet() ??
+        const <String>{};
+    if (setEquals(previousHiddenNames, uniqueNames)) {
+      return false;
+    }
+
     try {
       await _scheduleFilterRepository.saveAllHiddenNames(allFilteredNames);
       _cachedStates = _cloneStates(filterStates);
       _cachedStatesFuture = null;
-
-      _scheduleProvider.invalidateScheduleCache();
-      _scheduleSource.fireScheduleSourceChanged();
+      return true;
     } catch (e) {
       throw FilterSaveException(e);
     }
@@ -128,11 +132,11 @@ class FilterViewModel extends BaseViewModel {
     ScheduleEntryRepository scheduleEntryRepository,
     ScheduleFilterRepository scheduleFilterRepository,
   ) async {
-    final allNames =
-        await scheduleEntryRepository.queryAllNamesOfScheduleEntries();
-    final filteredNames = await scheduleFilterRepository.queryAllHiddenNames();
-
-    allNames.sort((s1, s2) => s1.compareTo(s2));
+    final allNamesFuture =
+        scheduleEntryRepository.queryAllNamesOfScheduleEntries();
+    final filteredNamesFuture = scheduleFilterRepository.queryAllHiddenNames();
+    final allNames = List<String>.from(await allNamesFuture);
+    final filteredNames = (await filteredNamesFuture).toSet();
 
     return allNames.map((e) {
       final isFiltered = filteredNames.contains(e);

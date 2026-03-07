@@ -5,10 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class DualisLoginPage extends StatelessWidget {
+  const DualisLoginPage({super.key});
+
   @override
   Widget build(BuildContext context) {
-    StudyGradesViewModel viewModel =
-        Provider.of<StudyGradesViewModel>(context);
+    StudyGradesViewModel viewModel = Provider.of<StudyGradesViewModel>(context);
     return buildLoginPage(context, viewModel);
   }
 

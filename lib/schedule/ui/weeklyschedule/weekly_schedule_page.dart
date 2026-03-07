@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:developer' as developer;
 import 'dart:ui' show lerpDouble;
 
@@ -32,17 +31,17 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   static const int _daysPerWeek = 7;
   static const double _defaultWideAxisWidth = 54.0;
 
-  final Set<String> _prefetchRequestedKeys = <String>{};
-  final Queue<String> _prefetchRequestOrder = Queue<String>();
   late final PageController _weekPageController;
   late WeeklyScheduleViewModel viewModel;
 
   bool _isApplyingWidgetPayload = false;
   bool _pagerInitialized = false;
   bool _didBindViewModel = false;
+  bool _isPagerScrolling = false;
   late DateTime _anchorWeekStart;
   int _currentPageIndex = _initialPageIndex;
   int _weekOpenRequestId = 0;
+  _HourViewport? _lockedViewport;
 
   @override
   void initState() {
@@ -198,16 +197,17 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                       ),
                     ),
                     PropertyChangeConsumer<WeeklyScheduleViewModel, String>(
-                      properties: const ['isUpdating'],
+                      properties: const ['isUpdating', 'weekSchedule'],
                       builder: (
                         BuildContext context,
                         WeeklyScheduleViewModel? model,
                         Set<String>? properties,
                       ) {
                         if (model == null) return const SizedBox.shrink();
-                        return model.isUpdating
-                            ? const LinearProgressIndicator()
-                            : const SizedBox.shrink();
+                        return _TopLoadingIndicator(
+                          isUpdating: model.isUpdating,
+                          showWithoutDelay: model.visibleWeekNeedsInitialFetch,
+                        );
                       },
                     ),
                   ],
@@ -225,7 +225,12 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     BuildContext context,
     WeeklyScheduleViewModel model,
   ) {
-    final targetViewport = _resolveTargetViewport(model);
+    final modelViewport = _resolveTargetViewport(model);
+    _lockedViewport ??= modelViewport;
+    if (!_isPagerScrolling) {
+      _lockedViewport = modelViewport;
+    }
+    final targetViewport = _isPagerScrolling ? _lockedViewport! : modelViewport;
     final displayedDays = _resolveDisplayedDays(model);
 
     return LayoutBuilder(
@@ -237,7 +242,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
 
         return TweenAnimationBuilder<_HourViewport>(
           tween: _HourViewportTween(end: targetViewport),
-          duration: const Duration(milliseconds: 280),
+          duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
           builder: (context, viewport, child) {
             return Row(
@@ -274,7 +279,11 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   ) {
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
+        if (notification is ScrollStartNotification) {
+          _setPagerScrolling(true);
+        }
         if (notification is ScrollEndNotification) {
+          _setPagerScrolling(false);
           unawaited(_commitVisibleWeekFromPager());
         }
         return false;
@@ -285,12 +294,10 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
         physics: const PageScrollPhysics(
           parent: ClampingScrollPhysics(),
         ),
-        allowImplicitScrolling: true,
+        allowImplicitScrolling: false,
         dragStartBehavior: DragStartBehavior.start,
         onPageChanged: (pageIndex) {
           _currentPageIndex = pageIndex;
-          final weekStart = _weekStartForPage(pageIndex);
-          unawaited(_prefetchAdjacentWeeks(weekStart));
         },
         itemBuilder: (context, pageIndex) {
           final weekStart = _weekStartForPage(pageIndex);
@@ -332,6 +339,19 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     await _openVisibleWeek(targetWeekStart);
   }
 
+  void _setPagerScrolling(bool value) {
+    if (_isPagerScrolling == value) {
+      return;
+    }
+    if (!mounted) {
+      _isPagerScrolling = value;
+      return;
+    }
+    setState(() {
+      _isPagerScrolling = value;
+    });
+  }
+
   Future<void> _openVisibleWeek(DateTime weekStart) async {
     final requestId = ++_weekOpenRequestId;
     await viewModel.openWeekContaining(weekStart);
@@ -366,9 +386,6 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   ) {
     final weekEnd = toNextWeek(weekStart);
     final cachedSchedule = model.getCachedWeek(weekStart, weekEnd);
-    if (cachedSchedule == null) {
-      _requestPrefetchWeek(weekStart, weekEnd, model);
-    }
 
     final displayRange = WeeklyScheduleViewModel.resolveWeeklyDisplayRange(
       weekStart,
@@ -379,34 +396,6 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
       schedule: cachedSchedule ?? Schedule(),
       displayStart: displayRange.start,
       displayEnd: displayRange.end,
-    );
-  }
-
-  void _requestPrefetchWeek(
-    DateTime start,
-    DateTime end,
-    WeeklyScheduleViewModel model,
-  ) {
-    final key = _windowKey(start, end);
-    if (_prefetchRequestedKeys.contains(key)) {
-      return;
-    }
-
-    _prefetchRequestedKeys.add(key);
-    _prefetchRequestOrder.addLast(key);
-    while (_prefetchRequestOrder.length > 20) {
-      final staleKey = _prefetchRequestOrder.removeFirst();
-      _prefetchRequestedKeys.remove(staleKey);
-    }
-    unawaited(
-      model.prefetchWeek(start, end).catchError((error, trace) {
-        developer.log(
-          'Week prefetch failed',
-          name: 'weekly_schedule_page',
-          error: error,
-          stackTrace: trace,
-        );
-      }),
     );
   }
 
@@ -430,7 +419,6 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     if (_weekPageController.hasClients) {
       _weekPageController.jumpToPage(_currentPageIndex);
     }
-    unawaited(_prefetchAdjacentWeeks(_anchorWeekStart));
   }
 
   DateTime _normalizeWeekStart(DateTime date) {
@@ -498,10 +486,6 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   DateTime _weekStartForPage(int pageIndex) {
     final weekOffset = pageIndex - _initialPageIndex;
     return addDays(_anchorWeekStart, weekOffset * _daysPerWeek);
-  }
-
-  String _windowKey(DateTime start, DateTime end) {
-    return '${start.toIso8601String()}_${end.toIso8601String()}';
   }
 
   void _handleWidgetPayload() {
@@ -660,6 +644,129 @@ class _HourViewport {
     required this.startHour,
     required this.endHour,
   });
+}
+
+class _TopLoadingIndicator extends StatefulWidget {
+  static const Duration _showDelay = Duration(milliseconds: 220);
+  static const Duration _minimumVisibleDuration = Duration(milliseconds: 180);
+
+  final bool isUpdating;
+  final bool showWithoutDelay;
+
+  const _TopLoadingIndicator({
+    required this.isUpdating,
+    required this.showWithoutDelay,
+  });
+
+  @override
+  State<_TopLoadingIndicator> createState() => _TopLoadingIndicatorState();
+}
+
+class _TopLoadingIndicatorState extends State<_TopLoadingIndicator> {
+  Timer? _showTimer;
+  bool _showIndicator = false;
+  DateTime? _shownAt;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFromState();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TopLoadingIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isUpdating == widget.isUpdating &&
+        oldWidget.showWithoutDelay == widget.showWithoutDelay) {
+      return;
+    }
+    _syncFromState();
+  }
+
+  @override
+  void dispose() {
+    _showTimer?.cancel();
+    super.dispose();
+  }
+
+  void _syncFromState() {
+    if (widget.isUpdating) {
+      if (widget.showWithoutDelay) {
+        _showTimer?.cancel();
+        _showTimer = null;
+        if (_showIndicator) {
+          return;
+        }
+        setState(() {
+          _showIndicator = true;
+          _shownAt = DateTime.now();
+        });
+        return;
+      }
+
+      if (_showIndicator || _showTimer != null) {
+        return;
+      }
+      _showTimer = Timer(_TopLoadingIndicator._showDelay, () {
+        if (!mounted || !widget.isUpdating) {
+          _showTimer = null;
+          return;
+        }
+        setState(() {
+          _showIndicator = true;
+          _shownAt = DateTime.now();
+          _showTimer = null;
+        });
+      });
+      return;
+    }
+
+    _showTimer?.cancel();
+    _showTimer = null;
+    if (!_showIndicator) {
+      return;
+    }
+
+    final shownAt = _shownAt;
+    if (shownAt != null) {
+      final elapsed = DateTime.now().difference(shownAt);
+      final remaining = _TopLoadingIndicator._minimumVisibleDuration - elapsed;
+      if (remaining > Duration.zero) {
+        _showTimer = Timer(remaining, () {
+          if (!mounted || widget.isUpdating) {
+            _showTimer = null;
+            return;
+          }
+          setState(() {
+            _showIndicator = false;
+            _shownAt = null;
+            _showTimer = null;
+          });
+        });
+        return;
+      }
+    }
+
+    setState(() {
+      _showIndicator = false;
+      _shownAt = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 160),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      child: _showIndicator
+          ? const SizedBox(
+              key: ValueKey<String>('weekly_schedule_loading_line'),
+              child: LinearProgressIndicator(),
+            )
+          : const SizedBox.shrink(),
+    );
+  }
 }
 
 class _HourViewportTween extends Tween<_HourViewport> {

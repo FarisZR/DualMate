@@ -27,8 +27,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   final ScheduleSourceProvider scheduleSourceProvider;
   final DateTime Function() _nowProvider;
 
-  late DateTime currentDateStart;
-  late DateTime currentDateEnd;
+  DateTime currentDateStart;
+  DateTime currentDateEnd;
 
   bool _hasCurrentDateRange = false;
 
@@ -65,6 +65,13 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   DateTime get now => _nowProvider();
 
+  bool get visibleWeekNeedsInitialFetch {
+    if (!_hasCurrentDateRange) {
+      return false;
+    }
+    return _needsInitialFetchForWindow(currentDateStart, currentDateEnd);
+  }
+
   Timer? _errorResetTimer;
   Timer? _updateNowTimer;
   Timer? _visibleRefreshDebounce;
@@ -76,6 +83,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   DateTime? _widgetLockedStart;
   DateTime? _widgetLockedEnd;
   DateTime? _widgetLockExpiresAt;
+  int _visibleUpdateRequestId = 0;
 
   DateTime? lastRequestedStart;
   DateTime? lastRequestedEnd;
@@ -87,7 +95,14 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     this.scheduleProvider,
     this.scheduleSourceProvider, {
     DateTime Function()? nowProvider,
-  }) : _nowProvider = nowProvider ?? DateTime.now;
+  })  : _nowProvider = nowProvider ?? DateTime.now,
+        currentDateStart = _resolveInitialWeekStart(nowProvider),
+        currentDateEnd = toNextWeek(_resolveInitialWeekStart(nowProvider));
+
+  static DateTime _resolveInitialWeekStart(DateTime Function()? nowProvider) {
+    final now = (nowProvider ?? DateTime.now)();
+    return toStartOfDay(toDayOfWeek(now, DateTime.monday));
+  }
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -205,7 +220,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         _lastWarmedWeekStart = null;
         _freshnessGate.reset();
         _entryRefreshGate.reset();
-        await _openWeekFromCache(currentDateStart, currentDateEnd);
+        if (weekSchedule == null) {
+          await _openWeekFromCache(currentDateStart, currentDateEnd);
+        }
         if (_isDisposed) return;
         await updateSchedule(currentDateStart, currentDateEnd, force: true);
       } catch (error, trace) {
@@ -216,6 +233,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   void _setSchedule(Schedule? schedule, DateTime start, DateTime end) {
+    final shouldWarmAdjacent =
+        _hasCurrentDateRange && !isAtSameDay(currentDateStart, start);
     weekSchedule = schedule;
     _lastCachedSchedule = schedule;
     if (schedule != null) {
@@ -251,7 +270,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
 
     notifyIfMounted("weekSchedule");
-    if (_lastWarmedWeekStart != start) {
+    if (shouldWarmAdjacent && _lastWarmedWeekStart != start) {
       _lastWarmedWeekStart = start;
       unawaited(_warmAdjacentWeeks(start));
     }
@@ -281,7 +300,12 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   Future openWeekContaining(DateTime date) async {
     final weekStart = toStartOfDay(toDayOfWeek(date, DateTime.monday));
     final weekEnd = toNextWeek(weekStart);
+    final needsInitialFetch = _needsInitialFetchForWindow(weekStart, weekEnd);
     await _openWeekFromCache(weekStart, weekEnd);
+    if (needsInitialFetch) {
+      unawaited(updateSchedule(weekStart, weekEnd, force: true));
+      return;
+    }
     _debounceVisibleRefresh(weekStart, weekEnd);
   }
 
@@ -345,8 +369,12 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       return;
     }
 
+    int? visibleUpdateRequestId;
+    var launchedBackgroundRefresh = false;
+
     try {
       if (applyToVisibleState) {
+        visibleUpdateRequestId = ++_visibleUpdateRequestId;
         isUpdating = true;
         notifyIfMounted("isUpdating");
       }
@@ -361,28 +389,26 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         return;
       }
 
-      await _doUpdateSchedule(
+      launchedBackgroundRefresh = await _doUpdateSchedule(
         start,
         end,
+        visibleUpdateRequestId: visibleUpdateRequestId,
         applyToVisibleState: applyToVisibleState,
       );
     } finally {
-      if (applyToVisibleState) {
-        isUpdating = false;
-      }
       _updateMutex.release();
-      if (applyToVisibleState) {
-        notifyIfMounted("isUpdating");
+      if (applyToVisibleState && !launchedBackgroundRefresh) {
+        _endVisibleUpdateIfCurrent(visibleUpdateRequestId);
       }
     }
   }
 
-  Future _doUpdateSchedule(
+  Future<bool> _doUpdateSchedule(
     DateTime start,
     DateTime end, {
+    int? visibleUpdateRequestId,
     bool applyToVisibleState = true,
   }) async {
-    print("Refreshing schedule...");
     final task = PerformanceTelemetry.instance
         .startTask('schedule.refresh.${start.toIso8601String()}');
 
@@ -399,7 +425,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _memoryWeekCache[cacheKey] = cachedSchedule;
     cacheTask.finish();
     cancellationToken.throwIfCancelled();
-    if (_isDisposed) return;
+    if (_isDisposed) return false;
 
     if (applyToVisibleState) {
       _setSchedule(cachedSchedule, start, end);
@@ -408,14 +434,11 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     final nowValue = now;
     final shouldForceFetch = cachedSchedule.entries.isEmpty &&
         scheduleSourceProvider.currentScheduleSource.canQuery();
-    final isStale = shouldForceFetch ||
-        _freshnessGate.isStale(start, end, nowValue) ||
-        _isWindowStale(start, end, nowValue);
+    final isStale = shouldForceFetch || _isWindowStale(start, end, nowValue);
 
     if (!isStale) {
-      print("Schedule fresh; skip network fetch");
       task.finish();
-      return;
+      return false;
     }
 
     unawaited(
@@ -424,9 +447,12 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         end,
         cancellationToken,
         task,
+        visibleUpdateRequestId: visibleUpdateRequestId,
         applyToVisibleState: applyToVisibleState,
       ),
     );
+
+    return true;
   }
 
   Future<void> _refreshScheduleInBackground(
@@ -434,47 +460,43 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     DateTime end,
     CancellationToken cancellationToken,
     developer.TimelineTask task, {
+    int? visibleUpdateRequestId,
     bool applyToVisibleState = true,
   }) async {
     ScheduleQueryResult? updatedSchedule;
     try {
-      updatedSchedule = await _readScheduleFromService(
-        start,
-        end,
-        cancellationToken,
-      );
-      _freshnessGate.markFetched(start, end, now);
-      _markWindowFetched(start, end, now);
-    } on OperationCancelledException {
-      task.finish();
-      return;
-    } catch (e) {
-      print("Schedule update failed: $e");
-    }
+      try {
+        updatedSchedule = await _readScheduleFromService(
+          start,
+          end,
+          cancellationToken,
+        );
+        _freshnessGate.markFetched(start, end, now);
+        _markWindowFetched(start, end, now);
+      } on OperationCancelledException {
+        return;
+      } catch (e) {
+        print("Schedule update failed: $e");
+      }
 
-    try {
-      cancellationToken.throwIfCancelled();
-    } on OperationCancelledException {
-      task.finish();
-      return;
-    }
+      try {
+        cancellationToken.throwIfCancelled();
+      } on OperationCancelledException {
+        return;
+      }
 
-    if (_isDisposed) {
-      task.finish();
-      return;
-    }
+      if (_isDisposed) {
+        return;
+      }
 
-    if (!applyToVisibleState) {
-      task.finish();
-      return;
-    }
+      if (!applyToVisibleState) {
+        return;
+      }
 
-    if (currentDateStart != start || currentDateEnd != end) {
-      task.finish();
-      return;
-    }
+      if (currentDateStart != start || currentDateEnd != end) {
+        return;
+      }
 
-    try {
       if (updatedSchedule != null) {
         var schedule = updatedSchedule.schedule;
         _memoryWeekCache[_windowKey(start, end)] = schedule;
@@ -501,14 +523,27 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       if (updateFailed) {
         _cancelErrorInFuture();
       }
-
-      print("Refreshing done");
     } catch (error, trace) {
       print("Weekly schedule background refresh failed: $error");
       print(trace);
     } finally {
+      if (applyToVisibleState) {
+        _endVisibleUpdateIfCurrent(visibleUpdateRequestId);
+      }
       task.finish();
     }
+  }
+
+  void _endVisibleUpdateIfCurrent(int? requestId) {
+    if (requestId == null) return;
+    if (requestId != _visibleUpdateRequestId) {
+      return;
+    }
+    if (!isUpdating) {
+      return;
+    }
+    isUpdating = false;
+    notifyIfMounted("isUpdating");
   }
 
   Future<ScheduleQueryResult?> _readScheduleFromService(
@@ -552,6 +587,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   bool _isWindowStale(DateTime start, DateTime end, DateTime now) {
     var gate = _windowFreshnessGates[_windowKey(start, end)];
     return gate == null || gate.isStale(start, end, now);
+  }
+
+  bool _needsInitialFetchForWindow(DateTime start, DateTime end) {
+    return !_windowFreshnessGates.containsKey(_windowKey(start, end));
   }
 
   void _markWindowFetched(DateTime start, DateTime end, DateTime now) {
@@ -642,7 +681,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   void _debounceVisibleRefresh(DateTime start, DateTime end) {
     _visibleRefreshDebounce?.cancel();
-    _visibleRefreshDebounce = Timer(const Duration(milliseconds: 180), () {
+    _visibleRefreshDebounce = Timer(const Duration(milliseconds: 420), () {
       if (_isDisposed) return;
       unawaited(updateSchedule(start, end));
     });
