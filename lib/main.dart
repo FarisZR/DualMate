@@ -31,7 +31,13 @@ void main() {
   runApp(RootPage(startupStopwatch: _startupStopwatch));
 
   // Keep startup non-blocking so Android splash is never held by async setup.
-  unawaited(PlatformUtil.initializePortraitLandscapeMode());
+  unawaited(() async {
+    try {
+      await PlatformUtil.initializePortraitLandscapeMode();
+    } catch (error, trace) {
+      await reportException(error, trace);
+    }
+  }());
 }
 
 ///

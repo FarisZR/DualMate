@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:ui';
 
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
@@ -95,7 +96,40 @@ class ScheduleChangedNotification {
   }
 
   Future<L> _loadLocalization() async {
-    final languageCode = await _preferencesProvider.getLastUsedLanguageCode();
-    return L(Locale(languageCode ?? 'en'));
+    try {
+      final languageCode = await _preferencesProvider.getLastUsedLanguageCode();
+      if (languageCode == null || languageCode.trim().isEmpty) {
+        return L(const Locale('en'));
+      }
+
+      final normalized = languageCode.replaceAll('_', '-').trim();
+      final segments = normalized.split('-');
+      final primaryLanguage = segments.first;
+      if (primaryLanguage.isEmpty) {
+        return L(const Locale('en'));
+      }
+
+      final scriptCode =
+          segments.length > 1 && segments[1].length == 4 ? segments[1] : null;
+      final countryCode = segments.length > 2
+          ? segments[2]
+          : (segments.length > 1 && segments[1].length != 4
+              ? segments[1]
+              : null);
+
+      return L(Locale.fromSubtags(
+        languageCode: primaryLanguage,
+        scriptCode: scriptCode,
+        countryCode: countryCode,
+      ));
+    } catch (error, trace) {
+      developer.log(
+        'Failed to load schedule notification localization',
+        name: 'schedule_changed_notification',
+        error: error,
+        stackTrace: trace,
+      );
+      return L(const Locale('en'));
+    }
   }
 }

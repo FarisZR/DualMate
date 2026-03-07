@@ -523,9 +523,9 @@ class _ScheduleDateFormatters {
   final DateFormat monthShort;
 
   _ScheduleDateFormatters(Locale locale)
-      : dayShort = DateFormat("E", locale.languageCode),
-        dayNumber = DateFormat("d", locale.languageCode),
-        monthShort = DateFormat("MMM", locale.languageCode);
+      : dayShort = DateFormat("E", locale.toLanguageTag()),
+        dayNumber = DateFormat("d", locale.toLanguageTag()),
+        monthShort = DateFormat("MMM", locale.toLanguageTag());
 }
 
 class _CurrentTimeIndicatorGeometry {

@@ -1,10 +1,9 @@
 import 'dart:async';
-import 'dart:math';
 import 'dart:developer' as developer;
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter/services.dart';
 
 ///
 /// Provides methods to display native notifications
@@ -73,22 +72,6 @@ class NotificationApi {
         name: 'notification_api',
       );
       return granted;
-    } on PlatformException catch (error, trace) {
-      developer.log(
-        'Notification runtime permission request failed',
-        name: 'notification_api',
-        error: error,
-        stackTrace: trace,
-      );
-      return null;
-    } on Exception catch (error, trace) {
-      developer.log(
-        'Notification runtime permission request failed',
-        name: 'notification_api',
-        error: error,
-        stackTrace: trace,
-      );
-      return null;
     } catch (error, trace) {
       developer.log(
         'Notification runtime permission request failed',

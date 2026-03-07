@@ -36,6 +36,7 @@ class MyNavigationDrawer extends StatelessWidget {
       widgets.add(_createDrawerItem(context,
           icon: entry.icon,
           text: entry.title,
+          drawerKeyName: entry.keyName,
           index: i,
           isSelected: i == selectedIndex));
 
@@ -83,6 +84,7 @@ class MyNavigationDrawer extends StatelessWidget {
     BuildContext context, {
     required Widget icon,
     required String text,
+    required String drawerKeyName,
     required bool isSelected,
     required int index,
   }) {
@@ -92,7 +94,7 @@ class MyNavigationDrawer extends StatelessWidget {
         color: isSelected ? Theme.of(context).focusColor : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
-          key: ValueKey<String>("drawer_item_$index"),
+          key: ValueKey<String>("drawer_item_$drawerKeyName"),
           borderRadius: BorderRadius.circular(8),
           onTap: () {
             onTap(index);
@@ -177,6 +179,7 @@ class MyNavigationDrawer extends StatelessWidget {
 class DrawerNavigationEntry {
   final Widget icon;
   final String title;
+  final String keyName;
 
-  DrawerNavigationEntry(this.icon, this.title);
+  DrawerNavigationEntry(this.icon, this.title, this.keyName);
 }

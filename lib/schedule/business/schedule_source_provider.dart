@@ -131,6 +131,9 @@ class ScheduleSourceProvider {
     return InvalidScheduleSource();
   }
 
+  /// Onboarding stores the Rapla URL first and defers full source setup plus
+  /// cache clearing to post-onboarding initialization. Other setup flows run
+  /// after onboarding and therefore keep the default immediate setup behavior.
   Future<void> setupForRapla(
     String url, {
     bool clearCachedEntries = true,

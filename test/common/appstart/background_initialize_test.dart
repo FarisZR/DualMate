@@ -4,6 +4,8 @@ import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/native/widget/widget_helper.dart';
+import 'package:dualmate/canteen/background/background_canteen_update.dart';
+import 'package:dualmate/schedule/background/background_schedule_update.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
@@ -50,13 +52,13 @@ void main() {
     );
     expect(
       container.isRegistered<TaskCallback>(
-        name: 'BackgroundCanteenUpdate',
+        name: BackgroundCanteenUpdate.name,
       ),
       isTrue,
     );
     expect(
       container.isRegistered<TaskCallback>(
-        name: 'BackgroundScheduleUpdate',
+        name: BackgroundScheduleUpdate.name,
       ),
       isTrue,
     );

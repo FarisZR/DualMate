@@ -815,7 +815,8 @@ class DateManagementViewModel extends BaseViewModel {
     while (windowStart.isBefore(end)) {
       var window =
           DateRange(start: windowStart, end: _addMonths(windowStart, 3));
-      await _loadRaplaWindow(
+      final beforeCount = _importantEvents.length;
+      final loadedEvents = await _loadRaplaWindow(
         window,
         _updateMutex.token,
         advanceWindow: false,
@@ -823,8 +824,12 @@ class DateManagementViewModel extends BaseViewModel {
         notify: false,
       );
       if (_isDisposed) return;
-      didChangeEvents = true;
-      lastWindowEnd = window.end;
+      final didLoadEvents =
+          loadedEvents != null && _importantEvents.length != beforeCount;
+      if (didLoadEvents) {
+        didChangeEvents = true;
+        lastWindowEnd = window.end;
+      }
       windowStart = window.end;
     }
 

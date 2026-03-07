@@ -13,6 +13,8 @@ import 'package:intl/intl.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:provider/provider.dart';
 
+const double kMealListCacheExtent = 240;
+
 bool shouldDeferCanteenPageSync({
   required bool hasClients,
   required int attachedPositions,
@@ -97,7 +99,6 @@ class CanteenPage extends StatefulWidget {
 
 class _CanteenPageState extends State<CanteenPage> {
   static const Duration _initialLoadDelay = Duration(milliseconds: 220);
-  static const double _mealListCacheExtent = 240;
   static final Map<String, DateFormat> _headerDateFormats =
       <String, DateFormat>{};
 
@@ -704,7 +705,7 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               itemCount: meals.length,
               addAutomaticKeepAlives: false,
-              cacheExtent: _CanteenPageState._mealListCacheExtent,
+              cacheExtent: kMealListCacheExtent,
               itemBuilder: (context, index) {
                 var meal = meals[index];
                 return Padding(

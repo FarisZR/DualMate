@@ -29,6 +29,29 @@ void main() {
     expect(viewModel.notifyAboutNextDay, isTrue);
   });
 
+  test('denied next-day notification permission keeps the toggle disabled',
+      () async {
+    final preferencesProvider = _FakePreferencesProvider();
+    final task = _FakeTaskCallback();
+    var permissionRequests = 0;
+    final notificationApi = NotificationApi(
+      runtimePermissionRequester: (_) async {
+        permissionRequests++;
+        return false;
+      },
+    );
+
+    final viewModel =
+        SettingsViewModel(preferencesProvider, task, notificationApi);
+
+    await viewModel.setNotifyAboutNextDay(true);
+
+    expect(permissionRequests, 1);
+    expect(viewModel.notifyAboutNextDay, isFalse);
+    expect(task.scheduleCalls, 0);
+    expect(task.cancelCalls, 1);
+  });
+
   test('schedule-change toggle only requests permission when enabling',
       () async {
     final preferencesProvider = _FakePreferencesProvider();

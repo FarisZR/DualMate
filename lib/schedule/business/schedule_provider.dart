@@ -212,7 +212,9 @@ class ScheduleProvider {
   }
 
   String _windowKey(DateTime start, DateTime end) {
-    return '${start.toIso8601String()}_${end.toIso8601String()}';
+    final normalizedStart = DateTime(start.year, start.month, start.day);
+    final normalizedEnd = DateTime(end.year, end.month, end.day);
+    return '${normalizedStart.toIso8601String()}_${normalizedEnd.toIso8601String()}';
   }
 
   void _debugLog(String message) {

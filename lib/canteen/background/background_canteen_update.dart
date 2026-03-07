@@ -5,6 +5,7 @@ import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 
 class BackgroundCanteenUpdate extends TaskCallback {
+  static const String name = 'BackgroundCanteenUpdate';
   final CanteenProvider _canteenProvider;
   final WorkSchedulerService _scheduler;
   static const Duration _retryInterval = Duration(hours: 8);
@@ -56,6 +57,6 @@ class BackgroundCanteenUpdate extends TaskCallback {
 
   @override
   String getName() {
-    return "BackgroundCanteenUpdate";
+    return name;
   }
 }

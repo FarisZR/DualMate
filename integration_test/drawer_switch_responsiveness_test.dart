@@ -30,7 +30,7 @@ void main() {
 
     await _openDrawer(tester);
     final dualisDrawerItem =
-        find.byKey(const ValueKey<String>('drawer_item_2'));
+        find.byKey(const ValueKey<String>('drawer_item_dualis'));
     expect(dualisDrawerItem, findsOneWidget);
 
     await tester.tap(dualisDrawerItem, warnIfMissed: false);
@@ -42,7 +42,8 @@ void main() {
     expect(find.byType(DualisPage), findsOneWidget);
 
     await _openDrawer(tester);
-    final datesDrawerItem = find.byKey(const ValueKey<String>('drawer_item_3'));
+    final datesDrawerItem =
+        find.byKey(const ValueKey<String>('drawer_item_date_management'));
     expect(datesDrawerItem, findsOneWidget);
 
     await tester.tap(datesDrawerItem, warnIfMissed: false);
@@ -78,16 +79,19 @@ Future<void> _dismissBlockingDialogs(WidgetTester tester) async {
 }
 
 Future<void> _openDrawer(WidgetTester tester) async {
+  final menuByIcon = find.byIcon(Icons.menu);
   final menuByTooltip = find.byTooltip('Open navigation menu');
+  if (menuByIcon.evaluate().isNotEmpty) {
+    await tester.tap(menuByIcon.first, warnIfMissed: false);
+    await tester.pumpAndSettle(const Duration(milliseconds: 450));
+    return;
+  }
+
   if (menuByTooltip.evaluate().isNotEmpty) {
     await tester.tap(menuByTooltip.first, warnIfMissed: false);
     await tester.pumpAndSettle(const Duration(milliseconds: 450));
     return;
   }
 
-  final menuByIcon = find.byIcon(Icons.menu);
-  if (menuByIcon.evaluate().isNotEmpty) {
-    await tester.tap(menuByIcon.first, warnIfMissed: false);
-    await tester.pumpAndSettle(const Duration(milliseconds: 450));
-  }
+  fail('Could not find menu button via Icons.menu or the navigation tooltip.');
 }

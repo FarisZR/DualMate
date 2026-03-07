@@ -9,13 +9,14 @@ import 'package:test/test.dart';
 void main() {
   test('run loads localization from preferences without Kiwi registration',
       () async {
+    final now = DateTime.now();
     final notificationApi = _RecordingNotificationApi();
     final notification = NextDayInformationNotification(
       notificationApi,
       _FakeScheduleEntryRepository(
         ScheduleEntry(
-          start: DateTime.now().add(const Duration(days: 1, hours: 9)),
-          end: DateTime.now().add(const Duration(days: 1, hours: 10)),
+          start: DateTime(now.year, now.month, now.day + 1, 9),
+          end: DateTime(now.year, now.month, now.day + 1, 10),
           title: 'Mathematics',
           details: '',
           professor: '',
@@ -42,6 +43,8 @@ class _FakePreferencesProvider implements PreferencesProvider {
   Future<String?> getLastUsedLanguageCode() async => 'en';
 
   @override
+  // Test-only fallback for the many unused PreferencesProvider members.
+  // Unexpected calls still fail through the default noSuchMethod behavior.
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 

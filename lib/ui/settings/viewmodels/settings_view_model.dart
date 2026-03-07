@@ -80,7 +80,13 @@ class SettingsViewModel extends BaseViewModel {
 
   Future<void> setNotifyAboutScheduleChanges(bool value) async {
     if (value) {
-      await _notificationApi.requestRuntimePermission();
+      final granted = await _notificationApi.requestRuntimePermission();
+      if (granted != true) {
+        _notifyAboutScheduleChanges = false;
+        notifyIfMounted("notifyAboutScheduleChanges");
+        await _preferencesProvider.setNotifyAboutScheduleChanges(false);
+        return;
+      }
     }
 
     _notifyAboutScheduleChanges = value;
@@ -100,7 +106,14 @@ class SettingsViewModel extends BaseViewModel {
 
   Future<void> setNotifyAboutNextDay(bool value) async {
     if (value) {
-      await _notificationApi.requestRuntimePermission();
+      final granted = await _notificationApi.requestRuntimePermission();
+      if (granted != true) {
+        _notifyAboutNextDay = false;
+        notifyIfMounted("notifyAboutNextDay");
+        await _preferencesProvider.setNotifyAboutNextDay(false);
+        await _nextDayInformationNotification.cancel();
+        return;
+      }
     }
 
     _notifyAboutNextDay = value;

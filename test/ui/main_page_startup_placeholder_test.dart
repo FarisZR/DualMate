@@ -32,9 +32,6 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('main_page_initial_placeholder')),
         findsOneWidget);
-
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump(const Duration(milliseconds: 250));
   });
 
   testWidgets('mounts the initial section after the startup delay',

@@ -66,21 +66,41 @@ class _DateManagementPageState extends State<DateManagementPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          if (viewModel.useDhMineForDates)
-            DateFilterOptions(viewModel: viewModel),
-          Stack(
-            children: <Widget>[
-              const Divider(),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: (viewModel.isLoading ||
-                        (!viewModel.useDhMineForDates &&
-                            viewModel.isLoadingNextRaplaPage &&
-                            viewModel.importantEventSections.isEmpty))
-                    ? const LinearProgressIndicator()
-                    : Container(),
-              ),
+          PropertyChangeConsumer<DateManagementViewModel, String>(
+            properties: const [
+              "useDhMineForDates",
+              "isLoading",
+              "isLoadingNextRaplaPage",
+              "importantEventSections",
             ],
+            builder: (
+              BuildContext context,
+              DateManagementViewModel? model,
+              Set<String>? properties,
+            ) {
+              final headerModel = model ?? viewModel;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  if (headerModel.useDhMineForDates)
+                    DateFilterOptions(viewModel: headerModel),
+                  Stack(
+                    children: <Widget>[
+                      const Divider(),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: (headerModel.isLoading ||
+                                (!headerModel.useDhMineForDates &&
+                                    headerModel.isLoadingNextRaplaPage &&
+                                    headerModel.importantEventSections.isEmpty))
+                            ? const LinearProgressIndicator()
+                            : Container(),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
           ),
           _buildBody(viewModel, context),
         ],

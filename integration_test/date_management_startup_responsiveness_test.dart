@@ -25,17 +25,23 @@ void main() {
     );
 
     app.main();
-    await tester.pumpAndSettle(const Duration(seconds: 2));
+    await _pumpAndSettleWithTimeout(
+      tester,
+      initialDelay: const Duration(seconds: 2),
+    );
     await _dismissBlockingDialogs(tester);
 
     await _openDrawer(tester);
     final datesDrawerItem = find.byKey(
-      const ValueKey<String>('drawer_item_3'),
+      const ValueKey<String>('drawer_item_date_management'),
     );
     expect(datesDrawerItem, findsOneWidget);
 
     await tester.tap(datesDrawerItem, warnIfMissed: false);
-    await tester.pumpAndSettle(const Duration(seconds: 2));
+    await _pumpAndSettleWithTimeout(
+      tester,
+      initialDelay: const Duration(seconds: 2),
+    );
     await _dismissBlockingDialogs(tester);
 
     expect(find.byType(DateManagementPage), findsOneWidget);
@@ -46,7 +52,7 @@ void main() {
     );
     if (scrollables.evaluate().isNotEmpty) {
       await tester.fling(scrollables.first, const Offset(0, -300), 1200);
-      await tester.pumpAndSettle(const Duration(milliseconds: 600));
+      await _pumpAndSettleWithTimeout(tester);
     }
 
     expect(find.byType(DateManagementPage), findsOneWidget);
@@ -66,26 +72,52 @@ Future<void> _dismissBlockingDialogs(WidgetTester tester) async {
     );
 
     if (buttons.evaluate().isEmpty) {
-      await tester.pumpAndSettle(const Duration(milliseconds: 250));
+      await _pumpAndSettleWithTimeout(tester);
       continue;
     }
 
     await tester.tap(buttons.first, warnIfMissed: false);
-    await tester.pumpAndSettle(const Duration(milliseconds: 450));
+    await _pumpAndSettleWithTimeout(tester);
   }
 }
 
 Future<void> _openDrawer(WidgetTester tester) async {
+  final menuByIcon = find.byIcon(Icons.menu);
   final menuByTooltip = find.byTooltip('Open navigation menu');
-  if (menuByTooltip.evaluate().isNotEmpty) {
-    await tester.tap(menuByTooltip.first, warnIfMissed: false);
-    await tester.pumpAndSettle(const Duration(milliseconds: 450));
+  if (menuByIcon.evaluate().isNotEmpty) {
+    await tester.tap(menuByIcon.first, warnIfMissed: false);
+    await _pumpAndSettleWithTimeout(tester);
     return;
   }
 
-  final menuByIcon = find.byIcon(Icons.menu);
-  if (menuByIcon.evaluate().isNotEmpty) {
-    await tester.tap(menuByIcon.first, warnIfMissed: false);
-    await tester.pumpAndSettle(const Duration(milliseconds: 450));
+  if (menuByTooltip.evaluate().isNotEmpty) {
+    await tester.tap(menuByTooltip.first, warnIfMissed: false);
+    await _pumpAndSettleWithTimeout(tester);
+    return;
   }
+
+  fail('Could not find menu button via Icons.menu or the navigation tooltip.');
+}
+
+Future<void> _pumpAndSettleWithTimeout(
+  WidgetTester tester, {
+  Duration initialDelay = Duration.zero,
+  Duration step = const Duration(milliseconds: 100),
+  Duration timeout = const Duration(seconds: 30),
+}) async {
+  if (initialDelay > Duration.zero) {
+    await tester.pump(initialDelay);
+  }
+
+  final endTime = tester.binding.clock.fromNowBy(timeout);
+  while (tester.binding.hasScheduledFrame) {
+    if (tester.binding.clock.now().isAfter(endTime)) {
+      throw FlutterError(
+        'pumpAndSettle timed out after ${timeout.inSeconds} seconds.',
+      );
+    }
+    await tester.pump(step);
+  }
+
+  await tester.pump(step);
 }

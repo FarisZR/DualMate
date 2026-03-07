@@ -452,7 +452,10 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     }
 
     _onboardingDeferredInitListenerAttached = false;
-    _rootViewModel!.removeListener(_onOnboardingStateChanged);
+    _rootViewModel!.removeListener(
+      _onOnboardingStateChanged,
+      const ["isOnboarding"],
+    );
   }
 
   void _onOnboardingStateChanged() {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/ui/app_launch_dialogs.dart';
 import 'package:dualmate/common/util/platform_util.dart';
 import 'package:dualmate/ui/navigation/navigation_entry.dart';
@@ -35,6 +37,8 @@ class _MainPageState extends State<MainPage> {
 
   bool _appLaunchDialogsShown = false;
   int? _pendingDrawerNavigationIndex;
+  Timer? _initialSectionLoadTimer;
+  Timer? _pendingNavigationTimer;
   final ValueNotifier<int> _currentEntryIndex = ValueNotifier<int>(0);
   final ValueNotifier<bool> _isDrawerOpen = ValueNotifier<bool>(false);
   final Map<int, Widget> _sectionCache = {};
@@ -54,7 +58,8 @@ class _MainPageState extends State<MainPage> {
         .addListener(_handleExternalRouteRequest);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      Future<void>.delayed(_initialSectionLoadDelay, () {
+      _initialSectionLoadTimer?.cancel();
+      _initialSectionLoadTimer = Timer(_initialSectionLoadDelay, () {
         if (!mounted) return;
         _ensureCurrentSectionLoaded();
       });
@@ -66,6 +71,8 @@ class _MainPageState extends State<MainPage> {
   void dispose() {
     MainSectionController.instance.routeSignal
         .removeListener(_handleExternalRouteRequest);
+    _initialSectionLoadTimer?.cancel();
+    _pendingNavigationTimer?.cancel();
     _isDrawerOpen.dispose();
     _currentEntryIndex.dispose();
     super.dispose();
@@ -228,6 +235,7 @@ class _MainPageState extends State<MainPage> {
       drawerEntries.add(DrawerNavigationEntry(
         entry.icon(context),
         entry.title(context),
+        entry.route,
       ));
     }
 
@@ -249,11 +257,12 @@ class _MainPageState extends State<MainPage> {
   void _applyPendingDrawerNavigation() {
     final pendingIndex = _pendingDrawerNavigationIndex;
     _pendingDrawerNavigationIndex = null;
+    _pendingNavigationTimer?.cancel();
     if (pendingIndex == null || pendingIndex == _currentEntryIndex.value) {
       return;
     }
 
-    Future<void>.delayed(_drawerCloseNavigationDelay, () {
+    _pendingNavigationTimer = Timer(_drawerCloseNavigationDelay, () {
       if (!mounted) return;
       _setCurrentEntryIndex(pendingIndex);
     });

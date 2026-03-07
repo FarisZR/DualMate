@@ -197,7 +197,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                       ),
                     ),
                     PropertyChangeConsumer<WeeklyScheduleViewModel, String>(
-                      properties: const ['isUpdating'],
+                      properties: const ['isUpdating', 'weekSchedule'],
                       builder: (
                         BuildContext context,
                         WeeklyScheduleViewModel? model,

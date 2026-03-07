@@ -21,6 +21,7 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
   bool _showLoadedList = FilterViewModel.hasCachedStates;
   bool _hasInitError = false;
   bool _isHandlingPop = false;
+  bool _didInitializeViewModel = false;
 
   @override
   void initState() {
@@ -40,6 +41,7 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
       await widget.preloadFuture;
       if (!mounted) return;
       await _viewModel.initialize();
+      _didInitializeViewModel = _viewModel.isInitialized;
       initSucceeded = true;
     } catch (e, trace) {
       debugPrint('Failed to initialize schedule filter page: $e');
@@ -193,6 +195,9 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
     var didChangeFilters = false;
     var applySucceeded = false;
     try {
+      if (!_didInitializeViewModel || _hasInitError) {
+        return;
+      }
       didChangeFilters = await _viewModel.applyFilter();
       applySucceeded = true;
     } on FilterValidationException catch (e, trace) {

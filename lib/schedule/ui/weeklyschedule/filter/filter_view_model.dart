@@ -28,6 +28,7 @@ class FilterViewModel extends BaseViewModel {
   final ScheduleEntryRepository _scheduleEntryRepository;
   final ScheduleFilterRepository _scheduleFilterRepository;
   bool _initialized = false;
+  bool get isInitialized => _initialized;
 
   List<ScheduleEntryFilterState> filterStates = [];
 
@@ -67,8 +68,8 @@ class FilterViewModel extends BaseViewModel {
 
   Future<void> initialize() async {
     if (_initialized) return;
-    _initialized = true;
     await loadFilterStates();
+    _initialized = true;
   }
 
   Future<void> loadFilterStates() async {

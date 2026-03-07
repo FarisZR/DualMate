@@ -35,8 +35,6 @@ class _DailySchedulePageState extends State<DailySchedulePage> {
 
   @override
   Widget build(BuildContext context) {
-    viewModel = Provider.of<DailyScheduleViewModel>(context);
-
     return PropertyChangeProvider<DailyScheduleViewModel, String>(
       value: viewModel,
       child: SingleChildScrollView(

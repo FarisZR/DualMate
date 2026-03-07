@@ -11,6 +11,8 @@ class RootViewModel extends BaseViewModel {
   late bool _isOnboarding;
   bool get isOnboarding => _isOnboarding;
 
+  // Preference loading fails open so startup can continue with defaults if the
+  // persisted values cannot be read.
   bool _hasLoadedPreferences = false;
   bool get hasLoadedPreferences => _hasLoadedPreferences;
 
@@ -30,6 +32,7 @@ class RootViewModel extends BaseViewModel {
       notifyListeners("appTheme");
       notifyListeners("isOnboarding");
     } finally {
+      // Mark the attempt as finished even on failure to unblock the UI.
       if (_hasLoadedPreferences) return;
 
       _hasLoadedPreferences = true;

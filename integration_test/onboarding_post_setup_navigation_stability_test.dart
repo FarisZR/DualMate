@@ -2,6 +2,7 @@ import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/date_management/ui/date_management_page.dart';
 import 'package:dualmate/dualis/ui/dualis_page.dart';
 import 'package:dualmate/main.dart' as app;
+import 'package:dualmate/schedule/model/schedule_source_type.dart';
 import 'package:dualmate/ui/onboarding/onboarding_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,7 +31,7 @@ void main() {
 
     await _openDrawer(tester);
     final dualisDrawerItem =
-        find.byKey(const ValueKey<String>('drawer_item_2'));
+        find.byKey(const ValueKey<String>('drawer_item_dualis'));
     expect(dualisDrawerItem, findsOneWidget);
     await tester.tap(dualisDrawerItem, warnIfMissed: false);
     await tester.pumpAndSettle(const Duration(seconds: 2));
@@ -38,7 +39,8 @@ void main() {
     expect(find.byType(DualisPage), findsOneWidget);
 
     await _openDrawer(tester);
-    final datesDrawerItem = find.byKey(const ValueKey<String>('drawer_item_3'));
+    final datesDrawerItem =
+        find.byKey(const ValueKey<String>('drawer_item_date_management'));
     expect(datesDrawerItem, findsOneWidget);
     await tester.tap(datesDrawerItem, warnIfMissed: false);
     await tester.pumpAndSettle(const Duration(seconds: 2));
@@ -53,9 +55,13 @@ Future<void> _finishOnboardingWithNoneSource(WidgetTester tester) async {
     return;
   }
 
-  final radioTiles = find.byType(RadioListTile);
-  if (radioTiles.evaluate().isNotEmpty) {
-    await tester.tap(radioTiles.last, warnIfMissed: false);
+  final noneRadio = find.byWidgetPredicate(
+    (widget) =>
+        widget is RadioListTile<ScheduleSourceType> &&
+        widget.value == ScheduleSourceType.None,
+  );
+  if (noneRadio.evaluate().isNotEmpty) {
+    await tester.tap(noneRadio.first, warnIfMissed: false);
     await tester.pumpAndSettle(const Duration(milliseconds: 450));
   }
 
@@ -97,16 +103,23 @@ Future<void> _dismissBlockingDialogs(WidgetTester tester) async {
 }
 
 Future<void> _openDrawer(WidgetTester tester) async {
-  final menuByTooltip = find.byTooltip('Open navigation menu');
-  if (menuByTooltip.evaluate().isNotEmpty) {
-    await tester.tap(menuByTooltip.first, warnIfMissed: false);
-    await tester.pumpAndSettle(const Duration(milliseconds: 450));
-    return;
-  }
-
   final menuByIcon = find.byIcon(Icons.menu);
+  final menuByTooltip = find.byTooltip('Open navigation menu');
+
   if (menuByIcon.evaluate().isNotEmpty) {
     await tester.tap(menuByIcon.first, warnIfMissed: false);
     await tester.pumpAndSettle(const Duration(milliseconds: 450));
+  } else if (menuByTooltip.evaluate().isNotEmpty) {
+    await tester.tap(menuByTooltip.first, warnIfMissed: false);
+    await tester.pumpAndSettle(const Duration(milliseconds: 450));
+  } else {
+    fail(
+        'Could not find menu button via Icons.menu or the navigation tooltip.');
   }
+
+  expect(
+    find.byKey(const ValueKey<String>('drawer_item_dualis')),
+    findsOneWidget,
+    reason: 'Drawer did not open after tapping the navigation menu button.',
+  );
 }
