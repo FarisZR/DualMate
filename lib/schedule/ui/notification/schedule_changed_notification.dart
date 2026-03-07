@@ -16,15 +16,15 @@ class ScheduleChangedNotification {
 
   Future<void> showNotification(ScheduleDiff scheduleDiff) async {
     final localization = await _loadLocalization();
-    showEntriesAddedNotifications(scheduleDiff, localization);
-    showEntriesRemovedNotifications(scheduleDiff, localization);
-    showEntriesChangedNotifications(scheduleDiff, localization);
+    await showEntriesAddedNotifications(scheduleDiff, localization);
+    await showEntriesRemovedNotifications(scheduleDiff, localization);
+    await showEntriesChangedNotifications(scheduleDiff, localization);
   }
 
-  void showEntriesChangedNotifications(
+  Future<void> showEntriesChangedNotifications(
     ScheduleDiff scheduleDiff,
     L localization,
-  ) {
+  ) async {
     if (scheduleDiff.updatedEntries.length > 4) {
       return;
     }
@@ -38,17 +38,17 @@ class ScheduleChangedNotification {
         ],
       );
 
-      notificationApi.showNotification(
+      await notificationApi.showNotification(
         localization.notificationScheduleChangedClassTitle,
         message,
       );
     }
   }
 
-  void showEntriesRemovedNotifications(
+  Future<void> showEntriesRemovedNotifications(
     ScheduleDiff scheduleDiff,
     L localization,
-  ) {
+  ) async {
     if (scheduleDiff.removedEntries.length > 4) {
       return;
     }
@@ -63,17 +63,17 @@ class ScheduleChangedNotification {
         ],
       );
 
-      notificationApi.showNotification(
+      await notificationApi.showNotification(
         localization.notificationScheduleChangedRemovedClassTitle,
         message,
       );
     }
   }
 
-  void showEntriesAddedNotifications(
+  Future<void> showEntriesAddedNotifications(
     ScheduleDiff scheduleDiff,
     L localization,
-  ) {
+  ) async {
     if (scheduleDiff.addedEntries.length > 4) {
       return;
     }
@@ -88,7 +88,7 @@ class ScheduleChangedNotification {
         ],
       );
 
-      notificationApi.showNotification(
+      await notificationApi.showNotification(
         localization.notificationScheduleChangedNewClassTitle,
         message,
       );
