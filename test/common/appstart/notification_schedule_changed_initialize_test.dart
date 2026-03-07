@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/appstart/notification_schedule_changed_initialize.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
@@ -50,6 +52,50 @@ void main() {
     expect(notificationApi.titles, isNotEmpty);
     expect(notificationApi.messages.single, contains('Mathematics'));
   });
+
+  test('schedule change notification waits for notification dispatch', () async {
+    final scheduleProvider = _FakeScheduleProvider();
+    final preferencesProvider = _FakePreferencesProvider();
+    final notificationApi = _BlockingNotificationApi();
+    final container = KiwiContainer();
+
+    container.registerInstance<ScheduleProvider>(scheduleProvider);
+    container.registerInstance<PreferencesProvider>(preferencesProvider);
+    container.registerInstance<NotificationApi>(notificationApi);
+
+    NotificationScheduleChangedInitialize().setupNotification();
+
+    var callbackCompleted = false;
+    final callbackFuture = scheduleProvider
+        .emitScheduleChanged(
+          ScheduleDiff(
+            addedEntries: [
+              ScheduleEntry(
+                start: DateTime(2026, 3, 9, 9),
+                end: DateTime(2026, 3, 9, 10),
+                title: 'Mathematics',
+                details: 'Lecture',
+                professor: 'Prof',
+                room: 'R1',
+                type: ScheduleEntryType.Class,
+              ),
+            ],
+            removedEntries: const [],
+            updatedEntries: const [],
+          ),
+        )
+        .then((_) => callbackCompleted = true);
+
+    await Future<void>.delayed(Duration.zero);
+
+    expect(notificationApi.callCount, 1);
+    expect(callbackCompleted, isFalse);
+
+    notificationApi.completePendingNotification();
+    await callbackFuture;
+
+    expect(callbackCompleted, isTrue);
+  });
 }
 
 class _FakeScheduleProvider implements ScheduleProvider {
@@ -91,5 +137,22 @@ class _RecordingNotificationApi extends VoidNotificationApi {
   Future<void> showNotification(String title, String message, [int? id]) async {
     titles.add(title);
     messages.add(message);
+  }
+}
+
+class _BlockingNotificationApi extends VoidNotificationApi {
+  final Completer<void> _notificationCompleter = Completer<void>();
+  int callCount = 0;
+
+  @override
+  Future<void> showNotification(String title, String message, [int? id]) {
+    callCount++;
+    return _notificationCompleter.future;
+  }
+
+  void completePendingNotification() {
+    if (!_notificationCompleter.isCompleted) {
+      _notificationCompleter.complete();
+    }
   }
 }
