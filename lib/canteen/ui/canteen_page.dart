@@ -70,6 +70,12 @@ ValueKey<String> canteenDayViewKey(DateTime date) {
   );
 }
 
+String canteenPageContentModeKey(List<DateTime> visibleDays) {
+  return visibleDays.isEmpty
+      ? 'canteen_page_content_single'
+      : 'canteen_page_content_paged';
+}
+
 class CanteenPage extends StatefulWidget {
   @override
   _CanteenPageState createState() => _CanteenPageState();
@@ -257,9 +263,7 @@ class _CanteenPageState extends State<CanteenPage> {
                       },
                       child: KeyedSubtree(
                         key: ValueKey<String>(
-                          visibleDays.isEmpty
-                              ? 'canteen_page_content_single'
-                              : 'canteen_page_content_paged_${visibleDays.length}',
+                          canteenPageContentModeKey(visibleDays),
                         ),
                         child: _buildPageContent(model, visibleDays),
                       ),

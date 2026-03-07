@@ -264,6 +264,18 @@ void main() {
       canteenDayViewKey(DateTime(2026, 2, 9, 15, 30)),
     );
   });
+
+  test('keeps the page-content mode key stable for paged content', () {
+    final monday = DateTime(2026, 2, 9);
+    final tuesday = monday.add(const Duration(days: 1));
+
+    expect(canteenPageContentModeKey(const <DateTime>[]),
+        'canteen_page_content_single');
+    expect(canteenPageContentModeKey(<DateTime>[monday]),
+        'canteen_page_content_paged');
+    expect(canteenPageContentModeKey(<DateTime>[monday, tuesday]),
+        'canteen_page_content_paged');
+  });
 }
 
 Future<void> _pumpFor(WidgetTester tester, Duration total) async {
