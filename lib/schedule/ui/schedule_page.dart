@@ -37,7 +37,7 @@ class SchedulePage extends StatefulWidget {
 }
 
 class _SchedulePageState extends State<SchedulePage> {
-  static const Duration _weeklyInitDelay = Duration(milliseconds: 280);
+  static const Duration _weeklyInitDelay = Duration(milliseconds: 520);
   static const Duration _filterWarmDelay = Duration(milliseconds: 1200);
 
   WeeklyScheduleViewModel get weeklyScheduleViewModel {
@@ -94,9 +94,6 @@ class _SchedulePageState extends State<SchedulePage> {
         ChangeNotifierProvider<WeeklyScheduleViewModel>.value(
           value: weeklyScheduleViewModel,
         ),
-        ChangeNotifierProvider<DailyScheduleViewModel>.value(
-          value: dailyScheduleViewModel,
-        ),
       ],
       child: Builder(
         builder: (context) {
@@ -114,6 +111,13 @@ class _SchedulePageState extends State<SchedulePage> {
             }
             return ScheduleEmptyState();
           } else {
+            if (!hasCachedSchedule) {
+              return Padding(
+                padding: const EdgeInsets.all(32),
+                child: ScheduleEmptyStatePlaceholder(),
+              );
+            }
+
             final pager = PagerWidget(
               forcedPage: _forcedPage,
               pages: <PageDefinition>[
@@ -125,7 +129,11 @@ class _SchedulePageState extends State<SchedulePage> {
                 PageDefinition(
                   icon: Icon(Icons.view_day),
                   text: L.of(context).pageDayOverviewTitle,
-                  builder: (_) => DailySchedulePage(),
+                  builder: (_) =>
+                      ChangeNotifierProvider<DailyScheduleViewModel>.value(
+                    value: dailyScheduleViewModel,
+                    child: DailySchedulePage(),
+                  ),
                 ),
               ],
             );

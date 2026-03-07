@@ -14,6 +14,33 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 void main() {
+  testWidgets('does not prefetch adjacent weeks before user interaction', (
+    tester,
+  ) async {
+    final provider = _TrackingScheduleProvider(<ScheduleEntry>[]);
+    final sourceProvider = _FakeScheduleSourceProvider();
+    final viewModel = _SpyWeeklyScheduleViewModel(
+      provider,
+      sourceProvider,
+      nowProvider: () => DateTime(2026, 2, 10, 10),
+    );
+    await viewModel.updateSchedule(
+      DateTime(2026, 2, 9),
+      DateTime(2026, 2, 16),
+      force: true,
+    );
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+
+    expect(viewModel.prefetchRequests, isEmpty);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
+
   testWidgets('animates hour viewport transitions instead of hard jumps', (
     tester,
   ) async {
@@ -80,6 +107,7 @@ void main() {
 
     final pageView = tester.widget<PageView>(pagerFinder);
     final controller = pageView.controller!;
+    expect(pageView.allowImplicitScrolling, isFalse);
     expect(controller.page, closeTo(10000.0, 0.001));
     expect(
       find.byKey(const ValueKey<String>('weekly_fixed_hour_axis')),
@@ -260,4 +288,27 @@ class _FakeScheduleSource implements ScheduleSource {
   ]) async {
     return ScheduleQueryResult(Schedule(), const []);
   }
+}
+
+class _SpyWeeklyScheduleViewModel extends WeeklyScheduleViewModel {
+  final List<_RangeRequest> prefetchRequests = <_RangeRequest>[];
+
+  _SpyWeeklyScheduleViewModel(
+    super.scheduleProvider,
+    super.scheduleSourceProvider, {
+    required super.nowProvider,
+  });
+
+  @override
+  Future<void> prefetchWeek(DateTime start, DateTime end) async {
+    prefetchRequests.add(_RangeRequest(start, end));
+    await super.prefetchWeek(start, end);
+  }
+}
+
+class _RangeRequest {
+  final DateTime start;
+  final DateTime end;
+
+  _RangeRequest(this.start, this.end);
 }

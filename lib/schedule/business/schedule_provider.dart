@@ -1,4 +1,5 @@
 import 'dart:developer' as developer;
+import 'dart:collection';
 
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
@@ -28,6 +29,8 @@ typedef ScheduleEntryChangedCallback = Future<void> Function(
 );
 
 class ScheduleProvider {
+  static const int _maxCachedWindows = 6;
+
   final PreferencesProvider _preferencesProvider;
   final ScheduleSourceProvider _scheduleSource;
   final ScheduleEntryRepository _scheduleEntryRepository;
@@ -41,9 +44,8 @@ class ScheduleProvider {
   final List<ScheduleEntryChangedCallback> _scheduleEntryChangedCallbacks =
       <ScheduleEntryChangedCallback>[];
 
-  Schedule? _cachedSchedule;
-  DateTime? _cachedScheduleStart;
-  DateTime? _cachedScheduleEnd;
+  final LinkedHashMap<String, Schedule> _cachedSchedulesByWindow =
+      LinkedHashMap<String, Schedule>();
 
   ScheduleProvider(
       this._scheduleSource,
@@ -59,13 +61,13 @@ class ScheduleProvider {
   }
 
   Future<Schedule> getCachedSchedule(DateTime start, DateTime end) async {
-    if (_cachedSchedule != null &&
-        _cachedScheduleStart != null &&
-        _cachedScheduleEnd != null &&
-        _cachedScheduleStart == start &&
-        _cachedScheduleEnd == end) {
-      return _cachedSchedule!;
+    final cacheKey = _windowKey(start, end);
+    final inMemorySchedule = _cachedSchedulesByWindow.remove(cacheKey);
+    if (inMemorySchedule != null) {
+      _cachedSchedulesByWindow[cacheKey] = inMemorySchedule;
+      return inMemorySchedule;
     }
+
     var cachedSchedule =
         await _scheduleEntryRepository.queryScheduleBetweenDates(start, end);
 
@@ -79,9 +81,7 @@ class ScheduleProvider {
       "Filtered cached schedule has ${cachedSchedule.entries.length} entries",
     );
 
-    _cachedSchedule = cachedSchedule;
-    _cachedScheduleStart = start;
-    _cachedScheduleEnd = end;
+    _cacheWindow(start, end, cachedSchedule);
     return cachedSchedule;
   }
 
@@ -114,9 +114,7 @@ class ScheduleProvider {
 
       schedule = await _scheduleFilter.filter(schedule);
 
-      _cachedSchedule = schedule;
-      _cachedScheduleStart = start;
-      _cachedScheduleEnd = end;
+      _cacheWindow(start, end, schedule);
 
       _debugLog("Filtered schedule has ${schedule.entries.length} entries");
 
@@ -200,9 +198,21 @@ class ScheduleProvider {
   }
 
   void invalidateScheduleCache() {
-    _cachedSchedule = null;
-    _cachedScheduleStart = null;
-    _cachedScheduleEnd = null;
+    _cachedSchedulesByWindow.clear();
+  }
+
+  void _cacheWindow(DateTime start, DateTime end, Schedule schedule) {
+    final cacheKey = _windowKey(start, end);
+    _cachedSchedulesByWindow.remove(cacheKey);
+    _cachedSchedulesByWindow[cacheKey] = schedule;
+
+    while (_cachedSchedulesByWindow.length > _maxCachedWindows) {
+      _cachedSchedulesByWindow.remove(_cachedSchedulesByWindow.keys.first);
+    }
+  }
+
+  String _windowKey(DateTime start, DateTime end) {
+    return '${start.toIso8601String()}_${end.toIso8601String()}';
   }
 
   void _debugLog(String message) {

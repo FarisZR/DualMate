@@ -16,8 +16,13 @@ import 'package:provider/provider.dart';
 ///
 class MainPage extends StatefulWidget {
   final String? initialRoute;
+  final bool showAppLaunchDialogs;
 
-  const MainPage({Key? key, this.initialRoute}) : super(key: key);
+  const MainPage({
+    Key? key,
+    this.initialRoute,
+    this.showAppLaunchDialogs = true,
+  }) : super(key: key);
 
   @override
   _MainPageState createState() => _MainPageState();
@@ -26,6 +31,7 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   static const Duration _drawerCloseNavigationDelay =
       Duration(milliseconds: 260);
+  static const Duration _initialSectionLoadDelay = Duration(milliseconds: 220);
 
   bool _appLaunchDialogsShown = false;
   int? _pendingDrawerNavigationIndex;
@@ -40,12 +46,18 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
-    _setCurrentEntryFromRoute(widget.initialRoute);
-    _loadedSections.add(_currentEntryIndex.value);
+    final initialIndex = _targetIndexForRoute(widget.initialRoute);
+    if (initialIndex != null) {
+      _currentEntryIndex.value = initialIndex;
+    }
     MainSectionController.instance.routeSignal
         .addListener(_handleExternalRouteRequest);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      Future<void>.delayed(_initialSectionLoadDelay, () {
+        if (!mounted) return;
+        _ensureCurrentSectionLoaded();
+      });
       _handleExternalRouteRequest();
     });
   }
@@ -84,6 +96,14 @@ class _MainPageState extends State<MainPage> {
   }
 
   Widget _buildSectionStack(BuildContext context) {
+    if (!_loadedSections.contains(_currentEntryIndex.value)) {
+      return const Center(
+        child: CircularProgressIndicator(
+          key: ValueKey<String>('main_page_initial_placeholder'),
+        ),
+      );
+    }
+
     return IndexedStack(
       index: _currentEntryIndex.value,
       children: List.generate(
@@ -129,7 +149,9 @@ class _MainPageState extends State<MainPage> {
           elevation: 0,
           iconTheme: Theme.of(context).iconTheme,
           title: Text(currentEntry.title(context)),
-          actions: currentEntry.appBarActions(context),
+          actions: _loadedSections.contains(_currentEntryIndex.value)
+              ? currentEntry.appBarActions(context)
+              : const <Widget>[],
           toolbarTextStyle: Theme.of(context).textTheme.bodyMedium,
           titleTextStyle: Theme.of(context).textTheme.titleLarge,
         ),
@@ -168,7 +190,9 @@ class _MainPageState extends State<MainPage> {
         elevation: 0,
         iconTheme: Theme.of(context).iconTheme,
         title: Text(currentEntry.title(context)),
-        actions: currentEntry.appBarActions(context),
+        actions: _loadedSections.contains(_currentEntryIndex.value)
+            ? currentEntry.appBarActions(context)
+            : const <Widget>[],
         toolbarTextStyle: Theme.of(context).textTheme.bodyMedium,
         titleTextStyle: Theme.of(context).textTheme.titleLarge,
       ),
@@ -236,11 +260,21 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _setCurrentEntryFromRoute(String? route) {
-    if (route == null) return;
+    final targetIndex = _targetIndexForRoute(route);
+    if (targetIndex == null) return;
+    _setCurrentEntryIndex(targetIndex);
+  }
+
+  int? _targetIndexForRoute(String? route) {
+    if (route == null) return null;
+
     final targetIndex =
         navigationEntries.indexWhere((entry) => entry.route == route);
-    if (targetIndex < 0) return;
-    _setCurrentEntryIndex(targetIndex);
+    if (targetIndex < 0) {
+      return null;
+    }
+
+    return targetIndex;
   }
 
   void _setCurrentEntryIndex(int index) {
@@ -251,6 +285,16 @@ class _MainPageState extends State<MainPage> {
     _currentEntryIndex.value = index;
   }
 
+  void _ensureCurrentSectionLoaded() {
+    if (_loadedSections.contains(_currentEntryIndex.value)) {
+      return;
+    }
+
+    setState(() {
+      _loadedSections.add(_currentEntryIndex.value);
+    });
+  }
+
   void _handleExternalRouteRequest() {
     final route = MainSectionController.instance.consumePendingRoute();
     if (route == null) return;
@@ -258,6 +302,10 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _showAppLaunchDialogsIfNeeded(BuildContext context) {
+    if (!widget.showAppLaunchDialogs) {
+      return;
+    }
+
     if (!_appLaunchDialogsShown) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future.delayed(const Duration(milliseconds: 1200), () {

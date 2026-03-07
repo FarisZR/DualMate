@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:developer' as developer;
 import 'dart:ui' show lerpDouble;
 
@@ -32,8 +31,6 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   static const int _daysPerWeek = 7;
   static const double _defaultWideAxisWidth = 54.0;
 
-  final Set<String> _prefetchRequestedKeys = <String>{};
-  final Queue<String> _prefetchRequestOrder = Queue<String>();
   late final PageController _weekPageController;
   late WeeklyScheduleViewModel viewModel;
 
@@ -297,12 +294,10 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
         physics: const PageScrollPhysics(
           parent: ClampingScrollPhysics(),
         ),
-        allowImplicitScrolling: true,
+        allowImplicitScrolling: false,
         dragStartBehavior: DragStartBehavior.start,
         onPageChanged: (pageIndex) {
           _currentPageIndex = pageIndex;
-          final weekStart = _weekStartForPage(pageIndex);
-          unawaited(_prefetchAdjacentWeeks(weekStart));
         },
         itemBuilder: (context, pageIndex) {
           final weekStart = _weekStartForPage(pageIndex);
@@ -391,9 +386,6 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   ) {
     final weekEnd = toNextWeek(weekStart);
     final cachedSchedule = model.getCachedWeek(weekStart, weekEnd);
-    if (cachedSchedule == null) {
-      _requestPrefetchWeek(weekStart, weekEnd, model);
-    }
 
     final displayRange = WeeklyScheduleViewModel.resolveWeeklyDisplayRange(
       weekStart,
@@ -404,34 +396,6 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
       schedule: cachedSchedule ?? Schedule(),
       displayStart: displayRange.start,
       displayEnd: displayRange.end,
-    );
-  }
-
-  void _requestPrefetchWeek(
-    DateTime start,
-    DateTime end,
-    WeeklyScheduleViewModel model,
-  ) {
-    final key = _windowKey(start, end);
-    if (_prefetchRequestedKeys.contains(key)) {
-      return;
-    }
-
-    _prefetchRequestedKeys.add(key);
-    _prefetchRequestOrder.addLast(key);
-    while (_prefetchRequestOrder.length > 20) {
-      final staleKey = _prefetchRequestOrder.removeFirst();
-      _prefetchRequestedKeys.remove(staleKey);
-    }
-    unawaited(
-      model.prefetchWeek(start, end).catchError((error, trace) {
-        developer.log(
-          'Week prefetch failed',
-          name: 'weekly_schedule_page',
-          error: error,
-          stackTrace: trace,
-        );
-      }),
     );
   }
 
@@ -455,7 +419,6 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     if (_weekPageController.hasClients) {
       _weekPageController.jumpToPage(_currentPageIndex);
     }
-    unawaited(_prefetchAdjacentWeeks(_anchorWeekStart));
   }
 
   DateTime _normalizeWeekStart(DateTime date) {
@@ -523,10 +486,6 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   DateTime _weekStartForPage(int pageIndex) {
     final weekOffset = pageIndex - _initialPageIndex;
     return addDays(_anchorWeekStart, weekOffset * _daysPerWeek);
-  }
-
-  String _windowKey(DateTime start, DateTime end) {
-    return '${start.toIso8601String()}_${end.toIso8601String()}';
   }
 
   void _handleWidgetPayload() {

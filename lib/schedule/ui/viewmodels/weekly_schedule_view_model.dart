@@ -220,7 +220,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         _lastWarmedWeekStart = null;
         _freshnessGate.reset();
         _entryRefreshGate.reset();
-        await _openWeekFromCache(currentDateStart, currentDateEnd);
+        if (weekSchedule == null) {
+          await _openWeekFromCache(currentDateStart, currentDateEnd);
+        }
         if (_isDisposed) return;
         await updateSchedule(currentDateStart, currentDateEnd, force: true);
       } catch (error, trace) {
@@ -231,6 +233,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   void _setSchedule(Schedule? schedule, DateTime start, DateTime end) {
+    final shouldWarmAdjacent =
+        _hasCurrentDateRange && !isAtSameDay(currentDateStart, start);
     weekSchedule = schedule;
     _lastCachedSchedule = schedule;
     if (schedule != null) {
@@ -266,7 +270,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
 
     notifyIfMounted("weekSchedule");
-    if (_lastWarmedWeekStart != start) {
+    if (shouldWarmAdjacent && _lastWarmedWeekStart != start) {
       _lastWarmedWeekStart = start;
       unawaited(_warmAdjacentWeeks(start));
     }

@@ -1,3 +1,6 @@
+import 'dart:ui';
+
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/common/util/string_utils.dart';
@@ -6,24 +9,28 @@ import 'package:intl/intl.dart';
 
 class ScheduleChangedNotification {
   final NotificationApi notificationApi;
-  final L _localization;
+  final PreferencesProvider _preferencesProvider;
 
-  ScheduleChangedNotification(this.notificationApi, this._localization);
+  ScheduleChangedNotification(this.notificationApi, this._preferencesProvider);
 
-  void showNotification(ScheduleDiff scheduleDiff) {
-    showEntriesAddedNotifications(scheduleDiff);
-    showEntriesRemovedNotifications(scheduleDiff);
-    showEntriesChangedNotifications(scheduleDiff);
+  Future<void> showNotification(ScheduleDiff scheduleDiff) async {
+    final localization = await _loadLocalization();
+    showEntriesAddedNotifications(scheduleDiff, localization);
+    showEntriesRemovedNotifications(scheduleDiff, localization);
+    showEntriesChangedNotifications(scheduleDiff, localization);
   }
 
-  void showEntriesChangedNotifications(ScheduleDiff scheduleDiff) {
+  void showEntriesChangedNotifications(
+    ScheduleDiff scheduleDiff,
+    L localization,
+  ) {
     if (scheduleDiff.updatedEntries.length > 4) {
       return;
     }
 
     for (var entry in scheduleDiff.updatedEntries) {
       var message = interpolate(
-        _localization.notificationScheduleChangedClass,
+        localization.notificationScheduleChangedClass,
         [
           entry.entry.title,
           DateFormat.yMd().format(entry.entry.start),
@@ -31,20 +38,23 @@ class ScheduleChangedNotification {
       );
 
       notificationApi.showNotification(
-        _localization.notificationScheduleChangedClassTitle,
+        localization.notificationScheduleChangedClassTitle,
         message,
       );
     }
   }
 
-  void showEntriesRemovedNotifications(ScheduleDiff scheduleDiff) {
+  void showEntriesRemovedNotifications(
+    ScheduleDiff scheduleDiff,
+    L localization,
+  ) {
     if (scheduleDiff.removedEntries.length > 4) {
       return;
     }
 
     for (var entry in scheduleDiff.removedEntries) {
       var message = interpolate(
-        _localization.notificationScheduleChangedRemovedClass,
+        localization.notificationScheduleChangedRemovedClass,
         [
           entry.title,
           DateFormat.yMd().format(entry.start),
@@ -53,20 +63,23 @@ class ScheduleChangedNotification {
       );
 
       notificationApi.showNotification(
-        _localization.notificationScheduleChangedRemovedClassTitle,
+        localization.notificationScheduleChangedRemovedClassTitle,
         message,
       );
     }
   }
 
-  void showEntriesAddedNotifications(ScheduleDiff scheduleDiff) {
+  void showEntriesAddedNotifications(
+    ScheduleDiff scheduleDiff,
+    L localization,
+  ) {
     if (scheduleDiff.addedEntries.length > 4) {
       return;
     }
 
     for (var entry in scheduleDiff.addedEntries) {
       var message = interpolate(
-        _localization.notificationScheduleChangedNewClass,
+        localization.notificationScheduleChangedNewClass,
         [
           entry.title,
           DateFormat.yMd().format(entry.start),
@@ -75,9 +88,14 @@ class ScheduleChangedNotification {
       );
 
       notificationApi.showNotification(
-        _localization.notificationScheduleChangedNewClassTitle,
+        localization.notificationScheduleChangedNewClassTitle,
         message,
       );
     }
+  }
+
+  Future<L> _loadLocalization() async {
+    final languageCode = await _preferencesProvider.getLastUsedLanguageCode();
+    return L(Locale(languageCode ?? 'en'));
   }
 }

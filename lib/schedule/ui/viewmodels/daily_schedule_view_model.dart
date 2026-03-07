@@ -7,6 +7,7 @@ class DailyScheduleViewModel extends BaseViewModel {
   static const Duration weekDuration = Duration(days: 7);
 
   final ScheduleProvider scheduleProvider;
+  bool _initialized = false;
 
   DateTime currentDate = DateTime.now();
 
@@ -14,8 +15,15 @@ class DailyScheduleViewModel extends BaseViewModel {
 
   DailyScheduleViewModel(this.scheduleProvider) {
     scheduleProvider.addScheduleUpdatedCallback(_scheduleUpdatedCallback);
+  }
 
-    loadScheduleForToday();
+  Future<void> initialize() async {
+    if (_initialized) {
+      return;
+    }
+
+    _initialized = true;
+    await loadScheduleForToday();
   }
 
   Future<void> setSchedule(Schedule schedule) async {

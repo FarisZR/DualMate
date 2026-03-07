@@ -182,8 +182,9 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
       );
 
-      await saveLastStartLanguage();
-      print("Root init: save language ${stopwatch.elapsedMilliseconds}ms");
+      unawaited(_saveLastStartLanguage());
+      print(
+          "Root init: save language deferred ${stopwatch.elapsedMilliseconds}ms");
       PerformanceTelemetry.instance.logInstant(
         'startup.root.language.done',
         args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
@@ -200,27 +201,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
       print("Root init: allow first frame ${stopwatch.elapsedMilliseconds}ms");
       _startupTask?.finish();
-
-      await _rootViewModel?.loadFromPreferences();
-      print("Root init: prefs ${stopwatch.elapsedMilliseconds}ms");
-      PerformanceTelemetry.instance.logInstant(
-        'startup.root.preferences.done',
-        args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      _deferredInitStopwatch = stopwatch;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || _backgroundInitStarted) return;
-        if (_rootViewModel?.isOnboarding ?? false) {
-          _attachOnboardingDeferredInitListener();
-          return;
-        }
-        _startDeferredInitialization();
-      });
+      unawaited(_loadRootPreferences(stopwatch));
     } catch (error, trace) {
       print("Root init failed");
       print(error);
@@ -238,24 +219,58 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _loadRootPreferences(Stopwatch stopwatch) async {
+    try {
+      await _rootViewModel?.loadFromPreferences();
+      print("Root init: prefs ${stopwatch.elapsedMilliseconds}ms");
+      PerformanceTelemetry.instance.logInstant(
+        'startup.root.preferences.done',
+        args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
+      );
+    } catch (error, trace) {
+      print("Root init: prefs failed");
+      print(error);
+      print(trace);
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    _deferredInitStopwatch = stopwatch;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _backgroundInitStarted) return;
+      if (!(_rootViewModel?.hasLoadedPreferences ?? false)) return;
+      if (_rootViewModel?.isOnboarding ?? false) {
+        _attachOnboardingDeferredInitListener();
+        return;
+      }
+      _startDeferredInitialization();
+    });
+  }
+
   Future<void> _loadPerfOverlayPreference() async {
     if (_perfOverlayLoaded) return;
     try {
       final preferencesProvider =
           KiwiContainer().resolve<PreferencesProvider>();
       await PerformanceOverlayController.load(preferencesProvider);
-      if (!mounted) return;
-      setState(() {
-        _perfOverlayLoaded = true;
-      });
+      _perfOverlayLoaded = true;
     } catch (error, trace) {
       print("Perf overlay load failed");
       print(error);
       print(trace);
-      if (!mounted) return;
-      setState(() {
-        _perfOverlayLoaded = true;
-      });
+      _perfOverlayLoaded = true;
+    }
+  }
+
+  Future<void> _saveLastStartLanguage() async {
+    try {
+      await saveLastStartLanguage();
+    } catch (error, trace) {
+      print("Root init: save language failed");
+      print(error);
+      print(trace);
     }
   }
 
@@ -269,25 +284,21 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     if (_rootViewModel == null) {
-      return MaterialApp(
-        home: const ColoredBox(
-          color: Color(0xFFFFFFFF),
-          child: Center(
-            child: CircularProgressIndicator(),
-          ),
-        ),
-      );
+      return _buildStartupPlaceholder();
     }
 
     return PropertyChangeProvider<RootViewModel, String>(
       child: PropertyChangeConsumer<RootViewModel, String>(
-        properties: const ["appTheme", "isOnboarding"],
+        properties: const ["appTheme", "isOnboarding", "hasLoadedPreferences"],
         builder: (
           BuildContext context,
           RootViewModel? model,
           Set<String>? properties,
         ) {
           if (model == null) return Container();
+          if (!model.hasLoadedPreferences) {
+            return _buildStartupPlaceholder();
+          }
           return ValueListenableBuilder<bool>(
             valueListenable: PerformanceOverlayController.enabled,
             builder: (context, perfEnabled, _) => MaterialApp(
@@ -314,6 +325,17 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         },
       ),
       value: _rootViewModel!,
+    );
+  }
+
+  Widget _buildStartupPlaceholder() {
+    return MaterialApp(
+      home: const ColoredBox(
+        color: Color(0xFFFFFFFF),
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
     );
   }
 

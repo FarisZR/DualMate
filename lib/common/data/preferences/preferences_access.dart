@@ -1,8 +1,25 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PreferencesAccess {
+  final Future<SharedPreferences> Function() _instanceLoader;
+  Future<SharedPreferences>? _instanceFuture;
+
+  PreferencesAccess({Future<SharedPreferences> Function()? instanceLoader})
+      : _instanceLoader = instanceLoader ?? SharedPreferences.getInstance;
+
+  Future<SharedPreferences> _preferences() {
+    final existing = _instanceFuture;
+    if (existing != null) {
+      return existing;
+    }
+
+    final created = _instanceLoader();
+    _instanceFuture = created;
+    return created;
+  }
+
   Future<void> set<T>(String key, T value) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final SharedPreferences prefs = await _preferences();
 
     switch (T) {
       case bool:
@@ -23,7 +40,7 @@ class PreferencesAccess {
   }
 
   Future<T?> get<T>(String key) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final SharedPreferences prefs = await _preferences();
 
     T? value;
 
