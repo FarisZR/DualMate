@@ -146,6 +146,7 @@ void main() {
         hasClients: false,
         attachedPositions: 0,
         isScrolling: false,
+        hasPendingPageDelta: false,
       ),
       isTrue,
     );
@@ -154,6 +155,7 @@ void main() {
         hasClients: true,
         attachedPositions: 2,
         isScrolling: false,
+        hasPendingPageDelta: false,
       ),
       isTrue,
     );
@@ -162,6 +164,7 @@ void main() {
         hasClients: true,
         attachedPositions: 1,
         isScrolling: true,
+        hasPendingPageDelta: false,
       ),
       isTrue,
     );
@@ -170,8 +173,85 @@ void main() {
         hasClients: true,
         attachedPositions: 1,
         isScrolling: false,
+        hasPendingPageDelta: true,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldDeferCanteenPageSync(
+        hasClients: true,
+        attachedPositions: 1,
+        isScrolling: false,
+        hasPendingPageDelta: false,
       ),
       isFalse,
+    );
+  });
+
+  test('treats an uncommitted page move as pending', () {
+    expect(
+      hasPendingCommittedCanteenPage(
+        committedPage: 0,
+        currentPage: null,
+      ),
+      isFalse,
+    );
+    expect(
+      hasPendingCommittedCanteenPage(
+        committedPage: 0,
+        currentPage: 0.2,
+      ),
+      isTrue,
+    );
+    expect(
+      hasPendingCommittedCanteenPage(
+        committedPage: 0,
+        currentPage: 0.6,
+      ),
+      isTrue,
+    );
+    expect(
+      hasPendingCommittedCanteenPage(
+        committedPage: 1,
+        currentPage: 1.0,
+      ),
+      isFalse,
+    );
+  });
+
+  test('prefers the active page over the base-date fallback on first sync', () {
+    final monday = DateTime(2026, 2, 9);
+    final tuesday = monday.add(const Duration(days: 1));
+    final wednesday = monday.add(const Duration(days: 2));
+
+    expect(
+      resolveCanteenPageSyncTarget(
+        baseDate: monday,
+        visibleDays: <DateTime>[monday, tuesday],
+        selectedDate: null,
+        currentPage: 1,
+      ),
+      tuesday,
+    );
+
+    expect(
+      resolveCanteenPageSyncTarget(
+        baseDate: monday,
+        visibleDays: <DateTime>[monday, tuesday],
+        selectedDate: monday,
+        currentPage: 1,
+      ),
+      tuesday,
+    );
+
+    expect(
+      resolveCanteenPageSyncTarget(
+        baseDate: monday,
+        visibleDays: <DateTime>[monday, tuesday, wednesday],
+        selectedDate: wednesday,
+        currentPage: 0,
+      ),
+      wednesday,
     );
   });
 }

@@ -17,6 +17,7 @@ bool shouldDeferCanteenPageSync({
   required bool hasClients,
   required int attachedPositions,
   required bool isScrolling,
+  required bool hasPendingPageDelta,
 }) {
   if (!hasClients) {
     return true;
@@ -26,7 +27,41 @@ bool shouldDeferCanteenPageSync({
     return true;
   }
 
+  if (hasPendingPageDelta) {
+    return true;
+  }
+
   return isScrolling;
+}
+
+DateTime resolveCanteenPageSyncTarget({
+  required DateTime baseDate,
+  required List<DateTime> visibleDays,
+  DateTime? selectedDate,
+  double? currentPage,
+}) {
+  if (visibleDays.isNotEmpty && currentPage != null) {
+    final roundedPage = currentPage.round().clamp(0, visibleDays.length - 1);
+    final controllerTarget = visibleDays[roundedPage];
+    final selectedIsFallback =
+        selectedDate == null || isAtSameDay(selectedDate, baseDate);
+    if (selectedIsFallback && !isAtSameDay(controllerTarget, baseDate)) {
+      return controllerTarget;
+    }
+  }
+
+  return selectedDate ?? baseDate;
+}
+
+bool hasPendingCommittedCanteenPage({
+  required int committedPage,
+  double? currentPage,
+}) {
+  if (currentPage == null) {
+    return false;
+  }
+
+  return (currentPage - committedPage).abs() > 0.01;
 }
 
 class CanteenPage extends StatefulWidget {
@@ -399,8 +434,20 @@ class _CanteenPageState extends State<CanteenPage> {
   ) {
     if (visibleDays.isEmpty) return;
 
-    final currentTarget = _selectedDate ?? baseDate;
-    final syncedDate = model.nearestVisibleContentDay(currentTarget);
+    final currentPage =
+        pageController.hasClients && pageController.positions.length == 1
+            ? pageController.page
+            : null;
+    final currentTarget = resolveCanteenPageSyncTarget(
+      baseDate: baseDate,
+      visibleDays: visibleDays,
+      selectedDate: _selectedDate,
+      currentPage: currentPage,
+    );
+    final syncedDate = model.nearestVisibleContentDay(
+      currentTarget,
+      precomputedDays: visibleDays,
+    );
     if (syncedDate == null) return;
 
     final targetIndex =
@@ -422,6 +469,12 @@ class _CanteenPageState extends State<CanteenPage> {
   bool _shouldDeferPageSync() {
     final hasClients = pageController.hasClients;
     final attachedPositions = pageController.positions.length;
+    final currentPage =
+        hasClients && attachedPositions == 1 ? pageController.page : null;
+    final hasPendingPageDelta = hasPendingCommittedCanteenPage(
+      committedPage: pageNotifier.value,
+      currentPage: currentPage,
+    );
     final isScrolling = hasClients && attachedPositions == 1
         ? pageController.position.isScrollingNotifier.value
         : false;
@@ -437,7 +490,11 @@ class _CanteenPageState extends State<CanteenPage> {
       hasClients: hasClients,
       attachedPositions: attachedPositions,
       isScrolling: isScrolling,
+      hasPendingPageDelta: hasPendingPageDelta,
     )) {
+      if (hasPendingPageDelta) {
+        _scheduleDeferredPageSyncRetry();
+      }
       return true;
     }
 

@@ -20,6 +20,12 @@ page, and sometimes throw a `Concurrent modification during iteration` error in
    attached multiple `PageView`s to the same controller.
 3. Those index-correction jumps are useful after the pager settles, but they are
    disruptive during active gestures and can replay the swipe animation.
+4. A remaining first-open edge still let page sync trust the base-date fallback
+   even after the pager had already moved to the next visible day, so a rebuild
+   could still anchor the first swipe back to day one.
+5. Another remaining edge existed before `onPageChanged`: any fractional pager
+   offset still counted as the committed page, so a rebuild could correct the
+   controller back to the old page while the first swipe was mid-flight.
 
 # Changes
 
@@ -31,10 +37,18 @@ page, and sometimes throw a `Concurrent modification during iteration` error in
     positions are attached, or while the pager is actively scrolling.
   - retry the deferred sync after the transition settles instead of snapping the
     controller immediately.
+  - when the first sync still only has the base-date fallback, prefer the active
+    pager page over that fallback so the first successful swipe stays anchored
+    to the user-visible day.
+  - treat any fractional or otherwise uncommitted pager offset as pending and
+    defer page correction until the swipe fully commits.
 - `test/canteen/business/canteen_provider_refresh_policy_test.dart`
   - added regression coverage for listeners removing callbacks mid-notify.
 - `test/canteen/ui/canteen_page_bounds_test.dart`
   - added coverage for the pager-sync deferral policy.
+  - added coverage for preserving the active page over the stale first-day
+    fallback during first-open sync.
+  - added coverage that any non-committed pager offset blocks corrective sync.
 
 # Validation
 
