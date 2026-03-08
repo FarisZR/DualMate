@@ -10,15 +10,18 @@ void main() {
   testWidgets('shows professor for exam events', (WidgetTester tester) async {
     await tester.pumpWidget(
       _wrapWithApp(
-        ImportantEventTile(
-          event: ImportantEvent(
-            title: 'Klausur',
-            start: DateTime(2026, 7, 31, 8),
-            end: DateTime(2026, 7, 31, 10),
-            professor: 'Prof. Schmidt',
-            type: ScheduleEntryType.Exam,
+        SizedBox(
+          width: 180,
+          child: ImportantEventTile(
+            event: ImportantEvent(
+              title: 'Klausur',
+              start: DateTime(2026, 7, 31, 8),
+              end: DateTime(2026, 7, 31, 10),
+              professor: 'Prof. Schmidt',
+              type: ScheduleEntryType.Exam,
+            ),
+            contentPadding: EdgeInsets.zero,
           ),
-          contentPadding: EdgeInsets.zero,
         ),
       ),
     );
@@ -32,6 +35,40 @@ void main() {
       find.byKey(const Key('important_event_professor_scroll')),
     );
     expect(scrollView.scrollDirection, Axis.horizontal);
+    expect(scrollView.controller, isNotNull);
+  });
+
+  testWidgets('auto scrolls long professor names', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      _wrapWithApp(
+        SizedBox(
+          width: 180,
+          child: ImportantEventTile(
+            event: ImportantEvent(
+              title: 'Klausur',
+              start: DateTime(2026, 7, 31, 8),
+              end: DateTime(2026, 7, 31, 10),
+              professor:
+                  'Prof. Schmidt, Prof. Becker, Prof. Mueller, Prof. Fischer',
+              type: ScheduleEntryType.Exam,
+            ),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      ),
+    );
+
+    final scrollView = tester.widget<SingleChildScrollView>(
+      find.byKey(const Key('important_event_professor_scroll')),
+    );
+
+    expect(scrollView.controller, isNotNull);
+    expect(scrollView.controller!.offset, 0);
+
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(scrollView.controller!.offset, greaterThan(0));
   });
 
   testWidgets('hides professor for non exam events', (

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/date_management/model/important_event.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
@@ -69,14 +71,9 @@ class ImportantEventTile extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(_formatEventDate(context, event)),
-        SingleChildScrollView(
-          key: const Key('important_event_professor_scroll'),
-          scrollDirection: Axis.horizontal,
-          child: Text(
-            event.professor,
-            softWrap: false,
-            style: professorStyle,
-          ),
+        _AutoScrollingProfessorText(
+          text: event.professor,
+          style: professorStyle,
         ),
       ],
     );
@@ -115,6 +112,131 @@ class ImportantEventTile extends StatelessWidget {
     final startDate = dateFormat.format(event.start);
     final endDate = dateFormat.format(event.end);
     return "$startDate - $endDate";
+  }
+}
+
+class _AutoScrollingProfessorText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+
+  const _AutoScrollingProfessorText({required this.text, this.style});
+
+  @override
+  State<_AutoScrollingProfessorText> createState() =>
+      _AutoScrollingProfessorTextState();
+}
+
+class _AutoScrollingProfessorTextState
+    extends State<_AutoScrollingProfessorText> {
+  static const _initialPause = Duration(milliseconds: 900);
+  static const _edgePause = Duration(milliseconds: 700);
+  static const _resumePause = Duration(milliseconds: 1400);
+
+  final ScrollController _scrollController = ScrollController();
+  int _animationToken = 0;
+  Timer? _pendingTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scheduleAutoScroll();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _AutoScrollingProfessorText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text) {
+      _scrollController.jumpTo(0);
+      _scheduleAutoScroll();
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationToken++;
+    _pendingTimer?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollStartNotification) {
+      _animationToken++;
+    } else if (notification is ScrollEndNotification) {
+      _scheduleAutoScroll(delay: _resumePause);
+    }
+    return false;
+  }
+
+  void _scheduleAutoScroll({Duration delay = _initialPause}) {
+    final token = ++_animationToken;
+    _pendingTimer?.cancel();
+    _pendingTimer = Timer(delay, () {
+      _autoScrollLoop(token, forward: true);
+    });
+  }
+
+  Future<void> _autoScrollLoop(int token, {required bool forward}) async {
+    if (!mounted || token != _animationToken || !_scrollController.hasClients) {
+      return;
+    }
+
+    final maxExtent = _scrollController.position.maxScrollExtent;
+    if (maxExtent <= 0) {
+      return;
+    }
+
+    final targetOffset = forward ? maxExtent : 0.0;
+    final currentOffset = _scrollController.offset;
+    final distance = (targetOffset - currentOffset).abs();
+    if (distance <= 0.5) {
+      _scheduleNextPass(token, forward: !forward);
+      return;
+    }
+
+    final duration = Duration(
+      milliseconds: (distance * 12).round().clamp(1200, 6000),
+    );
+
+    try {
+      await _scrollController.animateTo(
+        targetOffset,
+        duration: duration,
+        curve: Curves.linear,
+      );
+    } catch (_) {
+      return;
+    }
+
+    if (!mounted || token != _animationToken) return;
+    _scheduleNextPass(token, forward: !forward);
+  }
+
+  void _scheduleNextPass(int token, {required bool forward}) {
+    if (!mounted || token != _animationToken) return;
+    _pendingTimer?.cancel();
+    _pendingTimer = Timer(_edgePause, () {
+      _autoScrollLoop(token, forward: forward);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: _handleScrollNotification,
+      child: SingleChildScrollView(
+        key: const Key('important_event_professor_scroll'),
+        controller: _scrollController,
+        scrollDirection: Axis.horizontal,
+        child: Text(
+          widget.text,
+          softWrap: false,
+          style: widget.style,
+        ),
+      ),
+    );
   }
 }
 
