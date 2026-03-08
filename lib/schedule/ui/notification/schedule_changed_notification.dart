@@ -4,21 +4,55 @@ import 'dart:ui';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
+import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/common/util/string_utils.dart';
 import 'package:dualmate/schedule/business/schedule_diff_calculator.dart';
 import 'package:intl/intl.dart';
 
 class ScheduleChangedNotification {
+  static const int _notificationHorizonDays = 14;
+
   final NotificationApi notificationApi;
   final PreferencesProvider _preferencesProvider;
+  final DateTime Function() _now;
 
-  ScheduleChangedNotification(this.notificationApi, this._preferencesProvider);
+  ScheduleChangedNotification(
+    this.notificationApi,
+    this._preferencesProvider, {
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now;
 
   Future<void> showNotification(ScheduleDiff scheduleDiff) async {
+    final filteredDiff = _filterToNotificationWindow(scheduleDiff);
+    if (!filteredDiff.didSomethingChange()) {
+      return;
+    }
+
     final localization = await _loadLocalization();
-    await showEntriesAddedNotifications(scheduleDiff, localization);
-    await showEntriesRemovedNotifications(scheduleDiff, localization);
-    await showEntriesChangedNotifications(scheduleDiff, localization);
+    await showEntriesAddedNotifications(filteredDiff, localization);
+    await showEntriesRemovedNotifications(filteredDiff, localization);
+    await showEntriesChangedNotifications(filteredDiff, localization);
+  }
+
+  ScheduleDiff _filterToNotificationWindow(ScheduleDiff scheduleDiff) {
+    return ScheduleDiff(
+      addedEntries: scheduleDiff.addedEntries
+          .where((entry) => _isWithinNotificationWindow(entry.start))
+          .toList(),
+      removedEntries: scheduleDiff.removedEntries
+          .where((entry) => _isWithinNotificationWindow(entry.start))
+          .toList(),
+      updatedEntries: scheduleDiff.updatedEntries
+          .where((entry) => _isWithinNotificationWindow(entry.entry.start))
+          .toList(),
+    );
+  }
+
+  bool _isWithinNotificationWindow(DateTime start) {
+    final today = toStartOfDay(_now());
+    final cutoffExclusive = addDays(today, _notificationHorizonDays + 1);
+
+    return !start.isBefore(today) && start.isBefore(cutoffExclusive);
   }
 
   Future<void> showEntriesChangedNotifications(

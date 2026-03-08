@@ -53,7 +53,8 @@ void main() {
     expect(notificationApi.messages.single, contains('Mathematics'));
   });
 
-  test('schedule change notification waits for notification dispatch', () async {
+  test('schedule change notification waits for notification dispatch',
+      () async {
     final scheduleProvider = _FakeScheduleProvider();
     final preferencesProvider = _FakePreferencesProvider();
     final notificationApi = _BlockingNotificationApi();
@@ -95,6 +96,41 @@ void main() {
     await callbackFuture;
 
     expect(callbackCompleted, isTrue);
+  });
+
+  test('schedule change notification suppresses far-future entries', () async {
+    final scheduleProvider = _FakeScheduleProvider();
+    final preferencesProvider = _FakePreferencesProvider();
+    final notificationApi = _RecordingNotificationApi();
+    final container = KiwiContainer();
+
+    container.registerInstance<ScheduleProvider>(scheduleProvider);
+    container.registerInstance<PreferencesProvider>(preferencesProvider);
+    container.registerInstance<NotificationApi>(notificationApi);
+
+    NotificationScheduleChangedInitialize().setupNotification();
+
+    final start = DateTime.now().add(const Duration(days: 30));
+    await scheduleProvider.emitScheduleChanged(
+      ScheduleDiff(
+        addedEntries: [
+          ScheduleEntry(
+            start: start,
+            end: start.add(const Duration(hours: 1)),
+            title: 'Mathematics',
+            details: 'Lecture',
+            professor: 'Prof',
+            room: 'R1',
+            type: ScheduleEntryType.Class,
+          ),
+        ],
+        removedEntries: const [],
+        updatedEntries: const [],
+      ),
+    );
+
+    expect(notificationApi.titles, isEmpty);
+    expect(notificationApi.messages, isEmpty);
   });
 }
 
