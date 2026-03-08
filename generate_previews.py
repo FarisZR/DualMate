@@ -9,15 +9,27 @@ Canteen widget:  day column (label + "d MMM")     | divider | items without bg r
 
 Emoji characters are used for canteen meal types (monochrome Roboto glyphs).
 Price format matches NumberFormat.getCurrencyInstance(Locale.GERMANY): "3,60 €"
+
+Font paths can be configured with CLI flags or env vars:
+- `--font-regular` / `DUALMATE_FONT_REGULAR`
+- `--font-bold` / `DUALMATE_FONT_BOLD`
+- `--font-medium` / `DUALMATE_FONT_MEDIUM`
+- `--font-emoji` / `DUALMATE_FONT_EMOJI`
+
+By default the script looks in `/tmp/roboto/` and `/tmp/NotoEmoji.ttf`.
 """
 
+import argparse
+import os
 from PIL import Image, ImageDraw, ImageFont
 
-# -- Fonts (Roboto, downloaded to /tmp/roboto/) -----------------------------
-FONT_REG = "/tmp/roboto/Roboto-Regular.ttf"
-FONT_BOLD = "/tmp/roboto/Roboto-Bold.ttf"
-FONT_MED = "/tmp/roboto/Roboto-Medium.ttf"
-FONT_EMOJI = "/tmp/NotoEmoji.ttf"
+# -- Default paths -----------------------------------------------------------
+DEFAULT_SCHEDULE_OUT = "android/app/src/main/res/drawable-nodpi/schedule_now_widget_preview.png"
+DEFAULT_CANTEEN_OUT = "android/app/src/main/res/drawable-nodpi/canteen_today_widget_preview.png"
+DEFAULT_FONT_REG = "/tmp/roboto/Roboto-Regular.ttf"
+DEFAULT_FONT_BOLD = "/tmp/roboto/Roboto-Bold.ttf"
+DEFAULT_FONT_MED = "/tmp/roboto/Roboto-Medium.ttf"
+DEFAULT_FONT_EMOJI = "/tmp/NotoEmoji.ttf"
 
 # -- Colors (dark theme from colors.xml) ------------------------------------
 BG = "#1C1B1F"
@@ -51,11 +63,107 @@ CANTEEN_DAY_COL_W = 92 * SCALE
 DIVIDER_MARGIN = 6 * SCALE
 
 
-def hex_to_rgb(h):
+def hex_to_rgb(h, *, alpha_position=None):
+    """Return an RGB tuple from `#RRGGBB` or `#AARRGGBB`/`#RRGGBBAA`.
+
+    Six-digit hex is treated as RGB. Eight-digit hex requires an explicit
+    `alpha_position`: `first` for ARGB, `last` for RGBA.
+    """
     h = h.lstrip("#")
-    if len(h) == 8:
-        h = h[2:]
-    return tuple(int(h[i : i + 2], 16) for i in (0, 2, 4))
+    if len(h) == 6:
+        rgb = h
+    elif len(h) == 8:
+        if alpha_position == "first":
+            rgb = h[2:]
+        elif alpha_position == "last":
+            rgb = h[:-2]
+        else:
+            raise ValueError(
+                "8-digit hex colors require alpha_position='first' (ARGB) "
+                "or alpha_position='last' (RGBA)"
+            )
+    else:
+        raise ValueError(f"Unsupported hex color format: {h!r}")
+    return tuple(int(rgb[i : i + 2], 16) for i in (0, 2, 4))
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Generate DualMate widget preview PNGs.",
+    )
+    parser.add_argument(
+        "--schedule-out",
+        default=DEFAULT_SCHEDULE_OUT,
+        help=f"Output path for the schedule preview PNG (default: {DEFAULT_SCHEDULE_OUT})",
+    )
+    parser.add_argument(
+        "--canteen-out",
+        default=DEFAULT_CANTEEN_OUT,
+        help=f"Output path for the canteen preview PNG (default: {DEFAULT_CANTEEN_OUT})",
+    )
+    parser.add_argument(
+        "--font-regular",
+        default=os.environ.get("DUALMATE_FONT_REGULAR", DEFAULT_FONT_REG),
+        help=(
+            "Path to Roboto Regular font "
+            f"(env: DUALMATE_FONT_REGULAR, default: {DEFAULT_FONT_REG})"
+        ),
+    )
+    parser.add_argument(
+        "--font-bold",
+        default=os.environ.get("DUALMATE_FONT_BOLD", DEFAULT_FONT_BOLD),
+        help=(
+            "Path to Roboto Bold font "
+            f"(env: DUALMATE_FONT_BOLD, default: {DEFAULT_FONT_BOLD})"
+        ),
+    )
+    parser.add_argument(
+        "--font-medium",
+        default=os.environ.get("DUALMATE_FONT_MEDIUM", DEFAULT_FONT_MED),
+        help=(
+            "Path to Roboto Medium font "
+            f"(env: DUALMATE_FONT_MEDIUM, default: {DEFAULT_FONT_MED})"
+        ),
+    )
+    parser.add_argument(
+        "--font-emoji",
+        default=os.environ.get("DUALMATE_FONT_EMOJI", DEFAULT_FONT_EMOJI),
+        help=(
+            "Path to NotoEmoji font "
+            f"(env: DUALMATE_FONT_EMOJI, default: {DEFAULT_FONT_EMOJI})"
+        ),
+    )
+    return parser.parse_args()
+
+
+def resolve_font_paths(args):
+    return {
+        "regular": args.font_regular,
+        "bold": args.font_bold,
+        "medium": args.font_medium,
+        "emoji": args.font_emoji,
+    }
+
+
+def validate_font_paths(font_paths):
+    missing = []
+    for name, path in font_paths.items():
+        if not os.path.isfile(path) or not os.access(path, os.R_OK):
+            missing.append((name, path))
+
+    if not missing:
+        return
+
+    details = "\n".join(f"- {name}: {path}" for name, path in missing)
+    raise RuntimeError(
+        "Missing or unreadable font files:\n"
+        f"{details}\n\n"
+        "Provide fonts with CLI flags (--font-regular, --font-bold, "
+        "--font-medium, --font-emoji) or env vars "
+        "DUALMATE_FONT_REGULAR, DUALMATE_FONT_BOLD, DUALMATE_FONT_MEDIUM, "
+        "DUALMATE_FONT_EMOJI. Defaults are /tmp/roboto/Roboto-*.ttf and "
+        "/tmp/NotoEmoji.ttf."
+    )
 
 
 def draw_accent_bar(draw, x, y, h, color):
@@ -65,7 +173,7 @@ def draw_accent_bar(draw, x, y, h, color):
     )
 
 
-def load_fonts():
+def load_fonts(font_paths):
     """Font sizes proportional to real widget.
 
     Real widget on 420dpi:  12sp=31px, 13sp=34px, 15sp=39px, 16sp=42px
@@ -87,19 +195,19 @@ def load_fonts():
         s = int(pts * SCALE)
         bold = name in ("date_num", "title")
         if name == "meal_emoji":
-            font_path = FONT_EMOJI
+            font_path = font_paths["emoji"]
         elif bold:
-            font_path = FONT_BOLD
+            font_path = font_paths["bold"]
         elif name == "meal_name":
-            font_path = FONT_MED
+            font_path = font_paths["medium"]
         else:
-            font_path = FONT_REG
+            font_path = font_paths["regular"]
         sizes[name] = ImageFont.truetype(font_path, s)
     return sizes
 
 
-def generate_schedule_preview(out_path):
-    fonts = load_fonts()
+def generate_schedule_preview(out_path, font_paths):
+    fonts = load_fonts(font_paths)
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
@@ -246,8 +354,8 @@ def generate_schedule_preview(out_path):
     print(f"Schedule preview: {out_path} ({FINAL_W}x{FINAL_H})")
 
 
-def generate_canteen_preview(out_path):
-    fonts = load_fonts()
+def generate_canteen_preview(out_path, font_paths):
+    fonts = load_fonts(font_paths)
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
@@ -380,10 +488,9 @@ def generate_canteen_preview(out_path):
 
 
 if __name__ == "__main__":
-    generate_schedule_preview(
-        "android/app/src/main/res/drawable-nodpi/schedule_now_widget_preview.png"
-    )
-    generate_canteen_preview(
-        "android/app/src/main/res/drawable-nodpi/canteen_today_widget_preview.png"
-    )
+    args = parse_args()
+    font_paths = resolve_font_paths(args)
+    validate_font_paths(font_paths)
+    generate_schedule_preview(args.schedule_out, font_paths)
+    generate_canteen_preview(args.canteen_out, font_paths)
     print("Done!")
