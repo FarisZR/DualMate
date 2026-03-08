@@ -627,6 +627,20 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
       duration: _currentWeekButtonFadeDuration,
       switchInCurve: Curves.easeOutCubic,
       switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        final slideAnimation = Tween<Offset>(
+          begin: const Offset(0, 1),
+          end: Offset.zero,
+        ).animate(animation);
+
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: slideAnimation,
+            child: child,
+          ),
+        );
+      },
       child: !_showCurrentWeekButton
           ? const SizedBox.shrink()
           : Tooltip(
