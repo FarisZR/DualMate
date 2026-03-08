@@ -69,11 +69,14 @@ class ImportantEventTile extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(_formatEventDate(context, event)),
-        Text(
-          event.professor,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: professorStyle,
+        SingleChildScrollView(
+          key: const Key('important_event_professor_scroll'),
+          scrollDirection: Axis.horizontal,
+          child: Text(
+            event.professor,
+            softWrap: false,
+            style: professorStyle,
+          ),
         ),
       ],
     );

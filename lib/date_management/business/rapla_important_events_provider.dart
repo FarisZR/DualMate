@@ -83,7 +83,7 @@ class RaplaImportantEventsProvider {
 
     for (var entry in entries) {
       var key =
-          '${entry.title}-${entry.type}-${entry.start.toIso8601String()}-${entry.end.toIso8601String()}';
+          '${entry.title}-${entry.type}-${entry.start.toIso8601String()}-${entry.end.toIso8601String()}-${entry.professor}';
       if (seenKeys.add(key)) {
         result.add(entry);
       }

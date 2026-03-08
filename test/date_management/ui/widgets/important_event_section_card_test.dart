@@ -1,0 +1,55 @@
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/date_management/model/important_event.dart';
+import 'package:dualmate/date_management/model/important_event_section.dart';
+import 'package:dualmate/date_management/ui/widgets/important_event_section_card.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  testWidgets('shows professor only on grouped exam rows', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrapWithApp(
+        ImportantEventSectionCard(
+          section: ImportantEventSection(
+            header: ImportantEvent(
+              title: 'Klausurwoche',
+              start: DateTime(2026, 7, 27),
+              end: DateTime(2026, 7, 31),
+              professor: 'Header Lecturer',
+              type: ScheduleEntryType.SpecialEvent,
+            ),
+            events: [
+              ImportantEvent(
+                title: 'Klausur',
+                start: DateTime(2026, 7, 29, 8),
+                end: DateTime(2026, 7, 29, 10),
+                professor: 'Prof. Schmidt',
+                type: ScheduleEntryType.Exam,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Header Lecturer'), findsNothing);
+    expect(find.text('Prof. Schmidt'), findsOneWidget);
+  });
+}
+
+Widget _wrapWithApp(Widget child) {
+  return MaterialApp(
+    localizationsDelegates: const [
+      LocalizationDelegate(),
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: const [Locale('en'), Locale('de')],
+    home: Scaffold(body: child),
+  );
+}

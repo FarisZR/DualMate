@@ -1,7 +1,5 @@
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/date_management/model/important_event.dart';
-import 'package:dualmate/date_management/model/important_event_section.dart';
-import 'package:dualmate/date_management/ui/widgets/important_event_section_card.dart';
 import 'package:dualmate/date_management/ui/widgets/important_event_tile.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +25,13 @@ void main() {
 
     expect(find.text('Klausur'), findsOneWidget);
     expect(find.text('Prof. Schmidt'), findsOneWidget);
+    expect(find.byKey(const Key('important_event_professor_scroll')),
+        findsOneWidget);
+
+    final scrollView = tester.widget<SingleChildScrollView>(
+      find.byKey(const Key('important_event_professor_scroll')),
+    );
+    expect(scrollView.scrollDirection, Axis.horizontal);
   });
 
   testWidgets('hides professor for non exam events', (
@@ -49,38 +54,6 @@ void main() {
 
     expect(find.text('Feiertag'), findsOneWidget);
     expect(find.text('Prof. Schmidt'), findsNothing);
-  });
-
-  testWidgets('shows professor only on grouped exam rows', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      _wrapWithApp(
-        ImportantEventSectionCard(
-          section: ImportantEventSection(
-            header: ImportantEvent(
-              title: 'Klausurwoche',
-              start: DateTime(2026, 7, 27),
-              end: DateTime(2026, 7, 31),
-              professor: 'Header Lecturer',
-              type: ScheduleEntryType.SpecialEvent,
-            ),
-            events: [
-              ImportantEvent(
-                title: 'Klausur',
-                start: DateTime(2026, 7, 29, 8),
-                end: DateTime(2026, 7, 29, 10),
-                professor: 'Prof. Schmidt',
-                type: ScheduleEntryType.Exam,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    expect(find.text('Header Lecturer'), findsNothing);
-    expect(find.text('Prof. Schmidt'), findsOneWidget);
   });
 }
 

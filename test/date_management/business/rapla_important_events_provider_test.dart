@@ -176,6 +176,66 @@ void main() {
     expect(merged[1].professor, 'Prof. Becker');
   });
 
+  test('Preserves both professors for same-slot exam collisions', () {
+    var entries = [
+      ScheduleEntry(
+        start: DateTime(2026, 7, 27, 7),
+        end: DateTime(2026, 7, 27, 8),
+        title: 'Klausur',
+        details: '',
+        professor: 'Prof. Schmidt',
+        room: '',
+        type: ScheduleEntryType.Exam,
+      ),
+      ScheduleEntry(
+        start: DateTime(2026, 7, 27, 7),
+        end: DateTime(2026, 7, 27, 8),
+        title: 'Klausur',
+        details: '',
+        professor: 'Prof. Becker',
+        room: '',
+        type: ScheduleEntryType.Exam,
+      ),
+    ];
+
+    var merged = RaplaImportantEventsProvider.mergeImportantEntries(entries);
+
+    expect(merged.length, 2);
+    expect(merged[0].professor, 'Prof. Schmidt');
+    expect(merged[1].professor, 'Prof. Becker');
+  });
+
+  test('Keeps same-slot important entries with different professors', () {
+    var schedule = Schedule.fromList([
+      ScheduleEntry(
+        start: DateTime(2026, 7, 27, 9),
+        end: DateTime(2026, 7, 27, 10),
+        title: 'Klausur',
+        details: '',
+        professor: 'Prof. Schmidt',
+        room: '',
+        type: ScheduleEntryType.Exam,
+      ),
+      ScheduleEntry(
+        start: DateTime(2026, 7, 27, 9),
+        end: DateTime(2026, 7, 27, 10),
+        title: 'Klausur',
+        details: '',
+        professor: 'Prof. Becker',
+        room: '',
+        type: ScheduleEntryType.Exam,
+      ),
+    ]);
+
+    var filtered = RaplaImportantEventsProvider.filterImportantEntries(
+      schedule,
+    );
+
+    expect(filtered.length, 2);
+    expect(filtered[0].professor, 'Prof. Schmidt');
+    expect(filtered[1].professor, 'Prof. Becker');
+  });
+
   test('Deduplicates identical entries', () {
     var schedule = Schedule.fromList([
       ScheduleEntry(
