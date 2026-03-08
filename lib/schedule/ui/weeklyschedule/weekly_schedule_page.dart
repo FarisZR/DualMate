@@ -636,7 +636,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                 heroTag: null,
                 tooltip: label,
                 onPressed: _goToToday,
-                child: const Icon(Icons.today_outlined),
+                child: const Icon(Icons.arrow_back_rounded),
               ),
             ),
     );
