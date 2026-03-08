@@ -201,8 +201,8 @@ void main() {
     var merged = RaplaImportantEventsProvider.mergeImportantEntries(entries);
 
     expect(merged.length, 2);
-    expect(merged[0].professor, 'Prof. Schmidt');
-    expect(merged[1].professor, 'Prof. Becker');
+    expect(merged[0].professor, 'Prof. Becker');
+    expect(merged[1].professor, 'Prof. Schmidt');
   });
 
   test('Keeps same-slot important entries with different professors', () {

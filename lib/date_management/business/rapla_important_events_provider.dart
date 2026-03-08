@@ -104,7 +104,13 @@ class RaplaImportantEventsProvider {
 
     var mergedEntries = <ImportantEvent>[];
     grouped.forEach((_, groupEntries) {
-      groupEntries.sort((a, b) => a.start.compareTo(b.start));
+      groupEntries.sort((a, b) {
+        var c = a.start.compareTo(b.start);
+        if (c != 0) return c;
+        c = a.end.compareTo(b.end);
+        if (c != 0) return c;
+        return a.professor.compareTo(b.professor);
+      });
       if (groupEntries.first.type == ScheduleEntryType.Exam) {
         for (var entry in groupEntries) {
           mergedEntries.add(ImportantEvent(
@@ -156,7 +162,13 @@ class RaplaImportantEventsProvider {
       flushCurrent();
     });
 
-    mergedEntries.sort((a, b) => a.start.compareTo(b.start));
+    mergedEntries.sort((a, b) {
+      var c = a.start.compareTo(b.start);
+      if (c != 0) return c;
+      c = a.end.compareTo(b.end);
+      if (c != 0) return c;
+      return a.professor.compareTo(b.professor);
+    });
     return mergedEntries;
   }
 

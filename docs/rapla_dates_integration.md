@@ -71,8 +71,10 @@ them via the filter toggle on the Dates page.
     preservation on exam rows.
 
 - `test/date_management/ui/widgets/important_event_tile_test.dart`
-  - Verifies lecturer names render on exam rows but not on non-exam rows or
-    Klausurwoche headers.
+  - Verifies lecturer names render on exam rows but not on non-exam rows.
+
+- `test/date_management/ui/widgets/important_event_section_card_test.dart`
+  - Verifies lecturer names are not shown on Klausurwoche section headers.
 
 ### Manual Testing (Android)
 Run on a device with USB debugging enabled:

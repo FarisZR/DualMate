@@ -31,8 +31,8 @@ that metadata before rendering important events. Generic exam rows such as
 
 - `lib/date_management/ui/widgets/important_event_tile.dart`
   - show lecturer names as a secondary line for exam rows when available.
-  - keep long lecturer strings to one truncated line so the Dates list stays
-    compact.
+  - keep long lecturer strings to a single-line, horizontally scrollable row so
+    the Dates list stays compact.
 
 - `lib/date_management/ui/widgets/important_event_section_card.dart`
   - suppress lecturer rendering on `Klausurwoche` section headers.
@@ -44,7 +44,10 @@ that metadata before rendering important events. Generic exam rows such as
   - cover professor preservation for exam entries.
 
 - `test/date_management/ui/widgets/important_event_tile_test.dart`
-  - cover exam-row rendering, non-exam suppression, and grouped header behavior.
+  - cover exam-row rendering and non-exam suppression.
+
+- `test/date_management/ui/widgets/important_event_section_card_test.dart`
+  - cover grouped header behavior (lecturer names suppressed on Klausurwoche headers).
 
 # Validation
 

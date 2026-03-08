@@ -414,8 +414,10 @@ class DateManagementViewModel extends BaseViewModel {
     var deduped = <ImportantEvent>[];
 
     for (var event in combined) {
+      var professorSuffix =
+          event.type == ScheduleEntryType.Exam ? '-${event.professor}' : '';
       var key =
-          '${event.title}-${event.type}-${event.start.toIso8601String()}-${event.end.toIso8601String()}';
+          '${event.title}-${event.type}-${event.start.toIso8601String()}-${event.end.toIso8601String()}$professorSuffix';
       if (seenKeys.add(key)) {
         deduped.add(event);
       }
@@ -440,8 +442,10 @@ class DateManagementViewModel extends BaseViewModel {
     Set<String> seenKeys,
     ImportantEvent event,
   ) {
+    var professorSuffix =
+        event.type == ScheduleEntryType.Exam ? '-${event.professor}' : '';
     var key =
-        '${event.title}-${event.type}-${event.start.toIso8601String()}-${event.end.toIso8601String()}';
+        '${event.title}-${event.type}-${event.start.toIso8601String()}-${event.end.toIso8601String()}$professorSuffix';
     if (seenKeys.add(key)) {
       events.add(event);
     }
