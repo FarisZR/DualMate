@@ -32,6 +32,9 @@ and both widgets still appeared under the generic app name.
   canteen preview date column to prevent clipped dates.
 - Increased the visual scale again so launcher previews read more like the old
   closer-cropped assets while keeping the refreshed multi-day content.
+- Reworked the preview composition to scale proportionally and regenerated the
+  fallback images with high-resolution downsampling so the picker text stays
+  crisp instead of looking aliased.
 - Gave each widget receiver its own picker label (`Schedule` / `Canteen`) so
   launchers no longer show both widgets as `DualMate`.
 
