@@ -177,6 +177,94 @@ void main() {
     await tester.pump();
     viewModel.dispose();
   });
+
+  testWidgets(
+      'current week button stays hidden on current week and appears away', (
+    tester,
+  ) async {
+    final viewModel = _buildViewModel(
+      now: DateTime(2026, 2, 10, 10),
+      entries: <ScheduleEntry>[
+        _entry(DateTime(2026, 2, 9), 'CURRENT_WEEK'),
+        _entry(DateTime(2026, 2, 16), 'NEXT_WEEK'),
+      ],
+    );
+    await viewModel.updateSchedule(
+      DateTime(2026, 2, 9),
+      DateTime(2026, 2, 16),
+      force: true,
+    );
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump();
+
+    final currentWeekButton = find.byKey(
+      const ValueKey<String>('weekly_current_week_button'),
+    );
+    expect(currentWeekButton, findsNothing);
+
+    final pagerFinder = find.byKey(
+      const ValueKey<String>('weekly_schedule_page_view'),
+    );
+    await tester.fling(pagerFinder, const Offset(-420, 0), 1400);
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 80));
+
+    expect(viewModel.currentDateStart, DateTime(2026, 2, 16));
+    expect(currentWeekButton, findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
+
+  testWidgets('current week button returns to today week from distant page', (
+    tester,
+  ) async {
+    final viewModel = _buildViewModel(
+      now: DateTime(2026, 2, 10, 10),
+      entries: <ScheduleEntry>[
+        _entry(DateTime(2026, 2, 9), 'CURRENT_WEEK'),
+        _entry(DateTime(2026, 2, 23), 'FAR_WEEK'),
+      ],
+    );
+    await viewModel.updateSchedule(
+      DateTime(2026, 2, 9),
+      DateTime(2026, 2, 16),
+      force: true,
+    );
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump();
+
+    await tester.fling(
+      find.byKey(const ValueKey<String>('weekly_schedule_page_view')),
+      const Offset(-900, 0),
+      1800,
+    );
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 80));
+
+    expect(viewModel.currentDateStart, DateTime(2026, 2, 23));
+    expect(find.text('FAR_WEEK'), findsOneWidget);
+    final currentWeekButton = find.byKey(
+      const ValueKey<String>('weekly_current_week_button'),
+    );
+    expect(currentWeekButton, findsOneWidget);
+
+    await tester.tap(currentWeekButton);
+    await tester.pump();
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 80));
+
+    expect(viewModel.currentDateStart, DateTime(2026, 2, 9));
+    expect(find.text('CURRENT_WEEK'), findsOneWidget);
+    expect(currentWeekButton, findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
 }
 
 WeeklyScheduleViewModel _buildViewModel({
