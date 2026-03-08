@@ -4,12 +4,14 @@ class ImportantEvent {
   final String title;
   final DateTime start;
   final DateTime end;
+  final String professor;
   final ScheduleEntryType type;
 
   ImportantEvent({
     required this.title,
     required this.start,
     required this.end,
+    this.professor = '',
     required this.type,
   });
 
@@ -22,10 +24,7 @@ class ImportantEvent {
   }
 
   bool get hasTime =>
-      start.hour != 0 ||
-      start.minute != 0 ||
-      end.hour != 0 ||
-      end.minute != 0;
+      start.hour != 0 || start.minute != 0 || end.hour != 0 || end.minute != 0;
 
   bool _isSameDay(DateTime first, DateTime second) {
     return first.year == second.year &&
@@ -44,14 +43,15 @@ class ImportantEvent {
 
     var startText = json['start'] as String? ?? '';
     var endText = json['end'] as String? ?? '';
-    var start = DateTime.tryParse(startText) ??
-        DateTime.fromMillisecondsSinceEpoch(0);
+    var start =
+        DateTime.tryParse(startText) ?? DateTime.fromMillisecondsSinceEpoch(0);
     var end = DateTime.tryParse(endText) ?? start;
 
     return ImportantEvent(
       title: json['title'] as String? ?? '',
       start: start,
       end: end,
+      professor: json['professor'] as String? ?? '',
       type: type,
     );
   }
@@ -61,6 +61,7 @@ class ImportantEvent {
       'title': title,
       'start': start.toIso8601String(),
       'end': end.toIso8601String(),
+      'professor': professor,
       'type': type.index,
     };
   }
@@ -73,6 +74,7 @@ class ImportantEvent {
         other.title == title &&
         other.start == start &&
         other.end == end &&
+        other.professor == professor &&
         other.type == type;
   }
 
@@ -81,6 +83,7 @@ class ImportantEvent {
     return title.hashCode ^
         start.hashCode ^
         end.hashCode ^
+        professor.hashCode ^
         type.hashCode;
   }
 }
