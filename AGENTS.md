@@ -53,9 +53,9 @@ Important runtime behavior:
 
 ### Schedule (`lib/schedule`)
 
-- UI entry is `SchedulePage`, which keeps shared `WeeklyScheduleViewModel`/`DailyScheduleViewModel` instances so the weekly and daily tabs stay consistent; it wraps PagerWidget with `WeeklySchedulePage` and `DailySchedulePage` and guards against missing data sources by showing `BannerWidget` + `SelectSourceDialog` when no schedule URL is configured.
+- UI entry is `SchedulePage`, which keeps a shared `WeeklyScheduleViewModel`, renders `WeeklySchedulePage` directly, and guards against missing data sources by showing `BannerWidget` + `SelectSourceDialog` when no schedule URL is configured.
 - `ScheduleViewModel` orchestrates cache-first initialization/weathered refreshes, while `FilterViewModel.preloadStates` warmed via `ScheduleEntryRepository` and `ScheduleFilterRepository` keeps the filter UI snappy.
-- Widget navigation payloads from `WidgetNavigationPayloadStore` force the weekly tab when a widget tap comes in, and the background updater under `lib/schedule/background` keeps shared caches fresh every few hours.
+- Widget navigation payloads from `WidgetNavigationPayloadStore` open the relevant week directly, and the background updater under `lib/schedule/background` keeps shared caches fresh every few hours.
 - The `business`, `data`, `model`, and `service` packages contain the schedule cache logic, repositories, and DTO mapping that feed the UI layers.
 
 ### Information (`lib/information`)

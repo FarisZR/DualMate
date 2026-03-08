@@ -30,6 +30,8 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   static const int _initialPageIndex = 10000;
   static const int _daysPerWeek = 7;
   static const double _defaultWideAxisWidth = 54.0;
+  static const Duration _currentWeekButtonFadeDuration =
+      Duration(milliseconds: 180);
 
   late final PageController _weekPageController;
   late WeeklyScheduleViewModel viewModel;
@@ -142,6 +144,15 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     unawaited(_openVisibleWeek(todayWeekStart));
   }
 
+  bool get _showCurrentWeekButton {
+    if (!_pagerInitialized) {
+      return false;
+    }
+    final currentWeekStart = _normalizeWeekStart(viewModel.currentDateStart);
+    final todayWeekStart = _normalizeWeekStart(viewModel.now);
+    return !isAtSameDay(currentWeekStart, todayWeekStart);
+  }
+
   Future<void> _animateToPage(int pageIndex) async {
     if (!_weekPageController.hasClients) return;
     await _weekPageController.animateToPage(
@@ -209,6 +220,11 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                           showWithoutDelay: model.visibleWeekNeedsInitialFetch,
                         );
                       },
+                    ),
+                    Positioned(
+                      right: 20,
+                      bottom: 16,
+                      child: _buildCurrentWeekButton(context),
                     ),
                   ],
                 ),
@@ -594,11 +610,6 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
               onPressed: _previousWeek,
             ),
             IconButton(
-              icon: const Icon(Icons.today_outlined),
-              visualDensity: VisualDensity.compact,
-              onPressed: _goToToday,
-            ),
-            IconButton(
               icon: const Icon(Icons.chevron_right),
               visualDensity: VisualDensity.compact,
               onPressed: _nextWeek,
@@ -609,16 +620,53 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     );
   }
 
+  Widget _buildCurrentWeekButton(BuildContext context) {
+    final label = L.of(context).scheduleBackToCurrentWeek;
+
+    return AnimatedSwitcher(
+      duration: _currentWeekButtonFadeDuration,
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        final slideAnimation = Tween<Offset>(
+          begin: const Offset(0, 1),
+          end: Offset.zero,
+        ).animate(animation);
+
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: slideAnimation,
+            child: child,
+          ),
+        );
+      },
+      child: !_showCurrentWeekButton
+          ? const SizedBox.shrink()
+          : Tooltip(
+              message: label,
+              child: FloatingActionButton.small(
+                key: const ValueKey<String>('weekly_current_week_button'),
+                heroTag: null,
+                tooltip: label,
+                onPressed: _goToToday,
+                child: const Icon(Icons.arrow_back_rounded),
+              ),
+            ),
+    );
+  }
+
   Widget buildErrorDisplay(BuildContext context) {
     return PropertyChangeConsumer<WeeklyScheduleViewModel, String>(
-      properties: const ['updateFailed'],
+      properties: const ['updateFailed', 'initializeFailed'],
       builder: (
         BuildContext context,
         WeeklyScheduleViewModel? model,
         Set<String>? properties,
       ) =>
           ErrorDisplay(
-        show: model?.updateFailed ?? false,
+        show: (model?.updateFailed ?? false) ||
+            (model?.initializeFailed ?? false),
       ),
     );
   }

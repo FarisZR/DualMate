@@ -20,9 +20,10 @@ class L {
 
   String get scheduleEntryDetailTo => _getValue("scheduleEntryDetailTo");
 
-  String get pageDayOverviewTitle => _getValue("pageDayOverviewTitle");
-
   String get pageWeekOverviewTitle => _getValue("pageWeekOverviewTitle");
+
+  String get scheduleBackToCurrentWeek =>
+      _getValue("scheduleBackToCurrentWeek");
 
   String get noConnectionMessage => _getValue("noConnectionMessage");
 
@@ -47,9 +48,6 @@ class L {
       _getValue("settingsScheduleSourceTitle");
 
   String get settingsPageTitle => _getValue("settingsPageTitle");
-
-  String get dailyScheduleNoEntriesToday =>
-      _getValue("dailyScheduleNoEntriesToday");
 
   String get scheduleEntryTypePublicHoliday =>
       _getValue("scheduleEntryTypePublicHoliday");

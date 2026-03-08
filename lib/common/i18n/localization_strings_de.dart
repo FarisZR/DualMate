@@ -1,6 +1,6 @@
 final de = {
-  "pageDayOverviewTitle": "Tagesübersicht",
   "pageWeekOverviewTitle": "Wochenübersicht",
+  "scheduleBackToCurrentWeek": "Aktuelle Woche",
   "noConnectionMessage": "Keine Verbindung!",
   "settingsViewSourceCode": "Source code auf GitHub ansehen",
   "settingsCalendarSync": "Kalendersynchronisation",
@@ -19,7 +19,6 @@ final de = {
   "settingsScheduleSourceUrl": "Rapla URL festlegen",
   "settingsScheduleSourceTitle": "Vorlesungsplan",
   "settingsPageTitle": "Einstellungen",
-  "dailyScheduleNoEntriesToday": "Keine Vorlesungen für heute",
   "scheduleEntryTypePublicHoliday": "Feiertag",
   "scheduleEntryTypeClass": "Vorlesung",
   "scheduleEntryTypeExam": "Klausur / Prüfung",

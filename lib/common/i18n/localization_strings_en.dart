@@ -1,6 +1,6 @@
 final en = {
-  "pageDayOverviewTitle": "Daily schedule",
   "pageWeekOverviewTitle": "Weekly schedule",
+  "scheduleBackToCurrentWeek": "Current week",
   "noConnectionMessage": "No connection!",
   "settingsViewSourceCode": "View the source code on GitHub",
   "applicationName": "DualMate",
@@ -13,7 +13,6 @@ final en = {
   "settingsScheduleSourceUrl": "Set the rapla URL",
   "settingsScheduleSourceTitle": "Schedule",
   "settingsPageTitle": "Settings",
-  "dailyScheduleNoEntriesToday": "No classes for today!",
   "scheduleEntryTypePublicHoliday": "Public holiday",
   "scheduleEntryTypeClass": "Class",
   "scheduleEntryTypeExam": "Exam",
