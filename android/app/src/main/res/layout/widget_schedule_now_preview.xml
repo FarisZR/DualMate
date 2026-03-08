@@ -4,7 +4,7 @@
     android:layout_height="wrap_content"
     android:background="@drawable/widget_now_content_background"
     android:orientation="vertical"
-    android:padding="8dp">
+    android:padding="4dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -14,10 +14,10 @@
         android:paddingBottom="2dp">
 
         <LinearLayout
-            android:layout_width="56dp"
+            android:layout_width="64dp"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:minHeight="40dp"
+            android:minHeight="46dp"
             android:orientation="vertical">
 
             <TextView
@@ -25,14 +25,14 @@
                 android:layout_height="wrap_content"
                 android:text="Mon"
                 android:textColor="@color/widget_day_label_text_color"
-                android:textSize="13sp" />
+                android:textSize="14sp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="10"
                 android:textColor="@color/widget_day_label_text_color"
-                android:textSize="18sp"
+                android:textSize="20sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -52,10 +52,10 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="6dp"
+                android:layout_marginBottom="8dp"
                 android:background="@drawable/widget_schedule_item_current_background"
                 android:orientation="horizontal"
-                android:paddingVertical="6dp">
+                android:paddingVertical="8dp">
 
                 <View
                     android:layout_width="4dp"
@@ -76,7 +76,7 @@
                         android:maxLines="1"
                         android:text="Software Engineering"
                         android:textColor="@color/widget_schedule_item_text_current"
-                        android:textSize="17sp"
+                        android:textSize="19sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -86,17 +86,17 @@
                         android:maxLines="1"
                         android:text="09:15 - 10:45 • A208"
                         android:textColor="@color/widget_schedule_item_text_current"
-                        android:textSize="14sp" />
+                        android:textSize="15sp" />
                 </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="6dp"
+                android:layout_marginBottom="8dp"
                 android:background="@drawable/widget_schedule_item_past_background"
                 android:orientation="horizontal"
-                android:paddingVertical="6dp">
+                android:paddingVertical="8dp">
 
                 <View
                     android:layout_width="4dp"
@@ -117,7 +117,7 @@
                         android:maxLines="1"
                         android:text="Databases"
                         android:textColor="@color/widget_schedule_entry_text_color"
-                        android:textSize="17sp"
+                        android:textSize="19sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -127,7 +127,7 @@
                         android:maxLines="1"
                         android:text="11:00 - 12:30 • B114"
                         android:textColor="@color/widget_schedule_entry_text_color"
-                        android:textSize="14sp" />
+                        android:textSize="15sp" />
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
@@ -141,10 +141,10 @@
         android:paddingBottom="2dp">
 
         <LinearLayout
-            android:layout_width="56dp"
+            android:layout_width="64dp"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:minHeight="40dp"
+            android:minHeight="46dp"
             android:orientation="vertical">
 
             <TextView
@@ -152,14 +152,14 @@
                 android:layout_height="wrap_content"
                 android:text="Tue"
                 android:textColor="@color/widget_day_label_text_color"
-                android:textSize="13sp" />
+                android:textSize="14sp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="11"
                 android:textColor="@color/widget_day_label_text_color"
-                android:textSize="18sp"
+                android:textSize="20sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -181,7 +181,7 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/widget_schedule_item_past_background"
                 android:orientation="horizontal"
-                android:paddingVertical="6dp">
+                android:paddingVertical="8dp">
 
                 <View
                     android:layout_width="4dp"
@@ -202,7 +202,7 @@
                         android:maxLines="1"
                         android:text="Project Workshop"
                         android:textColor="@color/widget_schedule_entry_text_color"
-                        android:textSize="17sp"
+                        android:textSize="19sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -212,7 +212,7 @@
                         android:maxLines="1"
                         android:text="08:00 - 09:30 • Online"
                         android:textColor="@color/widget_schedule_entry_text_color"
-                        android:textSize="14sp" />
+                        android:textSize="15sp" />
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
