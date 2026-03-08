@@ -631,17 +631,12 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
           ? const SizedBox.shrink()
           : Tooltip(
               message: label,
-              child: FilledButton.tonalIcon(
+              child: FloatingActionButton.small(
                 key: const ValueKey<String>('weekly_current_week_button'),
-                style: FilledButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                ),
+                heroTag: null,
+                tooltip: label,
                 onPressed: _goToToday,
-                icon: const Icon(Icons.today_outlined, size: 18),
-                label: Text(label),
+                child: const Icon(Icons.today_outlined),
               ),
             ),
     );
