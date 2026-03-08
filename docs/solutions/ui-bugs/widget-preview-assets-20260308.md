@@ -7,7 +7,8 @@ date: 2026-03-08
 
 The widget picker previews for the schedule and canteen widgets no longer
 matched the current multi-day widget UI. The canteen widget also reused the
-schedule preview asset.
+schedule preview asset, the canteen date could overflow in the picker preview,
+and both widgets still appeared under the generic app name.
 
 # Cause
 
@@ -27,6 +28,10 @@ schedule preview asset.
 - Refreshed the schedule fallback preview PNG and added a dedicated canteen
   fallback preview PNG for older widget hosts.
 - Pointed the canteen widget info file at its own preview asset.
+- Tightened both previews so content reads larger in the picker and widened the
+  canteen preview date column to prevent clipped dates.
+- Gave each widget receiver its own picker label (`Schedule` / `Canteen`) so
+  launchers no longer show both widgets as `DualMate`.
 
 # Validation
 

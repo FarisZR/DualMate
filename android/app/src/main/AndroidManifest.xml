@@ -25,6 +25,7 @@
         tools:replace="android:label">
         <receiver
 			android:name=".widget.now.ScheduleNowWidget"
+            android:label="@string/widget_schedule_title"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -37,6 +38,7 @@
 
         <receiver
             android:name=".widget.canteen.CanteenTodayWidget"
+            android:label="@string/widget_canteen_title"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
