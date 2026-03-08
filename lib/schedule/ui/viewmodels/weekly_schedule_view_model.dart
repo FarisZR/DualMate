@@ -47,6 +47,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   VoidCallback? _queryFailedCallback;
 
   bool updateFailed = false;
+  bool initializeFailed = false;
 
   bool isUpdating = false;
   final ScheduleUpdateRequestGate _updateRequestGate =
@@ -110,6 +111,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     try {
       await _initViewModel();
     } catch (error, trace) {
+      initializeFailed = true;
+      notifyIfMounted("initializeFailed");
       print("Weekly schedule init failed: $error");
       print(trace);
     }
@@ -159,6 +162,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       scheduleSourceProvider
           .addDidChangeScheduleSourceCallback(_onDidChangeScheduleSource);
     } catch (error, trace) {
+      initializeFailed = true;
+      notifyIfMounted("initializeFailed");
       print("Weekly schedule init failed: $error");
       print(trace);
       ensureUpdateNowTimerRunning();
@@ -233,6 +238,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   void _setSchedule(Schedule? schedule, DateTime start, DateTime end) {
+    if (schedule != null && initializeFailed) {
+      initializeFailed = false;
+      notifyIfMounted("initializeFailed");
+    }
     final shouldWarmAdjacent =
         _hasCurrentDateRange && !isAtSameDay(currentDateStart, start);
     weekSchedule = schedule;

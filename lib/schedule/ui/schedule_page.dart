@@ -77,6 +77,8 @@ class _SchedulePageState extends State<SchedulePage> {
           final viewModel = Provider.of<ScheduleViewModel>(context);
           final weeklyViewModel = Provider.of<WeeklyScheduleViewModel>(context);
           final hasCachedSchedule = weeklyViewModel.weekSchedule != null;
+          final hasScheduleLoadFailure =
+              weeklyViewModel.updateFailed || weeklyViewModel.initializeFailed;
 
           if (!viewModel.didSetupProperly && !hasCachedSchedule) {
             if (viewModel.isInitializingScheduleSource ||
@@ -89,7 +91,7 @@ class _SchedulePageState extends State<SchedulePage> {
             return ScheduleEmptyState();
           }
 
-          if (!hasCachedSchedule) {
+          if (!hasCachedSchedule && !hasScheduleLoadFailure) {
             return Padding(
               padding: const EdgeInsets.all(32),
               child: ScheduleEmptyStatePlaceholder(),

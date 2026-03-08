@@ -658,14 +658,15 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
 
   Widget buildErrorDisplay(BuildContext context) {
     return PropertyChangeConsumer<WeeklyScheduleViewModel, String>(
-      properties: const ['updateFailed'],
+      properties: const ['updateFailed', 'initializeFailed'],
       builder: (
         BuildContext context,
         WeeklyScheduleViewModel? model,
         Set<String>? properties,
       ) =>
           ErrorDisplay(
-        show: model?.updateFailed ?? false,
+        show: (model?.updateFailed ?? false) ||
+            (model?.initializeFailed ?? false),
       ),
     );
   }
