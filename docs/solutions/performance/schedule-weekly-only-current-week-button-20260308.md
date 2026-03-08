@@ -44,4 +44,11 @@ current week.
 
 # Device check
 
-- Pending final live verification on the connected Galaxy S21+ (`RFCR31468LJ`).
+- Verified on the connected Galaxy S21+ (`RFCR31468LJ`) that Schedule now
+  opens as a weekly-only screen with no daily tab shell.
+- Confirmed the live schedule screen still renders the weekly header, pager,
+  and filter action correctly on device.
+- Reached the live onboarding and iCal setup flow, but Android shell input
+  limits prevented fully automating URL entry/clipboard injection for a
+  populated-data tap-through of the new current-week button. That final path
+  remains a manual follow-up check.
