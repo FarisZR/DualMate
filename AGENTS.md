@@ -65,6 +65,8 @@ Important runtime behavior:
   - `BackgroundScheduleUpdate` (~every 4h)
   - `BackgroundCanteenUpdate` (~every 8h)
   - `NextDayInformationNotification`
+- Schedule-change notifications are policy-filtered to class dates within the
+  next 14 days; broader refresh windows still update cached data silently.
 - Android uses real scheduler service; non-Android gets no-op scheduler.
 
 ## Testing Guidance
