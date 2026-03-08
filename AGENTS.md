@@ -9,6 +9,16 @@ Update this file when doing changes that affect documented items in it.
 - Target platform: Android
 - iOS: currently unmaintained, ignore iOS for fixes/features unless explicitly requested
 
+## Repository / Remote Rules
+
+- Treat `FarisZR/DualMate` as the authoritative upstream repository for this
+  project.
+- Create branches, issues, and pull requests against `FarisZR/DualMate`.
+- Do not open pull requests, push branches, or otherwise touch
+  `Bennik2000/DHBWStudentInformationApp` for DualMate work.
+- When using GitHub CLI, pass the target repository explicitly if there is any
+  ambiguity in local `gh` context.
+
 ## Localization
 - Supported locales: English (`en`) and German (`de`)
 
