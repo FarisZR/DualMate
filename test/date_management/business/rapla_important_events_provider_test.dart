@@ -44,8 +44,9 @@ void main() {
       ),
     ]);
 
-    var filtered =
-        RaplaImportantEventsProvider.filterImportantEntries(schedule);
+    var filtered = RaplaImportantEventsProvider.filterImportantEntries(
+      schedule,
+    );
 
     expect(filtered.length, 3);
     expect(
@@ -126,7 +127,7 @@ void main() {
         end: DateTime(2026, 7, 27, 8),
         title: 'Klausur',
         details: '',
-        professor: '',
+        professor: 'Prof. Schmidt',
         room: '',
         type: ScheduleEntryType.Exam,
       ),
@@ -135,7 +136,7 @@ void main() {
         end: DateTime(2026, 7, 28, 8),
         title: 'Klausur',
         details: '',
-        professor: '',
+        professor: 'Prof. Becker',
         room: '',
         type: ScheduleEntryType.Exam,
       ),
@@ -144,6 +145,35 @@ void main() {
     var merged = RaplaImportantEventsProvider.mergeImportantEntries(entries);
 
     expect(merged.length, 2);
+  });
+
+  test('Preserves professor names for exam entries', () {
+    var entries = [
+      ScheduleEntry(
+        start: DateTime(2026, 7, 27, 7),
+        end: DateTime(2026, 7, 27, 8),
+        title: 'Klausur',
+        details: '',
+        professor: 'Prof. Schmidt',
+        room: '',
+        type: ScheduleEntryType.Exam,
+      ),
+      ScheduleEntry(
+        start: DateTime(2026, 7, 28, 7),
+        end: DateTime(2026, 7, 28, 8),
+        title: 'Klausur',
+        details: '',
+        professor: 'Prof. Becker',
+        room: '',
+        type: ScheduleEntryType.Exam,
+      ),
+    ];
+
+    var merged = RaplaImportantEventsProvider.mergeImportantEntries(entries);
+
+    expect(merged.length, 2);
+    expect(merged[0].professor, 'Prof. Schmidt');
+    expect(merged[1].professor, 'Prof. Becker');
   });
 
   test('Deduplicates identical entries', () {
@@ -168,8 +198,9 @@ void main() {
       ),
     ]);
 
-    var filtered =
-        RaplaImportantEventsProvider.filterImportantEntries(schedule);
+    var filtered = RaplaImportantEventsProvider.filterImportantEntries(
+      schedule,
+    );
 
     expect(filtered.length, 1);
   });

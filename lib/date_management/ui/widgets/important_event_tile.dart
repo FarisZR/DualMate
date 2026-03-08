@@ -14,6 +14,7 @@ class ImportantEventTile extends StatelessWidget {
   final double dotSize;
   final TextStyle? titleStyle;
   final Color? dotColor;
+  final bool showProfessor;
 
   const ImportantEventTile({
     Key? key,
@@ -23,6 +24,7 @@ class ImportantEventTile extends StatelessWidget {
     this.dotSize = 12,
     this.titleStyle,
     this.dotColor,
+    this.showProfessor = true,
   }) : super(key: key);
 
   @override
@@ -41,8 +43,39 @@ class ImportantEventTile extends StatelessWidget {
         color: dotColor ?? _eventColor(context, event),
         size: dotSize,
       ),
+      isThreeLine: _showsProfessor,
       title: Text(event.title, style: resolvedTitleStyle),
-      subtitle: Text(_formatEventDate(context, event)),
+      subtitle: _buildSubtitle(context),
+    );
+  }
+
+  bool get _showsProfessor {
+    return showProfessor &&
+        event.type == ScheduleEntryType.Exam &&
+        event.professor.trim().isNotEmpty;
+  }
+
+  Widget _buildSubtitle(BuildContext context) {
+    if (!_showsProfessor) {
+      return Text(_formatEventDate(context, event));
+    }
+
+    final professorStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(_formatEventDate(context, event)),
+        Text(
+          event.professor,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: professorStyle,
+        ),
+      ],
     );
   }
 

@@ -111,6 +111,7 @@ class RaplaImportantEventsProvider {
             title: entry.title,
             start: entry.start,
             end: entry.end,
+            professor: entry.professor,
             type: entry.type,
           ));
         }

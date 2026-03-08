@@ -65,6 +65,7 @@ class ImportantEventSectionCard extends StatelessWidget {
     return ImportantEventTile(
       event: event,
       contentPadding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      showProfessor: false,
       titleStyle: (Theme.of(context).textTheme.titleMedium ?? const TextStyle())
           .copyWith(fontWeight: FontWeight.w600),
       dotColor: isExamSection ? const Color(0xffff0000) : null,

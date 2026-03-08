@@ -52,6 +52,7 @@ Each Rapla event shows a colored dot:
 - Gray: Holiday
 
 Klausurwoche entries appear as section headers with nested exam rows underneath.
+Exam rows show lecturer names when Rapla provides `Personen:` metadata.
 Events outside of detected study phases are hidden by default; users can enable
 them via the filter toggle on the Dates page.
 
@@ -66,7 +67,12 @@ them via the filter toggle on the Dates page.
   - Verifies `ImportantEvent` range handling and equality.
 
 - `test/date_management/business/rapla_important_events_provider_test.dart`
-  - Verifies filtering, merging, and non-merging rules for exams.
+  - Verifies filtering, merging, non-merging rules for exams, and lecturer
+    preservation on exam rows.
+
+- `test/date_management/ui/widgets/important_event_tile_test.dart`
+  - Verifies lecturer names render on exam rows but not on non-exam rows or
+    Klausurwoche headers.
 
 ### Manual Testing (Android)
 Run on a device with USB debugging enabled:

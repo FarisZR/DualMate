@@ -32,15 +32,32 @@ void main() {
       title: 'Hl. 3 Koenige',
       start: DateTime(2026, 1, 6),
       end: DateTime(2026, 1, 6),
+      professor: 'Prof. Schmidt',
       type: ScheduleEntryType.PublicHoliday,
     );
     var event2 = ImportantEvent(
       title: 'Hl. 3 Koenige',
       start: DateTime(2026, 1, 6),
       end: DateTime(2026, 1, 6),
+      professor: 'Prof. Schmidt',
       type: ScheduleEntryType.PublicHoliday,
     );
 
     expect(event1, event2);
+  });
+
+  test('ImportantEvent serializes and deserializes professor', () {
+    var event = ImportantEvent(
+      title: 'Klausur',
+      start: DateTime(2026, 7, 31, 8),
+      end: DateTime(2026, 7, 31, 10),
+      professor: 'Prof. Mueller, Prof. Fischer',
+      type: ScheduleEntryType.Exam,
+    );
+
+    var restored = ImportantEvent.fromJson(event.toJson());
+
+    expect(restored, event);
+    expect(restored.professor, 'Prof. Mueller, Prof. Fischer');
   });
 }
