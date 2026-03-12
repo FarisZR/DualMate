@@ -8,6 +8,7 @@ import 'package:dualmate/common/logging/perf_overlay_controller.dart';
 import 'package:dualmate/common/ui/colors.dart';
 import 'package:dualmate/common/ui/viewmodels/root_view_model.dart';
 import 'package:dualmate/common/appstart/app_initializer.dart';
+import 'package:dualmate/common/appstart/app_visibility_tracker.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/util/launch_intent.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
@@ -81,6 +82,9 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    try {
+      KiwiContainer().resolve<AppVisibilityTracker>().update(state);
+    } catch (_) {}
     if (state == AppLifecycleState.resumed) {
       _fetchLaunchRoute();
       _fetchLaunchPayload();

@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:dualmate/common/appstart/app_visibility_tracker.dart';
 import 'package:dualmate/common/appstart/notification_schedule_changed_initialize.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/schedule/business/schedule_diff_calculator.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
+import 'package:flutter/widgets.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:test/test.dart';
 
@@ -23,20 +25,25 @@ void main() {
     final scheduleProvider = _FakeScheduleProvider();
     final preferencesProvider = _FakePreferencesProvider();
     final notificationApi = _RecordingNotificationApi();
+    final appVisibilityTracker = AppVisibilityTracker(
+      initialState: AppLifecycleState.paused,
+    );
     final container = KiwiContainer();
 
     container.registerInstance<ScheduleProvider>(scheduleProvider);
     container.registerInstance<PreferencesProvider>(preferencesProvider);
     container.registerInstance<NotificationApi>(notificationApi);
+    container.registerInstance<AppVisibilityTracker>(appVisibilityTracker);
 
     NotificationScheduleChangedInitialize().setupNotification();
 
+    final start = DateTime.now().add(const Duration(days: 1));
     await scheduleProvider.emitScheduleChanged(
       ScheduleDiff(
         addedEntries: [
           ScheduleEntry(
-            start: DateTime(2026, 3, 9, 9),
-            end: DateTime(2026, 3, 9, 10),
+            start: start,
+            end: start.add(const Duration(hours: 1)),
             title: 'Mathematics',
             details: 'Lecture',
             professor: 'Prof',
@@ -58,22 +65,27 @@ void main() {
     final scheduleProvider = _FakeScheduleProvider();
     final preferencesProvider = _FakePreferencesProvider();
     final notificationApi = _BlockingNotificationApi();
+    final appVisibilityTracker = AppVisibilityTracker(
+      initialState: AppLifecycleState.paused,
+    );
     final container = KiwiContainer();
 
     container.registerInstance<ScheduleProvider>(scheduleProvider);
     container.registerInstance<PreferencesProvider>(preferencesProvider);
     container.registerInstance<NotificationApi>(notificationApi);
+    container.registerInstance<AppVisibilityTracker>(appVisibilityTracker);
 
     NotificationScheduleChangedInitialize().setupNotification();
 
     var callbackCompleted = false;
+    final start = DateTime.now().add(const Duration(days: 1));
     final callbackFuture = scheduleProvider
         .emitScheduleChanged(
           ScheduleDiff(
             addedEntries: [
               ScheduleEntry(
-                start: DateTime(2026, 3, 9, 9),
-                end: DateTime(2026, 3, 9, 10),
+                start: start,
+                end: start.add(const Duration(hours: 1)),
                 title: 'Mathematics',
                 details: 'Lecture',
                 professor: 'Prof',
@@ -102,15 +114,59 @@ void main() {
     final scheduleProvider = _FakeScheduleProvider();
     final preferencesProvider = _FakePreferencesProvider();
     final notificationApi = _RecordingNotificationApi();
+    final appVisibilityTracker = AppVisibilityTracker(
+      initialState: AppLifecycleState.paused,
+    );
     final container = KiwiContainer();
 
     container.registerInstance<ScheduleProvider>(scheduleProvider);
     container.registerInstance<PreferencesProvider>(preferencesProvider);
     container.registerInstance<NotificationApi>(notificationApi);
+    container.registerInstance<AppVisibilityTracker>(appVisibilityTracker);
 
     NotificationScheduleChangedInitialize().setupNotification();
 
     final start = DateTime.now().add(const Duration(days: 30));
+    await scheduleProvider.emitScheduleChanged(
+      ScheduleDiff(
+        addedEntries: [
+          ScheduleEntry(
+            start: start,
+            end: start.add(const Duration(hours: 1)),
+            title: 'Mathematics',
+            details: 'Lecture',
+            professor: 'Prof',
+            room: 'R1',
+            type: ScheduleEntryType.Class,
+          ),
+        ],
+        removedEntries: const [],
+        updatedEntries: const [],
+      ),
+    );
+
+    expect(notificationApi.titles, isEmpty);
+    expect(notificationApi.messages, isEmpty);
+  });
+
+  test('schedule change notification stays silent while app is attended',
+      () async {
+    final scheduleProvider = _FakeScheduleProvider();
+    final preferencesProvider = _FakePreferencesProvider();
+    final notificationApi = _RecordingNotificationApi();
+    final appVisibilityTracker = AppVisibilityTracker(
+      initialState: AppLifecycleState.resumed,
+    );
+    final container = KiwiContainer();
+
+    container.registerInstance<ScheduleProvider>(scheduleProvider);
+    container.registerInstance<PreferencesProvider>(preferencesProvider);
+    container.registerInstance<NotificationApi>(notificationApi);
+    container.registerInstance<AppVisibilityTracker>(appVisibilityTracker);
+
+    NotificationScheduleChangedInitialize().setupNotification();
+
+    final start = DateTime.now().add(const Duration(days: 1));
     await scheduleProvider.emitScheduleChanged(
       ScheduleDiff(
         addedEntries: [

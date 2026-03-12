@@ -1,4 +1,5 @@
 import 'package:dualmate/canteen/business/canteen_provider.dart';
+import 'package:dualmate/common/appstart/app_visibility_tracker.dart';
 import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
 import 'package:dualmate/common/data/database_access.dart';
@@ -21,6 +22,7 @@ import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 import 'package:dualmate/schedule/data/schedule_query_information_repository.dart';
+import 'package:flutter/widgets.dart';
 import 'package:kiwi/kiwi.dart';
 
 bool _isInjected = false;
@@ -33,6 +35,12 @@ void injectServices(bool isBackground) {
   if (_isInjected) return;
 
   KiwiContainer c = KiwiContainer();
+  c.registerInstance(
+    AppVisibilityTracker(
+      initialState:
+          isBackground ? AppLifecycleState.paused : AppLifecycleState.resumed,
+    ),
+  );
   c.registerInstance(PreferencesProvider(
     PreferencesAccess(),
     SecureStorageAccess(),

@@ -47,9 +47,50 @@ void main() {
       DateTime(2026, 2, 24),
       DateTime(2026, 2, 25),
       CancellationToken(),
+      origin: ScheduleRefreshOrigin.backgroundPeriodic,
     );
 
     expect(callbackOrder, ['changed', 'updated']);
+  });
+
+  test('attended refresh origins skip changed callbacks but still update',
+      () async {
+    final schedule = Schedule.fromList([
+      ScheduleEntry(
+        start: DateTime(2026, 2, 24, 9),
+        end: DateTime(2026, 2, 24, 10),
+        title: 'Math',
+        details: 'Lecture',
+        professor: 'Prof',
+        room: 'A1',
+        type: ScheduleEntryType.Class,
+      ),
+    ]);
+
+    final provider = ScheduleProvider(
+      _FakeScheduleSourceProvider(_FakeScheduleSource(schedule)),
+      _FakeScheduleEntryRepository(),
+      _FakeScheduleQueryInformationRepository(),
+      _FakePreferencesProvider(),
+      _FakeScheduleFilterRepository(),
+    );
+
+    final callbackOrder = <String>[];
+    provider.addScheduleEntryChangedCallback((_) async {
+      callbackOrder.add('changed');
+    });
+    provider.addScheduleUpdatedCallback((_, __, ___) async {
+      callbackOrder.add('updated');
+    });
+
+    await provider.getUpdatedSchedule(
+      DateTime(2026, 2, 24),
+      DateTime(2026, 2, 25),
+      CancellationToken(),
+      origin: ScheduleRefreshOrigin.userBrowsing,
+    );
+
+    expect(callbackOrder, ['updated']);
   });
 }
 

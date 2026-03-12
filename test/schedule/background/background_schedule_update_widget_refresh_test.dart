@@ -28,6 +28,10 @@ void main() {
     await update.updateSchedule();
 
     expect(scheduleProvider.updatedCalls, 1);
+    expect(
+      scheduleProvider.origins,
+      everyElement(ScheduleRefreshOrigin.backgroundPeriodic),
+    );
     expect(widgetHelper.refreshCalls, 1);
   });
 
@@ -48,6 +52,10 @@ void main() {
     await update.updateSchedule();
 
     expect(scheduleProvider.updatedCalls, 1);
+    expect(
+      scheduleProvider.origins,
+      everyElement(ScheduleRefreshOrigin.backgroundPeriodic),
+    );
     expect(widgetHelper.refreshCalls, 1);
   });
 
@@ -92,14 +100,17 @@ void main() {
 
 class _FakeScheduleProvider implements ScheduleProvider {
   int updatedCalls = 0;
+  final List<ScheduleRefreshOrigin> origins = <ScheduleRefreshOrigin>[];
 
   @override
   Future<ScheduleQueryResult> getUpdatedSchedule(
     DateTime start,
     DateTime end,
-    CancellationToken cancellationToken,
-  ) async {
+    CancellationToken cancellationToken, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
+  }) async {
     updatedCalls++;
+    origins.add(origin);
     return ScheduleQueryResult(Schedule(), const []);
   }
 
@@ -114,8 +125,9 @@ class _ThrowingScheduleProvider implements ScheduleProvider {
   Future<ScheduleQueryResult> getUpdatedSchedule(
     DateTime start,
     DateTime end,
-    CancellationToken cancellationToken,
-  ) async {
+    CancellationToken cancellationToken, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
+  }) async {
     throw Exception('schedule update failed');
   }
 

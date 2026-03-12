@@ -328,8 +328,9 @@ class _TrackingScheduleProvider implements ScheduleProvider {
   Future<ScheduleQueryResult> getUpdatedSchedule(
     DateTime start,
     DateTime end,
-    CancellationToken cancellationToken,
-  ) async {
+    CancellationToken cancellationToken, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
+  }) async {
     return ScheduleQueryResult(await getCachedSchedule(start, end), const []);
   }
 

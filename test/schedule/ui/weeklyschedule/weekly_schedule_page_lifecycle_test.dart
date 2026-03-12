@@ -91,6 +91,10 @@ void main() {
         ),
         isTrue,
       );
+      expect(
+        provider.updatedOrigins,
+        contains(ScheduleRefreshOrigin.foregroundMaintenance),
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
@@ -273,6 +277,7 @@ ScheduleEntry _entry(DateTime day, String title) {
 class _TrackingScheduleProvider implements ScheduleProvider {
   final List<ScheduleEntry> _entries;
   final List<_RangeRequest> cachedRequests = <_RangeRequest>[];
+  final List<ScheduleRefreshOrigin> updatedOrigins = <ScheduleRefreshOrigin>[];
   Set<String> _hiddenTitles = <String>{};
 
   _TrackingScheduleProvider(this._entries);
@@ -291,8 +296,10 @@ class _TrackingScheduleProvider implements ScheduleProvider {
   Future<ScheduleQueryResult> getUpdatedSchedule(
     DateTime start,
     DateTime end,
-    CancellationToken cancellationToken,
-  ) async {
+    CancellationToken cancellationToken, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
+  }) async {
+    updatedOrigins.add(origin);
     return ScheduleQueryResult(_trim(start, end), const []);
   }
 
@@ -323,8 +330,10 @@ class _QueuedBlockingTrackingScheduleProvider
   Future<ScheduleQueryResult> getUpdatedSchedule(
     DateTime start,
     DateTime end,
-    CancellationToken cancellationToken,
-  ) {
+    CancellationToken cancellationToken, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
+  }) {
+    updatedOrigins.add(origin);
     final completer = Completer<ScheduleQueryResult>();
     _pendingUpdates.add(completer);
     return completer.future;

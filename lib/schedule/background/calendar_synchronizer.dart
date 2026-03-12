@@ -48,10 +48,10 @@ class CalendarSynchronizer {
     Future.delayed(Duration(seconds: 10), () {
       if (!scheduleSourceProvider.didSetupCorrectly()) return;
       scheduleProvider.getUpdatedSchedule(
-        
         DateTime.now(),
         DateTime.now().add(Duration(days: 30)),
         CancellationToken(),
+        origin: ScheduleRefreshOrigin.foregroundMaintenance,
       );
     });
   }

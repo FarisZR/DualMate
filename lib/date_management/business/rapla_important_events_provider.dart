@@ -43,6 +43,7 @@ class RaplaImportantEventsProvider {
         start,
         end,
         cancellationToken,
+        origin: ScheduleRefreshOrigin.foregroundMaintenance,
       );
       return updatedSchedule;
     } on OperationCancelledException {

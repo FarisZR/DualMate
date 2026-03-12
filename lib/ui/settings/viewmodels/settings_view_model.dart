@@ -75,6 +75,7 @@ class SettingsViewModel extends BaseViewModel {
       DateTime.now(),
       DateTime.now().add(Duration(days: 30)),
       CancellationToken(),
+      origin: ScheduleRefreshOrigin.foregroundMaintenance,
     );
   }
 
