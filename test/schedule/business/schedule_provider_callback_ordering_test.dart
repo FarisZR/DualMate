@@ -36,7 +36,7 @@ void main() {
     );
 
     final callbackOrder = <String>[];
-    provider.addScheduleEntryChangedCallback((_) async {
+    provider.addScheduleEntryChangedCallback((_, __) async {
       callbackOrder.add('changed');
     });
     provider.addScheduleUpdatedCallback((_, __, ___) async {
@@ -53,7 +53,7 @@ void main() {
     expect(callbackOrder, ['changed', 'updated']);
   });
 
-  test('attended refresh origins skip changed callbacks but still update',
+  test('attended refresh origins still invoke changed callbacks with origin',
       () async {
     final schedule = Schedule.fromList([
       ScheduleEntry(
@@ -76,8 +76,10 @@ void main() {
     );
 
     final callbackOrder = <String>[];
-    provider.addScheduleEntryChangedCallback((_) async {
+    ScheduleRefreshOrigin? capturedOrigin;
+    provider.addScheduleEntryChangedCallback((_, origin) async {
       callbackOrder.add('changed');
+      capturedOrigin = origin;
     });
     provider.addScheduleUpdatedCallback((_, __, ___) async {
       callbackOrder.add('updated');
@@ -90,7 +92,8 @@ void main() {
       origin: ScheduleRefreshOrigin.userBrowsing,
     );
 
-    expect(callbackOrder, ['updated']);
+    expect(callbackOrder, ['changed', 'updated']);
+    expect(capturedOrigin, ScheduleRefreshOrigin.userBrowsing);
   });
 }
 

@@ -26,6 +26,7 @@ typedef ScheduleUpdatedCallback = Future<void> Function(
 
 typedef ScheduleEntryChangedCallback = Future<void> Function(
   ScheduleDiff scheduleDiff,
+  ScheduleRefreshOrigin origin,
 );
 
 enum ScheduleRefreshOrigin {
@@ -159,9 +160,9 @@ class ScheduleProvider {
 
     var cleanedDiff = await _cleanDiffFromNewlyQueriedEntries(start, end, diff);
 
-    if (origin.mayNotify && cleanedDiff.didSomethingChange()) {
+    if (cleanedDiff.didSomethingChange()) {
       for (var c in _scheduleEntryChangedCallbacks) {
-        await c(cleanedDiff);
+        await c(cleanedDiff, origin);
       }
     }
   }

@@ -15,7 +15,11 @@ class NotificationScheduleChangedInitialize {
     provider.addScheduleEntryChangedCallback(_scheduleChangedCallback);
   }
 
-  Future<void> _scheduleChangedCallback(ScheduleDiff scheduleDiff) async {
+  Future<void> _scheduleChangedCallback(
+      ScheduleDiff scheduleDiff, ScheduleRefreshOrigin origin) async {
+    // Only notify for background periodic refreshes
+    if (!origin.mayNotify) return;
+
     final preferences = KiwiContainer().resolve<PreferencesProvider>();
     var doNotify = await preferences.getNotifyAboutScheduleChanges();
 
