@@ -1,13 +1,11 @@
 import 'dart:async';
 
-import 'package:dualmate/common/appstart/app_visibility_tracker.dart';
 import 'package:dualmate/common/appstart/notification_schedule_changed_initialize.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/schedule/business/schedule_diff_calculator.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
-import 'package:flutter/widgets.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:test/test.dart';
 
@@ -25,15 +23,11 @@ void main() {
     final scheduleProvider = _FakeScheduleProvider();
     final preferencesProvider = _FakePreferencesProvider();
     final notificationApi = _RecordingNotificationApi();
-    final appVisibilityTracker = AppVisibilityTracker(
-      initialState: AppLifecycleState.paused,
-    );
     final container = KiwiContainer();
 
     container.registerInstance<ScheduleProvider>(scheduleProvider);
     container.registerInstance<PreferencesProvider>(preferencesProvider);
     container.registerInstance<NotificationApi>(notificationApi);
-    container.registerInstance<AppVisibilityTracker>(appVisibilityTracker);
 
     NotificationScheduleChangedInitialize().setupNotification();
 
@@ -65,15 +59,11 @@ void main() {
     final scheduleProvider = _FakeScheduleProvider();
     final preferencesProvider = _FakePreferencesProvider();
     final notificationApi = _BlockingNotificationApi();
-    final appVisibilityTracker = AppVisibilityTracker(
-      initialState: AppLifecycleState.paused,
-    );
     final container = KiwiContainer();
 
     container.registerInstance<ScheduleProvider>(scheduleProvider);
     container.registerInstance<PreferencesProvider>(preferencesProvider);
     container.registerInstance<NotificationApi>(notificationApi);
-    container.registerInstance<AppVisibilityTracker>(appVisibilityTracker);
 
     NotificationScheduleChangedInitialize().setupNotification();
 
@@ -114,15 +104,11 @@ void main() {
     final scheduleProvider = _FakeScheduleProvider();
     final preferencesProvider = _FakePreferencesProvider();
     final notificationApi = _RecordingNotificationApi();
-    final appVisibilityTracker = AppVisibilityTracker(
-      initialState: AppLifecycleState.paused,
-    );
     final container = KiwiContainer();
 
     container.registerInstance<ScheduleProvider>(scheduleProvider);
     container.registerInstance<PreferencesProvider>(preferencesProvider);
     container.registerInstance<NotificationApi>(notificationApi);
-    container.registerInstance<AppVisibilityTracker>(appVisibilityTracker);
 
     NotificationScheduleChangedInitialize().setupNotification();
 
@@ -153,16 +139,13 @@ void main() {
       () async {
     final scheduleProvider = _FakeScheduleProvider();
     final preferencesProvider = _FakePreferencesProvider();
+    preferencesProvider.isAppAttended = true;
     final notificationApi = _RecordingNotificationApi();
-    final appVisibilityTracker = AppVisibilityTracker(
-      initialState: AppLifecycleState.resumed,
-    );
     final container = KiwiContainer();
 
     container.registerInstance<ScheduleProvider>(scheduleProvider);
     container.registerInstance<PreferencesProvider>(preferencesProvider);
     container.registerInstance<NotificationApi>(notificationApi);
-    container.registerInstance<AppVisibilityTracker>(appVisibilityTracker);
 
     NotificationScheduleChangedInitialize().setupNotification();
 
@@ -209,8 +192,13 @@ class _FakeScheduleProvider implements ScheduleProvider {
 }
 
 class _FakePreferencesProvider implements PreferencesProvider {
+  bool isAppAttended = false;
+
   @override
   Future<bool> getNotifyAboutScheduleChanges() async => true;
+
+  @override
+  Future<bool> getIsAppAttended() async => isAppAttended;
 
   @override
   Future<String?> getLastUsedLanguageCode() async => 'en';

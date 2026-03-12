@@ -67,7 +67,7 @@ Adopt the modern best-practice pattern for shared refresh engines: pass explicit
 1. Add a small `ScheduleRefreshOrigin`-style option to `lib/schedule/business/schedule_provider.dart` so each refresh declares why it is running.
 2. Derive notification eligibility from that origin, with only the WorkManager-backed path in `lib/schedule/background/background_schedule_update.dart` marked as notification-eligible.
 3. Pass foreground/user-attended origins from weekly browsing, resume refresh, calendar sync, settings-triggered sync, and Rapla/date-management refreshes so those paths stay silent.
-4. Add a tiny app-visibility tracker so notification delivery does one final "app not in use" check before posting, even if a background refresh began first.
+4. Add one final "app not in use" check before posting, using a source of truth that both foreground and background execution can read.
 5. Keep `lib/schedule/ui/notification/schedule_changed_notification.dart` responsible for the existing today..day-14 filtering and message rendering, not refresh-origin decisions.
 
 ## Technical Considerations
@@ -185,7 +185,7 @@ await notification.showNotification(scheduleDiff);
 - [x] Add a new `test/schedule/background/calendar_synchronizer_test.dart` covering silent 30-day sync refreshes.
 - [x] Add a new `test/ui/settings/viewmodels/settings_view_model_schedule_refresh_test.dart` or extend an existing settings test to cover silent calendar-sync refreshes.
 - [x] Add a new targeted Rapla refresh test in `test/date_management/business/rapla_important_events_provider_test.dart` or a companion test file.
-- [x] Add app-visibility tracker coverage proving notification delivery is skipped while the app is attended.
+- [x] Add attended-app coverage proving notification delivery is skipped while the app is attended.
 - [x] Re-run existing notification policy tests in `test/common/appstart/notification_schedule_changed_initialize_test.dart` and `test/schedule/ui/notification/schedule_changed_notification_test.dart` to confirm the 14-day horizon still behaves as before.
 - [x] Record the shipped fix in `docs/solutions/` after implementation.
 

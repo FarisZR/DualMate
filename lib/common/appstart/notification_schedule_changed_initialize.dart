@@ -1,4 +1,3 @@
-import 'package:dualmate/common/appstart/app_visibility_tracker.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/schedule/business/schedule_diff_calculator.dart';
@@ -22,9 +21,7 @@ class NotificationScheduleChangedInitialize {
 
     if (!doNotify) return;
 
-    final appVisibilityTracker =
-        KiwiContainer().resolve<AppVisibilityTracker>();
-    if (appVisibilityTracker.isAppAttended) return;
+    if (await preferences.getIsAppAttended()) return;
 
     var notification = ScheduleChangedNotification(
       KiwiContainer().resolve<NotificationApi>(),

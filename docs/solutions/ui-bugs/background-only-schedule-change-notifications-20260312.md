@@ -11,7 +11,8 @@ browsing the schedule or while other foreground refresh paths reused the shared
 schedule refresh pipeline.
 
 This fix keeps notifications limited to unattended background schedule refreshes
-and suppresses delivery when the app is currently attended.
+and suppresses delivery when shared preferences say the app is currently
+attended.
 
 # Changes
 
@@ -20,12 +21,12 @@ and suppresses delivery when the app is currently attended.
   - limits changed-callback delivery to `backgroundPeriodic` refreshes while
     keeping updated callbacks and cache persistence unchanged.
 
-- `lib/common/appstart/app_visibility_tracker.dart`
-  - adds a tiny app-attended state holder for notification gating.
+- `lib/common/data/preferences/preferences_provider.dart`
+  - stores whether the app is currently attended so background work can read the
+    same state as the foreground app.
 
 - `lib/common/appstart/service_injector.dart`
-  - registers `AppVisibilityTracker` with a foreground/background-aware initial
-    state.
+  - no longer needs isolate-local app-attended state.
 
 - `lib/common/appstart/notification_schedule_changed_initialize.dart`
   - skips schedule-change notifications when the app is currently attended.
@@ -54,12 +55,14 @@ and suppresses delivery when the app is currently attended.
 
 The shared provider remains the single refresh engine, but refresh intent is now
 explicit. That keeps cache/diff logic reusable while making notification policy
-match Android guidance: notify only when the app is not in use.
+match Android guidance: notify only when the app is not in use. The attended-app
+check now comes from shared preferences so WorkManager background execution sees
+the same source of truth as the foreground isolate.
 
 # Validation
 
 - `flutter test test/common/appstart/notification_schedule_changed_initialize_test.dart test/schedule/business/schedule_provider_callback_ordering_test.dart test/schedule/background/background_schedule_update_widget_refresh_test.dart test/schedule/background/calendar_synchronizer_test.dart test/ui/settings/viewmodels/settings_view_model_schedule_refresh_test.dart test/date_management/business/rapla_important_events_provider_refresh_test.dart test/schedule/ui/viewmodels/weekly_schedule_background_refresh_test.dart test/schedule/ui/weeklyschedule/weekly_schedule_page_lifecycle_test.dart test/schedule/ui/notification/schedule_changed_notification_test.dart test/ui/settings/viewmodels/settings_view_model_notification_permission_test.dart`
-- `flutter analyze lib/common/appstart/app_visibility_tracker.dart lib/common/appstart/service_injector.dart lib/common/appstart/notification_schedule_changed_initialize.dart lib/schedule/business/schedule_provider.dart lib/schedule/background/background_schedule_update.dart lib/schedule/background/calendar_synchronizer.dart lib/date_management/business/rapla_important_events_provider.dart lib/ui/settings/viewmodels/settings_view_model.dart lib/schedule/ui/viewmodels/weekly_schedule_view_model.dart lib/ui/root_page.dart test/common/appstart/notification_schedule_changed_initialize_test.dart test/schedule/business/schedule_provider_callback_ordering_test.dart test/schedule/background/background_schedule_update_widget_refresh_test.dart test/schedule/background/calendar_synchronizer_test.dart test/ui/settings/viewmodels/settings_view_model_schedule_refresh_test.dart test/date_management/business/rapla_important_events_provider_refresh_test.dart test/schedule/ui/viewmodels/weekly_schedule_background_refresh_test.dart test/schedule/ui/weeklyschedule/weekly_schedule_page_lifecycle_test.dart`
+- `flutter analyze lib/common/appstart/notification_schedule_changed_initialize.dart lib/common/appstart/service_injector.dart lib/common/data/preferences/preferences_provider.dart lib/schedule/business/schedule_provider.dart lib/schedule/background/background_schedule_update.dart lib/schedule/background/calendar_synchronizer.dart lib/date_management/business/rapla_important_events_provider.dart lib/ui/settings/viewmodels/settings_view_model.dart lib/schedule/ui/viewmodels/weekly_schedule_view_model.dart lib/ui/root_page.dart test/common/appstart/notification_schedule_changed_initialize_test.dart test/schedule/business/schedule_provider_callback_ordering_test.dart test/schedule/background/background_schedule_update_widget_refresh_test.dart test/schedule/background/calendar_synchronizer_test.dart test/ui/settings/viewmodels/settings_view_model_schedule_refresh_test.dart test/date_management/business/rapla_important_events_provider_refresh_test.dart test/schedule/ui/viewmodels/weekly_schedule_background_refresh_test.dart test/schedule/ui/weeklyschedule/weekly_schedule_page_lifecycle_test.dart`
 
 # Notes
 

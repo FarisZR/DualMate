@@ -8,7 +8,6 @@ import 'package:dualmate/common/logging/perf_overlay_controller.dart';
 import 'package:dualmate/common/ui/colors.dart';
 import 'package:dualmate/common/ui/viewmodels/root_view_model.dart';
 import 'package:dualmate/common/appstart/app_initializer.dart';
-import 'package:dualmate/common/appstart/app_visibility_tracker.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/util/launch_intent.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
@@ -75,6 +74,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    unawaited(_setAppAttended(false));
     _detachOnboardingDeferredInitListener();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -82,9 +82,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    try {
-      KiwiContainer().resolve<AppVisibilityTracker>().update(state);
-    } catch (_) {}
+    unawaited(_setAppAttended(_isAttendedState(state)));
     if (state == AppLifecycleState.resumed) {
       _fetchLaunchRoute();
       _fetchLaunchPayload();
@@ -180,6 +178,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     );
     try {
       await initializeAppBase(false);
+      await _setAppAttended(true);
       print("Root init: base ${stopwatch.elapsedMilliseconds}ms");
       PerformanceTelemetry.instance.logInstant(
         'startup.root.base.done',
@@ -221,6 +220,19 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         setState(() {});
       }
     }
+  }
+
+  bool _isAttendedState(AppLifecycleState state) {
+    return state == AppLifecycleState.resumed ||
+        state == AppLifecycleState.inactive;
+  }
+
+  Future<void> _setAppAttended(bool attended) async {
+    try {
+      await KiwiContainer().resolve<PreferencesProvider>().setIsAppAttended(
+            attended,
+          );
+    } catch (_) {}
   }
 
   Future<void> _loadRootPreferences(Stopwatch stopwatch) async {

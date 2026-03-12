@@ -33,6 +33,7 @@ class PreferencesProvider {
   static const String RaplaImportantEventsCache = "RaplaImportantEventsCache";
   static const String RaplaImportantEventsWindowEnd =
       "RaplaImportantEventsWindowEnd";
+  static const String IsAppAttended = "IsAppAttended";
 
   final PreferencesAccess _preferencesAccess;
   final SecureStorageAccess _secureStorageAccess;
@@ -261,6 +262,14 @@ class PreferencesProvider {
 
   Future<void> setRaplaImportantEventsWindowEnd(String value) async {
     return _preferencesAccess.set<String>(RaplaImportantEventsWindowEnd, value);
+  }
+
+  Future<bool> getIsAppAttended() async {
+    return await _preferencesAccess.get<bool>(IsAppAttended) ?? false;
+  }
+
+  Future<void> setIsAppAttended(bool value) async {
+    return _preferencesAccess.set<bool>(IsAppAttended, value);
   }
 
   Future<void> set<T>(String key, T value) async {
