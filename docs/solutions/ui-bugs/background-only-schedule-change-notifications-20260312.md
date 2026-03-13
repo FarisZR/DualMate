@@ -18,12 +18,13 @@ attended.
 
 - `lib/schedule/business/schedule_provider.dart`
   - adds explicit `ScheduleRefreshOrigin` tagging for schedule refreshes.
-  - limits changed-callback delivery to `backgroundPeriodic` refreshes while
-    keeping updated callbacks and cache persistence unchanged.
+  - delivers changed callbacks for all origins; notification filtering happens
+    in `NotificationScheduleChangedInitialize` via `origin.mayNotify`.
 
 - `lib/common/data/preferences/preferences_provider.dart`
-  - stores whether the app is currently attended so background work can read the
-    same state as the foreground app.
+  - stores when the app was last attended as a timestamp (epoch ms). Background
+    work treats the app as unattended if the timestamp is older than 5 minutes,
+    so a crash while attended cannot suppress notifications indefinitely.
 
 - `lib/common/appstart/service_injector.dart`
   - no longer needs isolate-local app-attended state.

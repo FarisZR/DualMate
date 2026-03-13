@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
@@ -71,11 +73,17 @@ class SettingsViewModel extends BaseViewModel {
     await _preferencesProvider.setIsCalendarSyncEnabled(value);
 
     var scheduleProvider = KiwiContainer().resolve<ScheduleProvider>();
-    scheduleProvider.getUpdatedSchedule(
-      DateTime.now(),
-      DateTime.now().add(Duration(days: 30)),
-      CancellationToken(),
-      origin: ScheduleRefreshOrigin.foregroundMaintenance,
+    unawaited(
+      scheduleProvider
+          .getUpdatedSchedule(
+            DateTime.now(),
+            DateTime.now().add(Duration(days: 30)),
+            CancellationToken(),
+            origin: ScheduleRefreshOrigin.foregroundMaintenance,
+          )
+          .then<void>((_) {}, onError: (e) {
+        print("Calendar sync refresh failed: $e");
+      }),
     );
   }
 
