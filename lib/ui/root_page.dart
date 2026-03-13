@@ -69,6 +69,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     PerformanceTelemetry.instance.ensureFrameTimingListenerAttached();
     _startupTask =
         PerformanceTelemetry.instance.startTask('startup.initialize');
+    unawaited(_setAppAttended(true));
     _initializeApp();
   }
 
