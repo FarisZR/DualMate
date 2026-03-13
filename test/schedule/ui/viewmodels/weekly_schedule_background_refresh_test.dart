@@ -34,6 +34,8 @@ void main() {
         force: true,
       );
 
+      expect(provider.origins, [ScheduleRefreshOrigin.userBrowsing]);
+
       expect(viewModel.currentDateStart, visibleWeekStart);
       expect(viewModel.currentDateEnd, visibleWeekEnd);
 
@@ -45,6 +47,11 @@ void main() {
         widgetRefreshEnd,
         force: true,
         applyToVisibleState: false,
+      );
+
+      expect(
+        provider.origins.last,
+        ScheduleRefreshOrigin.foregroundMaintenance,
       );
 
       expect(viewModel.currentDateStart, visibleWeekStart);
@@ -192,6 +199,7 @@ ScheduleEntry _entry(DateTime start, String suffix) {
 
 class _FakeScheduleProvider implements ScheduleProvider {
   final List<ScheduleEntry> _entries;
+  final List<ScheduleRefreshOrigin> origins = <ScheduleRefreshOrigin>[];
 
   _FakeScheduleProvider(this._entries);
 
@@ -204,8 +212,10 @@ class _FakeScheduleProvider implements ScheduleProvider {
   Future<ScheduleQueryResult> getUpdatedSchedule(
     DateTime start,
     DateTime end,
-    CancellationToken cancellationToken,
-  ) async {
+    CancellationToken cancellationToken, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
+  }) async {
+    origins.add(origin);
     return ScheduleQueryResult(_trim(start, end), const []);
   }
 
@@ -231,10 +241,16 @@ class _CountingScheduleProvider extends _FakeScheduleProvider {
   Future<ScheduleQueryResult> getUpdatedSchedule(
     DateTime start,
     DateTime end,
-    CancellationToken cancellationToken,
-  ) async {
+    CancellationToken cancellationToken, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
+  }) async {
     updatedScheduleRequests += 1;
-    return super.getUpdatedSchedule(start, end, cancellationToken);
+    return super.getUpdatedSchedule(
+      start,
+      end,
+      cancellationToken,
+      origin: origin,
+    );
   }
 }
 
@@ -248,8 +264,10 @@ class _BlockingScheduleProvider extends _FakeScheduleProvider {
   Future<ScheduleQueryResult> getUpdatedSchedule(
     DateTime start,
     DateTime end,
-    CancellationToken cancellationToken,
-  ) {
+    CancellationToken cancellationToken, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
+  }) {
+    origins.add(origin);
     return _updatedScheduleCompleter.future;
   }
 

@@ -31,12 +31,13 @@ void main() {
 
     NotificationScheduleChangedInitialize().setupNotification();
 
+    final start = DateTime.now().add(const Duration(days: 1));
     await scheduleProvider.emitScheduleChanged(
       ScheduleDiff(
         addedEntries: [
           ScheduleEntry(
-            start: DateTime(2026, 3, 9, 9),
-            end: DateTime(2026, 3, 9, 10),
+            start: start,
+            end: start.add(const Duration(hours: 1)),
             title: 'Mathematics',
             details: 'Lecture',
             professor: 'Prof',
@@ -67,13 +68,14 @@ void main() {
     NotificationScheduleChangedInitialize().setupNotification();
 
     var callbackCompleted = false;
+    final start = DateTime.now().add(const Duration(days: 1));
     final callbackFuture = scheduleProvider
         .emitScheduleChanged(
           ScheduleDiff(
             addedEntries: [
               ScheduleEntry(
-                start: DateTime(2026, 3, 9, 9),
-                end: DateTime(2026, 3, 9, 10),
+                start: start,
+                end: start.add(const Duration(hours: 1)),
                 title: 'Mathematics',
                 details: 'Lecture',
                 professor: 'Prof',
@@ -132,6 +134,118 @@ void main() {
     expect(notificationApi.titles, isEmpty);
     expect(notificationApi.messages, isEmpty);
   });
+
+  test('schedule change notification stays silent while app is attended',
+      () async {
+    final scheduleProvider = _FakeScheduleProvider();
+    final preferencesProvider = _FakePreferencesProvider();
+    preferencesProvider.isAppAttended = true;
+    final notificationApi = _RecordingNotificationApi();
+    final container = KiwiContainer();
+
+    container.registerInstance<ScheduleProvider>(scheduleProvider);
+    container.registerInstance<PreferencesProvider>(preferencesProvider);
+    container.registerInstance<NotificationApi>(notificationApi);
+
+    NotificationScheduleChangedInitialize().setupNotification();
+
+    final start = DateTime.now().add(const Duration(days: 1));
+    await scheduleProvider.emitScheduleChanged(
+      ScheduleDiff(
+        addedEntries: [
+          ScheduleEntry(
+            start: start,
+            end: start.add(const Duration(hours: 1)),
+            title: 'Mathematics',
+            details: 'Lecture',
+            professor: 'Prof',
+            room: 'R1',
+            type: ScheduleEntryType.Class,
+          ),
+        ],
+        removedEntries: const [],
+        updatedEntries: const [],
+      ),
+    );
+
+    expect(notificationApi.titles, isEmpty);
+    expect(notificationApi.messages, isEmpty);
+  });
+
+  test('schedule change notification stays silent for user browsing origin',
+      () async {
+    final scheduleProvider = _FakeScheduleProvider();
+    final preferencesProvider = _FakePreferencesProvider();
+    final notificationApi = _RecordingNotificationApi();
+    final container = KiwiContainer();
+
+    container.registerInstance<ScheduleProvider>(scheduleProvider);
+    container.registerInstance<PreferencesProvider>(preferencesProvider);
+    container.registerInstance<NotificationApi>(notificationApi);
+
+    NotificationScheduleChangedInitialize().setupNotification();
+
+    final start = DateTime.now().add(const Duration(days: 1));
+    await scheduleProvider.emitScheduleChanged(
+      ScheduleDiff(
+        addedEntries: [
+          ScheduleEntry(
+            start: start,
+            end: start.add(const Duration(hours: 1)),
+            title: 'Mathematics',
+            details: 'Lecture',
+            professor: 'Prof',
+            room: 'R1',
+            type: ScheduleEntryType.Class,
+          ),
+        ],
+        removedEntries: const [],
+        updatedEntries: const [],
+      ),
+      origin: ScheduleRefreshOrigin.userBrowsing,
+    );
+
+    expect(notificationApi.titles, isEmpty);
+    expect(notificationApi.messages, isEmpty);
+  });
+
+  test(
+      'schedule change notification stays silent for foreground maintenance origin',
+      () async {
+    final scheduleProvider = _FakeScheduleProvider();
+    final preferencesProvider = _FakePreferencesProvider();
+    final notificationApi = _RecordingNotificationApi();
+    final container = KiwiContainer();
+
+    container.registerInstance<ScheduleProvider>(scheduleProvider);
+    container.registerInstance<PreferencesProvider>(preferencesProvider);
+    container.registerInstance<NotificationApi>(notificationApi);
+
+    NotificationScheduleChangedInitialize().setupNotification();
+
+    final start = DateTime.now().add(const Duration(days: 1));
+    await scheduleProvider.emitScheduleChanged(
+      ScheduleDiff(
+        addedEntries: [
+          ScheduleEntry(
+            start: start,
+            end: start.add(const Duration(hours: 1)),
+            title: 'Mathematics',
+            details: 'Lecture',
+            professor: 'Prof',
+            room: 'R1',
+            type: ScheduleEntryType.Class,
+          ),
+        ],
+        removedEntries: const [],
+        updatedEntries: const [],
+      ),
+      origin: ScheduleRefreshOrigin.foregroundMaintenance,
+    );
+
+    expect(notificationApi.titles, isEmpty);
+    expect(notificationApi.messages, isEmpty);
+  });
 }
 
 class _FakeScheduleProvider implements ScheduleProvider {
@@ -142,8 +256,11 @@ class _FakeScheduleProvider implements ScheduleProvider {
     _callback = callback;
   }
 
-  Future<void> emitScheduleChanged(ScheduleDiff diff) async {
-    await _callback?.call(diff);
+  Future<void> emitScheduleChanged(
+    ScheduleDiff diff, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.backgroundPeriodic,
+  }) async {
+    await _callback?.call(diff, origin);
   }
 
   @override
@@ -153,8 +270,13 @@ class _FakeScheduleProvider implements ScheduleProvider {
 }
 
 class _FakePreferencesProvider implements PreferencesProvider {
+  bool isAppAttended = false;
+
   @override
   Future<bool> getNotifyAboutScheduleChanges() async => true;
+
+  @override
+  Future<bool> getIsAppAttended() async => isAppAttended;
 
   @override
   Future<String?> getLastUsedLanguageCode() async => 'en';

@@ -69,11 +69,13 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     PerformanceTelemetry.instance.ensureFrameTimingListenerAttached();
     _startupTask =
         PerformanceTelemetry.instance.startTask('startup.initialize');
+    unawaited(_setAppAttended(true));
     _initializeApp();
   }
 
   @override
   void dispose() {
+    unawaited(_setAppAttended(false));
     _detachOnboardingDeferredInitListener();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -81,6 +83,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    unawaited(_setAppAttended(_isAttendedState(state)));
     if (state == AppLifecycleState.resumed) {
       _fetchLaunchRoute();
       _fetchLaunchPayload();
@@ -176,6 +179,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     );
     try {
       await initializeAppBase(false);
+      await _setAppAttended(true);
       print("Root init: base ${stopwatch.elapsedMilliseconds}ms");
       PerformanceTelemetry.instance.logInstant(
         'startup.root.base.done',
@@ -217,6 +221,19 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         setState(() {});
       }
     }
+  }
+
+  bool _isAttendedState(AppLifecycleState state) {
+    return state == AppLifecycleState.resumed ||
+        state == AppLifecycleState.inactive;
+  }
+
+  Future<void> _setAppAttended(bool attended) async {
+    try {
+      await KiwiContainer().resolve<PreferencesProvider>().setIsAppAttended(
+            attended,
+          );
+    } catch (_) {}
   }
 
   Future<void> _loadRootPreferences(Stopwatch stopwatch) async {

@@ -38,6 +38,7 @@ class BackgroundScheduleUpdate extends TaskCallback {
         today,
         end,
         cancellationToken,
+        origin: ScheduleRefreshOrigin.backgroundPeriodic,
       );
     } on ScheduleQueryFailedException catch (e, trace) {
       print("Background schedule update failed");

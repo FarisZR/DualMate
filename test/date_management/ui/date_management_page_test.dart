@@ -324,8 +324,9 @@ class _FakeScheduleProvider extends ScheduleProvider {
   Future<ScheduleQueryResult> getUpdatedSchedule(
     DateTime start,
     DateTime end,
-    CancellationToken cancellationToken,
-  ) async {
+    CancellationToken cancellationToken, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
+  }) async {
     return ScheduleQueryResult(Schedule(), <ParseError>[]);
   }
 }

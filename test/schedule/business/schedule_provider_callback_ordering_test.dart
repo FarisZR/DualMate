@@ -36,7 +36,7 @@ void main() {
     );
 
     final callbackOrder = <String>[];
-    provider.addScheduleEntryChangedCallback((_) async {
+    provider.addScheduleEntryChangedCallback((_, __) async {
       callbackOrder.add('changed');
     });
     provider.addScheduleUpdatedCallback((_, __, ___) async {
@@ -47,9 +47,53 @@ void main() {
       DateTime(2026, 2, 24),
       DateTime(2026, 2, 25),
       CancellationToken(),
+      origin: ScheduleRefreshOrigin.backgroundPeriodic,
     );
 
     expect(callbackOrder, ['changed', 'updated']);
+  });
+
+  test('attended refresh origins still invoke changed callbacks with origin',
+      () async {
+    final schedule = Schedule.fromList([
+      ScheduleEntry(
+        start: DateTime(2026, 2, 24, 9),
+        end: DateTime(2026, 2, 24, 10),
+        title: 'Math',
+        details: 'Lecture',
+        professor: 'Prof',
+        room: 'A1',
+        type: ScheduleEntryType.Class,
+      ),
+    ]);
+
+    final provider = ScheduleProvider(
+      _FakeScheduleSourceProvider(_FakeScheduleSource(schedule)),
+      _FakeScheduleEntryRepository(),
+      _FakeScheduleQueryInformationRepository(),
+      _FakePreferencesProvider(),
+      _FakeScheduleFilterRepository(),
+    );
+
+    final callbackOrder = <String>[];
+    ScheduleRefreshOrigin? capturedOrigin;
+    provider.addScheduleEntryChangedCallback((_, origin) async {
+      callbackOrder.add('changed');
+      capturedOrigin = origin;
+    });
+    provider.addScheduleUpdatedCallback((_, __, ___) async {
+      callbackOrder.add('updated');
+    });
+
+    await provider.getUpdatedSchedule(
+      DateTime(2026, 2, 24),
+      DateTime(2026, 2, 25),
+      CancellationToken(),
+      origin: ScheduleRefreshOrigin.userBrowsing,
+    );
+
+    expect(callbackOrder, ['changed', 'updated']);
+    expect(capturedOrigin, ScheduleRefreshOrigin.userBrowsing);
   });
 }
 

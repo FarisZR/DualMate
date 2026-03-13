@@ -403,6 +403,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         end,
         visibleUpdateRequestId: visibleUpdateRequestId,
         applyToVisibleState: applyToVisibleState,
+        origin: applyToVisibleState
+            ? ScheduleRefreshOrigin.userBrowsing
+            : ScheduleRefreshOrigin.foregroundMaintenance,
       );
     } finally {
       _updateMutex.release();
@@ -417,6 +420,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     DateTime end, {
     int? visibleUpdateRequestId,
     bool applyToVisibleState = true,
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
   }) async {
     final task = PerformanceTelemetry.instance
         .startTask('schedule.refresh.${start.toIso8601String()}');
@@ -458,6 +462,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         task,
         visibleUpdateRequestId: visibleUpdateRequestId,
         applyToVisibleState: applyToVisibleState,
+        origin: origin,
       ),
     );
 
@@ -471,6 +476,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     developer.TimelineTask task, {
     int? visibleUpdateRequestId,
     bool applyToVisibleState = true,
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
   }) async {
     ScheduleQueryResult? updatedSchedule;
     try {
@@ -479,6 +485,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
           start,
           end,
           cancellationToken,
+          origin: origin,
         );
         _freshnessGate.markFetched(start, end, now);
         _markWindowFetched(start, end, now);
@@ -558,13 +565,15 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   Future<ScheduleQueryResult?> _readScheduleFromService(
     DateTime start,
     DateTime end,
-    CancellationToken token,
-  ) async {
+    CancellationToken token, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
+  }) async {
     try {
       return await scheduleProvider.getUpdatedSchedule(
         start,
         end,
         token,
+        origin: origin,
       );
     } on ScheduleQueryFailedException {
       return null;

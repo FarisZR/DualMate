@@ -26,7 +26,19 @@ typedef ScheduleUpdatedCallback = Future<void> Function(
 
 typedef ScheduleEntryChangedCallback = Future<void> Function(
   ScheduleDiff scheduleDiff,
+  ScheduleRefreshOrigin origin,
 );
+
+enum ScheduleRefreshOrigin {
+  userBrowsing,
+  foregroundMaintenance,
+  backgroundPeriodic,
+}
+
+extension ScheduleRefreshOriginNotificationEligibility
+    on ScheduleRefreshOrigin {
+  bool get mayNotify => this == ScheduleRefreshOrigin.backgroundPeriodic;
+}
 
 class ScheduleProvider {
   static const int _maxCachedWindows = 6;
@@ -88,8 +100,9 @@ class ScheduleProvider {
   Future<ScheduleQueryResult> getUpdatedSchedule(
     DateTime start,
     DateTime end,
-    CancellationToken cancellationToken,
-  ) async {
+    CancellationToken cancellationToken, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
+  }) async {
     _debugLog(
       "Fetching schedule for ${DateFormat.yMd().format(start)} - ${DateFormat.yMd().format(end)}",
     );
@@ -105,7 +118,7 @@ class ScheduleProvider {
 
       _debugLog("Schedule returned with ${schedule.entries.length} entries");
 
-      await _diffToCache(start, end, schedule);
+      await _diffToCache(start, end, schedule, origin);
       await _scheduleEntryRepository.deleteScheduleEntriesBetween(start, end);
       await _scheduleEntryRepository.saveSchedule(schedule);
       await _scheduleQueryInformationRepository.saveScheduleQueryInformation(
@@ -137,6 +150,7 @@ class ScheduleProvider {
     DateTime start,
     DateTime end,
     Schedule updatedSchedule,
+    ScheduleRefreshOrigin origin,
   ) async {
     var oldSchedule =
         await _scheduleEntryRepository.queryScheduleBetweenDates(start, end);
@@ -148,7 +162,7 @@ class ScheduleProvider {
 
     if (cleanedDiff.didSomethingChange()) {
       for (var c in _scheduleEntryChangedCallbacks) {
-        await c(cleanedDiff);
+        await c(cleanedDiff, origin);
       }
     }
   }

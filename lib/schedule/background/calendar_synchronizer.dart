@@ -45,14 +45,18 @@ class CalendarSynchronizer {
   }
 
   void scheduleSyncInAFewSeconds() {
-    Future.delayed(Duration(seconds: 10), () {
+    Future.delayed(Duration(seconds: 10), () async {
       if (!scheduleSourceProvider.didSetupCorrectly()) return;
-      scheduleProvider.getUpdatedSchedule(
-        
-        DateTime.now(),
-        DateTime.now().add(Duration(days: 30)),
-        CancellationToken(),
-      );
+      try {
+        await scheduleProvider.getUpdatedSchedule(
+          DateTime.now(),
+          DateTime.now().add(Duration(days: 30)),
+          CancellationToken(),
+          origin: ScheduleRefreshOrigin.foregroundMaintenance,
+        );
+      } catch (e) {
+        print("Calendar delayed sync failed: $e");
+      }
     });
   }
 }
