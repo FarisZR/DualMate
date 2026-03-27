@@ -14,9 +14,7 @@ void main() {
 
     await notification.showNotification(
       ScheduleDiff(
-        addedEntries: [
-          _entryAt(DateTime(2026, 3, 22, 9), title: 'Algorithms'),
-        ],
+        addedEntries: [_entryAt(DateTime(2026, 3, 22, 9), title: 'Algorithms')],
       ),
     );
 
@@ -30,9 +28,7 @@ void main() {
 
     await notification.showNotification(
       ScheduleDiff(
-        addedEntries: [
-          _entryAt(DateTime(2026, 3, 23, 9), title: 'Algorithms'),
-        ],
+        addedEntries: [_entryAt(DateTime(2026, 3, 23, 9), title: 'Algorithms')],
       ),
     );
 
@@ -45,9 +41,7 @@ void main() {
 
     await notification.showNotification(
       ScheduleDiff(
-        removedEntries: [
-          _entryAt(DateTime(2026, 4, 5, 11), title: 'Physics'),
-        ],
+        removedEntries: [_entryAt(DateTime(2026, 4, 5, 11), title: 'Physics')],
       ),
     );
 
@@ -61,9 +55,50 @@ void main() {
     await notification.showNotification(
       ScheduleDiff(
         updatedEntries: [
-          UpdatedEntry(
-            _entryAt(DateTime(2026, 4, 2, 14), title: 'Databases'),
-            ['start'],
+          UpdatedEntry(_entryAt(DateTime(2026, 4, 2, 14), title: 'Databases'), [
+            'start',
+          ]),
+        ],
+      ),
+    );
+
+    expect(notificationApi.titles, isEmpty);
+  });
+
+  test(
+    'filters far-future entries before applying notification count limits',
+    () async {
+      final notificationApi = _RecordingNotificationApi();
+      final notification = _buildNotification(notificationApi, fixedNow);
+
+      await notification.showNotification(
+        ScheduleDiff(
+          addedEntries: [
+            _entryAt(DateTime(2026, 3, 10, 9), title: 'Near term'),
+            _entryAt(DateTime(2026, 4, 10, 9), title: 'Far 1'),
+            _entryAt(DateTime(2026, 4, 11, 9), title: 'Far 2'),
+            _entryAt(DateTime(2026, 4, 12, 9), title: 'Far 3'),
+            _entryAt(DateTime(2026, 4, 13, 9), title: 'Far 4'),
+          ],
+        ),
+      );
+
+      expect(notificationApi.titles, hasLength(1));
+      expect(notificationApi.messages.single, contains('Near term'));
+    },
+  );
+
+  test('does not notify for added marker events', () async {
+    final notificationApi = _RecordingNotificationApi();
+    final notification = _buildNotification(notificationApi, fixedNow);
+
+    await notification.showNotification(
+      ScheduleDiff(
+        addedEntries: [
+          _entryAt(
+            DateTime(2026, 3, 10, 7),
+            title: 'Klausurwoche 2. Semester',
+            type: ScheduleEntryType.SpecialEvent,
           ),
         ],
       ),
@@ -72,26 +107,35 @@ void main() {
     expect(notificationApi.titles, isEmpty);
   });
 
-  test('filters far-future entries before applying notification count limits',
-      () async {
-    final notificationApi = _RecordingNotificationApi();
-    final notification = _buildNotification(notificationApi, fixedNow);
+  test(
+    'notifies only for real classes when marker events also changed',
+    () async {
+      final notificationApi = _RecordingNotificationApi();
+      final notification = _buildNotification(notificationApi, fixedNow);
 
-    await notification.showNotification(
-      ScheduleDiff(
-        addedEntries: [
-          _entryAt(DateTime(2026, 3, 10, 9), title: 'Near term'),
-          _entryAt(DateTime(2026, 4, 10, 9), title: 'Far 1'),
-          _entryAt(DateTime(2026, 4, 11, 9), title: 'Far 2'),
-          _entryAt(DateTime(2026, 4, 12, 9), title: 'Far 3'),
-          _entryAt(DateTime(2026, 4, 13, 9), title: 'Far 4'),
-        ],
-      ),
-    );
+      await notification.showNotification(
+        ScheduleDiff(
+          addedEntries: [
+            _entryAt(
+              DateTime(2026, 3, 10, 7),
+              title: 'Klausurwoche 2. Semester',
+              type: ScheduleEntryType.SpecialEvent,
+            ),
+            _entryAt(DateTime(2026, 3, 10, 9), title: 'Algorithms'),
+          ],
+        ),
+      );
 
-    expect(notificationApi.titles, hasLength(1));
-    expect(notificationApi.messages.single, contains('Near term'));
-  });
+      expect(notificationApi.titles, hasLength(1));
+      expect(notificationApi.messages.single, contains('Algorithms'));
+      expect(
+        notificationApi.messages.any(
+          (message) => message.contains('Klausurwoche 2. Semester'),
+        ),
+        isFalse,
+      );
+    },
+  );
 }
 
 ScheduleChangedNotification _buildNotification(
@@ -105,7 +149,11 @@ ScheduleChangedNotification _buildNotification(
   );
 }
 
-ScheduleEntry _entryAt(DateTime start, {required String title}) {
+ScheduleEntry _entryAt(
+  DateTime start, {
+  required String title,
+  ScheduleEntryType type = ScheduleEntryType.Class,
+}) {
   return ScheduleEntry(
     start: start,
     end: start.add(const Duration(hours: 1)),
@@ -113,7 +161,7 @@ ScheduleEntry _entryAt(DateTime start, {required String title}) {
     details: 'Lecture',
     professor: 'Prof',
     room: 'R1',
-    type: ScheduleEntryType.Class,
+    type: type,
   );
 }
 
