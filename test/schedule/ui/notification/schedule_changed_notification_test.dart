@@ -113,6 +113,29 @@ void main() {
     );
   });
 
+  test('does not notify for added public holidays', () async {
+    final notificationApi = _RecordingNotificationApi();
+    final notification = _buildNotification(notificationApi, fixedNow);
+
+    await notification.showNotification(
+      ScheduleDiff(
+        addedEntries: [
+          _entryAt(
+            DateTime(2026, 4, 3),
+            title: 'Karfreitag',
+            type: ScheduleEntryType.PublicHoliday,
+          ),
+        ],
+      ),
+    );
+
+    expect(notificationApi.titles, isEmpty);
+    expect(
+      notificationApi.messages.any((message) => message.contains('Karfreitag')),
+      isFalse,
+    );
+  });
+
   test('does not notify for removed marker events', () async {
     final notificationApi = _RecordingNotificationApi();
     final notification = _buildNotification(notificationApi, fixedNow);

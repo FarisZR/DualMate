@@ -47,6 +47,15 @@ void main() {
 
     expect(ScheduleMarkerEvent.isMarkerEntry(entry), isTrue);
   });
+
+  test('treats public holidays as markers', () {
+    final entry = _entry(
+      title: 'Karfreitag',
+      type: ScheduleEntryType.PublicHoliday,
+    );
+
+    expect(ScheduleMarkerEvent.isMarkerEntry(entry), isTrue);
+  });
 }
 
 ScheduleEntry _entry({required String title, required ScheduleEntryType type}) {

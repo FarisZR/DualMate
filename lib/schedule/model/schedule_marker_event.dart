@@ -7,8 +7,13 @@ class ScheduleMarkerEvent {
 
   static bool isMarkerEntry(ScheduleEntry entry) {
     if (entry.type != ScheduleEntryType.SpecialEvent &&
-        entry.type != ScheduleEntryType.Exam) {
+        entry.type != ScheduleEntryType.Exam &&
+        entry.type != ScheduleEntryType.PublicHoliday) {
       return false;
+    }
+
+    if (entry.type == ScheduleEntryType.PublicHoliday) {
+      return true;
     }
 
     return isExamWeekTitle(entry.title) || isTheoryPhaseStartTitle(entry.title);

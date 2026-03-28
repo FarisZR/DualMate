@@ -15,8 +15,9 @@ tags: [schedule, notifications, widget, rapla, android]
 
 ## Context
 
-Rapla important events such as exam-week banners and theory-phase start markers
-should remain visible in the app and widget, but they are not actionable lessons.
+Rapla important events such as exam-week banners, theory-phase start markers,
+and public-holiday rows should remain visible in the app and widget, but they
+are not actionable lessons.
 Treating them like regular classes produced noisy schedule-change notifications,
 misleading next-day notifications, and cluttered widget rows.
 
@@ -33,9 +34,10 @@ misleading next-day notifications, and cluttered widget rows.
 ## Solution
 
 - Added a shared Dart helper at `lib/schedule/model/schedule_marker_event.dart`
-  to recognize marker entries by the existing title heuristics:
+  to recognize marker entries by the existing type and title heuristics:
   - `Klausurwoche`
   - `Beginn ... Theoriephase`
+  - all `PublicHoliday` schedule entries
 - Filtered marker entries out of notification delivery in:
   - `lib/schedule/ui/notification/schedule_changed_notification.dart`
   - `lib/schedule/ui/notification/next_day_information_notification.dart`

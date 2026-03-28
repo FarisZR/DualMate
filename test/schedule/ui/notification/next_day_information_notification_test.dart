@@ -73,6 +73,33 @@ void main() {
     expect(notificationApi.title, isEmpty);
     expect(notificationApi.message, isEmpty);
   });
+
+  test('run stays silent when only future public holidays exist', () async {
+    final now = DateTime(2026, 4, 2, 20);
+    final notificationApi = _RecordingNotificationApi();
+    final notification = NextDayInformationNotification(
+      notificationApi,
+      _FakeScheduleEntryRepository([
+        ScheduleEntry(
+          start: DateTime(2026, 4, 3),
+          end: DateTime(2026, 4, 4),
+          title: 'Karfreitag',
+          details: '',
+          professor: '',
+          room: '',
+          type: ScheduleEntryType.PublicHoliday,
+        ),
+      ]),
+      _FakeWorkSchedulerService(),
+      _FakePreferencesProvider(),
+      now: () => now,
+    );
+
+    await notification.run();
+
+    expect(notificationApi.title, isEmpty);
+    expect(notificationApi.message, isEmpty);
+  });
 }
 
 class _FakePreferencesProvider implements PreferencesProvider {

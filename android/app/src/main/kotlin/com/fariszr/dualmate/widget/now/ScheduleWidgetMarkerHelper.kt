@@ -6,13 +6,21 @@ import java.util.Locale
 object ScheduleWidgetMarkerHelper {
     private const val specialEventType = ScheduleEntry.SPECIAL_EVENT_TYPE
     private const val examType = ScheduleEntry.EXAM_TYPE
+    private const val publicHolidayType = ScheduleEntry.PUBLIC_HOLIDAY_TYPE
     private const val examWeekKeyword = "klausurwoche"
     private const val theoryPhaseKeyword = "theoriephase"
     private const val beginKeyword = "beginn"
 
     fun isMarkerEntry(entry: ScheduleEntry): Boolean {
-        if (entry.type != specialEventType && entry.type != examType) {
+        if (entry.type != specialEventType &&
+            entry.type != examType &&
+            entry.type != publicHolidayType
+        ) {
             return false
+        }
+
+        if (entry.type == publicHolidayType) {
+            return true
         }
 
         return isExamWeekTitle(entry.title) || isTheoryPhaseStartTitle(entry.title)

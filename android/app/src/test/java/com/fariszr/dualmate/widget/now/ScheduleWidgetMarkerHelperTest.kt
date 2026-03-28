@@ -39,6 +39,16 @@ class ScheduleWidgetMarkerHelperTest {
     }
 
     @Test
+    fun isMarkerEntry_matchesPublicHoliday() {
+        val entry = entry(
+            title = "Karfreitag",
+            type = ScheduleEntry.PUBLIC_HOLIDAY_TYPE
+        )
+
+        assertTrue(ScheduleWidgetMarkerHelper.isMarkerEntry(entry))
+    }
+
+    @Test
     fun orderEntriesForDisplay_movesMarkersToTop() {
         val classEntry = entry(
             title = "Algorithms",
