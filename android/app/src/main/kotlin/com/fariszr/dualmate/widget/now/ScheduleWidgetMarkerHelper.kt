@@ -5,12 +5,13 @@ import java.util.Locale
 
 object ScheduleWidgetMarkerHelper {
     private const val specialEventType = 5 // Mirrors Dart ScheduleEntryType.SpecialEvent.
+    private const val examType = 4 // Mirrors Dart ScheduleEntryType.Exam.
     private const val examWeekKeyword = "klausurwoche"
     private const val theoryPhaseKeyword = "theoriephase"
     private const val beginKeyword = "beginn"
 
     fun isMarkerEntry(entry: ScheduleEntry): Boolean {
-        if (entry.type != specialEventType) {
+        if (entry.type != specialEventType && entry.type != examType) {
             return false
         }
 

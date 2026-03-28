@@ -6,7 +6,8 @@ class ScheduleMarkerEvent {
   static const String beginKeyword = 'beginn';
 
   static bool isMarkerEntry(ScheduleEntry entry) {
-    if (entry.type != ScheduleEntryType.SpecialEvent) {
+    if (entry.type != ScheduleEntryType.SpecialEvent &&
+        entry.type != ScheduleEntryType.Exam) {
       return false;
     }
 

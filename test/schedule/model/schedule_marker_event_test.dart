@@ -29,6 +29,24 @@ void main() {
 
     expect(ScheduleMarkerEvent.isMarkerEntry(entry), isFalse);
   });
+
+  test('does not treat unrelated special events as markers', () {
+    final entry = _entry(
+      title: 'Career Fair',
+      type: ScheduleEntryType.SpecialEvent,
+    );
+
+    expect(ScheduleMarkerEvent.isMarkerEntry(entry), isFalse);
+  });
+
+  test('recognizes klausurwoche exams as markers', () {
+    final entry = _entry(
+      title: 'Klausurwoche 2. Semester',
+      type: ScheduleEntryType.Exam,
+    );
+
+    expect(ScheduleMarkerEvent.isMarkerEntry(entry), isTrue);
+  });
 }
 
 ScheduleEntry _entry({required String title, required ScheduleEntryType type}) {

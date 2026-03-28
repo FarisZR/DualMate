@@ -29,6 +29,16 @@ class ScheduleWidgetMarkerHelperTest {
     }
 
     @Test
+    fun isMarkerEntry_ignoresUnrelatedType5() {
+        val entry = entry(
+            title = "Career Fair",
+            type = 5
+        )
+
+        assertFalse(ScheduleWidgetMarkerHelper.isMarkerEntry(entry))
+    }
+
+    @Test
     fun orderEntriesForDisplay_movesMarkersToTop() {
         val classEntry = entry(
             title = "Algorithms",

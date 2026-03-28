@@ -109,7 +109,12 @@ class _FakeScheduleEntryRepository implements ScheduleEntryRepository {
     DateTime start,
     DateTime end,
   ) async {
-    return Schedule()..entries.addAll(entries);
+    final schedule = Schedule();
+    schedule.entries.addAll(
+      entries.where(
+          (entry) => entry.end.isAfter(start) && entry.start.isBefore(end)),
+    );
+    return schedule;
   }
 
   @override
