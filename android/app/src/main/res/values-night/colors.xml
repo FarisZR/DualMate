@@ -14,6 +14,7 @@
     <color name="widget_schedule_entry_exam_color">#815C19</color>
     <color name="widget_schedule_entry_holiday_color">#676767</color>
     <color name="widget_schedule_entry_online_color">#2659A6</color>
+    <color name="widget_schedule_entry_special_event_color">#3D7FD6</color>
     <color name="widget_schedule_entry_unknown_color">#676767</color>
 
 </resources>

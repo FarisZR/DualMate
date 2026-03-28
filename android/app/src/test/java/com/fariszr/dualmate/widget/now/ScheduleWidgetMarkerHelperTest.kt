@@ -49,6 +49,34 @@ class ScheduleWidgetMarkerHelperTest {
     }
 
     @Test
+    fun isMarkerOnlyDay_trueWhenAllEntriesAreMarkers() {
+        val entries = listOf(
+            entry(
+                title = "Karfreitag",
+                type = ScheduleEntry.PUBLIC_HOLIDAY_TYPE
+            )
+        )
+
+        assertTrue(ScheduleWidgetMarkerHelper.isMarkerOnlyDay(entries))
+    }
+
+    @Test
+    fun isMarkerOnlyDay_falseWhenRegularClassesExist() {
+        val entries = listOf(
+            entry(
+                title = "Beginn der 1. Theoriephase",
+                type = ScheduleEntry.SPECIAL_EVENT_TYPE
+            ),
+            entry(
+                title = "Algorithms",
+                type = ScheduleEntry.CLASS_TYPE
+            )
+        )
+
+        assertFalse(ScheduleWidgetMarkerHelper.isMarkerOnlyDay(entries))
+    }
+
+    @Test
     fun orderEntriesForDisplay_movesMarkersToTop() {
         val classEntry = entry(
             title = "Algorithms",

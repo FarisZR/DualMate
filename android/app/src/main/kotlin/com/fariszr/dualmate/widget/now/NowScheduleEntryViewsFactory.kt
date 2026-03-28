@@ -20,7 +20,7 @@ import java.util.Locale
 class NowScheduleEntryViewsFactory(
     context: Context,
     appWidgetId: Int
-) : MultiDayViewsFactory<ScheduleEntry>(context, appWidgetId, ROW_METRICS) {
+) : MultiDayViewsFactory<ScheduleWidgetItem>(context, appWidgetId, ROW_METRICS) {
 
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
     private val dayFormatter = DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
@@ -50,16 +50,16 @@ class NowScheduleEntryViewsFactory(
         )
     }
 
-    override fun buildItemView(item: ScheduleEntry, state: WidgetItemState): RemoteViews {
-        if (ScheduleWidgetMarkerHelper.isMarkerEntry(item)) {
+    override fun buildItemView(item: ScheduleWidgetItem, state: WidgetItemState): RemoteViews {
+        if (ScheduleWidgetMarkerHelper.isMarkerEntry(item.entry)) {
             return buildMarkerItemView(item, state)
         }
 
         val views = RemoteViews(context.packageName, R.layout.widget_schedule_day_item)
-        views.setTextViewText(R.id.text_view_item_title, item.title)
+        views.setTextViewText(R.id.text_view_item_title, item.entry.title)
 
-        val timeRange = "${item.start.format(timeFormatter)} - ${item.end.format(timeFormatter)}"
-        val subtitle = if (item.room.isBlank()) timeRange else "$timeRange • ${item.room}"
+        val timeRange = "${item.entry.start.format(timeFormatter)} - ${item.entry.end.format(timeFormatter)}"
+        val subtitle = if (item.entry.room.isBlank()) timeRange else "$timeRange • ${item.entry.room}"
         views.setTextViewText(R.id.text_view_item_subtitle, subtitle)
 
         val textColor = resolveTextColor(state)
@@ -74,12 +74,12 @@ class NowScheduleEntryViewsFactory(
         return views
     }
 
-    private fun buildMarkerItemView(item: ScheduleEntry, state: WidgetItemState): RemoteViews {
-        val views = RemoteViews(context.packageName, R.layout.widget_schedule_day_marker_item)
-        views.setTextViewText(R.id.text_view_item_title, item.title)
+    private fun buildMarkerItemView(item: ScheduleWidgetItem, state: WidgetItemState): RemoteViews {
+        val views = RemoteViews(context.packageName, markerLayoutId(item))
+        views.setTextViewText(R.id.text_view_item_title, item.entry.title)
 
         val textColor = resolveTextColor(state)
-        val accent = resolveAccent(state)
+        val accent = markerAccentDrawable(item.entry)
         val background = resolveBackground(state)
 
         views.setInt(R.id.layout_schedule_item, "setBackgroundResource", background)
@@ -127,12 +127,9 @@ class NowScheduleEntryViewsFactory(
     }
 
     override fun prepareVisibleItems(
-        items: List<ScheduleEntry>
-    ): MultiDayWidgetHelper.VisibleItems<ScheduleEntry> {
-        return MultiDayWidgetHelper.VisibleItems(
-            ScheduleWidgetMarkerHelper.orderEntriesForDisplay(items),
-            0
-        )
+        items: List<ScheduleWidgetItem>
+    ): MultiDayWidgetHelper.VisibleItems<ScheduleWidgetItem> {
+        return MultiDayWidgetHelper.VisibleItems(items, 0)
     }
 
     override fun buildEmptyView(isToday: Boolean, isDataUnavailable: Boolean): RemoteViews {
@@ -146,21 +143,23 @@ class NowScheduleEntryViewsFactory(
         return views
     }
 
-    override fun getItemState(item: ScheduleEntry, now: LocalDateTime): WidgetItemState {
-        return MultiDayWidgetHelper.resolveItemState(item.start, item.end, now)
+    override fun getItemState(item: ScheduleWidgetItem, now: LocalDateTime): WidgetItemState {
+        return MultiDayWidgetHelper.resolveItemState(item.entry.start, item.entry.end, now)
     }
 
     override fun loadItemsForWeek(
         startDate: LocalDate,
         endDate: LocalDate
-    ): MultiDayWidgetHelper.LoadResult<ScheduleEntry> {
+    ): MultiDayWidgetHelper.LoadResult<ScheduleWidgetItem> {
         val queryResult = ScheduleProvider(context).queryScheduleEntriesBetweenWithStatus(
             startDate.atStartOfDay(),
             endDate.plusDays(1).atStartOfDay()
         )
 
         return MultiDayWidgetHelper.LoadResult(
-            queryResult.entries.groupBy { entry -> entry.start.toLocalDate() },
+            queryResult.entries
+                .groupBy { entry -> entry.start.toLocalDate() }
+                .mapValues { (_, entries) -> prepareDayItems(entries) },
             queryResult.successful
         )
     }
@@ -173,5 +172,32 @@ class NowScheduleEntryViewsFactory(
             itemHeightDp = 20,
             maxItemsPerRow = 4
         )
+
+        internal fun prepareDayItems(entries: List<ScheduleEntry>): List<ScheduleWidgetItem> {
+            val orderedEntries = ScheduleWidgetMarkerHelper.orderEntriesForDisplay(entries)
+            val usesFullHeightMarkerLayout =
+                orderedEntries.size == 1 && ScheduleWidgetMarkerHelper.isMarkerOnlyDay(orderedEntries)
+
+            return orderedEntries.map { entry ->
+                ScheduleWidgetItem(entry, usesFullHeightMarkerLayout)
+            }
+        }
+
+        internal fun markerLayoutId(item: ScheduleWidgetItem): Int {
+            return if (item.usesFullHeightMarkerLayout) {
+                R.layout.widget_schedule_day_marker_full_item
+            } else {
+                R.layout.widget_schedule_day_marker_item
+            }
+        }
+
+        internal fun markerAccentDrawable(entry: ScheduleEntry): Int {
+            return when (entry.type) {
+                ScheduleEntry.PUBLIC_HOLIDAY_TYPE -> R.drawable.widget_schedule_item_accent_marker_holiday
+                ScheduleEntry.EXAM_TYPE -> R.drawable.widget_schedule_item_accent_marker_exam
+                ScheduleEntry.SPECIAL_EVENT_TYPE -> R.drawable.widget_schedule_item_accent_marker_special_event
+                else -> R.drawable.widget_schedule_item_accent_marker_unknown
+            }
+        }
     }
 }

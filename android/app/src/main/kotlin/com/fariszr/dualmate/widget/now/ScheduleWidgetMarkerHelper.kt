@@ -35,6 +35,10 @@ object ScheduleWidgetMarkerHelper {
         )
     }
 
+    fun isMarkerOnlyDay(entries: List<ScheduleEntry>): Boolean {
+        return entries.isNotEmpty() && entries.all { isMarkerEntry(it) }
+    }
+
     private fun isExamWeekTitle(title: String): Boolean {
         return normalizeTitle(title).contains(examWeekKeyword)
     }
