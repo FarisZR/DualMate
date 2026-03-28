@@ -4,8 +4,8 @@ import com.fariszr.dualmate.model.ScheduleEntry
 import java.util.Locale
 
 object ScheduleWidgetMarkerHelper {
-    private const val specialEventType = 5 // Mirrors Dart ScheduleEntryType.SpecialEvent.
-    private const val examType = 4 // Mirrors Dart ScheduleEntryType.Exam.
+    private const val specialEventType = ScheduleEntry.SPECIAL_EVENT_TYPE
+    private const val examType = ScheduleEntry.EXAM_TYPE
     private const val examWeekKeyword = "klausurwoche"
     private const val theoryPhaseKeyword = "theoriephase"
     private const val beginKeyword = "beginn"
