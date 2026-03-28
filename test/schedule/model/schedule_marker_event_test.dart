@@ -21,6 +21,15 @@ void main() {
     expect(ScheduleMarkerEvent.isMarkerEntry(entry), isTrue);
   });
 
+  test('does not treat theoriephase without beginn as marker', () {
+    final entry = _entry(
+      title: 'Theoriephase 2. Semester',
+      type: ScheduleEntryType.SpecialEvent,
+    );
+
+    expect(ScheduleMarkerEvent.isMarkerEntry(entry), isFalse);
+  });
+
   test('does not treat exams as markers', () {
     final entry = _entry(
       title: 'Klausur Informatik 2',

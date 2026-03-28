@@ -100,6 +100,36 @@ void main() {
     expect(notificationApi.title, isEmpty);
     expect(notificationApi.message, isEmpty);
   });
+
+  test(
+    'run stays silent when only future exam marker klausurwoche exists',
+    () async {
+      final now = DateTime(2026, 3, 8, 20);
+      final notificationApi = _RecordingNotificationApi();
+      final notification = NextDayInformationNotification(
+        notificationApi,
+        _FakeScheduleEntryRepository([
+          ScheduleEntry(
+            start: DateTime(now.year, now.month, now.day + 1, 7),
+            end: DateTime(now.year, now.month, now.day + 1, 8),
+            title: 'Klausurwoche 2. Semester',
+            details: '',
+            professor: '',
+            room: '',
+            type: ScheduleEntryType.Exam,
+          ),
+        ]),
+        _FakeWorkSchedulerService(),
+        _FakePreferencesProvider(),
+        now: () => now,
+      );
+
+      await notification.run();
+
+      expect(notificationApi.title, isEmpty);
+      expect(notificationApi.message, isEmpty);
+    },
+  );
 }
 
 class _FakePreferencesProvider implements PreferencesProvider {

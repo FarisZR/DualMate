@@ -75,14 +75,14 @@ class ScheduleWidgetMarkerHelperTest {
         start: LocalDateTime = LocalDateTime.of(2026, 4, 1, 7, 0)
     ): ScheduleEntry {
         return ScheduleEntry(
-            1,
-            title,
-            "",
-            "",
-            "",
-            type,
-            start,
-            start.plusHours(1)
+            id = 1,
+            title = title,
+            details = "",
+            professor = "",
+            room = "",
+            type = type,
+            start = start,
+            end = start.plusHours(1)
         )
     }
 }
