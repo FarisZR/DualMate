@@ -44,9 +44,16 @@ misleading next-day notifications, and cluttered widget rows.
 - Added widget-side marker handling in:
   - `android/app/src/main/kotlin/com/fariszr/dualmate/widget/now/ScheduleWidgetMarkerHelper.kt`
   - `android/app/src/main/kotlin/com/fariszr/dualmate/widget/now/NowScheduleEntryViewsFactory.kt`
-- Added a compact title-only widget row layout:
+- Added compact and full-height title-only widget row layouts:
   - `android/app/src/main/res/layout/widget_schedule_day_marker_item.xml`
+  - `android/app/src/main/res/layout/widget_schedule_day_marker_full_item.xml`
 - Marker rows now sort ahead of normal classes inside the widget day column.
+- Marker accents now follow the same type colors used by the schedule page:
+  - `SpecialEvent` / exam-week markers: blue
+  - `PublicHoliday`: gray
+  - `Exam` markers: yellow
+- Days that contain only a single marker entry now use the full minimum row
+  height instead of leaving empty space below a compact chip.
 
 ## Code References
 
