@@ -10,6 +10,7 @@ object ScheduleWidgetMarkerHelper {
     private const val examWeekKeyword = "klausurwoche"
     private const val theoryPhaseKeyword = "theoriephase"
     private const val beginKeyword = "beginn"
+    private val TITLE_NORMALIZATION_REGEX = Regex("[\\s\\.-]")
 
     fun isMarkerEntry(entry: ScheduleEntry): Boolean {
         if (entry.type != specialEventType &&
@@ -51,6 +52,6 @@ object ScheduleWidgetMarkerHelper {
     private fun normalizeTitle(title: String): String {
         return title
             .lowercase(Locale.ROOT)
-            .replace(Regex("[\\s\\.-]"), "")
+            .replace(TITLE_NORMALIZATION_REGEX, "")
     }
 }

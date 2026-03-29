@@ -27,13 +27,13 @@ class NowScheduleEntryViewsFactoryTest {
     fun prepareDayItems_keepsCompactLayoutForMixedDays() {
         val items = NowScheduleEntryViewsFactory.prepareDayItems(
             listOf(
-                entry(title = "Beginn der 1. Theoriephase", type = ScheduleEntry.SPECIAL_EVENT_TYPE),
-                entry(title = "Algorithms", type = ScheduleEntry.CLASS_TYPE)
+                entry(title = "Algorithms", type = ScheduleEntry.CLASS_TYPE),
+                entry(title = "Beginn der 1. Theoriephase", type = ScheduleEntry.SPECIAL_EVENT_TYPE)
             )
         )
 
-        val markerItem = items.first { ScheduleWidgetMarkerHelper.isMarkerEntry(it.entry) }
-
+        val markerItem = items.first()
+        assertTrue(ScheduleWidgetMarkerHelper.isMarkerEntry(markerItem.entry))
         assertFalse(markerItem.usesFullHeightMarkerLayout)
         assertEquals(
             R.layout.widget_schedule_day_marker_item,
