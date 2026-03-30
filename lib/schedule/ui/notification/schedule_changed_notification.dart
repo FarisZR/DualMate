@@ -7,6 +7,7 @@ import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/common/util/string_utils.dart';
 import 'package:dualmate/schedule/business/schedule_diff_calculator.dart';
+import 'package:dualmate/schedule/model/schedule_marker_event.dart';
 import 'package:intl/intl.dart';
 
 class ScheduleChangedNotification {
@@ -23,7 +24,9 @@ class ScheduleChangedNotification {
   }) : _now = now ?? DateTime.now;
 
   Future<void> showNotification(ScheduleDiff scheduleDiff) async {
-    final filteredDiff = _filterToNotificationWindow(scheduleDiff);
+    final filteredDiff = _filterMarkerEntries(
+      _filterToNotificationWindow(scheduleDiff),
+    );
     if (!filteredDiff.didSomethingChange()) {
       return;
     }
@@ -44,6 +47,20 @@ class ScheduleChangedNotification {
           .toList(),
       updatedEntries: scheduleDiff.updatedEntries
           .where((entry) => _isWithinNotificationWindow(entry.entry.start))
+          .toList(),
+    );
+  }
+
+  ScheduleDiff _filterMarkerEntries(ScheduleDiff scheduleDiff) {
+    return ScheduleDiff(
+      addedEntries: scheduleDiff.addedEntries
+          .where((entry) => !ScheduleMarkerEvent.isMarkerEntry(entry))
+          .toList(),
+      removedEntries: scheduleDiff.removedEntries
+          .where((entry) => !ScheduleMarkerEvent.isMarkerEntry(entry))
+          .toList(),
+      updatedEntries: scheduleDiff.updatedEntries
+          .where((entry) => !ScheduleMarkerEvent.isMarkerEntry(entry.entry))
           .toList(),
     );
   }

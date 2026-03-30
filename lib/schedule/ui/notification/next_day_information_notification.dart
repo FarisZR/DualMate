@@ -9,6 +9,7 @@ import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/common/util/string_utils.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
+import 'package:dualmate/schedule/model/schedule_marker_event.dart';
 import 'package:intl/intl.dart';
 
 class NextDayInformationNotification extends TaskCallback {
@@ -16,13 +17,15 @@ class NextDayInformationNotification extends TaskCallback {
   final NotificationApi _notificationApi;
   final ScheduleEntryRepository _scheduleEntryRepository;
   final WorkSchedulerService _scheduler;
+  final DateTime Function() _now;
 
   NextDayInformationNotification(
     this._notificationApi,
     this._scheduleEntryRepository,
     this._scheduler,
-    this._preferencesProvider,
-  );
+    this._preferencesProvider, {
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now;
 
   @override
   Future<void> run() async {
@@ -32,10 +35,9 @@ class NextDayInformationNotification extends TaskCallback {
       return;
     }
 
-    var now = DateTime.now();
+    var now = _now();
 
-    var nextScheduleEntry =
-        await _scheduleEntryRepository.queryNextScheduleEntry(now);
+    var nextScheduleEntry = await _findNextNotifiableScheduleEntry(now);
     if (nextScheduleEntry == null) {
       return;
     }
@@ -94,9 +96,28 @@ class NextDayInformationNotification extends TaskCallback {
     return L(Locale(languageCode ?? 'en'));
   }
 
+  Future<ScheduleEntry?> _findNextNotifiableScheduleEntry(DateTime now) async {
+    final schedule = await _scheduleEntryRepository.queryScheduleBetweenDates(
+      now,
+      addDays(toStartOfDay(now), 2),
+    );
+
+    var upcomingEntries = schedule.entries.where((entry) {
+      return entry.start.isAfter(now) &&
+          !ScheduleMarkerEvent.isMarkerEntry(entry);
+    }).toList()
+      ..sort((a, b) => a.start.compareTo(b.start));
+
+    if (upcomingEntries.isEmpty) {
+      return null;
+    }
+
+    return upcomingEntries.first;
+  }
+
   @override
   Future<void> schedule() async {
-    var nextSchedule = toTimeOfDayInFuture(DateTime.now(), 20, 00);
+    var nextSchedule = toTimeOfDayInFuture(_now(), 20, 00);
     await _scheduler.scheduleOneShotTaskAt(
       nextSchedule,
       "NextDayInformationNotification" + DateFormat.yMd().format(nextSchedule),
@@ -106,7 +127,7 @@ class NextDayInformationNotification extends TaskCallback {
 
   @override
   Future<void> cancel() async {
-    var nextSchedule = toTimeOfDayInFuture(DateTime.now(), 20, 00);
+    var nextSchedule = toTimeOfDayInFuture(_now(), 20, 00);
     await _scheduler.cancelTask(
       "NextDayInformationNotification" + DateFormat.yMd().format(nextSchedule),
     );

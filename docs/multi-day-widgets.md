@@ -9,6 +9,8 @@ The schedule and canteen Android home screen widgets now display multiple days. 
 - **Week-only lookahead:** The widgets scan a rolling 7-day window (today plus 6 days) to limit database work.
 - **Today always visible:** Today is always shown, even if there are no remaining classes or meals.
 - **Skip empty future days:** Future days without entries are omitted.
+- **Marker events:** Rapla marker events like `Klausurwoche`, theory-phase starts, and public holidays stay visible, render first in each day, and use their schedule-type colors (blue for special events, gray for holidays, yellow for exam markers).
+- **Marker-only days:** A day with only one marker-style entry uses the full minimum day height instead of a compact chip, so the row does not leave empty vertical space.
 - **State styling:** Schedule items are styled as past (grayed), current (brighter gray), or future (normal).
 - **Overflow:** When a day has more items than fit, the row ends with a "+N more" indicator.
 
