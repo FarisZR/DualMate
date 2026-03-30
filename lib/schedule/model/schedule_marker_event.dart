@@ -4,6 +4,7 @@ class ScheduleMarkerEvent {
   static const String examWeekKeyword = 'klausurwoche';
   static const String theoryPhaseKeyword = 'theoriephase';
   static const String beginKeyword = 'beginn';
+  static final RegExp _normalizationPattern = RegExp(r'[\s\.-]');
 
   static bool isMarkerEntry(ScheduleEntry entry) {
     if (entry.type != ScheduleEntryType.SpecialEvent &&
@@ -30,6 +31,6 @@ class ScheduleMarkerEvent {
   }
 
   static String _normalizeTitle(String title) {
-    return title.toLowerCase().replaceAll(RegExp(r'[\s\.-]'), '');
+    return title.toLowerCase().replaceAll(_normalizationPattern, '');
   }
 }

@@ -29,7 +29,7 @@ class ScheduleWidgetMarkerHelperTest {
     }
 
     @Test
-    fun isMarkerEntry_ignoresUnrelatedType5() {
+    fun isMarkerEntry_ignoresUnrelatedSpecialEvent() {
         val entry = entry(
             title = "Career Fair",
             type = ScheduleEntry.SPECIAL_EVENT_TYPE
