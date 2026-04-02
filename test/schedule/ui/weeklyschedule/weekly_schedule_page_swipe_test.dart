@@ -212,8 +212,20 @@ void main() {
 
     expect(viewModel.currentDateStart, DateTime(2026, 2, 16));
     expect(currentWeekButton, findsOneWidget);
-    expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.arrow_forward_rounded), findsNothing);
+    expect(
+      find.descendant(
+        of: currentWeekButton,
+        matching: find.byIcon(Icons.arrow_back_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: currentWeekButton,
+        matching: find.byIcon(Icons.arrow_forward_rounded),
+      ),
+      findsNothing,
+    );
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -244,8 +256,23 @@ void main() {
       find.byKey(const ValueKey<String>('weekly_current_week_button')),
       findsOneWidget,
     );
-    expect(find.byIcon(Icons.arrow_forward_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
+    final currentWeekButton = find.byKey(
+      const ValueKey<String>('weekly_current_week_button'),
+    );
+    expect(
+      find.descendant(
+        of: currentWeekButton,
+        matching: find.byIcon(Icons.arrow_forward_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: currentWeekButton,
+        matching: find.byIcon(Icons.arrow_back_rounded),
+      ),
+      findsNothing,
+    );
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
