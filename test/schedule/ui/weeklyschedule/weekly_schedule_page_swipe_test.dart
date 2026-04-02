@@ -212,6 +212,40 @@ void main() {
 
     expect(viewModel.currentDateStart, DateTime(2026, 2, 16));
     expect(currentWeekButton, findsOneWidget);
+    expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_forward_rounded), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
+
+  testWidgets('current week button points right when browsing past weeks', (
+    tester,
+  ) async {
+    final viewModel = _buildViewModel(
+      now: DateTime(2026, 2, 10, 10),
+      entries: <ScheduleEntry>[
+        _entry(DateTime(2026, 2, 2), 'PAST_WEEK'),
+        _entry(DateTime(2026, 2, 9), 'CURRENT_WEEK'),
+      ],
+    );
+    await viewModel.updateSchedule(
+      DateTime(2026, 2, 2),
+      DateTime(2026, 2, 16),
+      force: true,
+    );
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump();
+
+    expect(viewModel.currentDateStart, DateTime(2026, 2, 2));
+    expect(
+      find.byKey(const ValueKey<String>('weekly_current_week_button')),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.arrow_forward_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
