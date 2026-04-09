@@ -9,13 +9,14 @@ import 'package:kiwi/kiwi.dart';
 import 'package:flutter/material.dart';
 
 import 'common/util/platform_util.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 final Stopwatch _startupStopwatch = Stopwatch()..start();
 
 ///
 /// Main entry point for the app
 ///
-void main() {
+Future<void> main() async {
   // Setup the flutter bindings and the error reporting as early as possible
   WidgetsFlutterBinding.ensureInitialized();
   PerformanceTelemetry.instance.ensureFrameTimingListenerAttached();
@@ -28,7 +29,24 @@ void main() {
     reportException(details.exception, details.stack ?? StackTrace.current);
   };
 
-  runApp(RootPage(startupStopwatch: _startupStopwatch));
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = 'https://c066b6ee9a0627975699781ebdf378bd@o4511192693014528.ingest.de.sentry.io/4511192695046224';
+      // Adds request headers and IP for users, for more info visit:
+      // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
+      options.sendDefaultPii = true;
+      options.enableLogs = true;
+      // Set tracesSampleRate to 1.0 to capture 100% of transactions for tracing.
+      // We recommend adjusting this value in production.
+      options.tracesSampleRate = 1.0;
+      // Configure Session Replay
+      options.replay.sessionSampleRate = 0.1;
+      options.replay.onErrorSampleRate = 1.0;
+    },
+    appRunner: () => runApp(SentryWidget(child: RootPage(startupStopwatch: _startupStopwatch))),
+  );
+  // TODO: Remove this line after sending the first sample event to sentry.
+  await Sentry.captureException(StateError('This is a sample exception.'));
 
   // Keep startup non-blocking so Android splash is never held by async setup.
   unawaited(() async {
