@@ -49,7 +49,8 @@ void main() {
   });
 
   test('diagnostics recording is best effort when recorder fails', () async {
-    final diagnostics = AppDiagnostics(recorder: _FailingDiagnosticsRecorder());
+    final recorder = _FailingDiagnosticsRecorder();
+    final diagnostics = AppDiagnostics(recorder: recorder);
 
     await expectLater(
       diagnostics.recordNavigation('drawer.tab.schedule'),
@@ -63,6 +64,8 @@ void main() {
       diagnostics.reportCaughtException(StateError('boom'), StackTrace.current),
       completes,
     );
+    expect(recorder.breadcrumbAttempts, 2);
+    expect(recorder.captureExceptionAttempts, 1);
   });
 
   test('startSpan creates child span from current span', () async {
@@ -132,8 +135,12 @@ class _RecordingDiagnosticsRecorder implements DiagnosticsRecorder {
 }
 
 class _FailingDiagnosticsRecorder implements DiagnosticsRecorder {
+  int breadcrumbAttempts = 0;
+  int captureExceptionAttempts = 0;
+
   @override
   Future<void> addBreadcrumb(Breadcrumb breadcrumb) {
+    breadcrumbAttempts++;
     throw StateError('failed breadcrumb');
   }
 
@@ -145,6 +152,7 @@ class _FailingDiagnosticsRecorder implements DiagnosticsRecorder {
     Map<String, String> tags = const <String, String>{},
     Map<String, Object?> contexts = const <String, Object?>{},
   }) {
+    captureExceptionAttempts++;
     throw StateError('failed exception capture');
   }
 
