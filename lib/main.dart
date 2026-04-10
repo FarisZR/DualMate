@@ -32,13 +32,13 @@ Future<void> main() async {
   };
 
   final rootApp = RootPage(startupStopwatch: _startupStopwatch);
-  var appStarted = false;
+  var appStartedViaSentryRunner = false;
   if (isSentryConfigured()) {
     try {
       await SentryFlutter.init(
         configureSentryOptions,
         appRunner: () {
-          appStarted = true;
+          appStartedViaSentryRunner = true;
           runApp(SentryWidget(child: rootApp));
         },
       );
@@ -49,7 +49,7 @@ Future<void> main() async {
       );
     } catch (error, trace) {
       await reportException(error, trace);
-      if (!appStarted) {
+      if (!appStartedViaSentryRunner) {
         runApp(rootApp);
       }
     }
