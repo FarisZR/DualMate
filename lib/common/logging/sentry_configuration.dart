@@ -11,7 +11,7 @@ bool isSentryConfigured({String? dsn}) {
 
 Future<void> configureSentryOptions(SentryFlutterOptions options) async {
   options.dsn = _sentryDsn.trim();
-  options.debug = !const bool.fromEnvironment('dart.vm.product');
+  options.debug = !kReleaseMode;
   options.environment = _sentryEnvironment.isNotEmpty
       ? _sentryEnvironment
       : (kReleaseMode ? 'production' : 'debug');

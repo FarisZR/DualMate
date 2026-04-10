@@ -16,6 +16,8 @@ import 'package:workmanager/workmanager.dart';
 /// version and device the tasks will be executed even if the app is closed.
 ///
 class BackgroundWorkScheduler extends WorkSchedulerService {
+  static Future<void>? _sentryInitFuture;
+
   final Map<String, TaskCallback> _taskCallbacks = {};
   final Workmanager workmanager = Workmanager();
 
@@ -114,9 +116,7 @@ class BackgroundWorkScheduler extends WorkSchedulerService {
     try {
       print("Background task started: $taskId with data: $inputData");
 
-      if (isSentryConfigured() && !Sentry.isEnabled) {
-        await SentryFlutter.init(configureSentryOptions);
-      }
+      await _ensureSentryInitialized();
 
       await initializeApp(true);
 
@@ -151,6 +151,30 @@ class BackgroundWorkScheduler extends WorkSchedulerService {
     print("Background task finished successfully");
 
     return true;
+  }
+
+  static Future<void> _ensureSentryInitialized() async {
+    if (!isSentryConfigured() || Sentry.isEnabled) {
+      return;
+    }
+
+    final existingInit = _sentryInitFuture;
+    if (existingInit != null) {
+      await existingInit;
+      return;
+    }
+
+    final initFuture = SentryFlutter.init(configureSentryOptions);
+    _sentryInitFuture = initFuture;
+
+    try {
+      await initFuture;
+    } catch (_) {
+      if (identical(_sentryInitFuture, initFuture)) {
+        _sentryInitFuture = null;
+      }
+      rethrow;
+    }
   }
 
   Future<void> _setupBackgroundScheduling() async {

@@ -42,10 +42,11 @@ void main() {
     expect(captured.stackTrace, same(trace));
     expect(captured.message?.formatted, 'Root init failed');
     expect(captured.tags['feature'], 'startup');
-    expect(
-      (captured.contexts['diagnostics'] as Map<String, dynamic>)['operation'],
-      'root.initialize',
-    );
+    final diagnosticsContext = captured.contexts['diagnostics'];
+    expect(diagnosticsContext, isNotNull);
+    final diagnosticsMap =
+        Map<String, dynamic>.from(diagnosticsContext! as Map<Object?, Object?>);
+    expect(diagnosticsMap['operation'], 'root.initialize');
   });
 
   test('diagnostics recording is best effort when recorder fails', () async {
