@@ -48,10 +48,10 @@ Future<void> main() async {
         data: {'elapsedMs': _startupStopwatch.elapsedMilliseconds},
       );
     } catch (error, trace) {
-      await reportException(error, trace);
       if (!appStartedViaSentryRunner) {
         runApp(rootApp);
       }
+      await reportException(error, trace);
     }
   } else {
     runApp(rootApp);

@@ -14,7 +14,7 @@ bool isSentryConfigured({String? dsn}) {
 Future<void> configureSentryOptions(SentryFlutterOptions options) async {
   options.dsn = sentryDsn;
   options.debug = !kReleaseMode;
-  options.diagnosticLevel = SentryLevel.debug;
+  options.diagnosticLevel = kReleaseMode ? SentryLevel.info : SentryLevel.debug;
   final trimmedEnvironment = _sentryEnvironment.trim();
   final trimmedRelease = _sentryRelease.trim();
   options.environment = trimmedEnvironment.isNotEmpty
