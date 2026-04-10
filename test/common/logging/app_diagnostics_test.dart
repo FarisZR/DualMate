@@ -137,6 +137,23 @@ void main() {
     expect(transaction.status, const SpanStatus.ok());
   });
 
+  test('startSpan falls back to noop span when recorder span creation fails',
+      () async {
+    final diagnostics = AppDiagnostics(recorder: _FailingStartSpanRecorder());
+
+    final span = diagnostics.startSpan(
+      'schedule.refresh',
+      description: 'refresh visible week',
+      data: {'origin': 'userBrowsing'},
+      tags: {'feature': 'schedule'},
+    );
+
+    expect(() => span.setData('key', 'value'), returnsNormally);
+    expect(() => span.setTag('feature', 'schedule'), returnsNormally);
+    expect(() => span.attachError(StateError('boom')), returnsNormally);
+    await expectLater(span.finish(), completes);
+  });
+
   test('AppDiagnosticsSpan.attachError records error on span', () async {
     final recorder = _RecordingDiagnosticsRecorder();
     final diagnostics = AppDiagnostics(recorder: recorder);
@@ -150,6 +167,20 @@ void main() {
     expect(sentrySpan.throwable, same(error));
 
     await span.finish(status: const SpanStatus.internalError());
+  });
+
+  test('AppDiagnosticsSpan swallows errors from underlying span methods',
+      () async {
+    final recorder = _RecordingDiagnosticsRecorder();
+    recorder.currentSpan = _ThrowingSentrySpan('parent');
+    final diagnostics = AppDiagnostics(recorder: recorder);
+
+    final span = diagnostics.startSpan('task.execute');
+
+    expect(() => span.setData('phase', 'startup'), returnsNormally);
+    expect(() => span.setTag('feature', 'task'), returnsNormally);
+    expect(() => span.attachError(StateError('task failed')), returnsNormally);
+    await expectLater(span.finish(status: const SpanStatus.ok()), completes);
   });
 }
 
@@ -221,6 +252,28 @@ class _FailingDiagnosticsRecorder implements DiagnosticsRecorder {
   @override
   ISentrySpan startTransaction(String operation, {String? description}) {
     return _RecordingSentrySpan(operation, description: description);
+  }
+}
+
+class _FailingStartSpanRecorder implements DiagnosticsRecorder {
+  @override
+  Future<void> addBreadcrumb(Breadcrumb breadcrumb) async {}
+
+  @override
+  Future<void> captureException(
+    Object exception,
+    StackTrace stackTrace, {
+    SentryMessage? message,
+    Map<String, String> tags = const <String, String>{},
+    Map<String, Object?> contexts = const <String, Object?>{},
+  }) async {}
+
+  @override
+  ISentrySpan? getCurrentSpan() => null;
+
+  @override
+  ISentrySpan startTransaction(String operation, {String? description}) {
+    throw StateError('failed startTransaction');
   }
 }
 
@@ -337,4 +390,32 @@ class _RecordingSentrySpan extends ISentrySpan {
 
   @override
   SentryTraceContextHeader? traceContext() => null;
+}
+
+class _ThrowingSentrySpan extends _RecordingSentrySpan {
+  _ThrowingSentrySpan(super.operation);
+
+  @override
+  void setData(String key, dynamic value) {
+    throw StateError('failed setData');
+  }
+
+  @override
+  void setTag(String key, String value) {
+    throw StateError('failed setTag');
+  }
+
+  @override
+  set throwable(dynamic value) {
+    throw StateError('failed throwable');
+  }
+
+  @override
+  Future<void> finish({
+    SpanStatus? status,
+    DateTime? endTimestamp,
+    Hint? hint,
+  }) async {
+    throw StateError('failed finish');
+  }
 }

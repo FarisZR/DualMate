@@ -5,14 +5,29 @@ import 'package:flutter/widgets.dart';
 
 class Analytics {
   Future<void> logEvent(
-      {required String name, Map<String, Object>? parameters}) async {}
+      {required String name, Map<String, Object>? parameters}) {
+    return AppDiagnostics.instance.recordInfo(
+      'analytics.event',
+      name,
+      data: parameters ?? const <String, Object>{},
+    );
+  }
 
-  Future<void> logTutorialBegin() async {}
+  Future<void> logTutorialBegin() {
+    return logEvent(name: 'tutorial_begin');
+  }
 
-  Future<void> logTutorialComplete() async {}
+  Future<void> logTutorialComplete() {
+    return logEvent(name: 'tutorial_complete');
+  }
 
-  Future<void> setUserProperty(
-      {required String name, required String value}) async {}
+  Future<void> setUserProperty({required String name, required String value}) {
+    return AppDiagnostics.instance.recordInfo(
+      'analytics.user_property',
+      name,
+      data: {'value': value},
+    );
+  }
 }
 
 final Analytics analytics = Analytics();
@@ -39,7 +54,8 @@ class _PerfAwareNavigatorObserver extends NavigatorObserver {
     unawaited(
       AppDiagnostics.instance.recordNavigation(
         previousRoute != null
-            ? (previousRoute.settings.name ?? previousRoute.runtimeType.toString())
+            ? (previousRoute.settings.name ??
+                previousRoute.runtimeType.toString())
             : 'unknown',
         data: {
           'type': 'didPop',

@@ -1,6 +1,20 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:sentry/sentry.dart';
+
+void _logDiagnosticsFailure(
+  String operation,
+  Object error, [
+  StackTrace? stackTrace,
+]) {
+  developer.log(
+    'Diagnostics $operation failed',
+    name: 'diagnostics',
+    error: error,
+    stackTrace: stackTrace,
+  );
+}
 
 abstract class DiagnosticsRecorder {
   Future<void> addBreadcrumb(Breadcrumb breadcrumb);
@@ -55,8 +69,8 @@ class SentryDiagnosticsRecorder implements DiagnosticsRecorder {
   @override
   ISentrySpan startTransaction(String operation, {String? description}) {
     return Sentry.startTransaction(
+      description ?? operation,
       operation,
-      'task',
       description: description,
       bindToScope: true,
     );
@@ -138,42 +152,74 @@ class AppDiagnostics {
     Map<String, Object?> data = const <String, Object?>{},
     Map<String, String> tags = const <String, String>{},
   }) {
-    final parent = _recorder.getCurrentSpan();
-    final span = parent?.startChild(
-          operation,
-          description: description,
-        ) ??
-        _recorder.startTransaction(operation, description: description);
+    try {
+      final parent = _recorder.getCurrentSpan();
+      final span = parent?.startChild(
+            operation,
+            description: description,
+          ) ??
+          _recorder.startTransaction(operation, description: description);
 
-    for (final entry in data.entries) {
-      span.setData(entry.key, entry.value);
-    }
-    for (final entry in tags.entries) {
-      span.setTag(entry.key, entry.value);
-    }
+      final diagnosticsSpan = AppDiagnosticsSpan._(span);
+      for (final entry in data.entries) {
+        diagnosticsSpan.setData(entry.key, entry.value);
+      }
+      for (final entry in tags.entries) {
+        diagnosticsSpan.setTag(entry.key, entry.value);
+      }
 
-    return AppDiagnosticsSpan._(span);
+      return diagnosticsSpan;
+    } catch (error, stackTrace) {
+      _logDiagnosticsFailure('startSpan', error, stackTrace);
+      return const AppDiagnosticsSpan.noop();
+    }
   }
 }
 
 class AppDiagnosticsSpan {
-  final ISentrySpan _span;
+  final ISentrySpan? _span;
 
-  AppDiagnosticsSpan._(this._span);
+  const AppDiagnosticsSpan._(this._span);
+
+  const AppDiagnosticsSpan.noop() : _span = null;
 
   void setData(String key, Object? value) {
-    _span.setData(key, value);
+    final span = _span;
+    if (span == null) return;
+    try {
+      span.setData(key, value);
+    } catch (error, stackTrace) {
+      _logDiagnosticsFailure('span.setData', error, stackTrace);
+    }
   }
 
   void setTag(String key, String value) {
-    _span.setTag(key, value);
+    final span = _span;
+    if (span == null) return;
+    try {
+      span.setTag(key, value);
+    } catch (error, stackTrace) {
+      _logDiagnosticsFailure('span.setTag', error, stackTrace);
+    }
   }
 
   void attachError(Object error) {
-    _span.throwable = error;
+    final span = _span;
+    if (span == null) return;
+    try {
+      span.throwable = error;
+    } catch (attachError, stackTrace) {
+      _logDiagnosticsFailure('span.attachError', attachError, stackTrace);
+    }
   }
 
-  Future<void> finish({SpanStatus? status}) {
-    return _span.finish(status: status);
+  Future<void> finish({SpanStatus? status}) async {
+    final span = _span;
+    if (span == null) return;
+    try {
+      await span.finish(status: status);
+    } catch (error, stackTrace) {
+      _logDiagnosticsFailure('span.finish', error, stackTrace);
+    }
   }
 }

@@ -493,7 +493,7 @@ flutter run --profile -d <device_id>
 | Initial load time | < 500ms | Stopwatch in `initState` |
 | Scroll frame time | < 16.67ms (60fps) | Flutter DevTools |
 | Empty state discovery | User taps setup within 5s | Manual observation |
-| Crash rate (dispose errors) | 0 | Crashlytics/logs |
+| Crash rate (dispose errors) | 0 | Sentry/logs |
 
 ## Dependencies & Prerequisites
 
