@@ -114,7 +114,7 @@ class BackgroundWorkScheduler extends WorkSchedulerService {
     try {
       print("Background task started: $taskId with data: $inputData");
 
-      if (!Sentry.isEnabled) {
+      if (isSentryConfigured() && !Sentry.isEnabled) {
         await SentryFlutter.init(configureSentryOptions);
       }
 
@@ -158,7 +158,6 @@ class BackgroundWorkScheduler extends WorkSchedulerService {
 
     await workmanager.initialize(
       callbackDispatcher,
-      isInDebugMode: false,
     );
   }
 

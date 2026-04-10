@@ -5,19 +5,16 @@ const String _sentryDsn = String.fromEnvironment('SENTRY_DSN');
 const String _sentryRelease = String.fromEnvironment('SENTRY_RELEASE');
 const String _sentryEnvironment = String.fromEnvironment('SENTRY_ENVIRONMENT');
 
+bool isSentryConfigured({String? dsn}) {
+  return (dsn ?? _sentryDsn).trim().isNotEmpty;
+}
+
 Future<void> configureSentryOptions(SentryFlutterOptions options) async {
-  if (_sentryDsn.isNotEmpty) {
-    options.dsn = _sentryDsn;
-  } else if (kReleaseMode) {
-    debugPrint(
-      'SENTRY_DSN is not configured; Sentry events will not be sent in release.',
-    );
-  }
+  options.dsn = _sentryDsn.trim();
   options.debug = !const bool.fromEnvironment('dart.vm.product');
-  options.environment =
-      _sentryEnvironment.isNotEmpty
-          ? _sentryEnvironment
-          : (kReleaseMode ? 'production' : 'debug');
+  options.environment = _sentryEnvironment.isNotEmpty
+      ? _sentryEnvironment
+      : (kReleaseMode ? 'production' : 'debug');
   if (_sentryRelease.isNotEmpty) {
     options.release = _sentryRelease;
   }

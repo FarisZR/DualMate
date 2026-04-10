@@ -142,7 +142,6 @@ void main() {
 
     final span = diagnostics.startSpan('task.execute');
     final error = StateError('task failed');
-    final stackTrace = StackTrace.current;
 
     span.attachError(error);
 

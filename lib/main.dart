@@ -31,16 +31,20 @@ Future<void> main() async {
     reportException(details.exception, details.stack ?? StackTrace.current);
   };
 
-  await SentryFlutter.init(
-    configureSentryOptions,
-    appRunner: () => runApp(
-        SentryWidget(child: RootPage(startupStopwatch: _startupStopwatch))),
-  );
-  await AppDiagnostics.instance.recordInfo(
-    'startup',
-    'sentry.initialized',
-    data: {'elapsedMs': _startupStopwatch.elapsedMilliseconds},
-  );
+  final rootApp = RootPage(startupStopwatch: _startupStopwatch);
+  if (isSentryConfigured()) {
+    await SentryFlutter.init(
+      configureSentryOptions,
+      appRunner: () => runApp(SentryWidget(child: rootApp)),
+    );
+    await AppDiagnostics.instance.recordInfo(
+      'startup',
+      'sentry.initialized',
+      data: {'elapsedMs': _startupStopwatch.elapsedMilliseconds},
+    );
+  } else {
+    runApp(rootApp);
+  }
   // Keep startup non-blocking so Android splash is never held by async setup.
   unawaited(() async {
     try {
