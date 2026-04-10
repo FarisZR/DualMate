@@ -38,7 +38,9 @@ class _PerfAwareNavigatorObserver extends NavigatorObserver {
     super.didPop(route, previousRoute);
     unawaited(
       AppDiagnostics.instance.recordNavigation(
-        previousRoute?.settings.name ?? previousRoute.runtimeType.toString(),
+        previousRoute != null
+            ? (previousRoute.settings.name ?? previousRoute.runtimeType.toString())
+            : 'unknown',
         data: {
           'type': 'didPop',
           'from': route.settings.name,

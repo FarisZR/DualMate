@@ -5,7 +5,8 @@ Future<void> reportException(Object ex, StackTrace trace) async {
 
   try {
     await AppDiagnostics.instance.reportCaughtException(ex, trace);
-  } catch (error) {
+  } catch (error, stackTrace) {
     print("Failed to report exception to Sentry: $error");
+    print(stackTrace);
   }
 }

@@ -26,6 +26,29 @@ bool shouldAutoRequestNotificationPermissionAtStartup() {
   return false;
 }
 
+/// Helper that wraps reportCaughtException to ensure reporting failures never throw.
+Future<void> _reportNonFatalInitException(
+  Object error,
+  StackTrace trace, {
+  String? message,
+  Map<String, String> tags = const <String, String>{},
+  Map<String, Object?> contexts = const <String, Object?>{},
+}) async {
+  try {
+    await AppDiagnostics.instance.reportCaughtException(
+      error,
+      trace,
+      message: message,
+      tags: tags,
+      contexts: contexts,
+    );
+  } catch (reportError, reportTrace) {
+    print("Failed to report exception:");
+    print(reportError);
+    print(reportTrace);
+  }
+}
+
 Future<void> initializeAppBase(bool isBackground) async {
   if (isBaseInitialized) {
     return;
@@ -86,7 +109,7 @@ Future<void> initializeAppBackground(bool isBackground) async {
     print("Background init: workmanager failed (${exception.runtimeType})");
     print(exception);
     print(trace);
-    await AppDiagnostics.instance.reportCaughtException(
+    await _reportNonFatalInitException(
       exception,
       trace,
       message: 'Background init: workmanager failed',
@@ -99,7 +122,7 @@ Future<void> initializeAppBackground(bool isBackground) async {
     print("Background init: workmanager failed");
     print(error);
     print(trace);
-    await AppDiagnostics.instance.reportCaughtException(
+    await _reportNonFatalInitException(
       error,
       trace,
       message: 'Background init: workmanager failed',
@@ -118,7 +141,7 @@ Future<void> initializeAppBackground(bool isBackground) async {
     print("Background init: schedule notify failed (${exception.runtimeType})");
     print(exception);
     print(trace);
-    await AppDiagnostics.instance.reportCaughtException(
+    await _reportNonFatalInitException(
       exception,
       trace,
       message: 'Background init: schedule notify failed',
@@ -131,7 +154,7 @@ Future<void> initializeAppBackground(bool isBackground) async {
     print("Background init: schedule notify failed");
     print(error);
     print(trace);
-    await AppDiagnostics.instance.reportCaughtException(
+    await _reportNonFatalInitException(
       error,
       trace,
       message: 'Background init: schedule notify failed',
@@ -213,7 +236,7 @@ Future<void> _prewarmCanteenIfStaleInBackground(
     print("Foreground canteen prewarm failed (${exception.runtimeType})");
     print(exception);
     print(trace);
-    await AppDiagnostics.instance.reportCaughtException(
+    await _reportNonFatalInitException(
       exception,
       trace,
       message: 'Foreground canteen prewarm failed',
@@ -227,7 +250,7 @@ Future<void> _prewarmCanteenIfStaleInBackground(
     print("Foreground canteen prewarm failed");
     print(error);
     print(trace);
-    await AppDiagnostics.instance.reportCaughtException(
+    await _reportNonFatalInitException(
       error,
       trace,
       message: 'Foreground canteen prewarm failed',
@@ -257,7 +280,7 @@ Future<void> _setupCalendarSyncInBackground(Stopwatch stopwatch) async {
         "Foreground heavy init: calendar sync failed (${exception.runtimeType})");
     print(exception);
     print(trace);
-    await AppDiagnostics.instance.reportCaughtException(
+    await _reportNonFatalInitException(
       exception,
       trace,
       message: 'Foreground heavy init: calendar sync failed',
@@ -271,7 +294,7 @@ Future<void> _setupCalendarSyncInBackground(Stopwatch stopwatch) async {
     print("Foreground heavy init: calendar sync failed");
     print(error);
     print(trace);
-    await AppDiagnostics.instance.reportCaughtException(
+    await _reportNonFatalInitException(
       error,
       trace,
       message: 'Foreground heavy init: calendar sync failed',

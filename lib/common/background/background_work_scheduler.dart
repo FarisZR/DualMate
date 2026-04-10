@@ -127,18 +127,24 @@ class BackgroundWorkScheduler extends WorkSchedulerService {
       print("Background task failed:");
       print(e);
       print(trace);
-      await AppDiagnostics.instance.reportCaughtException(
-        e,
-        trace,
-        message: 'Background task failed',
-        tags: {'feature': 'background'},
-        contexts: {
-          'background_task': {
-            'taskId': '$taskId',
-            'inputData': inputData?.toString(),
+      try {
+        await AppDiagnostics.instance.reportCaughtException(
+          e,
+          trace,
+          message: 'Background task failed',
+          tags: {'feature': 'background'},
+          contexts: {
+            'background_task': {
+              'taskId': '$taskId',
+              'hasInputData': inputData != null,
+            },
           },
-        },
-      );
+        );
+      } catch (reportError, reportTrace) {
+        print("Failed to report exception:");
+        print(reportError);
+        print(reportTrace);
+      }
       return false;
     }
 

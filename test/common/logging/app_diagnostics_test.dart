@@ -92,6 +92,65 @@ void main() {
     expect(child.finished, isTrue);
     expect(child.status, const SpanStatus.ok());
   });
+
+  test('recordInfo adds an info breadcrumb', () async {
+    final recorder = _RecordingDiagnosticsRecorder();
+    final diagnostics = AppDiagnostics(recorder: recorder);
+
+    await diagnostics.recordInfo(
+      'perf.frame',
+      'frame rendered',
+      data: {'duration': 16.5},
+    );
+
+    expect(recorder.breadcrumbs, hasLength(1));
+    final breadcrumb = recorder.breadcrumbs.single;
+    expect(breadcrumb.category, 'perf.frame');
+    expect(breadcrumb.type, 'default');
+    expect(breadcrumb.message, 'frame rendered');
+    expect(breadcrumb.level, SentryLevel.info);
+    expect(breadcrumb.data?['duration'], 16.5);
+  });
+
+  test('startSpan creates transaction when currentSpan is null', () async {
+    final recorder = _RecordingDiagnosticsRecorder();
+    final diagnostics = AppDiagnostics(recorder: recorder);
+    expect(recorder.currentSpan, isNull);
+
+    final span = diagnostics.startSpan(
+      'app.init',
+      description: 'initialize app',
+      data: {'phase': 'startup'},
+      tags: {'feature': 'init'},
+    );
+
+    expect(recorder.currentSpan, isNotNull);
+    final transaction = recorder.currentSpan as _RecordingSentrySpan;
+    expect(transaction.operation, 'app.init');
+    expect(transaction.description, 'initialize app');
+    expect(transaction.data['phase'], 'startup');
+    expect(transaction.tags['feature'], 'init');
+
+    await span.finish(status: const SpanStatus.ok());
+    expect(transaction.finished, isTrue);
+    expect(transaction.status, const SpanStatus.ok());
+  });
+
+  test('AppDiagnosticsSpan.attachError records error on span', () async {
+    final recorder = _RecordingDiagnosticsRecorder();
+    final diagnostics = AppDiagnostics(recorder: recorder);
+
+    final span = diagnostics.startSpan('task.execute');
+    final error = StateError('task failed');
+    final stackTrace = StackTrace.current;
+
+    span.attachError(error);
+
+    final sentrySpan = recorder.currentSpan as _RecordingSentrySpan;
+    expect(sentrySpan.throwable, same(error));
+
+    await span.finish(status: const SpanStatus.internalError());
+  });
 }
 
 class _RecordingDiagnosticsRecorder implements DiagnosticsRecorder {
