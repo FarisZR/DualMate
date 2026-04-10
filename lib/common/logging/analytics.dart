@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:flutter/widgets.dart';
 
@@ -19,26 +21,30 @@ class _PerfAwareNavigatorObserver extends NavigatorObserver {
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPush(route, previousRoute);
-    AppDiagnostics.instance.recordNavigation(
-      route.settings.name ?? route.runtimeType.toString(),
-      data: {
-        'type': 'didPush',
-        'from': previousRoute?.settings.name,
-        'to': route.settings.name,
-      },
+    unawaited(
+      AppDiagnostics.instance.recordNavigation(
+        route.settings.name ?? route.runtimeType.toString(),
+        data: {
+          'type': 'didPush',
+          'from': previousRoute?.settings.name,
+          'to': route.settings.name,
+        },
+      ),
     );
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPop(route, previousRoute);
-    AppDiagnostics.instance.recordNavigation(
-      previousRoute?.settings.name ?? previousRoute.runtimeType.toString(),
-      data: {
-        'type': 'didPop',
-        'from': route.settings.name,
-        'to': previousRoute?.settings.name,
-      },
+    unawaited(
+      AppDiagnostics.instance.recordNavigation(
+        previousRoute?.settings.name ?? previousRoute.runtimeType.toString(),
+        data: {
+          'type': 'didPop',
+          'from': route.settings.name,
+          'to': previousRoute?.settings.name,
+        },
+      ),
     );
   }
 }

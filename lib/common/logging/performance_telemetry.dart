@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:dualmate/common/logging/app_diagnostics.dart';
@@ -41,13 +42,15 @@ class PerformanceTelemetry {
         'janky frame timing: build=${build}ms raster=${raster}ms',
         name: 'perf.frame',
       );
-      AppDiagnostics.instance.recordInfo(
-        'perf.frame',
-        'janky frame timing',
-        data: {
-          'buildMs': build,
-          'rasterMs': raster,
-        },
+      unawaited(
+        AppDiagnostics.instance.recordInfo(
+          'perf.frame',
+          'janky frame timing',
+          data: {
+            'buildMs': build,
+            'rasterMs': raster,
+          },
+        ),
       );
     }
   }
@@ -57,7 +60,9 @@ class PerformanceTelemetry {
     developer.Timeline.startSync('nav:$name');
     developer.Timeline.finishSync();
     developer.log('nav event: $name', name: 'perf.nav');
-    AppDiagnostics.instance.recordNavigation(name, data: {'source': 'app'});
+    unawaited(
+      AppDiagnostics.instance.recordNavigation(name, data: {'source': 'app'}),
+    );
   }
 
   /// Mark a timestamped span; caller is responsible for balancing start/finish.
@@ -78,7 +83,9 @@ class PerformanceTelemetry {
   /// Convenience to log a single instant with an optional payload.
   void logInstant(String name, {Map<String, Object?>? args}) {
     developer.log(name, name: 'perf.instant', error: args);
-    AppDiagnostics.instance.recordInfo('perf.instant', name, data: args ?? {});
+    unawaited(
+      AppDiagnostics.instance.recordInfo('perf.instant', name, data: args ?? {}),
+    );
   }
 }
 

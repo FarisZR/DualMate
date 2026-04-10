@@ -75,13 +75,15 @@ class AppDiagnostics {
     String name, {
     Map<String, Object?> data = const <String, Object?>{},
   }) {
-    return _recorder.addBreadcrumb(
-      Breadcrumb(
-        category: 'navigation',
-        type: 'navigation',
-        message: name,
-        data: data,
-        level: SentryLevel.info,
+    return _bestEffort(
+      () => _recorder.addBreadcrumb(
+        Breadcrumb(
+          category: 'navigation',
+          type: 'navigation',
+          message: name,
+          data: data,
+          level: SentryLevel.info,
+        ),
       ),
     );
   }
@@ -91,13 +93,15 @@ class AppDiagnostics {
     String message, {
     Map<String, Object?> data = const <String, Object?>{},
   }) {
-    return _recorder.addBreadcrumb(
-      Breadcrumb(
-        category: category,
-        type: 'default',
-        message: message,
-        data: data,
-        level: SentryLevel.info,
+    return _bestEffort(
+      () => _recorder.addBreadcrumb(
+        Breadcrumb(
+          category: category,
+          type: 'default',
+          message: message,
+          data: data,
+          level: SentryLevel.info,
+        ),
       ),
     );
   }
@@ -109,13 +113,23 @@ class AppDiagnostics {
     Map<String, String> tags = const <String, String>{},
     Map<String, Object?> contexts = const <String, Object?>{},
   }) {
-    return _recorder.captureException(
-      exception,
-      stackTrace,
-      message: message == null ? null : SentryMessage(message),
-      tags: tags,
-      contexts: contexts,
+    return _bestEffort(
+      () => _recorder.captureException(
+        exception,
+        stackTrace,
+        message: message == null ? null : SentryMessage(message),
+        tags: tags,
+        contexts: contexts,
+      ),
     );
+  }
+
+  Future<void> _bestEffort(Future<void> Function() action) async {
+    try {
+      await action();
+    } catch (_) {
+      // Diagnostics must never break app flows.
+    }
   }
 
   AppDiagnosticsSpan startSpan(

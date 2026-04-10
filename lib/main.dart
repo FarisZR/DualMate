@@ -41,9 +41,6 @@ Future<void> main() async {
     'sentry.initialized',
     data: {'elapsedMs': _startupStopwatch.elapsedMilliseconds},
   );
-  // TODO: Remove this line after sending the first sample event to sentry.
-  await Sentry.captureException(StateError('This is a sample exception.'));
-
   // Keep startup non-blocking so Android splash is never held by async setup.
   unawaited(() async {
     try {

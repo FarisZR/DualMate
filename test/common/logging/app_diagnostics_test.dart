@@ -48,6 +48,23 @@ void main() {
     );
   });
 
+  test('diagnostics recording is best effort when recorder fails', () async {
+    final diagnostics = AppDiagnostics(recorder: _FailingDiagnosticsRecorder());
+
+    await expectLater(
+      diagnostics.recordNavigation('drawer.tab.schedule'),
+      completes,
+    );
+    await expectLater(
+      diagnostics.recordInfo('startup', 'init'),
+      completes,
+    );
+    await expectLater(
+      diagnostics.reportCaughtException(StateError('boom'), StackTrace.current),
+      completes,
+    );
+  });
+
   test('startSpan creates child span from current span', () async {
     final recorder = _RecordingDiagnosticsRecorder();
     final diagnostics = AppDiagnostics(recorder: recorder);
@@ -111,6 +128,32 @@ class _RecordingDiagnosticsRecorder implements DiagnosticsRecorder {
     final span = _RecordingSentrySpan(operation, description: description);
     currentSpan = span;
     return span;
+  }
+}
+
+class _FailingDiagnosticsRecorder implements DiagnosticsRecorder {
+  @override
+  Future<void> addBreadcrumb(Breadcrumb breadcrumb) {
+    throw StateError('failed breadcrumb');
+  }
+
+  @override
+  Future<void> captureException(
+    Object exception,
+    StackTrace stackTrace, {
+    SentryMessage? message,
+    Map<String, String> tags = const <String, String>{},
+    Map<String, Object?> contexts = const <String, Object?>{},
+  }) {
+    throw StateError('failed exception capture');
+  }
+
+  @override
+  ISentrySpan? getCurrentSpan() => null;
+
+  @override
+  ISentrySpan startTransaction(String operation, {String? description}) {
+    return _RecordingSentrySpan(operation, description: description);
   }
 }
 
