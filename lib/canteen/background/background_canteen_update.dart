@@ -1,6 +1,7 @@
 import 'package:dualmate/canteen/business/canteen_provider.dart';
 import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
+import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 
@@ -26,6 +27,21 @@ class BackgroundCanteenUpdate extends TaskCallback {
       print("Background canteen update failed");
       print(exception);
       print(trace);
+      try {
+        await AppDiagnostics.instance.reportCaughtException(
+          exception,
+          trace,
+          message: 'Background canteen update failed',
+          tags: {'feature': 'canteen'},
+          contexts: {
+            'canteen_update': {'task': name},
+          },
+        );
+      } catch (reportError, reportTrace) {
+        print("Failed to report exception:");
+        print(reportError);
+        print(reportTrace);
+      }
       print("Background canteen update status: failure");
       print(
           "Background canteen update next: retry in ${_retryInterval.inHours}h");

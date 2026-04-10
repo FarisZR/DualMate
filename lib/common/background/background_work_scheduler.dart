@@ -1,10 +1,13 @@
 import 'dart:ui';
 
 import 'package:dualmate/common/appstart/app_initializer.dart';
+import 'package:dualmate/common/logging/app_diagnostics.dart';
+import 'package:dualmate/common/logging/sentry_configuration.dart';
 import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
 import 'package:flutter/widgets.dart';
 import 'package:kiwi/kiwi.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:workmanager/workmanager.dart';
 
 ///
@@ -13,6 +16,8 @@ import 'package:workmanager/workmanager.dart';
 /// version and device the tasks will be executed even if the app is closed.
 ///
 class BackgroundWorkScheduler extends WorkSchedulerService {
+  static Future<void>? _sentryInitFuture;
+
   final Map<String, TaskCallback> _taskCallbacks = {};
   final Workmanager workmanager = Workmanager();
 
@@ -111,6 +116,8 @@ class BackgroundWorkScheduler extends WorkSchedulerService {
     try {
       print("Background task started: $taskId with data: $inputData");
 
+      await _ensureSentryInitialized();
+
       await initializeApp(true);
 
       WorkSchedulerService scheduler = KiwiContainer().resolve();
@@ -120,6 +127,24 @@ class BackgroundWorkScheduler extends WorkSchedulerService {
       print("Background task failed:");
       print(e);
       print(trace);
+      try {
+        await AppDiagnostics.instance.reportCaughtException(
+          e,
+          trace,
+          message: 'Background task failed',
+          tags: {'feature': 'background'},
+          contexts: {
+            'background_task': {
+              'taskId': '$taskId',
+              'hasInputData': inputData != null,
+            },
+          },
+        );
+      } catch (reportError, reportTrace) {
+        print("Failed to report exception:");
+        print(reportError);
+        print(reportTrace);
+      }
       return false;
     }
 
@@ -128,12 +153,35 @@ class BackgroundWorkScheduler extends WorkSchedulerService {
     return true;
   }
 
+  static Future<void> _ensureSentryInitialized() async {
+    if (!isSentryConfigured() || Sentry.isEnabled) {
+      return;
+    }
+
+    final existingInit = _sentryInitFuture;
+    if (existingInit != null) {
+      await existingInit;
+      return;
+    }
+
+    final initFuture = SentryFlutter.init(configureSentryOptions);
+    _sentryInitFuture = initFuture;
+
+    try {
+      await initFuture;
+    } catch (_) {
+      if (identical(_sentryInitFuture, initFuture)) {
+        _sentryInitFuture = null;
+      }
+      rethrow;
+    }
+  }
+
   Future<void> _setupBackgroundScheduling() async {
     print("Initialize background scheduling");
 
     await workmanager.initialize(
       callbackDispatcher,
-      isInDebugMode: false,
     );
   }
 

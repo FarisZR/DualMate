@@ -1,5 +1,6 @@
 import 'package:device_calendar/device_calendar.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/date_management/data/calendar_access.dart';
 import 'package:dualmate/date_management/model/date_entry.dart';
@@ -54,8 +55,9 @@ class CalendarSynchronizer {
           CancellationToken(),
           origin: ScheduleRefreshOrigin.foregroundMaintenance,
         );
-      } catch (e) {
+      } catch (e, trace) {
         print("Calendar delayed sync failed: $e");
+        await reportException(e, trace);
       }
     });
   }

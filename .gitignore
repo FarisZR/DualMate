@@ -56,3 +56,6 @@ ios/build
 
 # Local debugging artifacts
 debugging-files/
+
+# Sentry configuration files
+sentry.properties

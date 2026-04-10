@@ -14,10 +14,11 @@ description: An app for the DHBW Stuttgart
 version: 2.0.0-beta+39
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
-  flutter: ">=3.27.0"
+  sdk: ">=3.10.0 <4.0.0"
+  flutter: ">=3.38.0"
 
 dependencies:
+  sentry_flutter: ^9.16.1
   flutter:
     sdk: flutter
   flutter_localizations:
@@ -49,6 +50,7 @@ dependencies:
     path: third_party/dualmate_widget_bridge
 
 dev_dependencies:
+  sentry_dart_plugin: ^3.2.1
   flutter_test:
     sdk: flutter
   integration_test:
@@ -89,3 +91,9 @@ flutter:
     - family:  CustomIcons
       fonts:
         - asset: fonts/CustomIcons.ttf
+
+sentry:
+  upload_debug_symbols: true
+  upload_source_maps: true
+  project: dualmate
+  org: fariszr

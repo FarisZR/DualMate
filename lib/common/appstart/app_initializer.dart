@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dualmate/canteen/business/canteen_provider.dart';
 import 'package:dualmate/common/appstart/background_initialize.dart';
+import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/appstart/localization_initialize.dart';
 import 'package:dualmate/common/appstart/notification_schedule_changed_initialize.dart';
 import 'package:dualmate/common/appstart/notifications_initialize.dart';
@@ -23,6 +24,29 @@ bool isForegroundCanteenPrewarmInitialized = false;
 
 bool shouldAutoRequestNotificationPermissionAtStartup() {
   return false;
+}
+
+/// Helper that wraps reportCaughtException to ensure reporting failures never throw.
+Future<void> _reportNonFatalInitException(
+  Object error,
+  StackTrace trace, {
+  String? message,
+  Map<String, String> tags = const <String, String>{},
+  Map<String, Object?> contexts = const <String, Object?>{},
+}) async {
+  try {
+    await AppDiagnostics.instance.reportCaughtException(
+      error,
+      trace,
+      message: message,
+      tags: tags,
+      contexts: contexts,
+    );
+  } catch (reportError, reportTrace) {
+    print("Failed to report exception:");
+    print(reportError);
+    print(reportTrace);
+  }
 }
 
 Future<void> initializeAppBase(bool isBackground) async {
@@ -85,10 +109,28 @@ Future<void> initializeAppBackground(bool isBackground) async {
     print("Background init: workmanager failed (${exception.runtimeType})");
     print(exception);
     print(trace);
+    await _reportNonFatalInitException(
+      exception,
+      trace,
+      message: 'Background init: workmanager failed',
+      tags: {'feature': 'background'},
+      contexts: {
+        'background': {'phase': 'workmanager.setup'},
+      },
+    );
   } catch (error, trace) {
     print("Background init: workmanager failed");
     print(error);
     print(trace);
+    await _reportNonFatalInitException(
+      error,
+      trace,
+      message: 'Background init: workmanager failed',
+      tags: {'feature': 'background'},
+      contexts: {
+        'background': {'phase': 'workmanager.setup'},
+      },
+    );
   }
 
   try {
@@ -99,10 +141,28 @@ Future<void> initializeAppBackground(bool isBackground) async {
     print("Background init: schedule notify failed (${exception.runtimeType})");
     print(exception);
     print(trace);
+    await _reportNonFatalInitException(
+      exception,
+      trace,
+      message: 'Background init: schedule notify failed',
+      tags: {'feature': 'notifications'},
+      contexts: {
+        'notifications': {'phase': 'schedule_changed.setup'},
+      },
+    );
   } catch (error, trace) {
     print("Background init: schedule notify failed");
     print(error);
     print(trace);
+    await _reportNonFatalInitException(
+      error,
+      trace,
+      message: 'Background init: schedule notify failed',
+      tags: {'feature': 'notifications'},
+      contexts: {
+        'notifications': {'phase': 'schedule_changed.setup'},
+      },
+    );
   }
 
   tz.initializeTimeZones();
@@ -176,11 +236,29 @@ Future<void> _prewarmCanteenIfStaleInBackground(
     print("Foreground canteen prewarm failed (${exception.runtimeType})");
     print(exception);
     print(trace);
+    await _reportNonFatalInitException(
+      exception,
+      trace,
+      message: 'Foreground canteen prewarm failed',
+      tags: {'feature': 'canteen'},
+      contexts: {
+        'canteen': {'phase': 'foreground_prewarm'},
+      },
+    );
     // Swallowing here is intentional; we don't want to block startup.
   } catch (error, trace) {
     print("Foreground canteen prewarm failed");
     print(error);
     print(trace);
+    await _reportNonFatalInitException(
+      error,
+      trace,
+      message: 'Foreground canteen prewarm failed',
+      tags: {'feature': 'canteen'},
+      contexts: {
+        'canteen': {'phase': 'foreground_prewarm'},
+      },
+    );
     // Swallowing here is intentional; we don't want to block startup.
   }
 }
@@ -202,11 +280,29 @@ Future<void> _setupCalendarSyncInBackground(Stopwatch stopwatch) async {
         "Foreground heavy init: calendar sync failed (${exception.runtimeType})");
     print(exception);
     print(trace);
+    await _reportNonFatalInitException(
+      exception,
+      trace,
+      message: 'Foreground heavy init: calendar sync failed',
+      tags: {'feature': 'calendar'},
+      contexts: {
+        'calendar': {'phase': 'foreground_sync_setup'},
+      },
+    );
     // Swallowing here is intentional; we don't want to block startup.
   } catch (error, trace) {
     print("Foreground heavy init: calendar sync failed");
     print(error);
     print(trace);
+    await _reportNonFatalInitException(
+      error,
+      trace,
+      message: 'Foreground heavy init: calendar sync failed',
+      tags: {'feature': 'calendar'},
+      contexts: {
+        'calendar': {'phase': 'foreground_sync_setup'},
+      },
+    );
     // Swallowing here is intentional; we don't want to block startup.
   }
 }

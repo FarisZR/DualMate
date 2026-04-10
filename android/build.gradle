@@ -60,48 +60,6 @@ subprojects {
             }
             android.namespace = namespaceValue
         }
-
-        android.compileOptions {
-            sourceCompatibility JavaVersion.VERSION_1_8
-            targetCompatibility JavaVersion.VERSION_1_8
-        }
-    }
-
-    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-        kotlinOptions {
-            jvmTarget = "1.8"
-        }
-    }
-
-    tasks.withType(JavaCompile).configureEach {
-        sourceCompatibility = "1.8"
-        targetCompatibility = "1.8"
-    }
-
-    if (project.name == "in_app_review") {
-        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-            kotlinOptions {
-                jvmTarget = "11"
-            }
-        }
-
-        tasks.withType(JavaCompile).configureEach {
-            sourceCompatibility = "11"
-            targetCompatibility = "11"
-        }
-    }
-
-    if (project.name == "shared_preferences_android") {
-        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
-        }
-
-        tasks.withType(JavaCompile).configureEach {
-            sourceCompatibility = "17"
-            targetCompatibility = "17"
-        }
     }
 }
 

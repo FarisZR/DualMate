@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/service/mannheim/mannheim_course_scraper.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
@@ -33,9 +36,10 @@ class MannheimViewModel extends OnboardingStepViewModel {
       await Future.delayed(Duration(seconds: 1));
       _courses = await MannheimCourseScraper().loadCourses();
       _loadingState = LoadCoursesState.Loaded;
-    } catch (ex) {
+    } catch (ex, trace) {
       _courses = [];
       _loadingState = LoadCoursesState.Failed;
+      unawaited(reportException(ex, trace));
     }
 
     notifyListeners("loadingState");

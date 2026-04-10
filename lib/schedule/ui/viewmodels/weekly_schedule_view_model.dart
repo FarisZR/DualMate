@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'dart:developer' as developer;
-
+import 'package:dualmate/common/logging/app_diagnostics.dart';
+import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/util/cancelable_mutex.dart';
@@ -115,6 +115,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       notifyIfMounted("initializeFailed");
       print("Weekly schedule init failed: $error");
       print(trace);
+      await reportException(error, trace);
     }
   }
 
@@ -166,6 +167,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       notifyIfMounted("initializeFailed");
       print("Weekly schedule init failed: $error");
       print(trace);
+      await reportException(error, trace);
       ensureUpdateNowTimerRunning();
       _ensureWindowRefreshTimer();
     }
@@ -184,6 +186,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       } catch (error, trace) {
         print("Weekly schedule refresh failed: $error");
         print(trace);
+        await reportException(error, trace);
       }
     });
   }
@@ -211,6 +214,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     } catch (error, trace) {
       print("Weekly schedule widget refresh failed: $error");
       print(trace);
+      await reportException(error, trace);
     }
   }
 
@@ -233,6 +237,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       } catch (error, trace) {
         print("Weekly schedule source refresh failed: $error");
         print(trace);
+        await reportException(error, trace);
       }
     }
   }
@@ -339,6 +344,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     } catch (error, trace) {
       print("Failed to open cached week: $error");
       print(trace);
+      await reportException(error, trace);
     }
   }
 
@@ -422,21 +428,32 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     bool applyToVisibleState = true,
     ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
   }) async {
-    final task = PerformanceTelemetry.instance
-        .startTask('schedule.refresh.${start.toIso8601String()}');
+    final task = PerformanceTelemetry.instance.startTask(
+      'schedule.refresh',
+      args: {
+        'start': start.toIso8601String(),
+        'end': end.toIso8601String(),
+        'origin': origin.name,
+        'applyToVisibleState': applyToVisibleState,
+      },
+    );
 
     var cancellationToken = _updateMutex.token;
 
     scheduleUrl = null;
 
     final cacheTask = PerformanceTelemetry.instance.startTask(
-      'schedule.cache.${start.toIso8601String()}',
+      'schedule.cache',
+      args: {
+        'start': start.toIso8601String(),
+        'end': end.toIso8601String(),
+      },
     );
     var cacheKey = _windowKey(start, end);
     var cachedSchedule = _memoryWeekCache[cacheKey] ??
         await scheduleProvider.getCachedSchedule(start, end);
     _memoryWeekCache[cacheKey] = cachedSchedule;
-    cacheTask.finish();
+    unawaited(cacheTask.finish());
     cancellationToken.throwIfCancelled();
     if (_isDisposed) return false;
 
@@ -450,7 +467,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     final isStale = shouldForceFetch || _isWindowStale(start, end, nowValue);
 
     if (!isStale) {
-      task.finish();
+      unawaited(task.finish());
       return false;
     }
 
@@ -473,7 +490,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     DateTime start,
     DateTime end,
     CancellationToken cancellationToken,
-    developer.TimelineTask task, {
+    PerformanceTelemetryTask task, {
     int? visibleUpdateRequestId,
     bool applyToVisibleState = true,
     ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
@@ -491,8 +508,12 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         _markWindowFetched(start, end, now);
       } on OperationCancelledException {
         return;
-      } catch (e) {
+      } catch (e, stack) {
         print("Schedule update failed: $e");
+        task.setTag('result', 'failed');
+        task.setData('error', '$e');
+        await reportException(e, stack);
+        await task.fail(e);
       }
 
       try {
@@ -542,11 +563,29 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     } catch (error, trace) {
       print("Weekly schedule background refresh failed: $error");
       print(trace);
+      await AppDiagnostics.instance.reportCaughtException(
+        error,
+        trace,
+        message: 'Weekly schedule background refresh failed',
+        tags: {
+          'feature': 'schedule',
+          'origin': origin.name,
+        },
+        contexts: {
+          'schedule_refresh': {
+            'start': start.toIso8601String(),
+            'end': end.toIso8601String(),
+            'applyToVisibleState': applyToVisibleState,
+          },
+        },
+      );
+      await task.fail(error);
     } finally {
       if (applyToVisibleState) {
         _endVisibleUpdateIfCurrent(visibleUpdateRequestId);
       }
-      task.finish();
+      if (task.isFinished) return;
+      await task.finish();
     }
   }
 
