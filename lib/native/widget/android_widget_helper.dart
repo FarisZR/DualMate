@@ -1,3 +1,4 @@
+import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/native/widget/widget_helper.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -33,6 +34,7 @@ class AndroidWidgetHelper implements WidgetHelper {
           'AndroidWidgetHelper.requestWidgetRefresh failed: $exception\n$trace',
         );
       }
+      await reportException(exception, trace);
     }
   }
 

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:dualmate/common/logging/app_diagnostics.dart';
+import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/util/cancelable_mutex.dart';
@@ -114,6 +115,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       notifyIfMounted("initializeFailed");
       print("Weekly schedule init failed: $error");
       print(trace);
+      await reportException(error, trace);
     }
   }
 
@@ -165,6 +167,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       notifyIfMounted("initializeFailed");
       print("Weekly schedule init failed: $error");
       print(trace);
+      await reportException(error, trace);
       ensureUpdateNowTimerRunning();
       _ensureWindowRefreshTimer();
     }
@@ -183,6 +186,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       } catch (error, trace) {
         print("Weekly schedule refresh failed: $error");
         print(trace);
+        await reportException(error, trace);
       }
     });
   }
@@ -210,6 +214,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     } catch (error, trace) {
       print("Weekly schedule widget refresh failed: $error");
       print(trace);
+      await reportException(error, trace);
     }
   }
 
@@ -232,6 +237,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       } catch (error, trace) {
         print("Weekly schedule source refresh failed: $error");
         print(trace);
+        await reportException(error, trace);
       }
     }
   }
@@ -338,6 +344,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     } catch (error, trace) {
       print("Failed to open cached week: $error");
       print(trace);
+      await reportException(error, trace);
     }
   }
 
@@ -505,6 +512,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         print("Schedule update failed: $e");
         task.setTag('result', 'failed');
         task.setData('error', '$e');
+        await reportException(e, StackTrace.current);
       }
 
       try {

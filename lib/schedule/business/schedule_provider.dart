@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 import 'dart:collection';
 
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/schedule/business/schedule_diff_calculator.dart';
 import 'package:dualmate/schedule/business/schedule_filter.dart';
@@ -130,6 +131,13 @@ class ScheduleProvider {
       _cacheWindow(start, end, schedule);
 
       _debugLog("Filtered schedule has ${schedule.entries.length} entries");
+
+      for (final error in updatedSchedule.errors) {
+        await reportException(
+          StateError('Schedule parse error: ${error.object}'),
+          StackTrace.fromString(error.trace),
+        );
+      }
 
       for (var c in _scheduleUpdatedCallbacks) {
         await c(schedule, start, end);

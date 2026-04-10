@@ -1,4 +1,6 @@
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/logging/crash_reporting.dart'
+    as crash_reporting;
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
@@ -13,6 +15,11 @@ import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:test/test.dart';
 
 void main() {
+  tearDown(() {
+    crash_reporting.reportExceptionImpl =
+        crash_reporting.reportExceptionToSentry;
+  });
+
   test('schedule entry changed callbacks run before updated callbacks',
       () async {
     final schedule = Schedule.fromList([
@@ -95,6 +102,45 @@ void main() {
     expect(callbackOrder, ['changed', 'updated']);
     expect(capturedOrigin, ScheduleRefreshOrigin.userBrowsing);
   });
+
+  test('schedule parse errors are reported through crash reporting', () async {
+    final reportedErrors = <Object>[];
+    final reportedTraces = <StackTrace>[];
+    crash_reporting.reportExceptionImpl = (error, trace) async {
+      reportedErrors.add(error);
+      reportedTraces.add(trace);
+    };
+
+    final provider = ScheduleProvider(
+      _FakeScheduleSourceProvider(
+        _FakeScheduleSource(
+          Schedule(),
+          errors: [
+            ParseError('event could not be interpreted', StackTrace.current)
+          ],
+        ),
+      ),
+      _FakeScheduleEntryRepository(),
+      _FakeScheduleQueryInformationRepository(),
+      _FakePreferencesProvider(),
+      _FakeScheduleFilterRepository(),
+    );
+
+    final result = await provider.getUpdatedSchedule(
+      DateTime(2026, 1, 26),
+      DateTime(2026, 2, 2),
+      CancellationToken(),
+    );
+
+    expect(result.errors, hasLength(1));
+    expect(reportedErrors, hasLength(1));
+    expect(reportedErrors.single, isA<StateError>());
+    expect(
+      reportedErrors.single.toString(),
+      contains('event could not be interpreted'),
+    );
+    expect(reportedTraces, hasLength(1));
+  });
 }
 
 class _FakeScheduleSourceProvider implements ScheduleSourceProvider {
@@ -114,8 +160,10 @@ class _FakeScheduleSourceProvider implements ScheduleSourceProvider {
 
 class _FakeScheduleSource implements ScheduleSource {
   final Schedule _schedule;
+  final List<ParseError> _errors;
 
-  _FakeScheduleSource(this._schedule);
+  _FakeScheduleSource(this._schedule, {List<ParseError> errors = const []})
+      : _errors = errors;
 
   @override
   bool canQuery() => true;
@@ -126,7 +174,7 @@ class _FakeScheduleSource implements ScheduleSource {
     DateTime to, [
     CancellationToken? cancellationToken,
   ]) async {
-    return ScheduleQueryResult(_schedule, const []);
+    return ScheduleQueryResult(_schedule, _errors);
   }
 
   @override

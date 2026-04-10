@@ -95,5 +95,5 @@ flutter:
 sentry:
   upload_debug_symbols: true
   upload_source_maps: true
-  project: flutter
-  org: zr-3t
+  project: dualmate
+  org: fariszr

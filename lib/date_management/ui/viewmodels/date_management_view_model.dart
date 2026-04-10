@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/util/cancelable_mutex.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
@@ -753,6 +754,18 @@ class DateManagementViewModel extends BaseViewModel {
       } catch (error, trace) {
         print(error);
         print(trace);
+        await AppDiagnostics.instance.reportCaughtException(
+          error,
+          trace,
+          message: 'Rapla important-events window refresh failed',
+          tags: {'feature': 'date_management'},
+          contexts: {
+            'important_events': {
+              'start': window.start.toIso8601String(),
+              'end': window.end.toIso8601String(),
+            },
+          },
+        );
       }
     });
   }

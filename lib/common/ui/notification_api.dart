@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:math';
 
+import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -79,6 +80,7 @@ class NotificationApi {
         error: error,
         stackTrace: trace,
       );
+      await reportException(error, trace);
       return null;
     }
   }
