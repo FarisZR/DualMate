@@ -622,6 +622,11 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
 
   Widget _buildCurrentWeekButton(BuildContext context) {
     final label = L.of(context).scheduleBackToCurrentWeek;
+    final currentWeekStart = _normalizeWeekStart(viewModel.currentDateStart);
+    final todayWeekStart = _normalizeWeekStart(viewModel.now);
+    final icon = currentWeekStart.isBefore(todayWeekStart)
+        ? Icons.arrow_forward_rounded
+        : Icons.arrow_back_rounded;
 
     return AnimatedSwitcher(
       duration: _currentWeekButtonFadeDuration,
@@ -650,7 +655,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                 heroTag: null,
                 tooltip: label,
                 onPressed: _goToToday,
-                child: const Icon(Icons.arrow_back_rounded),
+                child: Icon(icon),
               ),
             ),
     );
