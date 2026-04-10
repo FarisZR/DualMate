@@ -32,16 +32,27 @@ Future<void> main() async {
   };
 
   final rootApp = RootPage(startupStopwatch: _startupStopwatch);
+  var appStarted = false;
   if (isSentryConfigured()) {
-    await SentryFlutter.init(
-      configureSentryOptions,
-      appRunner: () => runApp(SentryWidget(child: rootApp)),
-    );
-    await AppDiagnostics.instance.recordInfo(
-      'startup',
-      'sentry.initialized',
-      data: {'elapsedMs': _startupStopwatch.elapsedMilliseconds},
-    );
+    try {
+      await SentryFlutter.init(
+        configureSentryOptions,
+        appRunner: () {
+          appStarted = true;
+          runApp(SentryWidget(child: rootApp));
+        },
+      );
+      await AppDiagnostics.instance.recordInfo(
+        'startup',
+        'sentry.initialized',
+        data: {'elapsedMs': _startupStopwatch.elapsedMilliseconds},
+      );
+    } catch (error, trace) {
+      await reportException(error, trace);
+      if (!appStarted) {
+        runApp(rootApp);
+      }
+    }
   } else {
     runApp(rootApp);
   }

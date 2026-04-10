@@ -14,8 +14,8 @@ description: An app for the DHBW Stuttgart
 version: 2.0.0-beta+39
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
-  flutter: ">=3.27.0"
+  sdk: ">=3.10.0 <4.0.0"
+  flutter: ">=3.38.0"
 
 dependencies:
   sentry_flutter: ^9.16.1
