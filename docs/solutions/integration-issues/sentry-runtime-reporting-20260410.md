@@ -22,7 +22,7 @@ Sentry is wired through a small diagnostics layer instead of being called direct
 ### Startup
 - `lib/main.dart` initializes Sentry only when `isSentryConfigured()` returns true.
 - `lib/common/logging/sentry_configuration.dart` resolves DSN, release, and environment from `String.fromEnvironment`.
-- The same file falls back to a built-in DSN so local Android runs still report.
+- The same file trims all values and only enables Sentry when `SENTRY_DSN` is present.
 
 ### Diagnostics seam
 - `lib/common/logging/app_diagnostics.dart` wraps Sentry breadcrumbs, spans, and exception capture.
@@ -38,7 +38,7 @@ Sentry is wired through a small diagnostics layer instead of being called direct
 - Background refreshes, canteen prewarm, widgets, onboarding, and notification helpers also report caught failures through the same seam.
 
 ## Verification
-On device, opening the January 2026 schedule reproduced `Parse exception: Invalid time format`.
+On device, opening the January 2026 schedule reproduced `Parse exception: Invalid time format` once Sentry was enabled.
 
 Logcat showed:
 - `Exception: Bad state: Schedule parse error: Parse exception: Invalid time format`

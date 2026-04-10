@@ -429,7 +429,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
   }) async {
     final task = PerformanceTelemetry.instance.startTask(
-      'schedule.refresh.${start.toIso8601String()}',
+      'schedule.refresh',
       args: {
         'start': start.toIso8601String(),
         'end': end.toIso8601String(),
@@ -443,7 +443,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     scheduleUrl = null;
 
     final cacheTask = PerformanceTelemetry.instance.startTask(
-      'schedule.cache.${start.toIso8601String()}',
+      'schedule.cache',
       args: {
         'start': start.toIso8601String(),
         'end': end.toIso8601String(),
@@ -508,11 +508,12 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         _markWindowFetched(start, end, now);
       } on OperationCancelledException {
         return;
-      } catch (e) {
+      } catch (e, stack) {
         print("Schedule update failed: $e");
         task.setTag('result', 'failed');
         task.setData('error', '$e');
-        await reportException(e, StackTrace.current);
+        await reportException(e, stack);
+        await task.fail(e);
       }
 
       try {

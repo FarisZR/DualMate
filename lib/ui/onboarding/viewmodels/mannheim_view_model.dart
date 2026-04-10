@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/service/mannheim/mannheim_course_scraper.dart';
@@ -37,7 +39,7 @@ class MannheimViewModel extends OnboardingStepViewModel {
     } catch (ex, trace) {
       _courses = [];
       _loadingState = LoadCoursesState.Failed;
-      await reportException(ex, trace);
+      unawaited(reportException(ex, trace));
     }
 
     notifyListeners("loadingState");

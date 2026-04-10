@@ -18,7 +18,7 @@ tags: [sentry, schedule, rapla, parse-error, android, diagnostics]
 The January 2026 Rapla schedule could reproduce `Parse exception: Invalid time format` on device, and the schedule UI showed the incomplete-schedule warning, but the same failure was not initially visible in Sentry.
 
 ## Solution
-Keep Sentry initialized for local/device Android runs by falling back to the configured default DSN when no `SENTRY_DSN` define is passed.
+Keep Sentry gated behind `SENTRY_DSN`, trim all Sentry config values, and forward non-fatal Rapla parser failures through the shared crash-reporting path.
 
 Forward non-fatal Rapla parser failures from `ScheduleQueryResult.errors` through `reportException(...)` in `ScheduleProvider.getUpdatedSchedule(...)` so UI-visible schedule parse problems become Sentry events.
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/dualis/model/credentials.dart';
@@ -38,7 +40,7 @@ class DualisLoginViewModel extends OnboardingStepViewModel {
     } catch (ex, trace) {
       setIsValid(false);
       _passwordOrUsernameWrong = true;
-      await reportException(ex, trace);
+      unawaited(reportException(ex, trace));
     } finally {
       _isLoading = false;
     }

@@ -1,5 +1,6 @@
-import 'dart:developer' as developer;
 import 'dart:collection';
+import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/logging/crash_reporting.dart';
@@ -133,9 +134,11 @@ class ScheduleProvider {
       _debugLog("Filtered schedule has ${schedule.entries.length} entries");
 
       for (final error in updatedSchedule.errors) {
-        await reportException(
-          StateError('Schedule parse error: ${error.object}'),
-          StackTrace.fromString(error.trace),
+        unawaited(
+          reportException(
+            StateError('Schedule parse error: ${error.object}'),
+            StackTrace.fromString(error.trace),
+          ),
         );
       }
 
