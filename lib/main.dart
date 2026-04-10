@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dualmate/ui/root_page.dart';
+import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
+import 'package:dualmate/common/logging/sentry_configuration.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:flutter/material.dart';
@@ -30,20 +32,14 @@ Future<void> main() async {
   };
 
   await SentryFlutter.init(
-    (options) {
-      options.dsn = 'https://c066b6ee9a0627975699781ebdf378bd@o4511192693014528.ingest.de.sentry.io/4511192695046224';
-      // Adds request headers and IP for users, for more info visit:
-      // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
-      options.sendDefaultPii = true;
-      options.enableLogs = true;
-      // Set tracesSampleRate to 1.0 to capture 100% of transactions for tracing.
-      // We recommend adjusting this value in production.
-      options.tracesSampleRate = 1.0;
-      // Configure Session Replay
-      options.replay.sessionSampleRate = 0.1;
-      options.replay.onErrorSampleRate = 1.0;
-    },
-    appRunner: () => runApp(SentryWidget(child: RootPage(startupStopwatch: _startupStopwatch))),
+    configureSentryOptions,
+    appRunner: () => runApp(
+        SentryWidget(child: RootPage(startupStopwatch: _startupStopwatch))),
+  );
+  await AppDiagnostics.instance.recordInfo(
+    'startup',
+    'sentry.initialized',
+    data: {'elapsedMs': _startupStopwatch.elapsedMilliseconds},
   );
   // TODO: Remove this line after sending the first sample event to sentry.
   await Sentry.captureException(StateError('This is a sample exception.'));

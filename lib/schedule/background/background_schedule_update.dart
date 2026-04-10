@@ -1,5 +1,6 @@
 import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
+import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/native/widget/widget_helper.dart';
@@ -44,6 +45,18 @@ class BackgroundScheduleUpdate extends TaskCallback {
       print("Background schedule update failed");
       print(e.innerException.toString());
       print(trace);
+      await AppDiagnostics.instance.reportCaughtException(
+        e,
+        trace,
+        message: 'Background schedule update failed',
+        tags: {'feature': 'schedule'},
+        contexts: {
+          'schedule_update': {
+            'origin': ScheduleRefreshOrigin.backgroundPeriodic.name,
+            'kind': 'query_failed',
+          },
+        },
+      );
       print("Background schedule update status: failure");
       print(
           "Background schedule update next: retry in ${_updateInterval.inHours}h");
@@ -52,6 +65,18 @@ class BackgroundScheduleUpdate extends TaskCallback {
       print("Background schedule update unexpected failure");
       print(e);
       print(trace);
+      await AppDiagnostics.instance.reportCaughtException(
+        e,
+        trace,
+        message: 'Background schedule update unexpected failure',
+        tags: {'feature': 'schedule'},
+        contexts: {
+          'schedule_update': {
+            'origin': ScheduleRefreshOrigin.backgroundPeriodic.name,
+            'kind': 'unexpected',
+          },
+        },
+      );
       print("Background schedule update status: failure");
       print(
           "Background schedule update next: retry in ${_updateInterval.inHours}h");
@@ -64,10 +89,28 @@ class BackgroundScheduleUpdate extends TaskCallback {
       print("Background schedule widget refresh failed");
       print(e);
       print(trace);
+      await AppDiagnostics.instance.reportCaughtException(
+        e,
+        trace,
+        message: 'Background schedule widget refresh failed',
+        tags: {'feature': 'widgets'},
+        contexts: {
+          'widget_refresh': {'task': name},
+        },
+      );
     } catch (e, trace) {
       print("Background schedule widget refresh failed");
       print(e);
       print(trace);
+      await AppDiagnostics.instance.reportCaughtException(
+        e,
+        trace,
+        message: 'Background schedule widget refresh failed',
+        tags: {'feature': 'widgets'},
+        contexts: {
+          'widget_refresh': {'task': name},
+        },
+      );
     }
 
     print("Finished updating schedule");

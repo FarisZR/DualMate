@@ -1,10 +1,13 @@
 import 'dart:ui';
 
 import 'package:dualmate/common/appstart/app_initializer.dart';
+import 'package:dualmate/common/logging/app_diagnostics.dart';
+import 'package:dualmate/common/logging/sentry_configuration.dart';
 import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
 import 'package:flutter/widgets.dart';
 import 'package:kiwi/kiwi.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:workmanager/workmanager.dart';
 
 ///
@@ -111,6 +114,10 @@ class BackgroundWorkScheduler extends WorkSchedulerService {
     try {
       print("Background task started: $taskId with data: $inputData");
 
+      if (!Sentry.isEnabled) {
+        await SentryFlutter.init(configureSentryOptions);
+      }
+
       await initializeApp(true);
 
       WorkSchedulerService scheduler = KiwiContainer().resolve();
@@ -120,6 +127,18 @@ class BackgroundWorkScheduler extends WorkSchedulerService {
       print("Background task failed:");
       print(e);
       print(trace);
+      await AppDiagnostics.instance.reportCaughtException(
+        e,
+        trace,
+        message: 'Background task failed',
+        tags: {'feature': 'background'},
+        contexts: {
+          'background_task': {
+            'taskId': '$taskId',
+            'inputData': inputData?.toString(),
+          },
+        },
+      );
       return false;
     }
 

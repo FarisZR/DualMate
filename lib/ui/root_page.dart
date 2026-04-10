@@ -1,8 +1,8 @@
-import 'dart:developer' as developer;
 import 'dart:async';
 
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/logging/analytics.dart';
+import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/logging/perf_overlay_controller.dart';
 import 'package:dualmate/common/ui/colors.dart';
@@ -24,6 +24,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 ///
 /// This is the top level widget of the app. It handles navigation of the
@@ -53,7 +54,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   static const MethodChannel _navigationChannel =
       MethodChannel('com.fariszr.dualmate/navigation');
   String? _pendingRoute;
-  developer.TimelineTask? _startupTask;
+  PerformanceTelemetryTask? _startupTask;
   bool _perfOverlayLoaded = false;
 
   @override
@@ -204,12 +205,27 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       _applyPendingRoute();
 
       print("Root init: allow first frame ${stopwatch.elapsedMilliseconds}ms");
-      _startupTask?.finish();
+      unawaited(_startupTask?.finish());
       unawaited(_loadRootPreferences(stopwatch));
     } catch (error, trace) {
       print("Root init failed");
       print(error);
       print(trace);
+      unawaited(
+        AppDiagnostics.instance.reportCaughtException(
+          error,
+          trace,
+          message: 'Root init failed',
+          tags: {'feature': 'startup'},
+          contexts: {
+            'startup': {
+              'phase': 'root.initialize',
+              'elapsedMs': widget.startupStopwatch.elapsedMilliseconds,
+            },
+          },
+        ),
+      );
+      unawaited(_startupTask?.fail(error));
 
       if (_rootViewModel == null) {
         _rootViewModel = RootViewModel(
@@ -248,6 +264,17 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       print("Root init: prefs failed");
       print(error);
       print(trace);
+      unawaited(
+        AppDiagnostics.instance.reportCaughtException(
+          error,
+          trace,
+          message: 'Root init: prefs failed',
+          tags: {'feature': 'startup'},
+          contexts: {
+            'startup': {'phase': 'root.preferences'},
+          },
+        ),
+      );
     }
 
     if (!mounted) {
@@ -277,6 +304,17 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       print("Perf overlay load failed");
       print(error);
       print(trace);
+      unawaited(
+        AppDiagnostics.instance.reportCaughtException(
+          error,
+          trace,
+          message: 'Perf overlay load failed',
+          tags: {'feature': 'diagnostics'},
+          contexts: {
+            'diagnostics': {'phase': 'perf_overlay.load'},
+          },
+        ),
+      );
       _perfOverlayLoaded = true;
     }
   }
@@ -288,6 +326,17 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       print("Root init: save language failed");
       print(error);
       print(trace);
+      unawaited(
+        AppDiagnostics.instance.reportCaughtException(
+          error,
+          trace,
+          message: 'Root init: save language failed',
+          tags: {'feature': 'startup'},
+          contexts: {
+            'startup': {'phase': 'language.save'},
+          },
+        ),
+      );
     }
   }
 
@@ -318,25 +367,35 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
           }
           return ValueListenableBuilder<bool>(
             valueListenable: PerformanceOverlayController.enabled,
-            builder: (context, perfEnabled, _) => MaterialApp(
-              theme: ColorPalettes.buildTheme(model.appTheme),
-              showPerformanceOverlay: perfEnabled,
-              initialRoute:
-                  model.isOnboarding ? "onboarding" : _resolveInitialRoute(),
-              navigatorKey: NavigatorKey.rootKey,
-              navigatorObservers: [rootNavigationObserver],
-              localizationsDelegates: [
-                const LocalizationDelegate(),
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-                DefaultCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: const [
-                Locale('en'),
-                Locale('de'),
-              ],
-              onGenerateRoute: generateRoute,
+            builder: (context, perfEnabled, _) => SentryUserInteractionWidget(
+              child: MaterialApp(
+                theme: ColorPalettes.buildTheme(model.appTheme),
+                showPerformanceOverlay: perfEnabled,
+                initialRoute:
+                    model.isOnboarding ? "onboarding" : _resolveInitialRoute(),
+                navigatorKey: NavigatorKey.rootKey,
+                navigatorObservers: [
+                  SentryNavigatorObserver(
+                    setRouteNameAsTransaction: true,
+                    enableAutoTransactions: true,
+                    autoFinishAfter: const Duration(seconds: 5),
+                    ignoreRoutes: const ['main'],
+                  ),
+                  rootNavigationObserver,
+                ],
+                localizationsDelegates: [
+                  const LocalizationDelegate(),
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                  DefaultCupertinoLocalizations.delegate,
+                ],
+                supportedLocales: const [
+                  Locale('en'),
+                  Locale('de'),
+                ],
+                onGenerateRoute: generateRoute,
+              ),
             ),
           );
         },
@@ -405,6 +464,17 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       print("Root init: deferred background failed");
       print(error);
       print(trace);
+      unawaited(
+        AppDiagnostics.instance.reportCaughtException(
+          error,
+          trace,
+          message: 'Root init: deferred background failed',
+          tags: {'feature': 'startup'},
+          contexts: {
+            'startup': {'phase': 'background.initialize'},
+          },
+        ),
+      );
     }
   }
 
@@ -415,6 +485,17 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       print("Root init: foreground heavy failed");
       print(error);
       print(trace);
+      unawaited(
+        AppDiagnostics.instance.reportCaughtException(
+          error,
+          trace,
+          message: 'Root init: foreground heavy failed',
+          tags: {'feature': 'startup'},
+          contexts: {
+            'startup': {'phase': 'foreground_heavy.initialize'},
+          },
+        ),
+      );
     }
   }
 
@@ -435,6 +516,17 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       print("Root init: canteen prewarm failed");
       print(error);
       print(trace);
+      unawaited(
+        AppDiagnostics.instance.reportCaughtException(
+          error,
+          trace,
+          message: 'Root init: canteen prewarm failed',
+          tags: {'feature': 'canteen'},
+          contexts: {
+            'canteen': {'phase': 'startup_prewarm'},
+          },
+        ),
+      );
     }
   }
 
@@ -448,6 +540,17 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       print("Root init: schedule cache warm failed");
       print(error);
       print(trace);
+      unawaited(
+        AppDiagnostics.instance.reportCaughtException(
+          error,
+          trace,
+          message: 'Root init: schedule cache warm failed',
+          tags: {'feature': 'schedule'},
+          contexts: {
+            'schedule': {'phase': 'startup_cache_warm'},
+          },
+        ),
+      );
     }
   }
 
