@@ -137,7 +137,7 @@ class _CalendarEventsPageState extends State<CalendarEventsPage> {
         _calendar.id,
         RetrieveEventsParams(startDate: startDate, endDate: endDate));
     setState(() {
-      _calendarEvents = calendarEventsResult.data as List<Event>;
+      _calendarEvents = calendarEventsResult.data?.toList() ?? [];
       _isLoading = false;
     });
   }

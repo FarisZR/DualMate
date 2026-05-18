@@ -70,9 +70,8 @@ class RecurrenceRule {
     }
 
     List<dynamic>? daysOfWeekValues = json[_daysOfWeekKey];
-    if (daysOfWeekValues != null && daysOfWeekValues is! List<int>) {
+    if (daysOfWeekValues != null && daysOfWeekValues is List<int>) {
       daysOfWeek = daysOfWeekValues
-          .cast<int>()
           .map((value) => value.getDayOfWeekEnumValue)
           .toList();
     }

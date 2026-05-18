@@ -62,7 +62,7 @@ class DeviceCalendarPlugin {
       evaluateResponse: (rawData) => UnmodifiableListView(
         json.decode(rawData).map<Calendar>(
               (decodedCalendar) => Calendar.fromJson(decodedCalendar),
-            ),
+            ).toList(),
       ),
     );
   }
@@ -113,7 +113,8 @@ class DeviceCalendarPlugin {
       evaluateResponse: (rawData) => UnmodifiableListView(
         json
             .decode(rawData)
-            .map<Event>((decodedEvent) => Event.fromJson(decodedEvent)),
+            .map<Event>((decodedEvent) => Event.fromJson(decodedEvent))
+            .toList(),
       ),
     );
   }
@@ -363,8 +364,10 @@ class DeviceCalendarPlugin {
       } else {
         result.data = rawData;
       }
+    } on Exception catch (e) {
+      _parsePlatformExceptionAndUpdateResult<T>(e, result);
     } catch (e) {
-      _parsePlatformExceptionAndUpdateResult<T>(e as Exception?, result);
+      _parsePlatformExceptionAndUpdateResult<T>(null, result);
     }
 
     return result;

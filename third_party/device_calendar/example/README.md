@@ -21,7 +21,7 @@ For a full API reference, the documentation can be found at [pub.dev](https://pu
     [DayOfWeek.Saturday, DayOfWeek.Sunday];
     ```
 
-* `DayOfWeekGroup.Alldays.getDays` will return:
+* `DayOfWeekGroup.AllDays.getDays` will return:
 
     ```dart
     [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday];

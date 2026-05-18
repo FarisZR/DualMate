@@ -17,7 +17,7 @@ enum DayOfWeekGroup {
 
 enum MonthOfYear {
   January,
-  Feburary,
+  February,
   March,
   April,
   May,
@@ -130,7 +130,7 @@ extension MonthOfYearExtension on MonthOfYear {
     switch (val) {
       case MonthOfYear.January:
         return 1;
-      case MonthOfYear.Feburary:
+      case MonthOfYear.February:
         return 2;
       case MonthOfYear.March:
         return 3;
@@ -218,7 +218,7 @@ extension IntExtensions on int {
       case 1:
         return MonthOfYear.January;
       case 2:
-        return MonthOfYear.Feburary;
+        return MonthOfYear.February;
       case 3:
         return MonthOfYear.March;
       case 4:

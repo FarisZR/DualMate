@@ -5,7 +5,7 @@ class ErrorMessages {
       'Calendar ID is missing or invalid';
 
   static const String invalidRetrieveEventsParams =
-      'A valid instance of the RetrieveEventsParams class is required. Must the event ids to filter by or the start and end date to filter by or a combination of these';
+      'A valid instance of the RetrieveEventsParams class is required. Provide event ids to filter by, or a start and end date range, or a combination of both.';
   static const String deleteEventInvalidArgumentsMessage =
       'Calendar ID and/or Event ID argument(s) have not been specified or are invalid';
   static const String createOrUpdateEventInvalidArgumentsMessageAllDay =

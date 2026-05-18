@@ -144,7 +144,7 @@ class _CalendarsPageState extends State<CalendarsPage> {
 
       final calendarsResult = await _deviceCalendarPlugin.retrieveCalendars();
       setState(() {
-        _calendars = calendarsResult.data as List<Calendar>;
+        _calendars = calendarsResult.data?.toList() ?? [];
       });
     } on PlatformException catch (e) {
       print(e);

@@ -88,23 +88,23 @@ class Event {
     int? startTimestamp;
     int? endTimestamp;
     bool legacyJSON = false;
-    var legacyName = {
-      title: 'title',
-      description: 'description',
-      startTimestamp: 'start',
-      endTimestamp: 'end',
-      startLocationName: 'startTimeZone',
-      endLocationName: 'endTimeZone',
-      allDay: 'allDay',
-      location: 'location',
-      foundUrl: 'url',
-    };
-    legacyName.forEach((key, value) {
-      if (json[value] != null) {
-        key = json[value];
+    const legacyFields = [
+      'title',
+      'description',
+      'start',
+      'end',
+      'startTimeZone',
+      'endTimeZone',
+      'allDay',
+      'location',
+      'url',
+    ];
+    for (final field in legacyFields) {
+      if (json[field] != null) {
         legacyJSON = true;
+        break;
       }
-    });
+    }
 
     eventId = json['eventId'];
     calendarId = json['calendarId'];
