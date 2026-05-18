@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:dualmate/dualis/service/parsing/parsing_utils.dart';
 import 'package:dualmate/dualis/service/parsing/study_grades_from_student_results_page_extract.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 Future<void> main() async {
   var studentResultsPage = await File(Directory.current.absolute.path +

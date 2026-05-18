@@ -91,7 +91,7 @@ class NotificationApi {
     DidReceiveNotificationResponseCallback onDidReceiveNotificationResponse,
   ) {
     return plugin.initialize(
-      settings,
+      settings: settings,
       onDidReceiveNotificationResponse: onDidReceiveNotificationResponse,
     );
   }
@@ -133,10 +133,10 @@ class NotificationApi {
 
     await _localNotificationsPlugin.show(
       // TODO: This is a quick and dirty fix. Find a better solution in the future
-      id ?? Random().nextInt(1 << 30),
-      title,
-      message,
-      platformChannelSpecifics,
+      id: id ?? Random().nextInt(1 << 30),
+      title: title,
+      body: message,
+      notificationDetails: platformChannelSpecifics,
       payload: "",
     );
   }

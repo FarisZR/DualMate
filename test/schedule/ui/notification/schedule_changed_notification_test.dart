@@ -3,7 +3,7 @@ import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/schedule/business/schedule_diff_calculator.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/ui/notification/schedule_changed_notification.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   final fixedNow = DateTime(2026, 3, 8, 12);

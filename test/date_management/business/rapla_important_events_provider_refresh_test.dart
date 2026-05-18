@@ -6,7 +6,7 @@ import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('rapla refresh uses a silent foreground maintenance origin', () async {

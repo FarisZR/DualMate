@@ -1,11 +1,15 @@
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 class PlatformUtil {
+  static FlutterView _implicitView() =>
+      WidgetsBinding.instance.platformDispatcher.implicitView!;
+
   static bool isPhone() {
-    final data = MediaQueryData.fromView(WidgetsBinding.instance.window);
+    final data = MediaQueryData.fromView(_implicitView());
     return data.size.shortestSide < 600;
   }
 
@@ -18,7 +22,7 @@ class PlatformUtil {
   }
 
   static Brightness platformBrightness() {
-    final data = MediaQueryData.fromView(WidgetsBinding.instance.window);
+    final data = MediaQueryData.fromView(_implicitView());
     return data.platformBrightness;
   }
 

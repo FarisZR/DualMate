@@ -28,6 +28,41 @@ class SelectSourceDialog {
   }
 
   SimpleDialog _buildDialog(BuildContext context) {
+    final radioGroup = RadioGroup<ScheduleSourceType>(
+      groupValue: _currentScheduleSource,
+      onChanged: (value) {
+        if (value != null) {
+          sourceSelected(value, context);
+        }
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          RadioListTile<ScheduleSourceType>(
+            value: ScheduleSourceType.Rapla,
+            toggleable: true,
+            title: Text(L.of(context).scheduleSourceTypeRapla),
+          ),
+          RadioListTile<ScheduleSourceType>(
+            value: ScheduleSourceType.Dualis,
+            title: Text(L.of(context).scheduleSourceTypeDualis),
+          ),
+          RadioListTile<ScheduleSourceType>(
+            value: ScheduleSourceType.Mannheim,
+            title: Text(L.of(context).scheduleSourceTypeMannheim),
+          ),
+          RadioListTile<ScheduleSourceType>(
+            value: ScheduleSourceType.Ical,
+            title: Text(L.of(context).scheduleSourceTypeIcal),
+          ),
+          RadioListTile<ScheduleSourceType>(
+            value: ScheduleSourceType.None,
+            title: Text(L.of(context).scheduleSourceTypeNone),
+          ),
+        ],
+      ),
+    );
+
     return SimpleDialog(
       title: Text(L.of(context).onboardingScheduleSourceTitle),
       children: <Widget>[
@@ -38,47 +73,7 @@ class SelectSourceDialog {
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
-        RadioListTile<ScheduleSourceType>(
-          groupValue: _currentScheduleSource,
-          value: ScheduleSourceType.Rapla,
-          toggleable: true,
-          onChanged: (_) {
-            sourceSelected(ScheduleSourceType.Rapla, context);
-          },
-          title: Text(L.of(context).scheduleSourceTypeRapla),
-        ),
-        RadioListTile<ScheduleSourceType>(
-          groupValue: _currentScheduleSource,
-          value: ScheduleSourceType.Dualis,
-          onChanged: (v) {
-            if (v != null) sourceSelected(v, context);
-          },
-          title: Text(L.of(context).scheduleSourceTypeDualis),
-        ),
-        RadioListTile<ScheduleSourceType>(
-          groupValue: _currentScheduleSource,
-          value: ScheduleSourceType.Mannheim,
-          onChanged: (v) {
-            if (v != null) sourceSelected(v, context);
-          },
-          title: Text(L.of(context).scheduleSourceTypeMannheim),
-        ),
-        RadioListTile<ScheduleSourceType>(
-          groupValue: _currentScheduleSource,
-          value: ScheduleSourceType.Ical,
-          onChanged: (v) {
-            if (v != null) sourceSelected(v, context);
-          },
-          title: Text(L.of(context).scheduleSourceTypeIcal),
-        ),
-        RadioListTile<ScheduleSourceType>(
-          groupValue: _currentScheduleSource,
-          value: ScheduleSourceType.None,
-          onChanged: (v) {
-            if (v != null) sourceSelected(v, context);
-          },
-          title: Text(L.of(context).scheduleSourceTypeNone),
-        )
+        radioGroup,
       ],
     );
   }

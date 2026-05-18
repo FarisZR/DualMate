@@ -5,7 +5,7 @@ import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 import 'package:dualmate/schedule/data/schedule_query_information_repository.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('cached schedules are reused across multiple windows', () async {

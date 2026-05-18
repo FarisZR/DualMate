@@ -7,7 +7,7 @@ import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:fake_async/fake_async.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('delayed calendar sync uses a silent foreground maintenance origin', () {

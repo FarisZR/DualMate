@@ -36,16 +36,17 @@ dependencies:
   shared_preferences: ^2.5.5
   url_launcher: ^6.3.2
   kiwi: ^5.0.1
-  flutter_local_notifications: ^18.0.1
+  flutter_local_notifications: ^21.0.0
   workmanager: ^0.9.0+3
   in_app_review: ^2.0.12
   flutter_secure_storage: ^10.2.0
   animations: ^2.2.0
   mutex: ^3.1.0
-  device_calendar: ^4.3.3
+  device_calendar:
+    path: third_party/device_calendar
   flutter_widgetkit: ^1.0.3
   flutter_app_group_directory: ^1.1.0
-  timezone: ^0.9.4
+  timezone: ^0.11.0
   dualmate_widget_bridge:
     path: third_party/dualmate_widget_bridge
 
@@ -56,12 +57,7 @@ dev_dependencies:
   integration_test:
     sdk: flutter
 
-  test: ^1.29.0
-
 dependency_overrides:
-  win32: ^6.2.0
-  path_provider_android:
-    path: third_party/path_provider_android
 
 
 

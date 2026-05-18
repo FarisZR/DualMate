@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:dualmate/dualis/service/parsing/exams_from_module_details_extract.dart';
 import 'package:dualmate/dualis/model/exam_grade.dart';
 import 'package:dualmate/dualis/service/parsing/parsing_utils.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 Future<void> main() async {
   var moduleDetailsPage = await File(Directory.current.absolute.path +

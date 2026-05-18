@@ -83,7 +83,9 @@ class ColorPalettes {
 
     var brightness = isDark ? Brightness.dark : Brightness.light;
 
-    var baseTheme = isDark ? ThemeData.dark() : ThemeData.light();
+    var baseTheme = isDark
+        ? ThemeData.dark(useMaterial3: true)
+        : ThemeData.light(useMaterial3: true);
     var lightSurface = const Color(0xFFFFFFFF);
     var darkSurface = const Color(0xFF1E1E1E);
     var lightBackground = const Color(0xFFFFFFFF);
@@ -101,7 +103,6 @@ class ColorPalettes {
 
     var themeData = baseTheme.copyWith(
       brightness: brightness,
-      useMaterial3: true,
       applyElevationOverlayColor: false,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: isDark ? darkBackground : lightBackground,

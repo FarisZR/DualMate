@@ -64,7 +64,5 @@ refresh windows working while removing low-value notification noise.
 
 # Notes
 
-- A full `flutter analyze` still reports unrelated pre-existing issues under
-  `third_party/path_provider_android/pigeons/messages.dart` because `pigeon`
-  tooling types are not available in the current workspace analyze baseline.
-  Targeted analyze for the touched notification files is clean.
+- `flutter analyze lib test` is clean on the current Flutter SDK and dependency
+  set.

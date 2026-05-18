@@ -1,5 +1,5 @@
 import 'package:dualmate/schedule/service/rapla/rapla_schedule_source.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('debugging', () async {

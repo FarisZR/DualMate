@@ -1,6 +1,6 @@
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('WidgetScheduleEntryPayload parses map values', () {

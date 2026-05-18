@@ -33,7 +33,6 @@ Future<void> configureSentryOptions(SentryFlutterOptions options) async {
   options.enableUserInteractionTracing = true;
   options.attachScreenshot = false;
   options.tracesSampleRate = kReleaseMode ? 0.1 : 1.0;
-  options.profilesSampleRate = kReleaseMode ? 0.0 : 1.0;
   options.replay.sessionSampleRate = kReleaseMode ? 0.0 : 0.1;
   options.replay.onErrorSampleRate = kReleaseMode ? 0.2 : 1.0;
 }

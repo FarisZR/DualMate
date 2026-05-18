@@ -1,5 +1,5 @@
 import 'package:dualmate/canteen/service/allergen_legend.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('Allergen legend resolves known codes', () {

@@ -49,11 +49,10 @@ void main() {
   });
 
   testWidgets('uses list layout on tablets', (WidgetTester tester) async {
-    final binding = TestWidgetsFlutterBinding.ensureInitialized();
-    binding.window.physicalSizeTestValue = const Size(1200, 800);
-    binding.window.devicePixelRatioTestValue = 1.0;
-    addTearDown(binding.window.clearPhysicalSizeTestValue);
-    addTearDown(binding.window.clearDevicePixelRatioTestValue);
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
     final viewModel = _buildViewModel(
       useDhMineForDates: false,

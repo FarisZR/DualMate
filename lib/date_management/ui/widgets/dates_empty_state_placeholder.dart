@@ -19,7 +19,7 @@ class DatesEmptyStatePlaceholder extends StatelessWidget {
           child: CustomPaint(
             painter: _DatesPlaceholderPainter(
               cardColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-              accentColor: colorScheduleEntryClass(context).withOpacity(0.12),
+              accentColor: colorScheduleEntryClass(context).withValues(alpha: 0.12),
             ),
             child: Container(),
           ),

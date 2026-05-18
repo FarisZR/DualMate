@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:dualmate/canteen/model/meal_type.dart';
 import 'package:dualmate/canteen/service/canteen_parser.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 Future<void> main() async {
   var html = await File(Directory.current.absolute.path +
