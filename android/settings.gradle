@@ -1,21 +1,4 @@
 pluginManagement {
-    // Respect JAVA_HOME if set, but avoid accessing javaHome on StartParameter when not supported (Gradle 8+).
-    def javaHomeEnv = System.getenv("JAVA_HOME")
-    if (javaHomeEnv) {
-        def javaHomeFile = file(javaHomeEnv)
-        if (javaHomeFile.exists()) {
-            if (gradle.startParameter.metaClass.hasProperty(gradle.startParameter, 'javaHome')) {
-                gradle.startParameter.javaHome = javaHomeFile
-            } else {
-                System.setProperty('java.home', javaHomeFile.absolutePath)
-            }
-        } else {
-            println "WARNING: JAVA_HOME is set to ${javaHomeEnv} but path does not exist. Gradle will fallback to system defaults."
-        }
-    } else {
-        // No JAVA_HOME: Gradle will use the system-installed Java (e.g., provided by dnf) or the java on PATH.
-    }
-
     def flutterSdkPath = {
         def properties = new Properties()
         file("local.properties").withInputStream { properties.load(it) }
