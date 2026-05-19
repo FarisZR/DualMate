@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/service/ical/ical_parser.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 Future<void> main() async {
   var icalFile = await File(Directory.current.absolute.path +

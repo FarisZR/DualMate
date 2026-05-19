@@ -39,6 +39,7 @@ class _MainPageState extends State<MainPage> {
   int? _pendingDrawerNavigationIndex;
   Timer? _initialSectionLoadTimer;
   Timer? _pendingNavigationTimer;
+  int _pendingNavigationGeneration = 0;
   final ValueNotifier<int> _currentEntryIndex = ValueNotifier<int>(0);
   final ValueNotifier<bool> _isDrawerOpen = ValueNotifier<bool>(false);
   final Map<int, Widget> _sectionCache = {};
@@ -72,7 +73,7 @@ class _MainPageState extends State<MainPage> {
     MainSectionController.instance.routeSignal
         .removeListener(_handleExternalRouteRequest);
     _initialSectionLoadTimer?.cancel();
-    _pendingNavigationTimer?.cancel();
+    _cancelPendingNavigation(clearPendingIndex: true);
     _isDrawerOpen.dispose();
     _currentEntryIndex.dispose();
     super.dispose();
@@ -242,11 +243,12 @@ class _MainPageState extends State<MainPage> {
     return drawerEntries;
   }
 
-  void _onNavigationTapped(int index) {
+  void _onNavigationTapped(int index, bool fromDrawer) {
     PerformanceTelemetry.instance
         .markNavEvent(name: "drawer.tab.${navigationEntries[index].route}");
 
-    if (!PlatformUtil.isTablet() && _isDrawerOpen.value) {
+    if (fromDrawer) {
+      _cancelPendingNavigation();
       _pendingDrawerNavigationIndex = index;
       return;
     }
@@ -257,14 +259,24 @@ class _MainPageState extends State<MainPage> {
   void _applyPendingDrawerNavigation() {
     final pendingIndex = _pendingDrawerNavigationIndex;
     _pendingDrawerNavigationIndex = null;
-    _pendingNavigationTimer?.cancel();
     if (pendingIndex == null || pendingIndex == _currentEntryIndex.value) {
       return;
     }
 
-    _pendingNavigationTimer = Timer(_drawerCloseNavigationDelay, () {
-      if (!mounted) return;
-      _setCurrentEntryIndex(pendingIndex);
+    _cancelPendingNavigation();
+    final generation = _pendingNavigationGeneration;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || generation != _pendingNavigationGeneration) {
+        return;
+      }
+
+      _pendingNavigationTimer = Timer(_drawerCloseNavigationDelay, () {
+        if (!mounted || generation != _pendingNavigationGeneration) {
+          return;
+        }
+        _setCurrentEntryIndex(pendingIndex);
+      });
     });
   }
 
@@ -287,11 +299,21 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _setCurrentEntryIndex(int index) {
+    _cancelPendingNavigation(clearPendingIndex: true);
     if (index < 0 || index >= navigationEntries.length) return;
     if (_loadedSections.add(index) && mounted) {
       setState(() {});
     }
     _currentEntryIndex.value = index;
+  }
+
+  void _cancelPendingNavigation({bool clearPendingIndex = false}) {
+    _pendingNavigationGeneration += 1;
+    _pendingNavigationTimer?.cancel();
+    _pendingNavigationTimer = null;
+    if (clearPendingIndex) {
+      _pendingDrawerNavigationIndex = null;
+    }
   }
 
   void _ensureCurrentSectionLoaded() {

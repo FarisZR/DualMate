@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:dualmate/dualis/service/parsing/monthly_schedule_extract.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 Future<void> main() async {
   var monthlySchedulePage = await File(Directory.current.absolute.path +

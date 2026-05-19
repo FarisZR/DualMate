@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:dualmate/date_management/service/parsing/all_dates_extract.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 Future<void> main() async {
   var allDatesPage = await File(Directory.current.absolute.path +

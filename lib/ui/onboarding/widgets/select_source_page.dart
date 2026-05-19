@@ -42,40 +42,38 @@ class SelectSourcePage extends StatelessWidget {
             ),
             Expanded(
               child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    buildScheduleTypeRadio(
-                      viewModel,
-                      context,
-                      ScheduleSourceType.Rapla,
-                      L.of(context).scheduleSourceTypeRapla,
-                    ),
-                    buildScheduleTypeRadio(
-                      viewModel,
-                      context,
-                      ScheduleSourceType.Dualis,
-                      L.of(context).scheduleSourceTypeDualis,
-                    ),
-                    buildScheduleTypeRadio(
-                      viewModel,
-                      context,
-                      ScheduleSourceType.Mannheim,
-                      "DHBW Mannheim",
-                    ),
-                    buildScheduleTypeRadio(
-                      viewModel,
-                      context,
-                      ScheduleSourceType.Ical,
-                      L.of(context).scheduleSourceTypeIcal,
-                    ),
-                    buildScheduleTypeRadio(
-                      viewModel,
-                      context,
-                      ScheduleSourceType.None,
-                      L.of(context).scheduleSourceTypeNone,
-                    )
-                  ],
+                child: RadioGroup<ScheduleSourceType>(
+                  groupValue: viewModel.scheduleSourceType,
+                  onChanged: (value) {
+                    if (value != null) {
+                      viewModel.setScheduleSourceType(value);
+                    }
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      buildScheduleTypeRadio(
+                        ScheduleSourceType.Rapla,
+                        L.of(context).scheduleSourceTypeRapla,
+                      ),
+                      buildScheduleTypeRadio(
+                        ScheduleSourceType.Dualis,
+                        L.of(context).scheduleSourceTypeDualis,
+                      ),
+                      buildScheduleTypeRadio(
+                        ScheduleSourceType.Mannheim,
+                        "DHBW Mannheim",
+                      ),
+                      buildScheduleTypeRadio(
+                        ScheduleSourceType.Ical,
+                        L.of(context).scheduleSourceTypeIcal,
+                      ),
+                      buildScheduleTypeRadio(
+                        ScheduleSourceType.None,
+                        L.of(context).scheduleSourceTypeNone,
+                      )
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -93,18 +91,10 @@ class SelectSourcePage extends StatelessWidget {
   }
 
   RadioListTile<ScheduleSourceType> buildScheduleTypeRadio(
-      SelectSourceViewModel viewModel,
-      BuildContext context,
-      ScheduleSourceType type,
-      String title) {
+      ScheduleSourceType type, String title) {
     return RadioListTile(
-      value: type, //model.useDualis,
-      onChanged: (value) {
-        if (value == null) return;
-        viewModel.setScheduleSourceType(value);
-      },
+      value: type,
       title: Text(title),
-      groupValue: viewModel.scheduleSourceType,
     );
   }
 }

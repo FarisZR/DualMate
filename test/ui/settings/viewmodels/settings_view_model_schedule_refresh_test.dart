@@ -7,7 +7,7 @@ import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
 import 'package:dualmate/ui/settings/viewmodels/settings_view_model.dart';
 import 'package:kiwi/kiwi.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   setUp(() {

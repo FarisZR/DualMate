@@ -1,6 +1,6 @@
 import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:sentry/sentry.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('recordNavigation adds a navigation breadcrumb', () async {

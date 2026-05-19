@@ -98,7 +98,7 @@ class ImportantEventSectionCard extends StatelessWidget {
     if (_isExamSection(section)) {
       final isDark = Theme.of(context).brightness == Brightness.dark;
       final opacity = isDark ? 0.22 : 0.12;
-      return const Color(0xffff0000).withOpacity(opacity);
+      return const Color(0xffff0000).withValues(alpha: opacity);
     }
 
     return Theme.of(context).colorScheme.surfaceContainerHighest;

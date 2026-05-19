@@ -1,5 +1,5 @@
 import 'package:dualmate/schedule/ui/viewmodels/schedule_update_request_gate.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('allows initial request', () {

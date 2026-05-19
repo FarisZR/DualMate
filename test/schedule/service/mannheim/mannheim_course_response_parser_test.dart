@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:dualmate/schedule/service/mannheim/mannheim_course_response_parser.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 Future<void> main() async {
   var coursePage = await File(Directory.current.absolute.path +

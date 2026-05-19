@@ -34,37 +34,30 @@ class SelectThemeDialog {
             Set<String>? properties,
           ) {
             if (model == null) return Container();
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                RadioListTile<AppTheme>(
-                  title: Text(L.of(context).selectThemeLight),
-                  value: AppTheme.Light,
-                  groupValue: _rootViewModel.appTheme,
-                  onChanged: (v) {
-                    if (v == null) return;
-                    _rootViewModel.setAppTheme(v);
-                  },
-                ),
-                RadioListTile<AppTheme>(
-                  title: Text(L.of(context).selectThemeDark),
-                  value: AppTheme.Dark,
-                  groupValue: _rootViewModel.appTheme,
-                  onChanged: (v) {
-                    if (v == null) return;
-                    _rootViewModel.setAppTheme(v);
-                  },
-                ),
-                RadioListTile<AppTheme>(
-                  title: Text(L.of(context).selectThemeSystem),
-                  value: AppTheme.System,
-                  groupValue: _rootViewModel.appTheme,
-                  onChanged: (v) {
-                    if (v == null) return;
-                    _rootViewModel.setAppTheme(v);
-                  },
-                ),
-              ],
+            return RadioGroup<AppTheme>(
+              groupValue: _rootViewModel.appTheme,
+              onChanged: (value) {
+                if (value != null) {
+                  _rootViewModel.setAppTheme(value);
+                }
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RadioListTile<AppTheme>(
+                    title: Text(L.of(context).selectThemeLight),
+                    value: AppTheme.Light,
+                  ),
+                  RadioListTile<AppTheme>(
+                    title: Text(L.of(context).selectThemeDark),
+                    value: AppTheme.Dark,
+                  ),
+                  RadioListTile<AppTheme>(
+                    title: Text(L.of(context).selectThemeSystem),
+                    value: AppTheme.System,
+                  ),
+                ],
+              ),
             );
           },
         ),

@@ -18,8 +18,6 @@ class GradeStateIcon extends StatelessWidget {
         return const Icon(Icons.close, color: Colors.red);
       case ExamState.Pending:
         return Container();
-      default:
-        return Container();
     }
   }
 }

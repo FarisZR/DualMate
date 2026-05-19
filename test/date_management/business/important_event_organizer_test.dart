@@ -1,7 +1,7 @@
 import 'package:dualmate/date_management/business/important_event_organizer.dart';
 import 'package:dualmate/date_management/model/important_event.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('Groups exams under exam week', () {

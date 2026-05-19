@@ -1,6 +1,6 @@
 import 'package:dualmate/date_management/model/important_event.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('ImportantEvent identifies single day events', () {

@@ -1,5 +1,5 @@
 import 'package:dualmate/common/util/string_utils.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('String interpolation', () async {

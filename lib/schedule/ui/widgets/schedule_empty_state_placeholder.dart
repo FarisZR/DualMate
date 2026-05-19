@@ -40,8 +40,9 @@ class ScheduleEmptyStatePlaceholder extends StatelessWidget {
                     columns: columns,
                     rows: rows,
                     gridColor: colorScheduleGridGridLines(context),
-                    accentColor:
-                        colorScheduleEntryClass(context).withOpacity(0.12),
+                    accentColor: colorScheduleEntryClass(context).withValues(
+                      alpha: 0.12,
+                    ),
                   ),
                   child: Container(),
                 ),
