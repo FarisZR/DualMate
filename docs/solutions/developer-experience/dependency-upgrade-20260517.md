@@ -25,13 +25,13 @@ The app's Flutter package lockfile had drifted behind the latest versions that a
 4. Updated explicit `pubspec.yaml` constraints for the direct packages that resolved to newer compatible versions.
 5. Removed the direct `test` dependency and converted pure Dart tests to `flutter_test`, which eliminated the temporary `matcher` / `test_api` / `test_core` override stack.
 6. Replaced the temporary `path_provider_android` override with the upstream hosted package once the newer Flutter SDK resolved it cleanly.
-7. Vendored `device_calendar 4.3.3` under `third_party/device_calendar` and widened only its `timezone` constraint so the app can use `flutter_local_notifications 21.x` without any root-level dependency override.
-8. Updated `lib/common/ui/notification_api.dart` for the `flutter_local_notifications 21.x` named-argument API.
+7. Kept `flutter_local_notifications` on `^18.0.1` and `device_calendar` on the published `^4.3.3` release; bumped `timezone` to `^0.9.4` to satisfy both. Moving to `flutter_local_notifications 21.x` was evaluated but abandoned because `device_calendar 4.3.3` pins `timezone` to `^0.9.x`, which conflicts with the `^0.11.0` requirement of 21.x.
+8. Updated `lib/common/ui/notification_api.dart` to use positional arguments to align with the `flutter_local_notifications 18.x` API (reverting an earlier attempt to migrate to the 21.x named-argument API).
 9. Cleaned up Flutter deprecations in app and test code (`RadioGroup`, `WidgetTester.view`, `withValues`, theme construction, and view access helpers).
 10. Revalidated the app with `flutter test` and scoped Flutter analysis.
 
 ## Notes
 - The final project state no longer needs any `dependency_overrides` in the root `pubspec.yaml`.
-- `device_calendar` is still vendored locally because the published `4.3.3` package constrains `timezone` too tightly for `flutter_local_notifications 21.x`.
+- `flutter_local_notifications` remains on `^18.0.1` because upgrading to `21.x` would require `timezone ^0.11.0`, conflicting with the `timezone ^0.9.x` constraint of `device_calendar 4.3.3`.
 - `flutter upgrade` can fail on this machine if `/tmp` is full because Flutter's tool update path writes pub downloads there first; rerun with extra temp capacity available if that happens again.
 - Root-level `flutter analyze lib test` is clean on the upgraded SDK and dependency set.
