@@ -1,7 +1,7 @@
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:flutter/material.dart';
 
-typedef NavigationItemOnTap = Function(int index);
+typedef NavigationItemOnTap = void Function(int index, bool fromDrawer);
 
 ///
 /// This widget builds the content of the navigation drawer. It takes a list of
@@ -97,7 +97,7 @@ class MyNavigationDrawer extends StatelessWidget {
           key: ValueKey<String>("drawer_item_$drawerKeyName"),
           borderRadius: BorderRadius.circular(8),
           onTap: () {
-            onTap(index);
+            onTap(index, isInDrawer);
 
             if (isInDrawer) {
               Navigator.of(context).pop();

@@ -110,7 +110,7 @@ class OnboardingPageBackground extends StatelessWidget {
                     offset: Offset(bottomBackground.value, 20),
                     child: Transform.scale(
                       scale: 1.5,
-                      child: Image.asset(
+                      child: _buildDecorImage(
                         background[Theme.of(context).brightness] ??
                             background[Brightness.light]!,
                       ),
@@ -129,7 +129,7 @@ class OnboardingPageBackground extends StatelessWidget {
                     offset: Offset(bottomForeground.value, 20),
                     child: Transform.scale(
                       scale: 1.5,
-                      child: Image.asset(
+                      child: _buildDecorImage(
                         foreground[Theme.of(context).brightness] ??
                             foreground[Brightness.light]!,
                       ),
@@ -139,6 +139,13 @@ class OnboardingPageBackground extends StatelessWidget {
               )
             : Container(),
       ],
+    );
+  }
+
+  Widget _buildDecorImage(String assetName) {
+    return Image.asset(
+      assetName,
+      errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
     );
   }
 

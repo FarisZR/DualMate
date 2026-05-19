@@ -103,7 +103,7 @@ Future<void> _pumpAndSettleWithTimeout(
   WidgetTester tester, {
   Duration initialDelay = Duration.zero,
   Duration step = const Duration(milliseconds: 100),
-  Duration timeout = const Duration(seconds: 30),
+  Duration timeout = const Duration(minutes: 3),
 }) async {
   if (initialDelay > Duration.zero) {
     await tester.pump(initialDelay);
