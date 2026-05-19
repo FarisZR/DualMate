@@ -4,83 +4,90 @@ import 'package:dualmate/dualis/model/exam_grade.dart';
 import 'package:dualmate/dualis/ui/viewmodels/study_grades_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
+import 'package:provider/provider.dart';
 
 class ExamResultsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: double.infinity,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-              child: Text(
-                L.of(context).dualisExamResultsTitle,
-                style: Theme.of(context).textTheme.titleLarge,
+    final viewModel = Provider.of<StudyGradesViewModel>(context, listen: false);
+
+    return RefreshIndicator(
+      onRefresh: () => viewModel.refreshData(force: true),
+      child: Container(
+        height: double.infinity,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          scrollDirection: Axis.vertical,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                child: Text(
+                  L.of(context).dualisExamResultsTitle,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: <Widget>[
-                  Text(L.of(context).dualisExamResultsSemesterSelect),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 0, 0),
-                    child: PropertyChangeConsumer<StudyGradesViewModel, String>(
-                      properties: const [
-                        "currentSemesterName",
-                        "allSemesterNames",
-                      ],
-                      builder: (
-                        BuildContext context,
-                        StudyGradesViewModel? model,
-                        Set<String>? properties,
-                      ) {
-                        if (model == null) return Container();
-                        return DropdownButton<String>(
-                          onChanged: (value) {
-                            if (value != null) {
-                              model.loadSemester(value);
-                            }
-                          },
-                          value: model.currentSemesterName.isEmpty
-                              ? null
-                              : model.currentSemesterName,
-                          items: model.allSemesterNames
-                              .map(
-                                (n) => DropdownMenuItem<String>(
-                                  child: Text(n),
-                                  value: n,
-                                ),
-                              )
-                              .toList(),
-                        );
-                      },
-                    ),
-                  )
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: <Widget>[
+                    Text(L.of(context).dualisExamResultsSemesterSelect),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 0, 0),
+                      child: PropertyChangeConsumer<StudyGradesViewModel, String>(
+                        properties: const [
+                          "currentSemesterName",
+                          "allSemesterNames",
+                        ],
+                        builder: (
+                          BuildContext context,
+                          StudyGradesViewModel? model,
+                          Set<String>? properties,
+                        ) {
+                          if (model == null) return Container();
+                          return DropdownButton<String>(
+                            onChanged: (value) {
+                              if (value != null) {
+                                model.loadSemester(value);
+                              }
+                            },
+                            value: model.currentSemesterName.isEmpty
+                                ? null
+                                : model.currentSemesterName,
+                            items: model.allSemesterNames
+                                .map(
+                                  (n) => DropdownMenuItem<String>(
+                                    child: Text(n),
+                                    value: n,
+                                  ),
+                                )
+                                .toList(),
+                          );
+                        },
+                      ),
+                    )
+                  ],
+                ),
+              ),
+              PropertyChangeConsumer<StudyGradesViewModel, String>(
+                properties: const [
+                  "currentSemester",
+                  "isLoadingCurrentSemester",
                 ],
+                builder: (
+                  BuildContext context,
+                  StudyGradesViewModel? model,
+                  Set<String>? properties,
+                ) =>
+                    model == null
+                        ? Container()
+                        : buildModulesColumn(context, model),
               ),
-            ),
-            PropertyChangeConsumer<StudyGradesViewModel, String>(
-              properties: const [
-                "currentSemester",
-                "isLoadingCurrentSemester",
-              ],
-              builder: (
-                BuildContext context,
-                StudyGradesViewModel? model,
-                Set<String>? properties,
-              ) =>
-                  model == null
-                      ? Container()
-                      : buildModulesColumn(context, model),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

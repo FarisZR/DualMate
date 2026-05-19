@@ -50,6 +50,11 @@ Important runtime behavior:
 
 - Navigation entry and page under `lib/dualis/ui`
 - Service stack includes cache decorator + scraper/authentication in `lib/dualis/service`
+- Stored Dualis credentials should restore the session automatically when the
+  Dualis section is shown again; long-idle returns should trigger a refresh
+  instead of dropping the user back to the login form.
+- Logged-in Dualis pages support manual pull-to-refresh, which should force a
+  cache-busting reload of overview and semester data.
 
 ### Schedule (`lib/schedule`)
 

@@ -23,7 +23,11 @@ class CacheDualisServiceDecorator extends DualisService {
     String password, [
     CancellationToken? cancellationToken,
   ]) {
-    return _service.login(username, password, cancellationToken ?? CancellationToken());
+    return _service.login(
+      username,
+      password,
+      cancellationToken ?? CancellationToken(),
+    );
   }
 
   @override
@@ -34,7 +38,9 @@ class CacheDualisServiceDecorator extends DualisService {
       return _allModulesCached!;
     }
 
-    var allModules = await _service.queryAllModules(cancellationToken ?? CancellationToken());
+    var allModules = await _service.queryAllModules(
+      cancellationToken ?? CancellationToken(),
+    );
 
     _allModulesCached = allModules;
 
@@ -49,7 +55,10 @@ class CacheDualisServiceDecorator extends DualisService {
     if (_semestersCached.containsKey(name)) {
       return Future.value(_semestersCached[name]);
     }
-    var semester = await _service.querySemester(name, cancellationToken ?? CancellationToken());
+    var semester = await _service.querySemester(
+      name,
+      cancellationToken ?? CancellationToken(),
+    );
 
     _semestersCached[name] = semester;
 
@@ -64,7 +73,9 @@ class CacheDualisServiceDecorator extends DualisService {
       return _allSemesterNamesCached!;
     }
 
-    var allSemesterNames = await _service.querySemesterNames(cancellationToken ?? CancellationToken());
+    var allSemesterNames = await _service.querySemesterNames(
+      cancellationToken ?? CancellationToken(),
+    );
 
     _allSemesterNamesCached = allSemesterNames;
 
@@ -79,7 +90,9 @@ class CacheDualisServiceDecorator extends DualisService {
       return _studyGradesCached!;
     }
 
-    var studyGrades = await _service.queryStudyGrades(cancellationToken ?? CancellationToken());
+    var studyGrades = await _service.queryStudyGrades(
+      cancellationToken ?? CancellationToken(),
+    );
 
     _studyGradesCached = studyGrades;
 
@@ -91,12 +104,14 @@ class CacheDualisServiceDecorator extends DualisService {
     _allSemesterNamesCached = null;
     _semestersCached = {};
     _studyGradesCached = null;
+    _service.clearCache();
   }
 
   @override
   Future<void> logout([
     CancellationToken? cancellationToken,
   ]) async {
-    await _service.logout(cancellationToken ?? CancellationToken());    clearCache();
+    await _service.logout(cancellationToken ?? CancellationToken());
+    clearCache();
   }
 }

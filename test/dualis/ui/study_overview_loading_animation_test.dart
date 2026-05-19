@@ -258,6 +258,9 @@ class _BlockingDualisService extends DualisService {
     CancellationToken? cancellationToken,
   ]) async {}
 
+  @override
+  void clearCache() {}
+
   void completeModules(List<Module> modules) {
     if (_allModulesCompleter.isCompleted) {
       return;
