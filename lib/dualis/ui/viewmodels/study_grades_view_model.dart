@@ -12,6 +12,7 @@ import 'package:dualmate/dualis/service/dualis_service.dart';
 import 'package:dualmate/schedule/model/schedule_source_type.dart';
 
 enum LoginState {
+  Initializing,
   LoggedOut,
   LoggingIn,
   RestoringSession,
@@ -27,7 +28,7 @@ class StudyGradesViewModel extends BaseViewModel {
 
   final PreferencesProvider _preferencesProvider;
 
-  LoginState _loginState = LoginState.LoggedOut;
+  LoginState _loginState = LoginState.Initializing;
   LoginState get loginState => _loginState;
 
   StudyGrades _studyGrades = StudyGrades(0, 0, 0, 0);
@@ -110,11 +111,15 @@ class StudyGradesViewModel extends BaseViewModel {
 
   Future<bool> restoreSessionIfPossible() async {
     if (_autoRestoreSuppressed) {
+      _loginState = LoginState.LoggedOut;
+      notifyListeners("loginState");
       return false;
     }
 
     final credentials = await _preferencesProvider.loadDualisCredentials();
     if (credentials.username.isEmpty || credentials.password.isEmpty) {
+      _loginState = LoginState.LoggedOut;
+      notifyListeners("loginState");
       return false;
     }
 

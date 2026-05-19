@@ -101,7 +101,8 @@ class _DualisPageState extends State<DualisPage> with WidgetsBindingObserver {
                   ),
                 ],
               ),
-            LoginState.RestoringSession => const _DualisSessionLoadingPage(
+            LoginState.Initializing || LoginState.RestoringSession =>
+              const _DualisSessionLoadingPage(
                 key: ValueKey<String>('dualis_restoring_page'),
               ),
             _ => const DualisLoginPage(
