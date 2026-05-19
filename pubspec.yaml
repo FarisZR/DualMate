@@ -57,6 +57,18 @@ dev_dependencies:
   integration_test:
     sdk: flutter
 
+dependency_overrides:
+  in_app_review:
+    path: third_party/in_app_review
+  package_info_plus:
+    path: third_party/package_info_plus
+  sentry_flutter:
+    path: third_party/sentry_flutter
+  shared_preferences_android:
+    path: third_party/shared_preferences_android
+  workmanager_android:
+    path: third_party/workmanager_android
+
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
