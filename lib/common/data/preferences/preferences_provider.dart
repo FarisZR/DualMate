@@ -18,6 +18,7 @@ class PreferencesProvider {
   static const String DualisStoreCredentials = "StoreDualisCredentials";
   static const String DualisUsername = "DualisUsername";
   static const String DualisPassword = "DualisPassword";
+  static const String DualisLastRefreshAt = "DualisLastRefreshAt";
   static const String LastViewedSemester = "LastViewedSemester";
   static const String LastViewedDateEntryDatabase =
       "LastViewedDateEntryDatabase";
@@ -163,6 +164,21 @@ class PreferencesProvider {
 
   Future<void> setStoreDualisCredentials(bool value) async {
     await _preferencesAccess.set<bool>(DualisStoreCredentials, value);
+  }
+
+  Future<DateTime?> getDualisLastRefreshAt() async {
+    final storedMs = await _preferencesAccess.get<int>(DualisLastRefreshAt);
+    if (storedMs == null || storedMs <= 0) {
+      return null;
+    }
+    return DateTime.fromMillisecondsSinceEpoch(storedMs);
+  }
+
+  Future<void> setDualisLastRefreshAt(DateTime value) async {
+    await _preferencesAccess.set<int>(
+      DualisLastRefreshAt,
+      value.millisecondsSinceEpoch,
+    );
   }
 
   Future<String> getLastViewedSemester() async {

@@ -32,6 +32,8 @@ abstract class DualisService {
   Future<void> logout([
     CancellationToken? cancellationToken,
   ]);
+
+  void clearCache();
 }
 
 enum LoginResult {
@@ -155,4 +157,7 @@ class DualisServiceImpl extends DualisService {
   ]) async {
     await _dualisScraper.logout(cancellationToken ?? CancellationToken());
   }
+
+  @override
+  void clearCache() {}
 }

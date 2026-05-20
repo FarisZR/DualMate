@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/util/cancelable_mutex.dart';
@@ -10,19 +12,23 @@ import 'package:dualmate/dualis/service/dualis_service.dart';
 import 'package:dualmate/schedule/model/schedule_source_type.dart';
 
 enum LoginState {
+  Initializing,
   LoggedOut,
   LoggingIn,
+  RestoringSession,
   LoggingOut,
   LoggedIn,
   LoginFailed,
 }
 
 class StudyGradesViewModel extends BaseViewModel {
+  static const Duration _staleRefreshDuration = Duration(hours: 6);
+
   final DualisService _dualisService;
 
   final PreferencesProvider _preferencesProvider;
 
-  LoginState _loginState = LoginState.LoggedOut;
+  LoginState _loginState = LoginState.Initializing;
   LoginState get loginState => _loginState;
 
   StudyGrades _studyGrades = StudyGrades(0, 0, 0, 0);
@@ -62,41 +68,66 @@ class StudyGradesViewModel extends BaseViewModel {
   int _allModulesLoadEpoch = 0;
   int _semesterNamesLoadEpoch = 0;
   int _currentSemesterLoadEpoch = 0;
+  bool _pageActivationInFlight = false;
+  bool _refreshInFlight = false;
+  bool _autoRestoreSuppressed = false;
 
   StudyGradesViewModel(this._preferencesProvider, this._dualisService);
 
   Future<bool> login(Credentials credentials) async {
-    _loginState = LoginState.LoggingIn;
-    notifyListeners("loginState");
+    _autoRestoreSuppressed = false;
+    return _loginWithCredentials(
+      credentials,
+      inProgressState: LoginState.LoggingIn,
+      failureState: LoginState.LoginFailed,
+    );
+  }
 
-    bool success;
-
-    try {
-      var result = await _dualisService.login(
-        credentials.username,
-        credentials.password,
-      );
-
-      success = result == LoginResult.LoggedIn;
-    } on OperationCancelledException catch (_) {
-      success = false;
-    } catch (_) {
-      success = false;
+  Future<void> onPageVisible() async {
+    if (_pageActivationInFlight || isDisposed) {
+      return;
     }
 
-    _loginState = success ? LoginState.LoggedIn : LoginState.LoginFailed;
+    _pageActivationInFlight = true;
+    try {
+      if (_loginState == LoginState.LoggedIn) {
+        if (await _isRefreshStale()) {
+          await refreshData(force: true);
+        }
+        return;
+      }
 
-    notifyListeners("loginState");
+      if (_loginState == LoginState.LoggingIn ||
+          _loginState == LoginState.LoggingOut ||
+          _loginState == LoginState.RestoringSession) {
+        return;
+      }
 
-    if (!success) {
+      await restoreSessionIfPossible();
+    } finally {
+      _pageActivationInFlight = false;
+    }
+  }
+
+  Future<bool> restoreSessionIfPossible() async {
+    if (_autoRestoreSuppressed) {
+      _loginState = LoginState.LoggedOut;
+      notifyListeners("loginState");
       return false;
     }
 
-    loadStudyGrades();
-    loadSemesterNames();
-    loadAllModules();
+    final credentials = await _preferencesProvider.loadDualisCredentials();
+    if (credentials.username.isEmpty || credentials.password.isEmpty) {
+      _loginState = LoginState.LoggedOut;
+      notifyListeners("loginState");
+      return false;
+    }
 
-    return true;
+    return _loginWithCredentials(
+      credentials,
+      inProgressState: LoginState.RestoringSession,
+      failureState: LoginState.LoggedOut,
+    );
   }
 
   Future<void> clearCredentials() async {
@@ -181,7 +212,16 @@ class StudyGradesViewModel extends BaseViewModel {
   }
 
   Future<void> loadSemester(String semesterName) async {
-    if (_currentSemesterName == semesterName) return Future.value();
+    await loadSemesterByName(semesterName);
+  }
+
+  Future<void> loadSemesterByName(
+    String semesterName, {
+    bool force = false,
+  }) async {
+    if (!force && _currentSemesterName == semesterName) {
+      return Future.value();
+    }
 
     if (_currentLoadingSemesterName == semesterName) return Future.value();
 
@@ -222,6 +262,13 @@ class StudyGradesViewModel extends BaseViewModel {
   }
 
   Future<void> loadSemesterNames() async {
+    await loadSemesterNamesForCurrentSelection();
+  }
+
+  Future<void> loadSemesterNamesForCurrentSelection({
+    String? preferredSemesterName,
+    bool forceCurrentSemesterReload = false,
+  }) async {
     final epoch = ++_semesterNamesLoadEpoch;
     _isLoadingSemesterNames = true;
     notifyListeners("isLoadingSemesterNames");
@@ -249,23 +296,63 @@ class StudyGradesViewModel extends BaseViewModel {
     notifyListeners("isLoadingSemesterNames");
 
     if (epoch == _semesterNamesLoadEpoch) {
-      await _loadInitialSemester();
+      await _loadInitialSemester(
+        preferredSemesterName: preferredSemesterName,
+        force: forceCurrentSemesterReload,
+      );
     }
   }
 
-  Future _loadInitialSemester() async {
+  Future<void> refreshData({bool force = false}) async {
+    if (_loginState != LoginState.LoggedIn || _refreshInFlight) {
+      return;
+    }
+
+    _refreshInFlight = true;
+    try {
+      if (force) {
+        _dualisService.clearCache();
+      }
+
+      final preferredSemesterName = _currentSemesterName;
+      await Future.wait<void>([
+        loadStudyGrades(),
+        loadAllModules(),
+        loadSemesterNamesForCurrentSelection(
+          preferredSemesterName: preferredSemesterName,
+          forceCurrentSemesterReload: preferredSemesterName.isNotEmpty,
+        ),
+      ]);
+
+      await _preferencesProvider.setDualisLastRefreshAt(DateTime.now());
+    } finally {
+      _refreshInFlight = false;
+    }
+  }
+
+  Future<void> _loadInitialSemester({
+    String? preferredSemesterName,
+    bool force = false,
+  }) async {
     if (_semesterNames.isEmpty) return;
+
+    var requestedSemester = preferredSemesterName ?? _currentSemesterName;
+    if (requestedSemester.isNotEmpty && _semesterNames.contains(requestedSemester)) {
+      await loadSemesterByName(requestedSemester, force: force);
+      return;
+    }
 
     var lastViewedSemester = await _preferencesProvider.getLastViewedSemester();
 
     if (_semesterNames.contains(lastViewedSemester)) {
-      loadSemester(lastViewedSemester);
+      await loadSemesterByName(lastViewedSemester, force: force);
     } else {
-      loadSemester(_semesterNames.first);
+      await loadSemesterByName(_semesterNames.first, force: force);
     }
   }
 
   Future<void> logout() async {
+    _autoRestoreSuppressed = true;
     _loginState = LoginState.LoggingOut;
     notifyListeners("loginState");
 
@@ -289,5 +376,49 @@ class StudyGradesViewModel extends BaseViewModel {
     _isLoadingCurrentSemester = false;
 
     notifyListeners();
+  }
+
+  Future<bool> _loginWithCredentials(
+    Credentials credentials, {
+    required LoginState inProgressState,
+    required LoginState failureState,
+  }) async {
+    _loginState = inProgressState;
+    notifyListeners("loginState");
+
+    bool success;
+
+    try {
+      var result = await _dualisService.login(
+        credentials.username,
+        credentials.password,
+      );
+
+      success = result == LoginResult.LoggedIn;
+    } on OperationCancelledException catch (_) {
+      success = false;
+    } catch (_) {
+      success = false;
+    }
+
+    _loginState = success ? LoginState.LoggedIn : failureState;
+
+    notifyListeners("loginState");
+
+    if (!success) {
+      return false;
+    }
+
+    unawaited(refreshData(force: true));
+    return true;
+  }
+
+  Future<bool> _isRefreshStale() async {
+    final lastRefreshAt = await _preferencesProvider.getDualisLastRefreshAt();
+    if (lastRefreshAt == null) {
+      return true;
+    }
+
+    return DateTime.now().difference(lastRefreshAt) >= _staleRefreshDuration;
   }
 }

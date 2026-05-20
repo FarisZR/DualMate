@@ -17,7 +17,10 @@ void main() {
 
   test('login falls back to LoginFailed on unexpected service errors',
       () async {
-    final service = _StudyGradesTestService(loginThrows: true);
+    final service = _StudyGradesTestService(
+      loginThrows: true,
+      blockFirstModulesRequest: false,
+    );
     final viewModel = StudyGradesViewModel(_buildPreferences(), service);
     addTearDown(viewModel.dispose);
 
@@ -48,6 +51,49 @@ void main() {
 
     expect(viewModel.isLoadingAllModules, isFalse);
   });
+
+  test('restores the Dualis session from saved credentials on page open',
+      () async {
+    final preferences = _buildPreferences();
+    await preferences.storeDualisCredentials(Credentials('saved-user', 'saved-pass'));
+    final service = _StudyGradesTestService(blockFirstModulesRequest: false);
+    final viewModel = StudyGradesViewModel(preferences, service);
+    addTearDown(viewModel.dispose);
+
+    final success = await viewModel.restoreSessionIfPossible();
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+
+    expect(success, isTrue);
+    expect(service.loginCalls, 1);
+    expect(service.lastLoginUsername, 'saved-user');
+    expect(service.lastLoginPassword, 'saved-pass');
+    expect(viewModel.loginState, LoginState.LoggedIn);
+    expect(service.clearCacheCalls, 1);
+  });
+
+  test('refreshData(force: true) clears cached Dualis data before reloading',
+      () async {
+    final preferences = _buildPreferences();
+    final service = _StudyGradesTestService(blockFirstModulesRequest: false);
+    final viewModel = StudyGradesViewModel(preferences, service);
+    addTearDown(viewModel.dispose);
+
+    final success = await viewModel.login(Credentials('u', 'p'));
+    expect(success, isTrue);
+
+    while (await preferences.getDualisLastRefreshAt() == null) {
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+    }
+
+    service.resetCallCounters();
+
+    await viewModel.refreshData(force: true);
+
+    expect(service.clearCacheCalls, 1);
+    expect(service.queryStudyGradesCalls, 1);
+    expect(service.queryAllModulesCalls, 1);
+    expect(service.querySemesterNamesCalls, 1);
+  });
 }
 
 PreferencesProvider _buildPreferences() {
@@ -59,11 +105,23 @@ PreferencesProvider _buildPreferences() {
 
 class _StudyGradesTestService extends DualisService {
   final bool loginThrows;
+  final bool blockFirstModulesRequest;
   int _allModulesCallCount = 0;
+  int loginCalls = 0;
+  int clearCacheCalls = 0;
+  int queryStudyGradesCalls = 0;
+  int queryAllModulesCalls = 0;
+  int querySemesterNamesCalls = 0;
+  int querySemesterCalls = 0;
+  String? lastLoginUsername;
+  String? lastLoginPassword;
   final Completer<void> secondModulesRequestStarted = Completer<void>();
   final Completer<void> _releaseSecondModulesRequest = Completer<void>();
 
-  _StudyGradesTestService({this.loginThrows = false});
+  _StudyGradesTestService({
+    this.loginThrows = false,
+    this.blockFirstModulesRequest = true,
+  });
 
   @override
   Future<LoginResult> login(
@@ -71,6 +129,9 @@ class _StudyGradesTestService extends DualisService {
     String password, [
     CancellationToken? cancellationToken,
   ]) async {
+    loginCalls += 1;
+    lastLoginUsername = username;
+    lastLoginPassword = password;
     if (loginThrows) {
       throw Exception('login exploded');
     }
@@ -81,20 +142,24 @@ class _StudyGradesTestService extends DualisService {
   Future<List<Module>> queryAllModules([
     CancellationToken? cancellationToken,
   ]) async {
+    queryAllModulesCalls += 1;
     _allModulesCallCount += 1;
     final token = cancellationToken;
 
-    if (_allModulesCallCount == 1) {
-      while (token != null && !token.isCancelled()) {
-        await Future<void>.delayed(const Duration(milliseconds: 1));
+    if (blockFirstModulesRequest) {
+      if (_allModulesCallCount == 1) {
+        while (token != null && !token.isCancelled()) {
+          await Future<void>.delayed(const Duration(milliseconds: 1));
+        }
+        throw OperationCancelledException();
       }
-      throw OperationCancelledException();
+
+      if (!secondModulesRequestStarted.isCompleted) {
+        secondModulesRequestStarted.complete();
+      }
+      await _releaseSecondModulesRequest.future;
     }
 
-    if (!secondModulesRequestStarted.isCompleted) {
-      secondModulesRequestStarted.complete();
-    }
-    await _releaseSecondModulesRequest.future;
     return const <Module>[];
   }
 
@@ -109,6 +174,7 @@ class _StudyGradesTestService extends DualisService {
   Future<StudyGrades> queryStudyGrades([
     CancellationToken? cancellationToken,
   ]) async {
+    queryStudyGradesCalls += 1;
     return StudyGrades(0, 0, 0, 0);
   }
 
@@ -116,7 +182,8 @@ class _StudyGradesTestService extends DualisService {
   Future<List<String>> querySemesterNames([
     CancellationToken? cancellationToken,
   ]) async {
-    return const <String>[];
+    querySemesterNamesCalls += 1;
+    return const <String>['SoSe2026'];
   }
 
   @override
@@ -124,6 +191,7 @@ class _StudyGradesTestService extends DualisService {
     String name, [
     CancellationToken? cancellationToken,
   ]) async {
+    querySemesterCalls += 1;
     return Semester(name, const <Module>[]);
   }
 
@@ -131,6 +199,19 @@ class _StudyGradesTestService extends DualisService {
   Future<void> logout([
     CancellationToken? cancellationToken,
   ]) async {}
+
+  @override
+  void clearCache() {
+    clearCacheCalls += 1;
+  }
+
+  void resetCallCounters() {
+    clearCacheCalls = 0;
+    queryStudyGradesCalls = 0;
+    queryAllModulesCalls = 0;
+    querySemesterNamesCalls = 0;
+    querySemesterCalls = 0;
+  }
 }
 
 class _FakePreferencesAccess extends PreferencesAccess {

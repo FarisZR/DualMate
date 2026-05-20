@@ -3,21 +3,28 @@ import 'package:dualmate/dualis/ui/viewmodels/study_grades_view_model.dart';
 import 'package:dualmate/dualis/ui/widgets/grade_state_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
+import 'package:provider/provider.dart';
 
 class StudyOverviewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: double.infinity,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            buildGpaCredits(context),
-            buildModules(context),
-          ],
+    final viewModel = Provider.of<StudyGradesViewModel>(context, listen: false);
+
+    return RefreshIndicator(
+      onRefresh: () => viewModel.refreshData(force: true),
+      child: SizedBox(
+        height: double.infinity,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          scrollDirection: Axis.vertical,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              buildGpaCredits(context),
+              buildModules(context),
+            ],
+          ),
         ),
       ),
     );
