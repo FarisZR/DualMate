@@ -323,6 +323,14 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _debounceVisibleRefresh(weekStart, weekEnd);
   }
 
+  Future<void> refreshVisibleWeek() {
+    return updateSchedule(
+      currentDateStart,
+      currentDateEnd,
+      force: true,
+    );
+  }
+
   Future openWeekContainingFromWidget(DateTime date) async {
     final weekStart = toStartOfDay(toDayOfWeek(date, DateTime.monday));
     final weekEnd = toNextWeek(weekStart);

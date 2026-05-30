@@ -181,58 +181,81 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
 
     return PropertyChangeProvider<WeeklyScheduleViewModel, String>(
       value: viewModel,
-      child: Stack(
-        fit: StackFit.passthrough,
-        children: <Widget>[
-          Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              _buildNavigationHeader(context),
-              Expanded(
+      child: RefreshIndicator(
+        onRefresh: () => viewModel.refreshVisibleWeek(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              key: const ValueKey<String>('weekly_schedule_refresh_scroll_view'),
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: SizedBox(
+                height: constraints.maxHeight,
                 child: Stack(
+                  fit: StackFit.passthrough,
                   children: <Widget>[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                      child: PropertyChangeConsumer<WeeklyScheduleViewModel,
-                          String>(
-                        properties: const ['weekSchedule', 'now'],
-                        builder: (
-                          BuildContext context,
-                          WeeklyScheduleViewModel? model,
-                          Set<String>? properties,
-                        ) {
-                          if (model == null) return const SizedBox.shrink();
-                          return _buildAnimatedScheduleViewport(context, model);
-                        },
-                      ),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        _buildNavigationHeader(context),
+                        Expanded(
+                          child: Stack(
+                            children: <Widget>[
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                                child: PropertyChangeConsumer<
+                                    WeeklyScheduleViewModel, String>(
+                                  properties: const ['weekSchedule', 'now'],
+                                  builder: (
+                                    BuildContext context,
+                                    WeeklyScheduleViewModel? model,
+                                    Set<String>? properties,
+                                  ) {
+                                    if (model == null) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return _buildAnimatedScheduleViewport(
+                                      context,
+                                      model,
+                                    );
+                                  },
+                                ),
+                              ),
+                              PropertyChangeConsumer<WeeklyScheduleViewModel,
+                                  String>(
+                                properties: const ['isUpdating', 'weekSchedule'],
+                                builder: (
+                                  BuildContext context,
+                                  WeeklyScheduleViewModel? model,
+                                  Set<String>? properties,
+                                ) {
+                                  if (model == null) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return _TopLoadingIndicator(
+                                    isUpdating: model.isUpdating,
+                                    showWithoutDelay:
+                                        model.visibleWeekNeedsInitialFetch,
+                                  );
+                                },
+                              ),
+                              Positioned(
+                                right: 20,
+                                bottom: 16,
+                                child: _buildCurrentWeekButton(context),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    PropertyChangeConsumer<WeeklyScheduleViewModel, String>(
-                      properties: const ['isUpdating', 'weekSchedule'],
-                      builder: (
-                        BuildContext context,
-                        WeeklyScheduleViewModel? model,
-                        Set<String>? properties,
-                      ) {
-                        if (model == null) return const SizedBox.shrink();
-                        return _TopLoadingIndicator(
-                          isUpdating: model.isUpdating,
-                          showWithoutDelay: model.visibleWeekNeedsInitialFetch,
-                        );
-                      },
-                    ),
-                    Positioned(
-                      right: 20,
-                      bottom: 16,
-                      child: _buildCurrentWeekButton(context),
-                    ),
+                    buildErrorDisplay(context),
                   ],
                 ),
               ),
-            ],
-          ),
-          buildErrorDisplay(context)
-        ],
+            );
+          },
+        ),
       ),
     );
   }

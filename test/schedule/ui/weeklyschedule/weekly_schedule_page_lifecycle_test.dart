@@ -44,6 +44,42 @@ void main() {
   );
 
   testWidgets(
+    'pull to refresh reloads the visible week',
+    (tester) async {
+      final provider = _TrackingScheduleProvider(const <ScheduleEntry>[]);
+      final sourceProvider = _FakeScheduleSourceProvider();
+      final viewModel = WeeklyScheduleViewModel(
+        provider,
+        sourceProvider,
+        nowProvider: () => DateTime(2026, 2, 10, 10, 0),
+      );
+
+      await viewModel.updateSchedule(
+        DateTime(2026, 2, 9),
+        DateTime(2026, 2, 16),
+        force: true,
+      );
+
+      await tester.pumpWidget(_wrapWithApp(viewModel));
+      await tester.pump();
+
+      await tester.drag(find.byType(SingleChildScrollView), const Offset(0, 300));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(
+        provider.updatedOrigins,
+        contains(ScheduleRefreshOrigin.userBrowsing),
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      viewModel.dispose();
+    },
+  );
+
+  testWidgets(
     'resume-triggered background refresh keeps monday lessons visible',
     (tester) async {
       const mondayTitle = 'MONDAY_ANCHOR';
