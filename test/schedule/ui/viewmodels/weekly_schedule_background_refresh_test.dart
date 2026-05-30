@@ -183,6 +183,66 @@ void main() {
 
     expect(viewModel.isUpdating, isFalse);
   });
+
+  test(
+    'refreshVisibleWeek awaits network refresh before completing',
+    () async {
+      final provider = _BlockingScheduleProvider();
+      final sourceProvider = _FakeScheduleSourceProvider();
+      final viewModel = WeeklyScheduleViewModel(provider, sourceProvider);
+
+      final weekStart = DateTime(2026, 2, 9);
+      final weekEnd = DateTime(2026, 2, 16);
+
+      viewModel.currentDateStart = weekStart;
+      viewModel.currentDateEnd = weekEnd;
+
+      var refreshCompleted = false;
+      final refreshFuture = viewModel.refreshVisibleWeek().then((_) {
+        refreshCompleted = true;
+      });
+
+      // Let microtasks run but the blocking provider hasn't completed yet.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(refreshCompleted, isFalse,
+          reason: 'refreshVisibleWeek should not complete until network '
+              'request finishes');
+
+      // Now complete the network request.
+      provider.complete(
+        ScheduleQueryResult(Schedule(), const []),
+      );
+      await refreshFuture;
+      expect(refreshCompleted, isTrue);
+    },
+  );
+
+  test(
+    'refreshVisibleWeek forces fetch even when cache is fresh',
+    () async {
+      final entries = <ScheduleEntry>[
+        _entry(DateTime(2026, 2, 9), 'Mon'),
+      ];
+      final provider = _CountingScheduleProvider(entries);
+      final sourceProvider = _FakeScheduleSourceProvider();
+      final viewModel = WeeklyScheduleViewModel(provider, sourceProvider);
+
+      final weekStart = DateTime(2026, 2, 9);
+      final weekEnd = DateTime(2026, 2, 16);
+
+      // Initial load populates cache and marks window as fresh.
+      await viewModel.updateSchedule(weekStart, weekEnd, force: true);
+      expect(provider.updatedScheduleRequests, 1);
+
+      viewModel.currentDateStart = weekStart;
+      viewModel.currentDateEnd = weekEnd;
+
+      // Pull-to-refresh should fetch again even though cache is fresh.
+      await viewModel.refreshVisibleWeek();
+      expect(provider.updatedScheduleRequests, 2,
+          reason: 'pull-to-refresh must bypass staleness gate');
+    },
+  );
 }
 
 ScheduleEntry _entry(DateTime start, String suffix) {

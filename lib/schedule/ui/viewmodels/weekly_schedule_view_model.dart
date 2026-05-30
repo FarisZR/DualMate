@@ -323,6 +323,15 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _debounceVisibleRefresh(weekStart, weekEnd);
   }
 
+  Future<void> refreshVisibleWeek() {
+    return updateSchedule(
+      currentDateStart,
+      currentDateEnd,
+      force: true,
+      awaitRefresh: true,
+    );
+  }
+
   Future openWeekContainingFromWidget(DateTime date) async {
     final weekStart = toStartOfDay(toDayOfWeek(date, DateTime.monday));
     final weekEnd = toNextWeek(weekStart);
@@ -353,6 +362,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     DateTime end, {
     bool force = false,
     bool applyToVisibleState = true,
+    bool awaitRefresh = false,
   }) async {
     if (_isDisposed) return;
 
@@ -409,6 +419,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         end,
         visibleUpdateRequestId: visibleUpdateRequestId,
         applyToVisibleState: applyToVisibleState,
+        awaitRefresh: awaitRefresh,
         origin: applyToVisibleState
             ? ScheduleRefreshOrigin.userBrowsing
             : ScheduleRefreshOrigin.foregroundMaintenance,
@@ -426,6 +437,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     DateTime end, {
     int? visibleUpdateRequestId,
     bool applyToVisibleState = true,
+    bool awaitRefresh = false,
     ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
   }) async {
     final task = PerformanceTelemetry.instance.startTask(
@@ -462,8 +474,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
 
     final nowValue = now;
-    final shouldForceFetch = cachedSchedule.entries.isEmpty &&
-        scheduleSourceProvider.currentScheduleSource.canQuery();
+    final shouldForceFetch = awaitRefresh ||
+        (cachedSchedule.entries.isEmpty &&
+            scheduleSourceProvider.currentScheduleSource.canQuery());
     final isStale = shouldForceFetch || _isWindowStale(start, end, nowValue);
 
     if (!isStale) {
@@ -471,17 +484,21 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       return false;
     }
 
-    unawaited(
-      _refreshScheduleInBackground(
-        start,
-        end,
-        cancellationToken,
-        task,
-        visibleUpdateRequestId: visibleUpdateRequestId,
-        applyToVisibleState: applyToVisibleState,
-        origin: origin,
-      ),
+    final refreshFuture = _refreshScheduleInBackground(
+      start,
+      end,
+      cancellationToken,
+      task,
+      visibleUpdateRequestId: visibleUpdateRequestId,
+      applyToVisibleState: applyToVisibleState,
+      origin: origin,
     );
+
+    if (awaitRefresh) {
+      await refreshFuture;
+    } else {
+      unawaited(refreshFuture);
+    }
 
     return true;
   }
