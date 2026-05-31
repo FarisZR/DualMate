@@ -705,6 +705,7 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               itemCount: meals.length,
               addAutomaticKeepAlives: false,
+              // ignore: deprecated_member_use
               cacheExtent: kMealListCacheExtent,
               itemBuilder: (context, index) {
                 var meal = meals[index];

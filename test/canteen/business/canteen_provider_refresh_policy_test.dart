@@ -2,13 +2,18 @@ import 'dart:async';
 
 import 'package:dualmate/canteen/business/canteen_provider.dart';
 import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
+import 'package:dualmate/canteen/model/canteen_location.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
+import 'package:dualmate/canteen/model/meal_type.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
+import 'package:dualmate/canteen/service/open_mensa_canteen_source.dart';
 import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../test_canteen_location_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -17,7 +22,12 @@ void main() {
     final database = _InMemoryDatabaseAccess();
     final repository = CanteenMealRepository(database);
     final scraper = _FakeCanteenScraper();
-    final provider = CanteenProvider(repository, scraper);
+    final provider = CanteenProvider(
+      repository,
+      TestCanteenLocationService(),
+      scraper,
+      OpenMensaCanteenSource(),
+    );
     final monday = DateTime(2026, 2, 9);
 
     await provider.refreshWeekIfStale(
@@ -41,7 +51,12 @@ void main() {
     final database = _InMemoryDatabaseAccess();
     final repository = CanteenMealRepository(database);
     final scraper = _FakeCanteenScraper();
-    final provider = CanteenProvider(repository, scraper);
+    final provider = CanteenProvider(
+      repository,
+      TestCanteenLocationService(),
+      scraper,
+      OpenMensaCanteenSource(),
+    );
     final monday = DateTime(2026, 2, 9);
     final blocker = Completer<void>();
 
@@ -70,7 +85,12 @@ void main() {
     final database = _InMemoryDatabaseAccess();
     final repository = CanteenMealRepository(database);
     final scraper = _FakeCanteenScraper();
-    final provider = CanteenProvider(repository, scraper);
+    final provider = CanteenProvider(
+      repository,
+      TestCanteenLocationService(),
+      scraper,
+      OpenMensaCanteenSource(),
+    );
     final monday = DateTime(2026, 2, 9);
     final callbackOrder = <String>[];
 
@@ -98,6 +118,29 @@ void main() {
       monday.add(const Duration(days: 7)),
     );
     expect(callbackOrder, ['first']);
+  });
+
+  test('refreshWeek uses OpenMensa for non-Karlsruhe locations', () async {
+    final database = _InMemoryDatabaseAccess();
+    final repository = CanteenMealRepository(database);
+    final scraper = _FakeCanteenScraper();
+    final openMensa = _FakeOpenMensaSource();
+    final locationService = TestCanteenLocationService(
+      initialLocation: CanteenLocations.fromId('mannheim_dhbw_eppelheim'),
+    );
+    final provider = CanteenProvider(
+      repository,
+      locationService,
+      scraper,
+      openMensa,
+    );
+    final monday = DateTime(2026, 6, 1);
+
+    final menus = await provider.refreshWeek(monday);
+
+    expect(scraper.loadWeekCalls, 0);
+    expect(openMensa.calls, <int>[795]);
+    expect(menus.first.meals.first.name, 'OpenMensaMeal');
   });
 }
 
@@ -132,6 +175,35 @@ class _FakeCanteenScraper extends CanteenScraper {
   }
 }
 
+class _FakeOpenMensaSource extends OpenMensaCanteenSource {
+  final List<int> calls = <int>[];
+
+  @override
+  Future<List<DailyMenu>> loadWeek(
+    int canteenId,
+    DateTime weekStart, [
+    CancellationToken? cancellationToken,
+  ]) async {
+    calls.add(canteenId);
+
+    return <DailyMenu>[
+      DailyMenu(
+        date: weekStart,
+        meals: <Meal>[
+          Meal(
+            date: weekStart,
+            name: 'OpenMensaMeal',
+            category: 'Vegetarisch',
+            price: 0,
+            notes: const <String>[],
+            mealTypes: const <MealType>[],
+          ),
+        ],
+      ),
+    ];
+  }
+}
+
 class _InMemoryDatabaseAccess extends DatabaseAccess {
   final List<Map<String, dynamic>> _rows = <Map<String, dynamic>>[];
   int _idCounter = 0;
@@ -161,8 +233,13 @@ class _InMemoryDatabaseAccess extends DatabaseAccess {
     int? limit,
     int? offset,
   }) async {
-    final start = whereArgs![0] as int;
-    final end = whereArgs[1] as int;
+    final args = whereArgs;
+    if (args == null || args.length < 2) {
+      return _rows.map((row) => Map<String, dynamic>.from(row)).toList();
+    }
+
+    final start = args[0] as int;
+    final end = args[1] as int;
     final filtered = _rows.where((row) {
       final date = row['date'] as int;
       return date >= start && date < end;
@@ -204,8 +281,15 @@ class _InMemoryDatabaseAccess extends DatabaseAccess {
     String? where,
     List<dynamic>? whereArgs,
   }) async {
-    final start = whereArgs![0] as int;
-    final end = whereArgs[1] as int;
+    final args = whereArgs;
+    if (args == null || args.length < 2) {
+      final removed = _rows.length;
+      _rows.clear();
+      return removed;
+    }
+
+    final start = args[0] as int;
+    final end = args[1] as int;
     final before = _rows.length;
     _rows.removeWhere((row) {
       final date = row['date'] as int;

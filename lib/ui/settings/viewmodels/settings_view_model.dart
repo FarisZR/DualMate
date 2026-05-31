@@ -5,6 +5,8 @@ import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/logging/perf_overlay_controller.dart';
+import 'package:dualmate/canteen/business/canteen_location_service.dart';
+import 'package:dualmate/canteen/model/canteen_location.dart';
 import 'package:kiwi/kiwi.dart';
 
 import '../../../common/util/cancellation_token.dart';
@@ -17,6 +19,7 @@ class SettingsViewModel extends BaseViewModel {
   static const int DeveloperTapThreshold = 6;
 
   final PreferencesProvider _preferencesProvider;
+  final CanteenLocationService _canteenLocationService;
   final TaskCallback _nextDayInformationNotification;
   final NotificationApi _notificationApi;
 
@@ -46,10 +49,14 @@ class SettingsViewModel extends BaseViewModel {
 
   bool get isDeveloperOptionsEnabled => _isDeveloperOptionsEnabled;
 
+  CanteenLocation _selectedCanteenLocation = CanteenLocations.defaultLocation;
+  CanteenLocation get selectedCanteenLocation => _selectedCanteenLocation;
+
   int _developerTapCount = 0;
 
   SettingsViewModel(
     this._preferencesProvider,
+    this._canteenLocationService,
     this._nextDayInformationNotification,
     this._notificationApi,
   ) {
@@ -152,12 +159,20 @@ class SettingsViewModel extends BaseViewModel {
 
     _prettifySchedule = await _preferencesProvider.getPrettifySchedule();
     _useDhMineForDates = await _preferencesProvider.getUseDhMineForDates();
+    _selectedCanteenLocation =
+        await _canteenLocationService.getSelectedLocation();
     await PerformanceOverlayController.load(_preferencesProvider);
     notifyIfMounted("notifyAboutNextDay");
     notifyIfMounted("notifyAboutScheduleChanges");
     notifyIfMounted("prettifySchedule");
     notifyIfMounted("useDhMineForDates");
+    notifyIfMounted("selectedCanteenLocation");
     notifyIfMounted("showPerformanceOverlay");
+  }
+
+  Future<void> reloadSelectedCanteenLocation() async {
+    _selectedCanteenLocation = await _canteenLocationService.getSelectedLocation();
+    notifyIfMounted('selectedCanteenLocation');
   }
 
   Future<void> setShowPerformanceOverlay(bool value) async {

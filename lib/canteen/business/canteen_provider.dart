@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
+import 'package:dualmate/canteen/model/canteen_location.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
+import 'package:dualmate/canteen/business/canteen_location_service.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
+import 'package:dualmate/canteen/service/open_mensa_canteen_source.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 
@@ -15,12 +18,20 @@ typedef CanteenMenuUpdatedCallback = Future<void> Function(
 
 class CanteenProvider {
   final CanteenMealRepository _repository;
+  final CanteenLocationService _locationService;
   final CanteenScraper _scraper;
+  final OpenMensaCanteenSource _openMensaSource;
   final List<CanteenMenuUpdatedCallback> _callbacks = [];
   final Map<DateTime, Future<List<DailyMenu>>> _refreshInFlight = {};
   final Map<DateTime, DateTime> _lastRefreshAtByWeek = {};
+  String? _activeLocationId;
 
-  CanteenProvider(this._repository, this._scraper);
+  CanteenProvider(
+    this._repository,
+    this._locationService,
+    this._scraper,
+    this._openMensaSource,
+  );
 
   void addMenuUpdatedCallback(CanteenMenuUpdatedCallback callback) {
     _callbacks.add(callback);
@@ -31,6 +42,7 @@ class CanteenProvider {
   }
 
   Future<List<DailyMenu>> getCachedWeek(DateTime date) async {
+    await _ensureActiveLocationCache();
     var weekStart = toStartOfDay(toMonday(date));
     var weekEnd = weekStart.add(const Duration(days: 5));
 
@@ -39,6 +51,7 @@ class CanteenProvider {
   }
 
   Future<DateTime?> lastUpdatedForWeek(DateTime date) async {
+    await _ensureActiveLocationCache();
     var weekStart = toStartOfDay(toMonday(date));
     var weekEnd = weekStart.add(const Duration(days: 5));
     return _repository.latestMealDateBetween(weekStart, weekEnd);
@@ -111,9 +124,14 @@ class CanteenProvider {
     CancellationToken? cancellationToken,
     required bool prefetchNextWeek,
   }) async {
+    final location = await _ensureActiveLocationCache();
     var weekEnd = weekStart.add(const Duration(days: 5));
 
-    var menus = await _scraper.loadWeek(weekStart, cancellationToken);
+    var menus = await _loadWeekForLocation(
+      location,
+      weekStart,
+      cancellationToken,
+    );
     var normalizedMenus = _normalizeMenus(weekStart, menus);
 
     await _repository.deleteMealsBetween(weekStart, weekEnd);
@@ -135,11 +153,16 @@ class CanteenProvider {
     DateTime weekStart,
     CancellationToken? cancellationToken,
   ) async {
+    final location = await _ensureActiveLocationCache();
     var nextWeekStart = toStartOfDay(weekStart.add(const Duration(days: 7)));
     var nextWeekEnd = nextWeekStart.add(const Duration(days: 5));
 
     try {
-      var nextMenus = await _scraper.loadWeek(nextWeekStart, cancellationToken);
+      var nextMenus = await _loadWeekForLocation(
+        location,
+        nextWeekStart,
+        cancellationToken,
+      );
       var normalizedNextMenus = _normalizeMenus(nextWeekStart, nextMenus);
 
       await _repository.deleteMealsBetween(nextWeekStart, nextWeekEnd);
@@ -162,6 +185,36 @@ class CanteenProvider {
     for (var callback in List<CanteenMenuUpdatedCallback>.from(_callbacks)) {
       await callback(menus, start, end);
     }
+  }
+
+  Future<CanteenLocation> _ensureActiveLocationCache() async {
+    final selected = await _locationService.getSelectedLocation();
+    if (_activeLocationId == selected.id) {
+      return selected;
+    }
+
+    _activeLocationId = selected.id;
+    _refreshInFlight.clear();
+    _lastRefreshAtByWeek.clear();
+    await _repository.clearMeals();
+    return selected;
+  }
+
+  Future<List<DailyMenu>> _loadWeekForLocation(
+    CanteenLocation location,
+    DateTime weekStart,
+    CancellationToken? cancellationToken,
+  ) {
+    if (location.isKarlsruheLegacy) {
+      return _scraper.loadWeek(weekStart, cancellationToken);
+    }
+
+    final openMensaId = location.openMensaId;
+    if (openMensaId == null) {
+      throw Exception('Missing OpenMensa id for selected canteen');
+    }
+
+    return _openMensaSource.loadWeek(openMensaId, weekStart, cancellationToken);
   }
 
   List<DailyMenu> _groupMealsByDay(DateTime weekStart, List<Meal> meals) {

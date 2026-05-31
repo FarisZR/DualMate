@@ -1,5 +1,7 @@
 import 'package:dualmate/canteen/business/canteen_provider.dart';
+import 'package:dualmate/canteen/business/canteen_location_service.dart';
 import 'package:dualmate/canteen/model/canteen_filter.dart';
+import 'package:dualmate/canteen/model/canteen_location.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
@@ -14,6 +16,7 @@ class CanteenViewModel extends BaseViewModel {
       Duration(milliseconds: 250);
 
   final CanteenProvider _provider;
+  final CanteenLocationService _locationService;
 
   final DateTime todayWeekStart;
   CanteenFilter filter = CanteenFilter.all;
@@ -28,14 +31,18 @@ class CanteenViewModel extends BaseViewModel {
   DateTime? _lastAdjacentPrefetchCenterWeekStart;
   List<DateTime> _visibleContentDaysCache = const <DateTime>[];
   bool _visibleContentDaysDirty = true;
+  CanteenLocation _selectedLocation = CanteenLocations.defaultLocation;
 
-  CanteenViewModel(this._provider)
+  CanteenLocation get selectedLocation => _selectedLocation;
+
+  CanteenViewModel(this._provider, this._locationService)
       : todayWeekStart = toStartOfDay(toMonday(DateTime.now()));
 
   void initialize() {
     if (_initialized) return;
     _initialized = true;
     _provider.addMenuUpdatedCallback(_onMenusUpdated);
+    unawaited(_loadSelectedLocation());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_weeklyMenus.containsKey(todayWeekStart)) return;
       primeVisibleWeek(todayWeekStart);
@@ -282,6 +289,10 @@ class CanteenViewModel extends BaseViewModel {
     notifyIfMounted("filter");
   }
 
+  Future<void> reloadSelectedLocation() async {
+    await _loadSelectedLocation(reloadWeek: true);
+  }
+
   Future<void> _onMenusUpdated(
     List<DailyMenu> menus,
     DateTime start,
@@ -298,6 +309,25 @@ class CanteenViewModel extends BaseViewModel {
 
   void _markVisibleContentDaysDirty() {
     _visibleContentDaysDirty = true;
+  }
+
+  Future<void> _loadSelectedLocation({bool reloadWeek = false}) async {
+    final nextLocation = await _locationService.getSelectedLocation();
+    final didChange = _selectedLocation.id != nextLocation.id;
+    _selectedLocation = nextLocation;
+    notifyIfMounted('selectedLocation');
+
+    if (!didChange || !reloadWeek) {
+      return;
+    }
+
+    _weeklyMenus.clear();
+    _weekErrors.clear();
+    _weekLastUpdated.clear();
+    _weekLastRefreshRequestAt.clear();
+    _markVisibleContentDaysDirty();
+    notifyIfMounted('weeklyMenus');
+    unawaited(loadWeek(todayWeekStart, forceRefresh: true, prefetchNextWeek: false));
   }
 
   @override

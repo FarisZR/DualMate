@@ -3,11 +3,14 @@ import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
+import 'package:dualmate/canteen/service/open_mensa_canteen_source.dart';
 import 'package:dualmate/canteen/ui/viewmodels/canteen_view_model.dart';
 import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../test_canteen_location_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +24,7 @@ void main() {
     final provider = _FakeCanteenProvider({
       weekStart: _buildMenus(weekStart, <DateTime>{tuesday, thursday}),
     });
-    final model = CanteenViewModel(provider);
+    final model = CanteenViewModel(provider, TestCanteenLocationService());
     addTearDown(model.dispose);
 
     await model.loadWeek(weekStart);
@@ -38,7 +41,7 @@ void main() {
     final provider = _FakeCanteenProvider({
       weekStart: _buildMenus(weekStart, <DateTime>{tuesday, thursday}),
     });
-    final model = CanteenViewModel(provider);
+    final model = CanteenViewModel(provider, TestCanteenLocationService());
     addTearDown(model.dispose);
 
     await model.loadWeek(weekStart);
@@ -78,7 +81,12 @@ class _FakeCanteenProvider extends CanteenProvider {
   final List<CanteenMenuUpdatedCallback> _callbacks = [];
 
   _FakeCanteenProvider(this._menusByWeek)
-      : super(CanteenMealRepository(_FakeDatabaseAccess()), CanteenScraper());
+      : super(
+          CanteenMealRepository(_FakeDatabaseAccess()),
+          TestCanteenLocationService(),
+          CanteenScraper(),
+          OpenMensaCanteenSource(),
+        );
 
   @override
   void addMenuUpdatedCallback(CanteenMenuUpdatedCallback callback) {

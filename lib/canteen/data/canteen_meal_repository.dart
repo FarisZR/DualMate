@@ -72,4 +72,8 @@ class CanteenMealRepository {
       ],
     );
   }
+
+  Future<void> clearMeals() async {
+    await _database.deleteWhere(CanteenMealEntity.tableName());
+  }
 }

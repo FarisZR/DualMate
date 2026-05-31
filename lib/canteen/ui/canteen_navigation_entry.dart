@@ -18,6 +18,7 @@ class CanteenNavigationEntry extends NavigationEntry<CanteenViewModel> {
   CanteenViewModel initViewModel() {
     _viewModel = CanteenViewModel(
       KiwiContainer().resolve(),
+      KiwiContainer().resolve(),
     );
     return _viewModel;
   }
@@ -38,7 +39,7 @@ class CanteenNavigationEntry extends NavigationEntry<CanteenViewModel> {
       IconButton(
         icon: Icon(Icons.help_outline),
         onPressed: () async {
-          await CanteenHelpDialog().show(context);
+          await CanteenHelpDialog(_viewModel).show(context);
         },
         tooltip: L.of(context).helpButtonTooltip,
       ),

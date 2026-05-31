@@ -3,11 +3,14 @@ import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
+import 'package:dualmate/canteen/service/open_mensa_canteen_source.dart';
 import 'package:dualmate/canteen/ui/viewmodels/canteen_view_model.dart';
 import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../test_canteen_location_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -16,7 +19,7 @@ void main() {
     final monday = DateTime(2026, 2, 9);
     final weekStart = toStartOfDay(toMonday(monday));
     final provider = _TrackingCanteenProvider();
-    final model = CanteenViewModel(provider);
+    final model = CanteenViewModel(provider, TestCanteenLocationService());
     addTearDown(model.dispose);
 
     model.primeVisibleWeek(monday);
@@ -33,7 +36,7 @@ void main() {
     final previous = toStartOfDay(weekStart.subtract(const Duration(days: 7)));
     final next = toStartOfDay(weekStart.add(const Duration(days: 7)));
     final provider = _TrackingCanteenProvider();
-    final model = CanteenViewModel(provider);
+    final model = CanteenViewModel(provider, TestCanteenLocationService());
     addTearDown(model.dispose);
 
     model.primeVisibleWeek(monday);
@@ -54,7 +57,7 @@ void main() {
     final monday = DateTime(2026, 2, 9);
     final weekStart = toStartOfDay(toMonday(monday));
     final provider = _TrackingCanteenProvider();
-    final model = CanteenViewModel(provider);
+    final model = CanteenViewModel(provider, TestCanteenLocationService());
     addTearDown(model.dispose);
 
     model.primeVisibleWeek(monday);
@@ -81,7 +84,12 @@ class _TrackingCanteenProvider extends CanteenProvider {
   final Set<DateTime> _cachedWeeks = <DateTime>{};
 
   _TrackingCanteenProvider()
-      : super(CanteenMealRepository(_FakeDatabaseAccess()), CanteenScraper());
+      : super(
+          CanteenMealRepository(_FakeDatabaseAccess()),
+          TestCanteenLocationService(),
+          CanteenScraper(),
+          OpenMensaCanteenSource(),
+        );
 
   @override
   void addMenuUpdatedCallback(CanteenMenuUpdatedCallback callback) {

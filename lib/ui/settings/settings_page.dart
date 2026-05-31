@@ -1,3 +1,5 @@
+import 'package:dualmate/canteen/business/canteen_location_service.dart';
+import 'package:dualmate/canteen/ui/widgets/select_canteen_location_dialog.dart';
 import 'package:dualmate/common/application_constants.dart';
 import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
@@ -33,6 +35,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final SettingsViewModel settingsViewModel = SettingsViewModel(
       KiwiContainer().resolve(),
+      KiwiContainer().resolve(),
       KiwiContainer()
           .resolve<TaskCallback>(NextDayInformationNotification.name),
       KiwiContainer().resolve());
@@ -42,6 +45,7 @@ class _SettingsPageState extends State<SettingsPage> {
     var widgets = <Widget>[];
 
     widgets.addAll(buildScheduleSourceSettings(context));
+    widgets.addAll(buildCanteenSettings(context));
     widgets.addAll(buildDesignSettings(context));
     widgets.addAll(buildDeveloperSettings(context));
     widgets.addAll(buildNotificationSettings(context));
@@ -184,6 +188,40 @@ class _SettingsPageState extends State<SettingsPage> {
                     isCalendarSyncEnabled: isCalendarSyncEnabled,
                   ),
               settings: RouteSettings(name: "settings")));
+        },
+      ),
+      const Divider(),
+    ];
+  }
+
+  List<Widget> buildCanteenSettings(BuildContext context) {
+    return [
+      TitleListTile(title: L.of(context).settingsCanteenTitle),
+      PropertyChangeConsumer<SettingsViewModel, String>(
+        properties: const [
+          'selectedCanteenLocation',
+        ],
+        builder: (
+          BuildContext context,
+          SettingsViewModel? model,
+          Set<String>? properties,
+        ) {
+          if (model == null) return Container();
+          final location = model.selectedCanteenLocation;
+          return ListTile(
+            title: Text(L.of(context).settingsSetupCanteenLocation),
+            subtitle: Text(
+              location.subtitle == null
+                  ? location.name
+                  : '${location.name} - ${location.subtitle}',
+            ),
+            onTap: () async {
+              await SelectCanteenLocationDialog(
+                KiwiContainer().resolve<CanteenLocationService>(),
+              ).show(context);
+              await model.reloadSelectedCanteenLocation();
+            },
+          );
         },
       ),
       const Divider(),

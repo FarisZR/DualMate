@@ -3,6 +3,7 @@ import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
+import 'package:dualmate/canteen/service/open_mensa_canteen_source.dart';
 import 'package:dualmate/canteen/ui/canteen_page.dart';
 import 'package:dualmate/canteen/ui/viewmodels/canteen_view_model.dart';
 import 'package:dualmate/common/data/database_access.dart';
@@ -14,6 +15,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import '../test_canteen_location_service.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -24,7 +27,7 @@ void main() {
     final menus = _buildWeekMenusWithSingleDayMeal(weekStart, today);
 
     final provider = _FakeCanteenProvider({weekStart: menus});
-    final viewModel = CanteenViewModel(provider);
+    final viewModel = CanteenViewModel(provider, TestCanteenLocationService());
     addTearDown(viewModel.dispose);
     await viewModel.loadWeek(weekStart);
 
@@ -44,7 +47,7 @@ void main() {
     final menus = _buildWeekMenusWithSingleDayMeal(weekStart, today);
 
     final provider = _FakeCanteenProvider({weekStart: menus});
-    final viewModel = CanteenViewModel(provider);
+    final viewModel = CanteenViewModel(provider, TestCanteenLocationService());
     addTearDown(viewModel.dispose);
     await viewModel.loadWeek(weekStart);
 
@@ -69,7 +72,7 @@ void main() {
     final menus = _buildWeekMenusWithSingleDayMeal(weekStart, today);
 
     final provider = _FakeCanteenProvider({weekStart: menus});
-    final viewModel = CanteenViewModel(provider);
+    final viewModel = CanteenViewModel(provider, TestCanteenLocationService());
     addTearDown(viewModel.dispose);
     await viewModel.loadWeek(weekStart);
 
@@ -88,7 +91,7 @@ void main() {
     final menus = _buildWeekMenusWithSingleDayMeal(weekStart, today);
 
     final provider = _FakeCanteenProvider({weekStart: menus});
-    final viewModel = CanteenViewModel(provider);
+    final viewModel = CanteenViewModel(provider, TestCanteenLocationService());
     addTearDown(viewModel.dispose);
     await viewModel.loadWeek(weekStart);
 
@@ -121,7 +124,7 @@ void main() {
       menusByWeek,
       cacheOnlyKnownWeeks: true,
     );
-    final viewModel = CanteenViewModel(provider);
+    final viewModel = CanteenViewModel(provider, TestCanteenLocationService());
     addTearDown(viewModel.dispose);
     await viewModel.loadWeek(weekStart);
 
@@ -371,7 +374,12 @@ class _FakeCanteenProvider extends CanteenProvider {
   _FakeCanteenProvider(
     this._menusByWeek, {
     this.cacheOnlyKnownWeeks = false,
-  }) : super(CanteenMealRepository(_FakeDatabaseAccess()), CanteenScraper());
+  }) : super(
+          CanteenMealRepository(_FakeDatabaseAccess()),
+          TestCanteenLocationService(),
+          CanteenScraper(),
+          OpenMensaCanteenSource(),
+        );
 
   @override
   void addMenuUpdatedCallback(CanteenMenuUpdatedCallback callback) {
