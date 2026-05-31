@@ -15,17 +15,18 @@ jobs:
 
       - name: Extract version info from tag
         id: version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
         run: |
-          TAG="${{ github.event.release.tag_name }}"
-          # Strip leading 'v'
           VERSION_NAME="${TAG#v}"
-          # Strip pre-release suffix (e.g. -beta) for version code calculation
           BASE="${VERSION_NAME%%-*}"
           IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE"
-          MAJOR="${MAJOR:-0}"; MINOR="${MINOR:-0}"; PATCH="${PATCH:-0}"
+          MAJOR="${MAJOR:-0}"
+          MINOR="${MINOR:-0}"
+          PATCH="${PATCH:-0}"
           VERSION_CODE=$(( MAJOR * 10000 + MINOR * 100 + PATCH ))
           echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
-          echo "version_code=$VERSION_CODE"  >> "$GITHUB_OUTPUT"
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -40,32 +41,50 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Decode keystore
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+      - name: Validate signing secrets
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+          missing=0
+          for name in KEYSTORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing required secret: $name"
+              missing=1
+            fi
+          done
+
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
           cat > android/key.properties <<EOF
           storeFile=release.keystore
-          storePassword=${{ secrets.STORE_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
           EOF
 
       - name: Get dependencies
         run: flutter pub get
 
       - name: Build arm64 APK
-        env:
-          VERSION_NAME: ${{ steps.version.outputs.version_name }}
-          VERSION_CODE: ${{ steps.version.outputs.version_code }}
         run: |
-          perl -0pi -e "s/def flutterVersionCode = '[^']*'/def flutterVersionCode = '$ENV{VERSION_CODE}'/" android/app/build.gradle
-          perl -0pi -e "s/def flutterVersionName = '[^']*'/def flutterVersionName = '$ENV{VERSION_NAME}'/" android/app/build.gradle
           flutter build apk \
             --target-platform android-arm64 \
-            --split-per-abi
+            --split-per-abi \
+            --build-name="${{ steps.version.outputs.version_name }}" \
+            --build-number="${{ steps.version.outputs.version_code }}"
 
       - name: Upload APK to release
         uses: softprops/action-gh-release@v2
