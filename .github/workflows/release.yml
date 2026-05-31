@@ -57,12 +57,15 @@ jobs:
         run: flutter pub get
 
       - name: Build arm64 APK
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          VERSION_CODE: ${{ steps.version.outputs.version_code }}
         run: |
+          perl -0pi -e "s/def flutterVersionCode = '[^']*'/def flutterVersionCode = '$ENV{VERSION_CODE}'/" android/app/build.gradle
+          perl -0pi -e "s/def flutterVersionName = '[^']*'/def flutterVersionName = '$ENV{VERSION_NAME}'/" android/app/build.gradle
           flutter build apk \
             --target-platform android-arm64 \
-            --split-per-abi \
-            --build-name="${{ steps.version.outputs.version_name }}" \
-            --build-number="${{ steps.version.outputs.version_code }}"
+            --split-per-abi
 
       - name: Upload APK to release
         uses: softprops/action-gh-release@v2
