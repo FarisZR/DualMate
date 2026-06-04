@@ -1,3 +1,4 @@
+import 'package:dualmate/canteen/business/canteen_location_service.dart';
 import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
@@ -19,24 +20,27 @@ void main() {
   });
 
   test(
-      'calendar sync toggle refresh uses a silent foreground maintenance origin',
-      () async {
-    final scheduleProvider = _TrackingScheduleProvider();
-    KiwiContainer().registerInstance<ScheduleProvider>(scheduleProvider);
+    'calendar sync toggle refresh uses a silent foreground maintenance origin',
+    () async {
+      final scheduleProvider = _TrackingScheduleProvider();
+      KiwiContainer().registerInstance<ScheduleProvider>(scheduleProvider);
+      final preferencesProvider = _FakePreferencesProvider();
 
-    final viewModel = SettingsViewModel(
-      _FakePreferencesProvider(),
-      _FakeTaskCallback(),
-      VoidNotificationApi(),
-    );
+      final viewModel = SettingsViewModel(
+        preferencesProvider,
+        CanteenLocationService(preferencesProvider),
+        _FakeTaskCallback(),
+        VoidNotificationApi(),
+      );
 
-    await Future<void>.delayed(Duration.zero);
-    await viewModel.setIsCalendarSyncEnabled(true);
+      await Future<void>.delayed(Duration.zero);
+      await viewModel.setIsCalendarSyncEnabled(true);
 
-    expect(scheduleProvider.origins, [
-      ScheduleRefreshOrigin.foregroundMaintenance,
-    ]);
-  });
+      expect(scheduleProvider.origins, [
+        ScheduleRefreshOrigin.foregroundMaintenance,
+      ]);
+    },
+  );
 }
 
 class _TrackingScheduleProvider implements ScheduleProvider {
@@ -91,6 +95,9 @@ class _FakePreferencesProvider implements PreferencesProvider {
 
   @override
   Future<bool> getUseDhMineForDates() async => false;
+
+  @override
+  Future<String?> getSelectedCanteenLocationId() async => null;
 
   @override
   Future<void> setIsCalendarSyncEnabled(bool value) async {

@@ -3,6 +3,7 @@ import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
+import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
 import 'package:dualmate/canteen/service/open_mensa_canteen_source.dart';
 import 'package:dualmate/canteen/ui/viewmodels/canteen_view_model.dart';
 import 'package:dualmate/common/data/database_access.dart';
@@ -29,51 +30,54 @@ void main() {
     expect(provider.refreshWeekIfStaleRequests, <DateTime>[weekStart]);
   });
 
-  test('prefetchAdjacentWeeksDebounced refreshes next week for forward swipes',
-      () async {
-    final monday = DateTime(2026, 2, 9);
-    final weekStart = toStartOfDay(toMonday(monday));
-    final previous = toStartOfDay(weekStart.subtract(const Duration(days: 7)));
-    final next = toStartOfDay(weekStart.add(const Duration(days: 7)));
-    final provider = _TrackingCanteenProvider();
-    final model = CanteenViewModel(provider, TestCanteenLocationService());
-    addTearDown(model.dispose);
+  test(
+    'prefetchAdjacentWeeksDebounced refreshes next week for forward swipes',
+    () async {
+      final monday = DateTime(2026, 2, 9);
+      final weekStart = toStartOfDay(toMonday(monday));
+      final previous = toStartOfDay(
+        weekStart.subtract(const Duration(days: 7)),
+      );
+      final next = toStartOfDay(weekStart.add(const Duration(days: 7)));
+      final provider = _TrackingCanteenProvider();
+      final model = CanteenViewModel(provider, TestCanteenLocationService());
+      addTearDown(model.dispose);
 
-    model.primeVisibleWeek(monday);
-    await Future<void>.delayed(const Duration(milliseconds: 30));
-    provider.clearRequests();
+      model.primeVisibleWeek(monday);
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      provider.clearRequests();
 
-    model.prefetchAdjacentWeeksDebounced(monday);
-    model.prefetchAdjacentWeeksDebounced(monday);
-    await Future<void>.delayed(const Duration(milliseconds: 320));
+      model.prefetchAdjacentWeeksDebounced(monday);
+      model.prefetchAdjacentWeeksDebounced(monday);
+      await Future<void>.delayed(const Duration(milliseconds: 320));
 
-    expect(provider.cachedWeekRequests.toSet(), <DateTime>{previous, next});
-    expect(provider.refreshWeekIfStaleRequests, <DateTime>[next]);
-    expect(model.visibleContentDays, <DateTime>[weekStart, next]);
-  });
+      expect(provider.cachedWeekRequests.toSet(), <DateTime>{previous, next});
+      expect(provider.refreshWeekIfStaleRequests, <DateTime>[next]);
+      expect(model.visibleContentDays, <DateTime>[weekStart, next]);
+    },
+  );
 
-  test('refreshVisibleWeekIfStale throttles repeated same-week requests',
-      () async {
-    final monday = DateTime(2026, 2, 9);
-    final weekStart = toStartOfDay(toMonday(monday));
-    final provider = _TrackingCanteenProvider();
-    final model = CanteenViewModel(provider, TestCanteenLocationService());
-    addTearDown(model.dispose);
+  test(
+    'refreshVisibleWeekIfStale throttles repeated same-week requests',
+    () async {
+      final monday = DateTime(2026, 2, 9);
+      final weekStart = toStartOfDay(toMonday(monday));
+      final provider = _TrackingCanteenProvider();
+      final model = CanteenViewModel(provider, TestCanteenLocationService());
+      addTearDown(model.dispose);
 
-    model.primeVisibleWeek(monday);
-    await Future<void>.delayed(const Duration(milliseconds: 30));
-    provider.clearRequests();
+      model.primeVisibleWeek(monday);
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      provider.clearRequests();
 
-    model.refreshVisibleWeekIfStale(
-      monday,
-      staleAfter: Duration.zero,
-    );
-    await Future<void>.delayed(const Duration(milliseconds: 40));
-    model.refreshVisibleWeekIfStale(monday);
-    await Future<void>.delayed(const Duration(milliseconds: 40));
+      model.refreshVisibleWeekIfStale(monday, staleAfter: Duration.zero);
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      model.refreshVisibleWeekIfStale(monday);
+      await Future<void>.delayed(const Duration(milliseconds: 40));
 
-    expect(provider.refreshWeekIfStaleRequests, <DateTime>[weekStart]);
-  });
+      expect(provider.refreshWeekIfStaleRequests, <DateTime>[weekStart]);
+    },
+  );
 }
 
 class _TrackingCanteenProvider extends CanteenProvider {
@@ -84,12 +88,13 @@ class _TrackingCanteenProvider extends CanteenProvider {
   final Set<DateTime> _cachedWeeks = <DateTime>{};
 
   _TrackingCanteenProvider()
-      : super(
-          CanteenMealRepository(_FakeDatabaseAccess()),
-          TestCanteenLocationService(),
-          CanteenScraper(),
-          OpenMensaCanteenSource(),
-        );
+    : super(
+        CanteenMealRepository(_FakeDatabaseAccess()),
+        TestCanteenLocationService(),
+        CanteenScraper(),
+        OpenMensaCanteenSource(),
+        DhbwAppCanteenSource(),
+      );
 
   @override
   void addMenuUpdatedCallback(CanteenMenuUpdatedCallback callback) {
@@ -204,13 +209,17 @@ class _FakeDatabaseAccess extends DatabaseAccess {
 
   @override
   Future<List<Map<String, dynamic>>> rawQuery(
-      String sql, List<dynamic> parameters) async {
+    String sql,
+    List<dynamic> parameters,
+  ) async {
     return <Map<String, dynamic>>[];
   }
 
   @override
   Future<void> insertBatch(
-      String table, List<Map<String, dynamic>> rows) async {}
+    String table,
+    List<Map<String, dynamic>> rows,
+  ) async {}
 
   @override
   Future<int> deleteWhere(

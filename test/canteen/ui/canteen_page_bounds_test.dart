@@ -3,6 +3,7 @@ import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
+import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
 import 'package:dualmate/canteen/service/open_mensa_canteen_source.dart';
 import 'package:dualmate/canteen/ui/canteen_page.dart';
 import 'package:dualmate/canteen/ui/viewmodels/canteen_view_model.dart';
@@ -39,8 +40,9 @@ void main() {
     expect(delegate.childCount, 1);
   });
 
-  testWidgets('shows horizontal stretching overscroll indicator',
-      (tester) async {
+  testWidgets('shows horizontal stretching overscroll indicator', (
+    tester,
+  ) async {
     final now = DateTime.now();
     final today = _normalizeToWeekday(now);
     final weekStart = toStartOfDay(toMonday(today));
@@ -64,8 +66,9 @@ void main() {
     );
   });
 
-  testWidgets('disables implicit page prebuild on canteen pager',
-      (tester) async {
+  testWidgets('disables implicit page prebuild on canteen pager', (
+    tester,
+  ) async {
     final now = DateTime.now();
     final today = _normalizeToWeekday(now);
     final weekStart = toStartOfDay(toMonday(today));
@@ -83,8 +86,9 @@ void main() {
     expect(pageView.allowImplicitScrolling, isFalse);
   });
 
-  testWidgets('does not allow paging to empty days before/after content',
-      (tester) async {
+  testWidgets('does not allow paging to empty days before/after content', (
+    tester,
+  ) async {
     final now = DateTime.now();
     final today = _normalizeToWeekday(now);
     final weekStart = toStartOfDay(toMonday(today));
@@ -116,8 +120,10 @@ void main() {
     final nextWeekStart = toStartOfDay(weekStart.add(const Duration(days: 7)));
     final menusByWeek = <DateTime, List<DailyMenu>>{
       weekStart: _buildWeekMenusWithSingleDayMeal(weekStart, today),
-      nextWeekStart:
-          _buildWeekMenusWithSingleDayMeal(nextWeekStart, nextWeekStart),
+      nextWeekStart: _buildWeekMenusWithSingleDayMeal(
+        nextWeekStart,
+        nextWeekStart,
+      ),
     };
 
     final provider = _FakeCanteenProvider(
@@ -186,31 +192,19 @@ void main() {
 
   test('treats an uncommitted page move as pending', () {
     expect(
-      hasPendingCommittedCanteenPage(
-        committedPage: 0,
-        currentPage: null,
-      ),
+      hasPendingCommittedCanteenPage(committedPage: 0, currentPage: null),
       isFalse,
     );
     expect(
-      hasPendingCommittedCanteenPage(
-        committedPage: 0,
-        currentPage: 0.2,
-      ),
+      hasPendingCommittedCanteenPage(committedPage: 0, currentPage: 0.2),
       isTrue,
     );
     expect(
-      hasPendingCommittedCanteenPage(
-        committedPage: 0,
-        currentPage: 0.6,
-      ),
+      hasPendingCommittedCanteenPage(committedPage: 0, currentPage: 0.6),
       isTrue,
     );
     expect(
-      hasPendingCommittedCanteenPage(
-        committedPage: 1,
-        currentPage: 1.0,
-      ),
+      hasPendingCommittedCanteenPage(committedPage: 1, currentPage: 1.0),
       isFalse,
     );
   });
@@ -265,12 +259,18 @@ void main() {
     final monday = DateTime(2026, 2, 9);
     final tuesday = monday.add(const Duration(days: 1));
 
-    expect(canteenPageContentModeKey(const <DateTime>[]),
-        'canteen_page_content_single');
-    expect(canteenPageContentModeKey(<DateTime>[monday]),
-        'canteen_page_content_paged');
-    expect(canteenPageContentModeKey(<DateTime>[monday, tuesday]),
-        'canteen_page_content_paged');
+    expect(
+      canteenPageContentModeKey(const <DateTime>[]),
+      'canteen_page_content_single',
+    );
+    expect(
+      canteenPageContentModeKey(<DateTime>[monday]),
+      'canteen_page_content_paged',
+    );
+    expect(
+      canteenPageContentModeKey(<DateTime>[monday, tuesday]),
+      'canteen_page_content_paged',
+    );
   });
 
   test('finds a canteen day index from its stable key', () {
@@ -281,8 +281,10 @@ void main() {
 
     expect(findCanteenDayIndexByKey(canteenDayViewKey(monday), days), 0);
     expect(findCanteenDayIndexByKey(canteenDayViewKey(tuesday), days), 1);
-    expect(findCanteenDayIndexByKey(const ValueKey<String>('unknown'), days),
-        isNull);
+    expect(
+      findCanteenDayIndexByKey(const ValueKey<String>('unknown'), days),
+      isNull,
+    );
   });
 }
 
@@ -305,9 +307,7 @@ Widget _wrapWithApp(CanteenViewModel viewModel) {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('en'), Locale('de')],
-      home: Scaffold(
-        body: CanteenPage(),
-      ),
+      home: Scaffold(body: CanteenPage()),
     ),
   );
 }
@@ -371,15 +371,14 @@ class _FakeCanteenProvider extends CanteenProvider {
   final bool cacheOnlyKnownWeeks;
   final Set<DateTime> _cachedWeeks = <DateTime>{};
 
-  _FakeCanteenProvider(
-    this._menusByWeek, {
-    this.cacheOnlyKnownWeeks = false,
-  }) : super(
-          CanteenMealRepository(_FakeDatabaseAccess()),
-          TestCanteenLocationService(),
-          CanteenScraper(),
-          OpenMensaCanteenSource(),
-        );
+  _FakeCanteenProvider(this._menusByWeek, {this.cacheOnlyKnownWeeks = false})
+    : super(
+        CanteenMealRepository(_FakeDatabaseAccess()),
+        TestCanteenLocationService(),
+        CanteenScraper(),
+        OpenMensaCanteenSource(),
+        DhbwAppCanteenSource(),
+      );
 
   @override
   void addMenuUpdatedCallback(CanteenMenuUpdatedCallback callback) {
@@ -447,28 +446,34 @@ class _FakeCanteenProvider extends CanteenProvider {
 
 class _FakeDatabaseAccess extends DatabaseAccess {
   @override
-  Future<List<Map<String, dynamic>>> queryRows(String table,
-      {bool? distinct,
-      List<String>? columns,
-      String? where,
-      List<dynamic>? whereArgs,
-      String? groupBy,
-      String? having,
-      String? orderBy,
-      int? limit,
-      int? offset}) async {
+  Future<List<Map<String, dynamic>>> queryRows(
+    String table, {
+    bool? distinct,
+    List<String>? columns,
+    String? where,
+    List<dynamic>? whereArgs,
+    String? groupBy,
+    String? having,
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) async {
     return <Map<String, dynamic>>[];
   }
 
   @override
   Future<List<Map<String, dynamic>>> rawQuery(
-      String sql, List<dynamic> parameters) async {
+    String sql,
+    List<dynamic> parameters,
+  ) async {
     return <Map<String, dynamic>>[];
   }
 
   @override
   Future<void> insertBatch(
-      String table, List<Map<String, dynamic>> rows) async {
+    String table,
+    List<Map<String, dynamic>> rows,
+  ) async {
     return;
   }
 

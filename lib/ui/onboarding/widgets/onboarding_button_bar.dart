@@ -23,7 +23,7 @@ class OnboardingButtonBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
           _buildPreviousButton(context),
-          _buildNextButton(context)
+          _buildNextButton(context),
         ],
       ),
     );
@@ -45,8 +45,8 @@ class OnboardingButtonBar extends StatelessWidget {
   }
 
   Widget _buildNextButton(BuildContext context) {
-    final canSkip = viewModel.pages[viewModel.currentStep]?.viewModel().canSkip ??
-        true;
+    final page = viewModel.pages[viewModel.currentStep];
+    final canSkip = page?.viewModel().canSkip ?? false;
     String buttonText;
     if (viewModel.isLastStep) {
       buttonText = L.of(context).onboardingFinishButton;

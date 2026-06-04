@@ -3,25 +3,25 @@ import 'package:dualmate/canteen/model/canteen_location.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 
 class TestCanteenLocationService extends CanteenLocationService {
-  CanteenLocation _location;
+  CanteenLocation? _configuredLocation;
 
   TestCanteenLocationService({CanteenLocation? initialLocation})
-      : _location = initialLocation ?? CanteenLocations.defaultLocation,
-        super(_NoopPreferencesProvider());
+    : _configuredLocation = initialLocation,
+      super(_NoopPreferencesProvider());
 
   @override
   Future<CanteenLocation> getSelectedLocation() async {
-    return _location;
+    return _configuredLocation ?? CanteenLocations.defaultLocation;
   }
 
   @override
   Future<CanteenLocation?> getConfiguredLocation() async {
-    return _location;
+    return _configuredLocation;
   }
 
   @override
   Future<void> setSelectedLocation(CanteenLocation location) async {
-    _location = location;
+    _configuredLocation = location;
   }
 }
 

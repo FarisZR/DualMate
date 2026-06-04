@@ -12,7 +12,7 @@ class CanteenLocationService {
       return null;
     }
 
-    return CanteenLocations.fromId(id);
+    return CanteenLocations.supportedFromId(id);
   }
 
   Future<CanteenLocation> getSelectedLocation() async {

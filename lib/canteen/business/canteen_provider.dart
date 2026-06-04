@@ -6,24 +6,23 @@ import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/business/canteen_location_service.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
+import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
 import 'package:dualmate/canteen/service/open_mensa_canteen_source.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 
-typedef CanteenMenuUpdatedCallback = Future<void> Function(
-  List<DailyMenu> menus,
-  DateTime start,
-  DateTime end,
-);
+typedef CanteenMenuUpdatedCallback =
+    Future<void> Function(List<DailyMenu> menus, DateTime start, DateTime end);
 
 class CanteenProvider {
   final CanteenMealRepository _repository;
   final CanteenLocationService _locationService;
   final CanteenScraper _scraper;
   final OpenMensaCanteenSource _openMensaSource;
+  final DhbwAppCanteenSource _dhbwAppSource;
   final List<CanteenMenuUpdatedCallback> _callbacks = [];
-  final Map<DateTime, Future<List<DailyMenu>>> _refreshInFlight = {};
-  final Map<DateTime, DateTime> _lastRefreshAtByWeek = {};
+  final Map<String, Future<List<DailyMenu>>> _refreshInFlight = {};
+  final Map<String, DateTime> _lastRefreshAtByWeek = {};
   String? _activeLocationId;
 
   CanteenProvider(
@@ -31,6 +30,7 @@ class CanteenProvider {
     this._locationService,
     this._scraper,
     this._openMensaSource,
+    this._dhbwAppSource,
   );
 
   void addMenuUpdatedCallback(CanteenMenuUpdatedCallback callback) {
@@ -74,14 +74,17 @@ class CanteenProvider {
     CancellationToken? cancellationToken,
     bool prefetchNextWeek = true,
   }) async {
+    final location = await _ensureActiveLocationCache();
     var weekStart = toStartOfDay(toMonday(date));
-    final inFlight = _refreshInFlight[weekStart];
+    final refreshKey = _refreshKey(weekStart, location.id);
+    final inFlight = _refreshInFlight[refreshKey];
     if (inFlight != null) {
       return inFlight;
     }
 
-    final lastRefreshAt = _lastRefreshAtByWeek[weekStart];
-    final isFresh = lastRefreshAt != null &&
+    final lastRefreshAt = _lastRefreshAtByWeek[refreshKey];
+    final isFresh =
+        lastRefreshAt != null &&
         DateTime.now().difference(lastRefreshAt) < staleAfter;
     if (isFresh) {
       return getCachedWeek(weekStart);
@@ -99,32 +102,36 @@ class CanteenProvider {
     CancellationToken? cancellationToken,
     required bool prefetchNextWeek,
   }) async {
+    final location = await _ensureActiveLocationCache();
     var weekStart = toStartOfDay(toMonday(date));
-    final inFlight = _refreshInFlight[weekStart];
+    final refreshKey = _refreshKey(weekStart, location.id);
+    final inFlight = _refreshInFlight[refreshKey];
     if (inFlight != null) {
       return inFlight;
     }
 
     final refreshFuture = _doRefreshWeek(
+      location,
       weekStart,
       cancellationToken: cancellationToken,
       prefetchNextWeek: prefetchNextWeek,
     );
-    _refreshInFlight[weekStart] = refreshFuture;
+    _refreshInFlight[refreshKey] = refreshFuture;
 
     try {
       return await refreshFuture;
     } finally {
-      _refreshInFlight.remove(weekStart);
+      _refreshInFlight.remove(refreshKey);
     }
   }
 
   Future<List<DailyMenu>> _doRefreshWeek(
+    CanteenLocation location,
     DateTime weekStart, {
     CancellationToken? cancellationToken,
     required bool prefetchNextWeek,
   }) async {
-    final location = await _ensureActiveLocationCache();
+    final locationId = location.id;
     var weekEnd = weekStart.add(const Duration(days: 5));
 
     var menus = await _loadWeekForLocation(
@@ -132,46 +139,55 @@ class CanteenProvider {
       weekStart,
       cancellationToken,
     );
+    _throwIfLocationChanged(locationId);
     var normalizedMenus = _normalizeMenus(weekStart, menus);
 
     await _repository.deleteMealsBetween(weekStart, weekEnd);
+    _throwIfLocationChanged(locationId);
     await _repository.saveMeals(
       normalizedMenus.expand((menu) => menu.meals).toList(),
     );
+    _throwIfLocationChanged(locationId);
 
     await _notifyCallbacks(normalizedMenus, weekStart, weekEnd);
-    _lastRefreshAtByWeek[weekStart] = DateTime.now();
+    _lastRefreshAtByWeek[_refreshKey(weekStart, locationId)] = DateTime.now();
 
     if (prefetchNextWeek) {
-      unawaited(_prefetchNextWeek(weekStart, cancellationToken));
+      unawaited(_prefetchNextWeek(location, weekStart, cancellationToken));
     }
 
     return normalizedMenus;
   }
 
   Future<void> _prefetchNextWeek(
+    CanteenLocation location,
     DateTime weekStart,
     CancellationToken? cancellationToken,
   ) async {
-    final location = await _ensureActiveLocationCache();
+    final locationId = location.id;
     var nextWeekStart = toStartOfDay(weekStart.add(const Duration(days: 7)));
     var nextWeekEnd = nextWeekStart.add(const Duration(days: 5));
 
     try {
+      _throwIfLocationChanged(locationId);
       var nextMenus = await _loadWeekForLocation(
         location,
         nextWeekStart,
         cancellationToken,
       );
+      _throwIfLocationChanged(locationId);
       var normalizedNextMenus = _normalizeMenus(nextWeekStart, nextMenus);
 
       await _repository.deleteMealsBetween(nextWeekStart, nextWeekEnd);
+      _throwIfLocationChanged(locationId);
       await _repository.saveMeals(
         normalizedNextMenus.expand((menu) => menu.meals).toList(),
       );
+      _throwIfLocationChanged(locationId);
 
       await _notifyCallbacks(normalizedNextMenus, nextWeekStart, nextWeekEnd);
-      _lastRefreshAtByWeek[nextWeekStart] = DateTime.now();
+      _lastRefreshAtByWeek[_refreshKey(nextWeekStart, locationId)] =
+          DateTime.now();
     } catch (_) {
       // Prefetch failures should not affect the current week.
     }
@@ -200,6 +216,16 @@ class CanteenProvider {
     return selected;
   }
 
+  String _refreshKey(DateTime weekStart, String locationId) {
+    return '$locationId:${weekStart.millisecondsSinceEpoch}';
+  }
+
+  void _throwIfLocationChanged(String locationId) {
+    if (_activeLocationId != locationId) {
+      throw OperationCancelledException();
+    }
+  }
+
   Future<List<DailyMenu>> _loadWeekForLocation(
     CanteenLocation location,
     DateTime weekStart,
@@ -211,7 +237,20 @@ class CanteenProvider {
 
     final openMensaId = location.openMensaId;
     if (openMensaId == null) {
-      throw Exception('Missing OpenMensa id for selected canteen');
+      if (location.source == CanteenLocationSource.dhbwApp) {
+        final site = location.dhbwAppSite;
+        final mensaId = location.dhbwAppMensaId;
+        if (site == null || mensaId == null) {
+          throw Exception('Missing DHBW.app id for selected canteen');
+        }
+        return _dhbwAppSource.loadWeek(
+          site,
+          mensaId,
+          weekStart,
+          cancellationToken,
+        );
+      }
+      throw Exception('Missing canteen id for selected canteen');
     }
 
     return _openMensaSource.loadWeek(openMensaId, weekStart, cancellationToken);

@@ -91,7 +91,7 @@ final en = {
   "onboardingRaplaUrlPaste": "Paste",
   "onboardingDualisPageDescription":
       "Here you can insert the login credentials for Dualis to see your schedule and your grades from within the app. "
-          "This step is optional and can be done later",
+      "This step is optional and can be done later",
   "onboardingDualisPageTitle": "Dualis Login",
   "onboardingDualisTestButton": "Test",
   "onboardingDualisWrongCredentials": "Wrong password or username",
@@ -118,13 +118,15 @@ final en = {
   "logoutButtonTooltip": "Logout",
   "scheduleHelpDialogContent":
       "Here you can view your schedule if you get it from Rapla or Dualis."
-          "\nNormally you get the url for Rapla at the beginning of the semester via email.",
+      "\nNormally you get the url for Rapla at the beginning of the semester via email.",
   "scheduleHelpDialogTitle": "Schedule",
-  "dualisHelpDialogContent": ""
+  "dualisHelpDialogContent":
+      ""
       "With your Dualis credentials you can view the exam results and course results from within the app."
       "\n\nIf you cannot login check your internet connection and login credentials",
   "dualisHelpDialogTitle": "Dualis Login",
-  "dateManagementHelpDialogContent": ""
+  "dateManagementHelpDialogContent":
+      ""
       "The dates page shows important Rapla events like exams, test weeks, and holidays. "
       "\nYou can switch to DHmine dates in Settings. DHmine is only available for DHBW Stuttgart.",
   "dateManagementHelpDialogTitle": "Dates",
@@ -153,7 +155,8 @@ final en = {
   "settingsUseDhMineDates": "Use DHmine for dates",
   "onboardingDualisSourceDescription":
       "To view the schedule from Dualis you have to log in using your account:",
-  "onboardingIcalPageDescription": ""
+  "onboardingIcalPageDescription":
+      ""
       "Here you can insert the url to the iCal online calendar:",
   "onboardingIcalPageTitle": "iCal Calendar",
   "onboardingIcalUrlHint": "URL",
@@ -207,11 +210,11 @@ final en = {
   "canteenHelpDialogTitle": "Canteen Menu",
   "canteenHelpDialogContent":
       "View the daily menu of the DHBW Karlsruhe canteen (Menseria Erzbergerstraße). Data is from Studierendenwerk Karlsruhe.",
-  "onboardingCanteenLocationTitle": "Mensa",
+  "onboardingCanteenLocationTitle": "Canteen",
   "onboardingCanteenLocationDescription":
-      "Select the exact mensa that should be used in the app.",
+      "Select the exact canteen that should be used in the app.",
   "onboardingCanteenLocationRequired":
       "This selection is required and can be changed later in Settings.",
   "settingsCanteenTitle": "Canteen",
-  "settingsSetupCanteenLocation": "Select mensa",
+  "settingsSetupCanteenLocation": "Select canteen",
 };

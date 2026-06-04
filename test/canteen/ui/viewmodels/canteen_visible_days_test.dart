@@ -3,6 +3,7 @@ import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
+import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
 import 'package:dualmate/canteen/service/open_mensa_canteen_source.dart';
 import 'package:dualmate/canteen/ui/viewmodels/canteen_view_model.dart';
 import 'package:dualmate/common/data/database_access.dart';
@@ -48,8 +49,9 @@ void main() {
 
     expect(model.nearestVisibleContentDay(weekStart), tuesday);
     expect(
-        model.nearestVisibleContentDay(weekStart.add(const Duration(days: 4))),
-        thursday);
+      model.nearestVisibleContentDay(weekStart.add(const Duration(days: 4))),
+      thursday,
+    );
   });
 }
 
@@ -81,12 +83,13 @@ class _FakeCanteenProvider extends CanteenProvider {
   final List<CanteenMenuUpdatedCallback> _callbacks = [];
 
   _FakeCanteenProvider(this._menusByWeek)
-      : super(
-          CanteenMealRepository(_FakeDatabaseAccess()),
-          TestCanteenLocationService(),
-          CanteenScraper(),
-          OpenMensaCanteenSource(),
-        );
+    : super(
+        CanteenMealRepository(_FakeDatabaseAccess()),
+        TestCanteenLocationService(),
+        CanteenScraper(),
+        OpenMensaCanteenSource(),
+        DhbwAppCanteenSource(),
+      );
 
   @override
   void addMenuUpdatedCallback(CanteenMenuUpdatedCallback callback) {
@@ -149,28 +152,34 @@ class _FakeCanteenProvider extends CanteenProvider {
 
 class _FakeDatabaseAccess extends DatabaseAccess {
   @override
-  Future<List<Map<String, dynamic>>> queryRows(String table,
-      {bool? distinct,
-      List<String>? columns,
-      String? where,
-      List<dynamic>? whereArgs,
-      String? groupBy,
-      String? having,
-      String? orderBy,
-      int? limit,
-      int? offset}) async {
+  Future<List<Map<String, dynamic>>> queryRows(
+    String table, {
+    bool? distinct,
+    List<String>? columns,
+    String? where,
+    List<dynamic>? whereArgs,
+    String? groupBy,
+    String? having,
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) async {
     return <Map<String, dynamic>>[];
   }
 
   @override
   Future<List<Map<String, dynamic>>> rawQuery(
-      String sql, List<dynamic> parameters) async {
+    String sql,
+    List<dynamic> parameters,
+  ) async {
     return <Map<String, dynamic>>[];
   }
 
   @override
   Future<void> insertBatch(
-      String table, List<Map<String, dynamic>> rows) async {
+    String table,
+    List<Map<String, dynamic>> rows,
+  ) async {
     return;
   }
 

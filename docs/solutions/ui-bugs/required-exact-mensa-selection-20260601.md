@@ -26,12 +26,16 @@ The canteen stack only had one implicit source: the Karlsruhe scraper path. Ther
 - Added a required onboarding mensa step that intentionally matches the schedule setup page structure.
 - Added a Settings dialog to reselect the exact mensa later.
 - Kept Karlsruhe on the existing scraper/model path exactly as before.
-- Added an OpenMensa-backed source for the newly supported non-Karlsruhe locations.
+- Added a dhbw.app-backed source for the supported non-Karlsruhe locations and expanded the selectable list to match the dhbw.app mensa metadata, including the multiple Mannheim choices.
 - Kept the SQLite/widget cache model minimal by treating the selected mensa as the single active canteen cache and clearing cached meals when the selection changes.
+- Hardened location-switch refreshes so old in-flight requests cannot repopulate the active cache after a mensa change.
+- Added a canteen page header action for changing the selected mensa without leaving the page.
 
 ## Test Coverage
 - `required canteen step cannot be skipped when invalid`
-- `refreshWeek uses OpenMensa for non-Karlsruhe locations`
+- `invalid configured location id does not fall back as configured`
+- `supported locations include all DHBW.app canteen choices`
+- `refreshWeek uses DHBW.app for non-Karlsruhe locations`
 - existing canteen page bounds, visible-days, and startup loading policy suites updated for the new location service path
 
 ## Commands run

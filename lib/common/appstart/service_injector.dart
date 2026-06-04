@@ -2,6 +2,7 @@ import 'package:dualmate/canteen/business/canteen_location_service.dart';
 import 'package:dualmate/canteen/business/canteen_provider.dart';
 import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
+import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
 import 'package:dualmate/canteen/service/open_mensa_canteen_source.dart';
 import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/common/data/preferences/preferences_access.dart';
@@ -35,62 +36,58 @@ void injectServices(bool isBackground) {
   if (_isInjected) return;
 
   KiwiContainer c = KiwiContainer();
-  c.registerInstance(PreferencesProvider(
-    PreferencesAccess(),
-    SecureStorageAccess(),
-  ));
+  c.registerInstance(
+    PreferencesProvider(PreferencesAccess(), SecureStorageAccess()),
+  );
   c.registerInstance(DatabaseAccess());
-  c.registerInstance(CanteenMealRepository(
-    c.resolve(),
-  ));
+  c.registerInstance(CanteenMealRepository(c.resolve()));
   c.registerInstance(CanteenLocationService(c.resolve()));
   c.registerInstance(CanteenScraper());
   c.registerInstance(OpenMensaCanteenSource());
-  c.registerInstance(CanteenProvider(
-    c.resolve(),
-    c.resolve(),
-    c.resolve(),
-    c.resolve(),
-  ));
-  c.registerInstance(ScheduleEntryRepository(
-    c.resolve(),
-  ));
-  c.registerInstance(ScheduleFilterRepository(
-    c.resolve(),
-  ));
-  c.registerInstance(ScheduleQueryInformationRepository(
-    c.resolve(),
-  ));
-  c.registerInstance(ScheduleSourceProvider(
-    c.resolve(),
-    isBackground,
-    c.resolve(),
-    c.resolve(),
-  ));
-  c.registerInstance(ScheduleProvider(
-    c.resolve(),
-    c.resolve(),
-    c.resolve(),
-    c.resolve(),
-    c.resolve(),
-  ));
+  c.registerInstance(DhbwAppCanteenSource());
+  c.registerInstance(
+    CanteenProvider(
+      c.resolve(),
+      c.resolve(),
+      c.resolve(),
+      c.resolve(),
+      c.resolve(),
+    ),
+  );
+  c.registerInstance(ScheduleEntryRepository(c.resolve()));
+  c.registerInstance(ScheduleFilterRepository(c.resolve()));
+  c.registerInstance(ScheduleQueryInformationRepository(c.resolve()));
+  c.registerInstance(
+    ScheduleSourceProvider(c.resolve(), isBackground, c.resolve(), c.resolve()),
+  );
+  c.registerInstance(
+    ScheduleProvider(
+      c.resolve(),
+      c.resolve(),
+      c.resolve(),
+      c.resolve(),
+      c.resolve(),
+    ),
+  );
   c.registerInstance<DualisScraper>(
     FakeAccountDualisScraperDecorator(DualisScraper()),
   );
-  c.registerInstance<DualisService>(CacheDualisServiceDecorator(
-    DualisServiceImpl(
-      c.resolve(),
+  c.registerInstance<DualisService>(
+    CacheDualisServiceDecorator(DualisServiceImpl(c.resolve())),
+  );
+  c.registerInstance(
+    DateEntryProvider(
+      DateManagementService(),
+      DateEntryRepository(c.resolve()),
     ),
-  ));
-  c.registerInstance(DateEntryProvider(
-    DateManagementService(),
-    DateEntryRepository(c.resolve()),
-  ));
-  c.registerInstance(RaplaImportantEventsProvider(
-    c.resolve<PreferencesProvider>(),
-    c.resolve<ScheduleProvider>(),
-    c.resolve<ScheduleSourceProvider>(),
-  ));
+  );
+  c.registerInstance(
+    RaplaImportantEventsProvider(
+      c.resolve<PreferencesProvider>(),
+      c.resolve<ScheduleProvider>(),
+      c.resolve<ScheduleSourceProvider>(),
+    ),
+  );
   c.registerInstance(WidgetHelper());
   c.registerInstance(ListDateEntries30d(List<DateEntry>.empty(growable: true)));
 
