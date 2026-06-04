@@ -117,10 +117,14 @@ class FakeAccountDualisScraperDecorator implements DualisScraper {
   }
 
   @override
-  Future<void> logout(CancellationToken? cancellationToken) {
-    return _currentDualisScraper.logout(
-      cancellationToken ?? CancellationToken(),
-    );
+  Future<void> logout(CancellationToken? cancellationToken) async {
+    try {
+      await _currentDualisScraper.logout(
+        cancellationToken ?? CancellationToken(),
+      );
+    } finally {
+      _currentDualisScraper = _originalDualisScraper;
+    }
   }
 
   @override

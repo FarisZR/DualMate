@@ -129,6 +129,28 @@ void main() {
 
     expect(scraper.isLoggedIn(), isFalse);
   });
+
+  test('logout prevents demo restore through previous credentials', () async {
+    final originalScraper = _RecordingDualisScraper();
+    final scraper = FakeAccountDualisScraperDecorator(originalScraper);
+
+    scraper.setLoginCredentials(
+      FakeAccountDualisScraperDecorator.demoUsername,
+      FakeAccountDualisScraperDecorator.demoPassword,
+    );
+    expect(
+      await scraper.loginWithPreviousCredentials(CancellationToken()),
+      LoginResult.LoggedIn,
+    );
+
+    await scraper.logout(CancellationToken());
+
+    expect(
+      await scraper.loginWithPreviousCredentials(CancellationToken()),
+      LoginResult.LoginFailed,
+    );
+    expect(originalScraper.loginWithPreviousCredentialsCalls, 1);
+  });
 }
 
 class _RecordingDualisScraper implements DualisScraper {
