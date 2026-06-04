@@ -55,6 +55,9 @@ Important runtime behavior:
   instead of dropping the user back to the login form.
 - Logged-in Dualis pages support manual pull-to-refresh, which should force a
   cache-busting reload of overview and semester data.
+- Google Play review credentials are handled by
+  `FakeAccountDualisScraperDecorator`; keep mock data local and covered by
+  automated tests.
 
 ### Schedule (`lib/schedule`)
 
