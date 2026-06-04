@@ -12,8 +12,7 @@ could not mask the icon consistently or use a themed monochrome layer.
 
 ## Solution
 
-- Replaced the Flutter branding asset at `assets/app_icon.png` with the refined
-  DualMate icon from `~/dualmate_android_icon_v1_refined.zip`.
+- Replaced the Flutter branding asset at `assets/app_icon.png` with the refined DualMate icon.
 - Added adaptive launcher icon resources in `mipmap-anydpi-v26` with foreground,
   background, and monochrome layers.
 - Regenerated legacy density fallback PNGs in `mipmap-*dpi`.
