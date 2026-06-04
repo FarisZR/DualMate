@@ -10,7 +10,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('delayed calendar sync uses a silent foreground maintenance origin', () {
+  test('delayed calendar sync is skipped when local calendar is disabled', () {
     fakeAsync((async) {
       final scheduleProvider = _TrackingScheduleProvider();
       final scheduleSourceProvider = _FakeScheduleSourceProvider();
@@ -24,11 +24,33 @@ void main() {
       async.elapse(const Duration(seconds: 10));
       async.flushMicrotasks();
 
-      expect(scheduleProvider.origins, [
-        ScheduleRefreshOrigin.foregroundMaintenance,
-      ]);
+      expect(scheduleProvider.origins, isEmpty);
     });
   });
+
+  test(
+    'enabled delayed calendar sync uses a silent foreground maintenance origin',
+    () {
+      fakeAsync((async) {
+        final scheduleProvider = _TrackingScheduleProvider();
+        final scheduleSourceProvider = _FakeScheduleSourceProvider();
+        final synchronizer = CalendarSynchronizer(
+          scheduleProvider,
+          scheduleSourceProvider,
+          _FakePreferencesProvider(),
+          localCalendarEnabled: true,
+        );
+
+        synchronizer.scheduleSyncInAFewSeconds();
+        async.elapse(const Duration(seconds: 10));
+        async.flushMicrotasks();
+
+        expect(scheduleProvider.origins, [
+          ScheduleRefreshOrigin.foregroundMaintenance,
+        ]);
+      });
+    },
+  );
 }
 
 class _TrackingScheduleProvider implements ScheduleProvider {

@@ -1,4 +1,5 @@
 import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/features/local_calendar_feature.dart';
 import 'package:dualmate/date_management/ui/calendar_export_page.dart';
 import 'package:dualmate/date_management/ui/date_management_page.dart';
 import 'package:dualmate/date_management/ui/viewmodels/date_management_view_model.dart';
@@ -35,6 +36,18 @@ class DateManagementNavigationEntry
 
   @override
   List<Widget> appBarActions(BuildContext context) {
+    if (!isLocalCalendarFeatureEnabled) {
+      return [
+        IconButton(
+          icon: Icon(Icons.help_outline),
+          onPressed: () async {
+            await DateManagementHelpDialog().show(context);
+          },
+          tooltip: L.of(context).helpButtonTooltip,
+        ),
+      ];
+    }
+
     final model = viewModel();
     return [
       IconButton(
@@ -47,30 +60,35 @@ class DateManagementNavigationEntry
       PropertyChangeProvider<DateManagementViewModel, String>(
         value: model,
         child: PropertyChangeConsumer<DateManagementViewModel, String>(
-          builder: (BuildContext context, DateManagementViewModel? viewModel,
-                  Set<String>? properties) =>
-              viewModel == null
-                  ? Container()
-                  : PopupMenuButton<String>(
-                      onSelected: (i) async {
-                        await NavigatorKey.rootKey.currentState?.push(
-                            MaterialPageRoute(
-                                builder: (BuildContext context) =>
-                                    CalendarExportPage(
-                                      entriesToExport: viewModel.exportEntries,
-                                    ),
-                                settings: RouteSettings(name: "settings")));
-                      },
-                      itemBuilder: (BuildContext context) {
-                        return [
-                          PopupMenuItem<String>(
-                            value: "",
-                            child: Text(
-                                L.of(context).dateManagementExportToCalendar),
-                          )
-                        ];
-                      },
-                    ),
+          builder:
+              (
+                BuildContext context,
+                DateManagementViewModel? viewModel,
+                Set<String>? properties,
+              ) => viewModel == null
+              ? Container()
+              : PopupMenuButton<String>(
+                  onSelected: (i) async {
+                    await NavigatorKey.rootKey.currentState?.push(
+                      MaterialPageRoute(
+                        builder: (BuildContext context) => CalendarExportPage(
+                          entriesToExport: viewModel.exportEntries,
+                        ),
+                        settings: RouteSettings(name: "settings"),
+                      ),
+                    );
+                  },
+                  itemBuilder: (BuildContext context) {
+                    return [
+                      PopupMenuItem<String>(
+                        value: "",
+                        child: Text(
+                          L.of(context).dateManagementExportToCalendar,
+                        ),
+                      ),
+                    ];
+                  },
+                ),
         ),
       ),
     ];

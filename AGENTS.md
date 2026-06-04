@@ -37,6 +37,8 @@ Important runtime behavior:
 - Default source is Rapla important events (DHmine optional via settings toggle).
 - Rapla events are derived from shared schedule cache (not a separate legacy cache).
 - Pagination is windowed (3-month chunks), throttled, and bounded.
+- Local device calendar export is behind the `DUALMATE_ENABLE_LOCAL_CALENDAR`
+  Dart define and the Android `localCalendar` flavor.
 
 ### Canteen (`lib/canteen`)
 
@@ -83,6 +85,10 @@ Important runtime behavior:
 - Schedule-change notifications are policy-filtered to class dates within the
   next 14 days; broader refresh windows still update cached data silently.
 - Android uses real scheduler service; non-Android gets no-op scheduler.
+- Local calendar sync startup work is disabled in the standard build. Use
+  `--flavor localCalendar --dart-define=DUALMATE_ENABLE_LOCAL_CALENDAR=true`
+  only when the local calendar feature should be compiled in and Android
+  calendar permissions should be requested.
 
 ## Testing Guidance
 

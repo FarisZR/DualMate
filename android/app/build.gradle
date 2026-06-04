@@ -75,6 +75,17 @@ android {
         multiDexEnabled true
     }
 
+    flavorDimensions "calendarAccess"
+
+    productFlavors {
+        standard {
+            dimension "calendarAccess"
+        }
+        localCalendar {
+            dimension "calendarAccess"
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
