@@ -345,7 +345,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void dispose() {
-    settingsViewModel.dispose();
     super.dispose();
+    settingsViewModel.dispose();
   }
 }
