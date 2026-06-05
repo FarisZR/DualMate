@@ -1,7 +1,6 @@
 import 'package:dualmate/canteen/ui/viewmodels/canteen_view_model.dart';
 import 'package:dualmate/canteen/ui/widgets/filter_dropdown.dart';
 import 'package:dualmate/canteen/ui/widgets/meal_card.dart';
-import 'package:dualmate/canteen/ui/widgets/select_canteen_location_dialog.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/util/date_utils.dart';
@@ -193,53 +192,47 @@ class _CanteenPageState extends State<CanteenPage> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: ValueListenableBuilder<int>(
-                            valueListenable: pageNotifier,
-                            builder: (context, page, _) {
-                              final date = _displayDateForPage(
-                                page,
-                                visibleDays,
-                                model,
-                              );
-                              return AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 200),
-                                transitionBuilder: (child, animation) {
-                                  var offsetAnimation = Tween<Offset>(
-                                    begin: const Offset(0, 0.15),
-                                    end: Offset.zero,
-                                  ).animate(animation);
+                        ValueListenableBuilder<int>(
+                          valueListenable: pageNotifier,
+                          builder: (context, page, _) {
+                            final date = _displayDateForPage(
+                              page,
+                              visibleDays,
+                              model,
+                            );
+                            return AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              transitionBuilder: (child, animation) {
+                                var offsetAnimation = Tween<Offset>(
+                                  begin: const Offset(0, 0.15),
+                                  end: Offset.zero,
+                                ).animate(animation);
 
-                                  return FadeTransition(
-                                    opacity: animation,
-                                    child: SlideTransition(
-                                      position: offsetAnimation,
-                                      child: child,
-                                    ),
-                                  );
-                                },
-                                child: Text(
-                                  dateFormat.format(date),
-                                  key: ValueKey(date.toIso8601String()),
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleMedium,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: L.of(context).settingsSetupCanteenLocation,
-                          onPressed: () async {
-                            await SelectCanteenLocationDialog(
-                              model.locationService,
-                            ).show(context);
-                            await model.reloadSelectedLocation();
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: SlideTransition(
+                                    position: offsetAnimation,
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                dateFormat.format(date),
+                                key: ValueKey(date.toIso8601String()),
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            );
                           },
-                          icon: const Icon(Icons.restaurant),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatSelectedLocation(model),
+                          style: Theme.of(context).textTheme.bodySmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -383,6 +376,15 @@ class _CanteenPageState extends State<CanteenPage> {
     return _selectedDate ??
         model.nearestVisibleContentDay(baseDate) ??
         baseDate;
+  }
+
+  String _formatSelectedLocation(CanteenViewModel model) {
+    final location = model.selectedLocation;
+    final subtitle = location.subtitle;
+    if (subtitle == null || subtitle.isEmpty) {
+      return location.name;
+    }
+    return '${location.name} - $subtitle';
   }
 
   Widget _buildPageContent(CanteenViewModel model, List<DateTime> visibleDays) {
