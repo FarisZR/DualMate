@@ -15,6 +15,8 @@ could not mask the icon consistently or use a themed monochrome layer.
 - Replaced the Flutter branding asset at `assets/app_icon.png` with the refined DualMate icon.
 - Added adaptive launcher icon resources in `mipmap-anydpi-v26` with foreground,
   background, and monochrome layers.
+- Centered the foreground mark inside the adaptive icon safe zone so launcher
+  masks and the splash drawable do not crop the logo.
 - Regenerated legacy density fallback PNGs in `mipmap-*dpi`, including
   `ic_launcher_round.png` fallbacks for pre-Android 8 launchers.
 - Added `android:roundIcon` so round launcher contexts use the new adaptive icon.
