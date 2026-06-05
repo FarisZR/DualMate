@@ -19,18 +19,35 @@ class FakeDataDualisScraper implements DualisScraper {
   }
 
   @override
-  Future<List<DualisModule>> loadAllModules(
-      [CancellationToken? cancellationToken]) async {
+  Future<List<DualisModule>> loadAllModules([
+    CancellationToken? cancellationToken,
+  ]) async {
     await Future.delayed(Duration(milliseconds: 200));
 
     return Future.value([
       DualisModule(
-        "Module1",
-        "Informatik",
-        "1.0",
-        "10",
+        "T3INF1001",
+        "Software Engineering",
+        "1.7",
+        "5",
         ExamState.Passed,
+        "demo://software-engineering",
+      ),
+      DualisModule(
+        "T3INF1002",
+        "Datenbanken",
+        "2.0",
+        "5",
+        ExamState.Passed,
+        "demo://databases",
+      ),
+      DualisModule(
+        "T3INF1003",
+        "Mathematik",
         "",
+        "5",
+        ExamState.Pending,
+        "demo://mathematics",
       ),
     ]);
   }
@@ -44,10 +61,17 @@ class FakeDataDualisScraper implements DualisScraper {
     return Future.value([
       DualisExam(
         "Klausur",
-        "Module1",
-        ExamGrade.graded("1.0"),
+        "Software Engineering",
+        ExamGrade.graded("1.7"),
         "1",
-        "SoSe2020",
+        "SoSe 2026",
+      ),
+      DualisExam(
+        "Projektarbeit",
+        "Software Engineering",
+        ExamGrade.passed(),
+        "1",
+        "SoSe 2026",
       ),
     ]);
   }
@@ -69,35 +93,40 @@ class FakeDataDualisScraper implements DualisScraper {
     await Future.delayed(Duration(milliseconds: 200));
     return Future.value([
       DualisModule(
-        "Module1",
-        "Informatik",
-        "1.0",
-        "10",
+        "T3INF1001",
+        "Software Engineering",
+        "1.7",
+        "5",
         ExamState.Passed,
-        "",
+        "demo://software-engineering",
+      ),
+      DualisModule(
+        "T3INF1002",
+        "Datenbanken",
+        "2.0",
+        "5",
+        ExamState.Passed,
+        "demo://databases",
       ),
     ]);
   }
 
   @override
-  Future<List<DualisSemester>> loadSemesters(
-      [CancellationToken? cancellationToken]) async {
+  Future<List<DualisSemester>> loadSemesters([
+    CancellationToken? cancellationToken,
+  ]) async {
     await Future.delayed(Duration(milliseconds: 200));
-    return Future.value([DualisSemester("SoSe2020", "", [])]);
+    return Future.value([
+      DualisSemester("SoSe 2026", "demo://semester/sose-2026", []),
+    ]);
   }
 
   @override
   Future<StudyGrades> loadStudyGrades(
-      CancellationToken? cancellationToken) async {
+    CancellationToken? cancellationToken,
+  ) async {
     await Future.delayed(Duration(milliseconds: 200));
-    return Future.value(
-      StudyGrades(
-        1.5,
-        1.5,
-        210,
-        10,
-      ),
-    );
+    return Future.value(StudyGrades(1.7, 1.8, 210, 96));
   }
 
   @override
@@ -113,7 +142,8 @@ class FakeDataDualisScraper implements DualisScraper {
 
   @override
   Future<LoginResult> loginWithPreviousCredentials(
-      CancellationToken? cancellationToken) async {
+    CancellationToken? cancellationToken,
+  ) async {
     await Future.delayed(Duration(milliseconds: 200));
     _isLoggedIn = true;
     return Future.value(LoginResult.LoggedIn);
@@ -126,7 +156,5 @@ class FakeDataDualisScraper implements DualisScraper {
   }
 
   @override
-  void setLoginCredentials(String username, String password) {
-    // TODO: implement setLoginCredentials
-  }
+  void setLoginCredentials(String username, String password) {}
 }
