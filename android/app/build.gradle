@@ -44,6 +44,55 @@ def getBuildDate() {
     return new Date().format('yyyyMMdd')
 } 
 
+def getDartDefine(String name, String defaultValue) {
+    def dartDefines = project.findProperty('dart-defines')
+    if (dartDefines == null || dartDefines.isEmpty()) {
+        return defaultValue
+    }
+
+    for (encodedDefine in dartDefines.split(',')) {
+        if (encodedDefine.isEmpty()) {
+            continue
+        }
+        def decodedDefine = new String(
+                java.util.Base64.decoder.decode(encodedDefine),
+                'UTF-8'
+        )
+        def separatorIndex = decodedDefine.indexOf('=')
+        if (separatorIndex > 0 && decodedDefine.substring(0, separatorIndex) == name) {
+            return decodedDefine.substring(separatorIndex + 1)
+        }
+    }
+
+    return defaultValue
+}
+
+def enableLocalCalendarFeature =
+        getDartDefine('DUALMATE_ENABLE_LOCAL_CALENDAR', 'false').toBoolean()
+
+def sourceMainManifestFile = file('src/main/AndroidManifest.xml')
+def generatedMainManifestFile = layout.buildDirectory
+        .file('generated/conditionalManifest/AndroidManifest.xml')
+        .get()
+        .asFile
+
+def writeConditionalMainManifest = {
+    def manifestText = sourceMainManifestFile.getText('UTF-8')
+    if (enableLocalCalendarFeature) {
+        def calendarPermissions = '''    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+'''
+        manifestText = manifestText.replace(
+                '    <uses-permission android:name="android.permission.INTERNET" />\n',
+                '    <uses-permission android:name="android.permission.INTERNET" />\n' + calendarPermissions
+        )
+    }
+
+    generatedMainManifestFile.parentFile.mkdirs()
+    generatedMainManifestFile.setText(manifestText, 'UTF-8')
+}
+
+writeConditionalMainManifest()
 
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
@@ -59,6 +108,7 @@ android {
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
+        main.manifest.srcFile generatedMainManifestFile
     }
 
     lintOptions {
@@ -73,17 +123,6 @@ android {
         versionName flutterVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled true
-    }
-
-    flavorDimensions "calendarAccess"
-
-    productFlavors {
-        standard {
-            dimension "calendarAccess"
-        }
-        localCalendar {
-            dimension "calendarAccess"
-        }
     }
 
     compileOptions {
