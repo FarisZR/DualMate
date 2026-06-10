@@ -7,10 +7,6 @@ import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/logging/perf_overlay_controller.dart';
 import 'package:dualmate/canteen/business/canteen_location_service.dart';
 import 'package:dualmate/canteen/model/canteen_location.dart';
-import 'package:kiwi/kiwi.dart';
-
-import '../../../common/util/cancellation_token.dart';
-import '../../../schedule/business/schedule_provider.dart';
 
 ///
 /// The view model for the settings page.
@@ -39,10 +35,6 @@ class SettingsViewModel extends BaseViewModel {
 
   bool get useDhMineForDates => _useDhMineForDates;
 
-  bool _isCalendarSyncEnabled = false;
-
-  bool get isCalendarSyncEnabled => _isCalendarSyncEnabled;
-
   bool get showPerformanceOverlay => PerformanceOverlayController.enabled.value;
 
   bool _isDeveloperOptionsEnabled = false;
@@ -70,28 +62,6 @@ class SettingsViewModel extends BaseViewModel {
       _isDeveloperOptionsEnabled = true;
       notifyIfMounted("developerOptions");
     }
-  }
-
-  Future<void> setIsCalendarSyncEnabled(bool value) async {
-    _isCalendarSyncEnabled = value;
-
-    notifyIfMounted("isCalendarSyncEnabled");
-
-    await _preferencesProvider.setIsCalendarSyncEnabled(value);
-
-    var scheduleProvider = KiwiContainer().resolve<ScheduleProvider>();
-    unawaited(
-      scheduleProvider
-          .getUpdatedSchedule(
-            DateTime.now(),
-            DateTime.now().add(Duration(days: 30)),
-            CancellationToken(),
-            origin: ScheduleRefreshOrigin.foregroundMaintenance,
-          )
-          .then<void>((_) {}, onError: (e) {
-        print("Calendar sync refresh failed: $e");
-      }),
-    );
   }
 
   Future<void> setNotifyAboutScheduleChanges(bool value) async {
@@ -154,13 +124,13 @@ class SettingsViewModel extends BaseViewModel {
 
   Future<void> _loadPreferences() async {
     _notifyAboutNextDay = await _preferencesProvider.getNotifyAboutNextDay();
-    _notifyAboutScheduleChanges =
-        await _preferencesProvider.getNotifyAboutScheduleChanges();
+    _notifyAboutScheduleChanges = await _preferencesProvider
+        .getNotifyAboutScheduleChanges();
 
     _prettifySchedule = await _preferencesProvider.getPrettifySchedule();
     _useDhMineForDates = await _preferencesProvider.getUseDhMineForDates();
-    _selectedCanteenLocation =
-        await _canteenLocationService.getSelectedLocation();
+    _selectedCanteenLocation = await _canteenLocationService
+        .getSelectedLocation();
     await PerformanceOverlayController.load(_preferencesProvider);
     notifyIfMounted("notifyAboutNextDay");
     notifyIfMounted("notifyAboutScheduleChanges");
@@ -171,7 +141,8 @@ class SettingsViewModel extends BaseViewModel {
   }
 
   Future<void> reloadSelectedCanteenLocation() async {
-    _selectedCanteenLocation = await _canteenLocationService.getSelectedLocation();
+    _selectedCanteenLocation = await _canteenLocationService
+        .getSelectedLocation();
     notifyIfMounted('selectedCanteenLocation');
   }
 

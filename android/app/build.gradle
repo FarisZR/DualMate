@@ -17,8 +17,15 @@ if (flutterRoot == null) {
     throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
 }
 
-def flutterVersionCode = '39'
-def flutterVersionName = '2.0-beta'
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    flutterVersionCode = '39'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    flutterVersionName = '2.0-beta'
+}
 
 def getGitCommitHash() {
     try {
@@ -37,6 +44,70 @@ def getBuildDate() {
     return new Date().format('yyyyMMdd')
 } 
 
+def getDartDefine(String name, String defaultValue) {
+    def dartDefines = project.findProperty('dart-defines')
+    if (dartDefines == null || dartDefines.isEmpty()) {
+        return defaultValue
+    }
+
+    for (encodedDefine in dartDefines.split(',')) {
+        if (encodedDefine.isEmpty()) {
+            continue
+        }
+        def decodedDefine = new String(
+                java.util.Base64.decoder.decode(encodedDefine),
+                'UTF-8'
+        )
+        def separatorIndex = decodedDefine.indexOf('=')
+        if (separatorIndex > 0 && decodedDefine.substring(0, separatorIndex) == name) {
+            return decodedDefine.substring(separatorIndex + 1)
+        }
+    }
+
+    return defaultValue
+}
+
+def enableLocalCalendarFeature =
+        getDartDefine('DUALMATE_ENABLE_LOCAL_CALENDAR', 'false').toBoolean()
+
+def sourceMainManifestFile = file('src/main/AndroidManifest.xml')
+def generatedMainManifestFile = layout.buildDirectory
+        .file('generated/conditionalManifest/AndroidManifest.xml')
+        .get()
+        .asFile
+
+def writeConditionalMainManifest = {
+    generatedMainManifestFile.parentFile.mkdirs()
+
+    if (!enableLocalCalendarFeature) {
+        generatedMainManifestFile.setText(
+                sourceMainManifestFile.getText('UTF-8'),
+                'UTF-8'
+        )
+        return
+    }
+
+    def manifest = new groovy.xml.XmlParser(false, false).parse(
+            sourceMainManifestFile
+    )
+    [
+            'android.permission.READ_CALENDAR',
+            'android.permission.WRITE_CALENDAR'
+    ].each { permissionName ->
+        def permissionExists = manifest.'uses-permission'.any { permission ->
+            permission.attributes()['android:name'] == permissionName
+        }
+
+        if (!permissionExists) {
+            manifest.appendNode('uses-permission', ['android:name': permissionName])
+        }
+    }
+
+    def manifestText = groovy.xml.XmlUtil.serialize(manifest)
+    generatedMainManifestFile.setText(manifestText, 'UTF-8')
+}
+
+writeConditionalMainManifest()
 
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
@@ -52,6 +123,7 @@ android {
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
+        main.manifest.srcFile generatedMainManifestFile
     }
 
     lintOptions {

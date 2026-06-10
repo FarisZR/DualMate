@@ -9,6 +9,7 @@ import 'package:dualmate/common/appstart/notification_schedule_changed_initializ
 import 'package:dualmate/common/appstart/notifications_initialize.dart';
 import 'package:dualmate/common/appstart/service_injector.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/features/local_calendar_feature.dart';
 import 'package:dualmate/common/util/rapla_tls_override.dart';
 import 'package:dualmate/native/widget/widget_update_callback.dart';
 import 'package:dualmate/schedule/background/calendar_synchronizer.dart';
@@ -75,7 +76,8 @@ Future<void> initializeAppBase(bool isBackground) async {
     // Registering a second localization object in Kiwi here causes avoidable
     // startup work on the first frame path.
     print(
-        "Base init: localizations deferred ${stopwatch.elapsedMilliseconds}ms");
+      "Base init: localizations deferred ${stopwatch.elapsedMilliseconds}ms",
+    );
   }
   print("Base init finished ${stopwatch.elapsedMilliseconds}ms");
 
@@ -136,7 +138,8 @@ Future<void> initializeAppBackground(bool isBackground) async {
   try {
     NotificationScheduleChangedInitialize().setupNotification();
     print(
-        "Background init: schedule notify ${stopwatch.elapsedMilliseconds}ms");
+      "Background init: schedule notify ${stopwatch.elapsedMilliseconds}ms",
+    );
   } on Exception catch (exception, trace) {
     print("Background init: schedule notify failed (${exception.runtimeType})");
     print(exception);
@@ -172,7 +175,8 @@ Future<void> initializeAppBackground(bool isBackground) async {
     var setup = KiwiContainer().resolve<ScheduleSourceProvider>();
     setup.setupScheduleSource();
     print(
-        "Background init: schedule source ${stopwatch.elapsedMilliseconds}ms");
+      "Background init: schedule source ${stopwatch.elapsedMilliseconds}ms",
+    );
   }
 
   isInitialized = true;
@@ -193,6 +197,10 @@ Future<void> initializeAppForegroundHeavy({
 }
 
 Future<void> initializeForegroundCalendarSyncOnly() async {
+  if (!isLocalCalendarFeatureEnabled) {
+    return;
+  }
+
   final stopwatch = Stopwatch()..start();
   unawaited(_setupCalendarSyncInBackground(stopwatch));
   print("Foreground heavy init scheduled ${stopwatch.elapsedMilliseconds}ms");
@@ -208,7 +216,8 @@ Future<void> prewarmCanteenIfStale({
 
   isForegroundCanteenPrewarmInitialized = true;
 
-  final prewarm = runCanteenPrewarm ??
+  final prewarm =
+      runCanteenPrewarm ??
       () async {
         final stopwatch = Stopwatch()..start();
         await _prewarmCanteenIfStaleInBackground(
@@ -226,12 +235,13 @@ Future<void> _prewarmCanteenIfStaleInBackground(
 }) async {
   try {
     await KiwiContainer().resolve<CanteenProvider>().refreshWeekIfStale(
-          DateTime.now(),
-          staleAfter: staleAfter,
-          prefetchNextWeek: false,
-        );
+      DateTime.now(),
+      staleAfter: staleAfter,
+      prefetchNextWeek: false,
+    );
     print(
-        "Foreground canteen prewarm: refresh ${stopwatch.elapsedMilliseconds}ms");
+      "Foreground canteen prewarm: refresh ${stopwatch.elapsedMilliseconds}ms",
+    );
   } on Exception catch (exception, trace) {
     print("Foreground canteen prewarm failed (${exception.runtimeType})");
     print(exception);
@@ -274,10 +284,12 @@ Future<void> _setupCalendarSyncInBackground(Stopwatch stopwatch) async {
     calendarSynchronizer.registerSynchronizationCallback();
     calendarSynchronizer.scheduleSyncInAFewSeconds();
     print(
-        "Foreground heavy init: calendar sync ${stopwatch.elapsedMilliseconds}ms");
+      "Foreground heavy init: calendar sync ${stopwatch.elapsedMilliseconds}ms",
+    );
   } on Exception catch (exception, trace) {
     print(
-        "Foreground heavy init: calendar sync failed (${exception.runtimeType})");
+      "Foreground heavy init: calendar sync failed (${exception.runtimeType})",
+    );
     print(exception);
     print(trace);
     await _reportNonFatalInitException(
