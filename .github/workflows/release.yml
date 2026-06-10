@@ -89,4 +89,4 @@ jobs:
       - name: Upload APK to release
         uses: softprops/action-gh-release@v2
         with:
-          files: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          files: build/app/outputs/flutter-apk/*arm64-v8a-release.apk

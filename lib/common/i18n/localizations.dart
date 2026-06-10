@@ -77,8 +77,6 @@ class L {
 
   String get disclaimer => _getValue("disclaimer");
 
-  String get settingsCalendarSync => _getValue("settingsCalendarSync");
-
   String get calendarSyncPageTitle => _getValue("calendarSyncPageTitle");
 
   String get calendarSyncPageSubtitle => _getValue("calendarSyncPageSubtitle");
@@ -472,7 +470,7 @@ class L {
 
   static final Map<String, Map<String, String>> _localizedValues = {
     "de": de,
-    "en": en
+    "en": en,
   };
 
   String _getValue(String key) {

@@ -3,7 +3,6 @@ final de = {
   "scheduleBackToCurrentWeek": "Aktuelle Woche",
   "noConnectionMessage": "Keine Verbindung!",
   "settingsViewSourceCode": "Source code auf GitHub ansehen",
-  "settingsCalendarSync": "Kalendersynchronisation",
   "calendarSyncPageTitle": "Kalender synchronisieren",
   "calendarSyncPageSubtitle":
       "Wähle den Kalender aus, in den der Vorlesungsplan übertragen werden soll:",
@@ -129,15 +128,15 @@ final de = {
   "logoutButtonTooltip": "Abmelden",
   "scheduleHelpDialogContent":
       "Du kannst deinen Vorlesungsplan hier anzeigen lassen, falls Du ihn über Rapla oder Dualis bekommst."
-          "\nDen Link zum Rapla Vorlesungsplan bekommst Du üblicherweise zu Beginn deines Studiums per Email.",
+      "\nDen Link zum Rapla Vorlesungsplan bekommst Du üblicherweise zu Beginn deines Studiums per Email.",
   "scheduleHelpDialogTitle": "Vorlesungsplan",
   "dualisHelpDialogContent":
       "Mit den Dualis Zugangsdaten kannst Du deine Prüfungsergebnisse und Kursnoten in der App ansehen."
-          "\n\nFalls Du dich nicht anmelden kannst, prüfe die Internetverbindung und Zugangsdaten.",
+      "\n\nFalls Du dich nicht anmelden kannst, prüfe die Internetverbindung und Zugangsdaten.",
   "dualisHelpDialogTitle": "Dualis Anmeldung",
   "dateManagementHelpDialogContent":
       "In der Terminverwaltung siehst Du wichtige Rapla-Termine wie Klausuren, Klausurwochen und Feiertage. "
-          "\nIn den Einstellungen kannst Du auf DHmine umschalten. DHmine ist nur für die DHBW Stuttgart verfügbar.",
+      "\nIn den Einstellungen kannst Du auf DHmine umschalten. DHmine ist nur für die DHBW Stuttgart verfügbar.",
   "dateManagementHelpDialogTitle": "Terminverwaltung",
   "dateManagementExportToCalendar": "In Kalender übertragen",
   "dateManagementExportToCalendarConfirm": "Übertragen",

@@ -1,5 +1,6 @@
 import 'package:device_calendar/device_calendar.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/features/local_calendar_feature.dart';
 import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/date_management/data/calendar_access.dart';
@@ -12,32 +13,38 @@ class CalendarSynchronizer {
   final ScheduleProvider scheduleProvider;
   final ScheduleSourceProvider scheduleSourceProvider;
   final PreferencesProvider preferencesProvider;
+  final bool localCalendarEnabled;
 
-  CalendarSynchronizer(this.scheduleProvider, this.scheduleSourceProvider,
-      this.preferencesProvider);
+  CalendarSynchronizer(
+    this.scheduleProvider,
+    this.scheduleSourceProvider,
+    this.preferencesProvider, {
+    this.localCalendarEnabled = isLocalCalendarFeatureEnabled,
+  });
 
   void registerSynchronizationCallback() {
+    if (!localCalendarEnabled) return;
+
     scheduleProvider.addScheduleUpdatedCallback((schedule, start, end) async {
       List<DateEntry> listDateEntries = List<DateEntry>.empty(growable: true);
-      schedule.entries.forEach(
-        (element) {
-          DateEntry date = DateEntry(
-              room: element.room,
-              comment: element.details,
-              databaseName: 'DHBW',
-              description: element.title,
-              year: element.start.year.toString(),
-              start: element.start,
-              end: element.end);
-          listDateEntries.add(date);
-        },
-      );
+      schedule.entries.forEach((element) {
+        DateEntry date = DateEntry(
+          room: element.room,
+          comment: element.details,
+          databaseName: 'DHBW',
+          description: element.title,
+          year: element.start.year.toString(),
+          start: element.start,
+          end: element.end,
+        );
+        listDateEntries.add(date);
+      });
       KiwiContainer().resolve<ListDateEntries30d>().listDateEntries =
           listDateEntries;
 
       if (await preferencesProvider.isCalendarSyncEnabled()) {
-        Calendar? selectedCalendar =
-            await preferencesProvider.getSelectedCalendar();
+        Calendar? selectedCalendar = await preferencesProvider
+            .getSelectedCalendar();
         if (selectedCalendar != null) {
           CalendarAccess().addOrUpdateDates(listDateEntries, selectedCalendar);
         }
@@ -46,6 +53,8 @@ class CalendarSynchronizer {
   }
 
   void scheduleSyncInAFewSeconds() {
+    if (!localCalendarEnabled) return;
+
     Future.delayed(Duration(seconds: 10), () async {
       if (!scheduleSourceProvider.didSetupCorrectly()) return;
       try {

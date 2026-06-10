@@ -1,6 +1,7 @@
 import 'package:device_calendar/device_calendar.dart';
 import 'package:dualmate/common/application_constants.dart';
 import 'package:dualmate/common/data/preferences/app_theme_enum.dart';
+import 'package:dualmate/common/features/local_calendar_feature.dart';
 import 'package:dualmate/common/data/preferences/preferences_access.dart';
 import 'package:dualmate/common/data/preferences/secure_storage_access.dart';
 import 'package:dualmate/date_management/data/calendar_access.dart';
@@ -66,25 +67,40 @@ class PreferencesProvider {
   }
 
   Future<void> setIsCalendarSyncEnabled(bool value) async {
-    await _preferencesAccess.set<bool>('isCalendarSyncEnabled', value);
+    await _preferencesAccess.set<bool>(
+      'isCalendarSyncEnabled',
+      isLocalCalendarFeatureEnabled && value,
+    );
   }
 
   Future<bool> isCalendarSyncEnabled() async {
+    if (!isLocalCalendarFeatureEnabled) return false;
+
     return await _preferencesAccess.get<bool>('isCalendarSyncEnabled') ?? false;
   }
 
   Future<void> setSelectedCalendar(Calendar? selectedCalendar) async {
+    if (!isLocalCalendarFeatureEnabled) {
+      await _preferencesAccess.set<String>('SelectedCalendarId', '');
+      return;
+    }
+
     String? selectedCalendarId = selectedCalendar?.id;
     await _preferencesAccess.set<String>(
-        'SelectedCalendarId', selectedCalendarId ?? '');
+      'SelectedCalendarId',
+      selectedCalendarId ?? '',
+    );
   }
 
   Future<Calendar?> getSelectedCalendar() async {
+    if (!isLocalCalendarFeatureEnabled) return null;
+
     Calendar? selectedCalendar;
-    String? selectedCalendarId =
-        await _preferencesAccess.get<String>('SelectedCalendarId');
-    List<Calendar> availableCalendars =
-        await CalendarAccess().queryWriteableCalendars();
+    String? selectedCalendarId = await _preferencesAccess.get<String>(
+      'SelectedCalendarId',
+    );
+    List<Calendar> availableCalendars = await CalendarAccess()
+        .queryWriteableCalendars();
     availableCalendars.forEach((cal) {
       if (cal.id == selectedCalendarId) {
         selectedCalendar = cal;
@@ -187,7 +203,9 @@ class PreferencesProvider {
 
   Future<void> setLastViewedSemester(String lastViewedSemester) async {
     await _preferencesAccess.set<String>(
-        LastViewedSemester, lastViewedSemester);
+      LastViewedSemester,
+      lastViewedSemester,
+    );
   }
 
   Future<String> getLastViewedDateEntryDatabase() async {
@@ -240,8 +258,9 @@ class PreferencesProvider {
   }
 
   Future<bool> getSynchronizeScheduleWithCalendar() async {
-    return await _preferencesAccess
-            .get<bool>(SynchronizeScheduleWithCalendar) ??
+    return await _preferencesAccess.get<bool>(
+          SynchronizeScheduleWithCalendar,
+        ) ??
         true;
   }
 
@@ -282,8 +301,7 @@ class PreferencesProvider {
   }
 
   Future<bool> getIsAppAttended() async {
-    final storedMs =
-        await _preferencesAccess.get<int>(IsAppAttendedAt) ?? 0;
+    final storedMs = await _preferencesAccess.get<int>(IsAppAttendedAt) ?? 0;
     if (storedMs <= 0) return false;
     final lastSeen = DateTime.fromMillisecondsSinceEpoch(storedMs);
     return DateTime.now().difference(lastSeen) < _appAttendedStaleness;
@@ -317,7 +335,9 @@ class PreferencesProvider {
 
   Future<void> setNextRateInStoreLaunchCount(int value) async {
     return await _preferencesAccess.set<int>(
-        "NextRateInStoreLaunchCount", value);
+      "NextRateInStoreLaunchCount",
+      value,
+    );
   }
 
   Future<bool> getDidShowDonateDialog() async {
