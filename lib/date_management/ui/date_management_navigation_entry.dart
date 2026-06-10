@@ -36,27 +36,21 @@ class DateManagementNavigationEntry
 
   @override
   List<Widget> appBarActions(BuildContext context) {
+    final Widget helpButton = IconButton(
+      icon: Icon(Icons.help_outline),
+      onPressed: () async {
+        await DateManagementHelpDialog().show(context);
+      },
+      tooltip: L.of(context).helpButtonTooltip,
+    );
+
     if (!isLocalCalendarFeatureEnabled) {
-      return [
-        IconButton(
-          icon: Icon(Icons.help_outline),
-          onPressed: () async {
-            await DateManagementHelpDialog().show(context);
-          },
-          tooltip: L.of(context).helpButtonTooltip,
-        ),
-      ];
+      return [helpButton];
     }
 
     final model = viewModel();
     return [
-      IconButton(
-        icon: Icon(Icons.help_outline),
-        onPressed: () async {
-          await DateManagementHelpDialog().show(context);
-        },
-        tooltip: L.of(context).helpButtonTooltip,
-      ),
+      helpButton,
       PropertyChangeProvider<DateManagementViewModel, String>(
         value: model,
         child: PropertyChangeConsumer<DateManagementViewModel, String>(

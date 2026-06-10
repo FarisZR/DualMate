@@ -1,6 +1,7 @@
 import 'package:dualmate/common/data/preferences/preferences_access.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/data/preferences/secure_storage_access.dart';
+import 'package:dualmate/common/features/local_calendar_feature.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -28,6 +29,9 @@ void main() {
       );
       expect(await preferencesAccess.get<String>('SelectedCalendarId'), '');
     },
+    skip: isLocalCalendarFeatureEnabled
+        ? 'Only applies when local calendar support is compiled out.'
+        : false,
   );
 }
 

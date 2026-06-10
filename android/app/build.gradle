@@ -77,18 +77,33 @@ def generatedMainManifestFile = layout.buildDirectory
         .asFile
 
 def writeConditionalMainManifest = {
-    def manifestText = sourceMainManifestFile.getText('UTF-8')
-    if (enableLocalCalendarFeature) {
-        def calendarPermissions = '''    <uses-permission android:name="android.permission.READ_CALENDAR" />
-    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
-'''
-        manifestText = manifestText.replace(
-                '    <uses-permission android:name="android.permission.INTERNET" />\n',
-                '    <uses-permission android:name="android.permission.INTERNET" />\n' + calendarPermissions
+    generatedMainManifestFile.parentFile.mkdirs()
+
+    if (!enableLocalCalendarFeature) {
+        generatedMainManifestFile.setText(
+                sourceMainManifestFile.getText('UTF-8'),
+                'UTF-8'
         )
+        return
     }
 
-    generatedMainManifestFile.parentFile.mkdirs()
+    def manifest = new groovy.xml.XmlParser(false, false).parse(
+            sourceMainManifestFile
+    )
+    [
+            'android.permission.READ_CALENDAR',
+            'android.permission.WRITE_CALENDAR'
+    ].each { permissionName ->
+        def permissionExists = manifest.'uses-permission'.any { permission ->
+            permission.attributes()['android:name'] == permissionName
+        }
+
+        if (!permissionExists) {
+            manifest.appendNode('uses-permission', ['android:name': permissionName])
+        }
+    }
+
+    def manifestText = groovy.xml.XmlUtil.serialize(manifest)
     generatedMainManifestFile.setText(manifestText, 'UTF-8')
 }
 
