@@ -19,6 +19,8 @@ could not mask the icon consistently or use a themed monochrome layer.
   asset set.
 - Centered the foreground mark inside the adaptive icon safe zone so launcher
   masks and the splash drawable do not crop the logo.
+- Simplified the monochrome themed-icon layer to the front mark only, avoiding
+  flattened shadow shapes when Android applies dynamic color.
 - Regenerated legacy density fallback PNGs in `mipmap-*dpi`, including
   `ic_launcher_round.png` fallbacks for pre-Android 8 launchers.
 - Added `android:roundIcon` so round launcher contexts use the new adaptive icon.
