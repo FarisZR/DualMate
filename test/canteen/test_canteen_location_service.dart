@@ -4,6 +4,7 @@ import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 
 class TestCanteenLocationService extends CanteenLocationService {
   CanteenLocation? _configuredLocation;
+  String? _cachedLocationId;
 
   TestCanteenLocationService({CanteenLocation? initialLocation})
     : _configuredLocation = initialLocation,
@@ -22,6 +23,16 @@ class TestCanteenLocationService extends CanteenLocationService {
   @override
   Future<void> setSelectedLocation(CanteenLocation location) async {
     _configuredLocation = location;
+  }
+
+  @override
+  Future<String?> getCachedLocationId() async {
+    return _cachedLocationId;
+  }
+
+  @override
+  Future<void> setCachedLocation(CanteenLocation location) async {
+    _cachedLocationId = location.id;
   }
 }
 

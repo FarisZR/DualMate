@@ -23,6 +23,14 @@ class CanteenLocationService {
     await _preferencesProvider.setSelectedCanteenLocationId(location.id);
   }
 
+  Future<String?> getCachedLocationId() async {
+    return await _preferencesProvider.getCachedCanteenLocationId();
+  }
+
+  Future<void> setCachedLocation(CanteenLocation location) async {
+    await _preferencesProvider.setCachedCanteenLocationId(location.id);
+  }
+
   List<CanteenLocation> supportedLocations() {
     return List<CanteenLocation>.unmodifiable(CanteenLocations.supported);
   }

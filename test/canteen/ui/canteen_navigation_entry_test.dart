@@ -3,7 +3,6 @@ import 'package:dualmate/canteen/business/canteen_provider.dart';
 import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
 import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
-import 'package:dualmate/canteen/service/open_mensa_canteen_source.dart';
 import 'package:dualmate/canteen/ui/canteen_navigation_entry.dart';
 import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
@@ -71,7 +70,6 @@ class _FakeCanteenProvider extends CanteenProvider {
         CanteenMealRepository(_FakeDatabaseAccess()),
         TestCanteenLocationService(),
         CanteenScraper(),
-        OpenMensaCanteenSource(),
         DhbwAppCanteenSource(),
       );
 }

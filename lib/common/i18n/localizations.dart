@@ -472,6 +472,7 @@ class L {
   String get settingsCanteenTitle => _getValue("settingsCanteenTitle");
   String get settingsSetupCanteenLocation =>
       _getValue("settingsSetupCanteenLocation");
+  String get canteenPoweredByDhbwApp => _getValue("canteenPoweredByDhbwApp");
 
   static L of(BuildContext context) {
     return Localizations.of<L>(context, L)!;

@@ -3,7 +3,6 @@ class CanteenLocation {
   final String name;
   final String? subtitle;
   final CanteenLocationSource source;
-  final int? openMensaId;
   final String? dhbwAppSite;
   final int? dhbwAppMensaId;
 
@@ -12,7 +11,6 @@ class CanteenLocation {
     required this.name,
     required this.source,
     this.subtitle,
-    this.openMensaId,
     this.dhbwAppSite,
     this.dhbwAppMensaId,
   });
@@ -21,7 +19,7 @@ class CanteenLocation {
   bool get usesDhbwApp => source == CanteenLocationSource.dhbwApp;
 }
 
-enum CanteenLocationSource { karlsruheLegacy, openMensa, dhbwApp }
+enum CanteenLocationSource { karlsruheLegacy, dhbwApp }
 
 class CanteenLocations {
   static const String karlsruheId = 'karlsruhe_erzbergerstrasse';

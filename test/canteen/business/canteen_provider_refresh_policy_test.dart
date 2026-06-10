@@ -8,7 +8,6 @@ import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/model/meal_type.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
 import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
-import 'package:dualmate/canteen/service/open_mensa_canteen_source.dart';
 import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
@@ -27,7 +26,6 @@ void main() {
       repository,
       TestCanteenLocationService(),
       scraper,
-      OpenMensaCanteenSource(),
       DhbwAppCanteenSource(),
     );
     final monday = DateTime(2026, 2, 9);
@@ -58,7 +56,6 @@ void main() {
         repository,
         TestCanteenLocationService(),
         scraper,
-        OpenMensaCanteenSource(),
         DhbwAppCanteenSource(),
       );
       final monday = DateTime(2026, 2, 9);
@@ -95,7 +92,6 @@ void main() {
         repository,
         TestCanteenLocationService(),
         scraper,
-        OpenMensaCanteenSource(),
         DhbwAppCanteenSource(),
       );
       final monday = DateTime(2026, 2, 9);
@@ -130,7 +126,6 @@ void main() {
     final database = _InMemoryDatabaseAccess();
     final repository = CanteenMealRepository(database);
     final scraper = _FakeCanteenScraper();
-    final openMensa = _FakeOpenMensaSource();
     final dhbwApp = _FakeDhbwAppSource();
     final locationService = TestCanteenLocationService(
       initialLocation: CanteenLocations.fromId('mannheim_dhbw_eppelheim'),
@@ -139,7 +134,6 @@ void main() {
       repository,
       locationService,
       scraper,
-      openMensa,
       dhbwApp,
     );
     final monday = DateTime(2026, 6, 1);
@@ -151,10 +145,81 @@ void main() {
     );
 
     expect(scraper.loadWeekCalls, 0);
-    expect(openMensa.calls, isEmpty);
     expect(dhbwApp.calls, <int>[7]);
     expect(menus.first.meals.first.name, 'DhbwAppMeal');
   });
+
+  test(
+    'getCachedWeek preserves persisted cache on provider cold start',
+    () async {
+      final database = _InMemoryDatabaseAccess();
+      final repository = CanteenMealRepository(database);
+      final locationService = TestCanteenLocationService();
+      await locationService.setCachedLocation(CanteenLocations.defaultLocation);
+      final provider = CanteenProvider(
+        repository,
+        locationService,
+        _FakeCanteenScraper(),
+        DhbwAppCanteenSource(),
+      );
+      final monday = DateTime(2026, 2, 9);
+      final weekStart = toStartOfDay(toMonday(monday));
+
+      await repository.saveMeals([
+        Meal(
+          date: weekStart,
+          name: 'CachedMeal',
+          category: 'Wahlessen 1',
+          price: 3.5,
+          notes: const <String>[],
+          mealTypes: const <MealType>[],
+        ),
+      ]);
+
+      final menus = await provider.getCachedWeek(monday);
+
+      expect(menus.first.meals.first.name, 'CachedMeal');
+    },
+  );
+
+  test(
+    'getCachedWeek clears persisted cache when selected location changes',
+    () async {
+      final database = _InMemoryDatabaseAccess();
+      final repository = CanteenMealRepository(database);
+      final locationService = TestCanteenLocationService(
+        initialLocation: CanteenLocations.fromId('mannheim_mensaria_metropol'),
+      );
+      await locationService.setCachedLocation(CanteenLocations.defaultLocation);
+      final provider = CanteenProvider(
+        repository,
+        locationService,
+        _FakeCanteenScraper(),
+        DhbwAppCanteenSource(),
+      );
+      final monday = DateTime(2026, 2, 9);
+      final weekStart = toStartOfDay(toMonday(monday));
+
+      await repository.saveMeals([
+        Meal(
+          date: weekStart,
+          name: 'OldLocationMeal',
+          category: 'Wahlessen 1',
+          price: 3.5,
+          notes: const <String>[],
+          mealTypes: const <MealType>[],
+        ),
+      ]);
+
+      final menus = await provider.getCachedWeek(monday);
+
+      expect(menus.expand((menu) => menu.meals), isEmpty);
+      expect(
+        await locationService.getCachedLocationId(),
+        'mannheim_mensaria_metropol',
+      );
+    },
+  );
 }
 
 class _FakeCanteenScraper extends CanteenScraper {
@@ -184,35 +249,6 @@ class _FakeCanteenScraper extends CanteenScraper {
 
     return <DailyMenu>[
       DailyMenu(date: weekStart, meals: <Meal>[mondayMeal]),
-    ];
-  }
-}
-
-class _FakeOpenMensaSource extends OpenMensaCanteenSource {
-  final List<int> calls = <int>[];
-
-  @override
-  Future<List<DailyMenu>> loadWeek(
-    int canteenId,
-    DateTime weekStart, [
-    CancellationToken? cancellationToken,
-  ]) async {
-    calls.add(canteenId);
-
-    return <DailyMenu>[
-      DailyMenu(
-        date: weekStart,
-        meals: <Meal>[
-          Meal(
-            date: weekStart,
-            name: 'OpenMensaMeal',
-            category: 'Vegetarisch',
-            price: 0,
-            notes: const <String>[],
-            mealTypes: const <MealType>[],
-          ),
-        ],
-      ),
     ];
   }
 }

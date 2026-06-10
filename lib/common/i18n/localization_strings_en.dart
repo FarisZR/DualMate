@@ -208,8 +208,7 @@ final en = {
   "canteenCategoryWahlessen": "Choice %0",
   "lastUpdatedLabel": "Last updated %0",
   "canteenHelpDialogTitle": "Canteen Menu",
-  "canteenHelpDialogContent":
-      "View the daily menu of the DHBW Karlsruhe canteen (Menseria Erzbergerstraße). Data is from Studierendenwerk Karlsruhe.",
+  "canteenHelpDialogContent": "View the daily menu for the selected canteen.",
   "onboardingCanteenLocationTitle": "Canteen",
   "onboardingCanteenLocationDescription":
       "Select the exact canteen that should be used in the app.",
@@ -217,4 +216,5 @@ final en = {
       "This selection is required and can be changed later in Settings.",
   "settingsCanteenTitle": "Canteen",
   "settingsSetupCanteenLocation": "Select canteen",
+  "canteenPoweredByDhbwApp": "powered by dhbw.app",
 };

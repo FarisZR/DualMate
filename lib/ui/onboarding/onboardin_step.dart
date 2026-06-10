@@ -1,4 +1,3 @@
-import 'package:dualmate/canteen/business/canteen_location_service.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/dualis_login_view_model.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/ical_url_view_model.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/mannheim_view_model.dart';
@@ -68,11 +67,7 @@ class DualisCredentialsOnboardingStep extends OnboardingStep {
 
 class SelectCanteenLocationOnboardingStep extends OnboardingStep {
   final SelectCanteenLocationViewModel _viewModel =
-      SelectCanteenLocationViewModel(
-    CanteenLocationService(
-      KiwiContainer().resolve(),
-    ),
-  );
+      SelectCanteenLocationViewModel(KiwiContainer().resolve());
 
   @override
   Widget buildContent(BuildContext context) {

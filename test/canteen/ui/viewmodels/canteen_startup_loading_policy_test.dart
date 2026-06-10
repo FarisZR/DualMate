@@ -4,7 +4,6 @@ import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
 import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
-import 'package:dualmate/canteen/service/open_mensa_canteen_source.dart';
 import 'package:dualmate/canteen/ui/viewmodels/canteen_view_model.dart';
 import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
@@ -92,7 +91,6 @@ class _TrackingCanteenProvider extends CanteenProvider {
         CanteenMealRepository(_FakeDatabaseAccess()),
         TestCanteenLocationService(),
         CanteenScraper(),
-        OpenMensaCanteenSource(),
         DhbwAppCanteenSource(),
       );
 

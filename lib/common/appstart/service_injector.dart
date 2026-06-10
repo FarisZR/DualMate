@@ -3,7 +3,6 @@ import 'package:dualmate/canteen/business/canteen_provider.dart';
 import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
 import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
-import 'package:dualmate/canteen/service/open_mensa_canteen_source.dart';
 import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/common/data/preferences/preferences_access.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
@@ -43,16 +42,9 @@ void injectServices(bool isBackground) {
   c.registerInstance(CanteenMealRepository(c.resolve()));
   c.registerInstance(CanteenLocationService(c.resolve()));
   c.registerInstance(CanteenScraper());
-  c.registerInstance(OpenMensaCanteenSource());
   c.registerInstance(DhbwAppCanteenSource());
   c.registerInstance(
-    CanteenProvider(
-      c.resolve(),
-      c.resolve(),
-      c.resolve(),
-      c.resolve(),
-      c.resolve(),
-    ),
+    CanteenProvider(c.resolve(), c.resolve(), c.resolve(), c.resolve()),
   );
   c.registerInstance(ScheduleEntryRepository(c.resolve()));
   c.registerInstance(ScheduleFilterRepository(c.resolve()));

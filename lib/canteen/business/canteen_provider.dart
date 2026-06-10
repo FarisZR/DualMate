@@ -7,7 +7,6 @@ import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/business/canteen_location_service.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
 import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
-import 'package:dualmate/canteen/service/open_mensa_canteen_source.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 
@@ -18,7 +17,6 @@ class CanteenProvider {
   final CanteenMealRepository _repository;
   final CanteenLocationService _locationService;
   final CanteenScraper _scraper;
-  final OpenMensaCanteenSource _openMensaSource;
   final DhbwAppCanteenSource _dhbwAppSource;
   final List<CanteenMenuUpdatedCallback> _callbacks = [];
   final Map<String, Future<List<DailyMenu>>> _refreshInFlight = {};
@@ -29,7 +27,6 @@ class CanteenProvider {
     this._repository,
     this._locationService,
     this._scraper,
-    this._openMensaSource,
     this._dhbwAppSource,
   );
 
@@ -209,10 +206,16 @@ class CanteenProvider {
       return selected;
     }
 
+    final cachedLocationId = await _locationService.getCachedLocationId();
     _activeLocationId = selected.id;
     _refreshInFlight.clear();
     _lastRefreshAtByWeek.clear();
-    await _repository.clearMeals();
+    if (cachedLocationId != null && cachedLocationId != selected.id) {
+      await _repository.clearMeals();
+    }
+    if (cachedLocationId != selected.id) {
+      await _locationService.setCachedLocation(selected);
+    }
     return selected;
   }
 
@@ -235,25 +238,21 @@ class CanteenProvider {
       return _scraper.loadWeek(weekStart, cancellationToken);
     }
 
-    final openMensaId = location.openMensaId;
-    if (openMensaId == null) {
-      if (location.source == CanteenLocationSource.dhbwApp) {
-        final site = location.dhbwAppSite;
-        final mensaId = location.dhbwAppMensaId;
-        if (site == null || mensaId == null) {
-          throw Exception('Missing DHBW.app id for selected canteen');
-        }
-        return _dhbwAppSource.loadWeek(
-          site,
-          mensaId,
-          weekStart,
-          cancellationToken,
-        );
+    if (location.source == CanteenLocationSource.dhbwApp) {
+      final site = location.dhbwAppSite;
+      final mensaId = location.dhbwAppMensaId;
+      if (site == null || mensaId == null) {
+        throw Exception('Missing DHBW.app id for selected canteen');
       }
-      throw Exception('Missing canteen id for selected canteen');
+      return _dhbwAppSource.loadWeek(
+        site,
+        mensaId,
+        weekStart,
+        cancellationToken,
+      );
     }
 
-    return _openMensaSource.loadWeek(openMensaId, weekStart, cancellationToken);
+    throw Exception('Unsupported canteen source');
   }
 
   List<DailyMenu> _groupMealsByDay(DateTime weekStart, List<Meal> meals) {

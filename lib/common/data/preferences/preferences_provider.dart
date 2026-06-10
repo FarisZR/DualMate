@@ -33,6 +33,7 @@ class PreferencesProvider {
       "SynchronizeScheduleWithCalendar";
   static const String UseDhMineForDates = "UseDhMineForDates";
   static const String SelectedCanteenLocationId = "SelectedCanteenLocationId";
+  static const String CachedCanteenLocationId = "CachedCanteenLocationId";
   static const String RaplaImportantEventsCache = "RaplaImportantEventsCache";
   static const String RaplaImportantEventsWindowEnd =
       "RaplaImportantEventsWindowEnd";
@@ -291,6 +292,14 @@ class PreferencesProvider {
 
   Future<void> setSelectedCanteenLocationId(String value) async {
     return _preferencesAccess.set<String>(SelectedCanteenLocationId, value);
+  }
+
+  Future<String?> getCachedCanteenLocationId() async {
+    return await _preferencesAccess.get<String>(CachedCanteenLocationId);
+  }
+
+  Future<void> setCachedCanteenLocationId(String value) async {
+    return _preferencesAccess.set<String>(CachedCanteenLocationId, value);
   }
 
   Future<String?> getRaplaImportantEventsCache() async {
