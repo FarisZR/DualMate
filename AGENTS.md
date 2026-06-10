@@ -46,9 +46,7 @@ Important runtime behavior:
 - View model: `lib/canteen/ui/viewmodels/canteen_view_model.dart`
 - Page: `lib/canteen/ui/canteen_page.dart`
 - Provider/repository: `lib/canteen/business/canteen_provider.dart`, `lib/canteen/data/canteen_meal_repository.dart`
-- Users must choose an exact mensa during onboarding before finishing; the same selection can be changed later in Settings.
-- Karlsruhe keeps the existing Studierendenwerk Karlsruhe scraper/model path (`Mensa Erzbergerstrasse`); non-Karlsruhe supported locations currently use the OpenMensa path.
-- The active mensa is stored as a single selected-location cache; widgets/background refresh follow that active selection.
+- Karlsruhe keeps the existing Studierendenwerk Karlsruhe scraper/model path (`Mensa Erzbergerstrasse`); non-Karlsruhe supported locations currently use the dhbw.app path.
 - Scraping/parsing offloads heavy parsing to isolate path in service layer.
 - UI is day-based with visible-content-day bounds (recent fixes prevent invalid swipe pages/overscroll edge issues).
 
