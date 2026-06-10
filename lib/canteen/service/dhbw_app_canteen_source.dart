@@ -7,7 +7,26 @@ import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:http_client_helper/http_client_helper.dart' as http;
 
+typedef DhbwAppSitePayloadResponseLoader =
+    Future<String?> Function(Uri uri, http.CancellationToken cancellationToken);
+
 class DhbwAppCanteenSource {
+  static const Duration defaultSitePayloadCacheDuration = Duration(minutes: 5);
+
+  final DhbwAppSitePayloadResponseLoader _loadSitePayloadResponse;
+  final Duration sitePayloadCacheDuration;
+  final DateTime Function() _now;
+  final Map<String, _DhbwAppSitePayloadCacheEntry> _sitePayloadCache =
+      <String, _DhbwAppSitePayloadCacheEntry>{};
+
+  DhbwAppCanteenSource({
+    DhbwAppSitePayloadResponseLoader? loadSitePayloadResponse,
+    this.sitePayloadCacheDuration = defaultSitePayloadCacheDuration,
+    DateTime Function()? now,
+  }) : _loadSitePayloadResponse =
+           loadSitePayloadResponse ?? _defaultLoadSitePayloadResponse,
+       _now = now ?? DateTime.now;
+
   Future<List<DailyMenu>> loadWeek(
     String site,
     int mensaId,
@@ -15,44 +34,92 @@ class DhbwAppCanteenSource {
     CancellationToken? cancellationToken,
   ]) async {
     final token = cancellationToken ?? CancellationToken();
+    token.throwIfCancelled();
+
+    final sitePayload = await _loadSitePayload(site, token);
+    token.throwIfCancelled();
+
+    final mensaEntry = sitePayload.whereType<Map<String, dynamic>>().firstWhere(
+      (entry) => _mensaInfoId(entry) == mensaId,
+      orElse: () => const <String, dynamic>{},
+    );
+    if (mensaEntry.isEmpty) {
+      return _emptyWeek(weekStart);
+    }
+
+    return _menusFromEntry(mensaEntry, weekStart);
+  }
+
+  Future<List<dynamic>> _loadSitePayload(
+    String site,
+    CancellationToken token,
+  ) async {
+    final cached = _sitePayloadCache[site];
+    final now = _now();
+    if (cached != null &&
+        now.difference(cached.createdAt) < sitePayloadCacheDuration) {
+      return cached.payload;
+    }
+
+    final payload = _fetchAndDecodeSitePayload(site, token);
+    _sitePayloadCache[site] = _DhbwAppSitePayloadCacheEntry(
+      createdAt: now,
+      payload: payload,
+    );
+
+    try {
+      return await payload;
+    } catch (_) {
+      if (_sitePayloadCache[site]?.payload == payload) {
+        _sitePayloadCache.remove(site);
+      }
+      rethrow;
+    }
+  }
+
+  Future<List<dynamic>> _fetchAndDecodeSitePayload(
+    String site,
+    CancellationToken token,
+  ) async {
     final requestCancellationToken = http.CancellationToken();
 
     try {
-      token.setCancellationCallback(() {
-        requestCancellationToken.cancel();
-      });
+      token.setCancellationCallback(requestCancellationToken.cancel);
 
-      final response = await http.HttpClientHelper.get(
+      final body = await _loadSitePayloadResponse(
         Uri.https('api.dhbw.app', '/mensa/$site'),
-        cancelToken: requestCancellationToken,
+        requestCancellationToken,
       );
 
-      if (response == null) {
+      if (body == null) {
         if (requestCancellationToken.isCanceled) {
           throw OperationCancelledException();
         }
         throw Exception('DHBW.app canteen request failed');
       }
 
-      final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(body);
       if (decoded is! List) {
-        return _emptyWeek(weekStart);
+        return const <dynamic>[];
       }
 
-      final mensaEntry = decoded.whereType<Map<String, dynamic>>().firstWhere(
-        (entry) => _mensaInfoId(entry) == mensaId,
-        orElse: () => const <String, dynamic>{},
-      );
-      if (mensaEntry.isEmpty) {
-        return _emptyWeek(weekStart);
-      }
-
-      return _menusFromEntry(mensaEntry, weekStart);
+      return List<dynamic>.unmodifiable(decoded);
     } on http.OperationCanceledError catch (_) {
       throw OperationCancelledException();
     } finally {
       token.setCancellationCallback(null);
     }
+  }
+
+  static Future<String?> _defaultLoadSitePayloadResponse(
+    Uri uri,
+    http.CancellationToken cancellationToken,
+  ) async {
+    final response = await http.HttpClientHelper.get(
+      uri,
+      cancelToken: cancellationToken,
+    );
+    return response?.body;
   }
 
   int? _mensaInfoId(Map<String, dynamic> entry) {
@@ -174,4 +241,14 @@ class DhbwAppCanteenSource {
       return DailyMenu(date: date, meals: const <Meal>[]);
     });
   }
+}
+
+class _DhbwAppSitePayloadCacheEntry {
+  final DateTime createdAt;
+  final Future<List<dynamic>> payload;
+
+  const _DhbwAppSitePayloadCacheEntry({
+    required this.createdAt,
+    required this.payload,
+  });
 }

@@ -5,6 +5,7 @@ import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
 import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
 import 'package:dualmate/canteen/ui/canteen_page.dart';
+import 'package:dualmate/canteen/ui/canteen_page_sync_coordinator.dart';
 import 'package:dualmate/canteen/ui/viewmodels/canteen_view_model.dart';
 import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/common/i18n/localizations.dart';

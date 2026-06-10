@@ -1,3 +1,4 @@
+import 'package:dualmate/canteen/ui/canteen_page_sync_coordinator.dart';
 import 'package:dualmate/canteen/ui/viewmodels/canteen_view_model.dart';
 import 'package:dualmate/canteen/ui/widgets/filter_dropdown.dart';
 import 'package:dualmate/canteen/ui/widgets/meal_card.dart';
@@ -5,7 +6,6 @@ import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -14,57 +14,6 @@ import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:provider/provider.dart';
 
 const double kMealListCacheExtent = 240;
-
-bool shouldDeferCanteenPageSync({
-  required bool hasClients,
-  required int attachedPositions,
-  required bool isScrolling,
-  required bool hasPendingPageDelta,
-}) {
-  if (!hasClients) {
-    return true;
-  }
-
-  if (attachedPositions != 1) {
-    return true;
-  }
-
-  if (hasPendingPageDelta) {
-    return true;
-  }
-
-  return isScrolling;
-}
-
-DateTime resolveCanteenPageSyncTarget({
-  required DateTime baseDate,
-  required List<DateTime> visibleDays,
-  DateTime? selectedDate,
-  double? currentPage,
-}) {
-  if (visibleDays.isNotEmpty && currentPage != null) {
-    final roundedPage = currentPage.round().clamp(0, visibleDays.length - 1);
-    final controllerTarget = visibleDays[roundedPage];
-    final selectedIsFallback =
-        selectedDate == null || isAtSameDay(selectedDate, baseDate);
-    if (selectedIsFallback && !isAtSameDay(controllerTarget, baseDate)) {
-      return controllerTarget;
-    }
-  }
-
-  return selectedDate ?? baseDate;
-}
-
-bool hasPendingCommittedCanteenPage({
-  required int committedPage,
-  double? currentPage,
-}) {
-  if (currentPage == null) {
-    return false;
-  }
-
-  return (currentPage - committedPage).abs() > 0.01;
-}
 
 ValueKey<String> canteenDayViewKey(DateTime date) {
   return ValueKey<String>(
@@ -105,10 +54,8 @@ class _CanteenPageState extends State<CanteenPage> {
   late CanteenViewModel viewModel;
   late PageController pageController;
   late ValueNotifier<int> pageNotifier;
+  late CanteenPageSyncCoordinator _pageSyncCoordinator;
   late DateTime baseDate;
-  Timer? _deferredPageSyncTimer;
-  bool _pageSyncPending = false;
-  bool _pageScrollListenerAttached = false;
   DateTime? _selectedDate;
   DateTime? _lastInteractionWeekStart;
   bool _isApplyingWidgetPayload = false;
@@ -122,6 +69,12 @@ class _CanteenPageState extends State<CanteenPage> {
     _lastInteractionWeekStart = viewModel.weekStartFor(baseDate);
     pageController = PageController(initialPage: 0);
     pageNotifier = ValueNotifier<int>(0);
+    _pageSyncCoordinator = CanteenPageSyncCoordinator(
+      pageController: pageController,
+      pageNotifier: pageNotifier,
+      isMounted: () => mounted,
+      onRetryPendingSync: _retryPendingPageSync,
+    );
     WidgetNavigationPayloadStore.instance.addListener(_handleWidgetPayload);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -144,8 +97,7 @@ class _CanteenPageState extends State<CanteenPage> {
 
   @override
   void dispose() {
-    _deferredPageSyncTimer?.cancel();
-    _detachPageScrollListener();
+    _pageSyncCoordinator.dispose();
     WidgetNavigationPayloadStore.instance.removeListener(_handleWidgetPayload);
     pageController.dispose();
     pageNotifier.dispose();
@@ -502,118 +454,19 @@ class _CanteenPageState extends State<CanteenPage> {
 
     _selectedDate = syncedDate;
     if (pageNotifier.value == targetIndex) return;
-    if (_shouldDeferPageSync()) {
-      _pageSyncPending = true;
+    if (_pageSyncCoordinator.shouldDeferSync()) {
+      _pageSyncCoordinator.markPending();
       return;
     }
 
-    _pageSyncPending = false;
+    _pageSyncCoordinator.clearPending();
     pageController.jumpToPage(targetIndex);
     pageNotifier.value = targetIndex;
   }
 
-  bool _shouldDeferPageSync() {
-    final hasClients = pageController.hasClients;
-    final attachedPositions = pageController.positions.length;
-    final currentPage = hasClients && attachedPositions == 1
-        ? pageController.page
-        : null;
-    final hasPendingPageDelta = hasPendingCommittedCanteenPage(
-      committedPage: pageNotifier.value,
-      currentPage: currentPage,
-    );
-    final isScrolling = hasClients && attachedPositions == 1
-        ? pageController.position.isScrollingNotifier.value
-        : false;
-
-    if (!hasClients || attachedPositions != 1) {
-      _scheduleDeferredPageSyncRetry();
-      return true;
-    }
-
-    _attachPageScrollListener();
-
-    if (shouldDeferCanteenPageSync(
-      hasClients: hasClients,
-      attachedPositions: attachedPositions,
-      isScrolling: isScrolling,
-      hasPendingPageDelta: hasPendingPageDelta,
-    )) {
-      if (hasPendingPageDelta) {
-        _scheduleDeferredPageSyncRetry();
-      }
-      return true;
-    }
-
-    return false;
-  }
-
-  void _scheduleDeferredPageSyncRetry() {
-    _deferredPageSyncTimer?.cancel();
-    _deferredPageSyncTimer = Timer(const Duration(milliseconds: 360), () {
-      if (!mounted) {
-        return;
-      }
-
-      _retryPendingPageSync();
-    });
-  }
-
   void _retryPendingPageSync() {
-    if (!_pageSyncPending || !mounted) {
-      return;
-    }
-
     final model = Provider.of<CanteenViewModel>(context, listen: false);
     _syncPageForVisibleDays(model, model.visibleContentDays);
-  }
-
-  void _attachPageScrollListener() {
-    if (_pageScrollListenerAttached || !pageController.hasClients) {
-      return;
-    }
-
-    if (pageController.positions.length != 1) {
-      return;
-    }
-
-    pageController.position.isScrollingNotifier.addListener(
-      _handlePageScrollStateChanged,
-    );
-    _pageScrollListenerAttached = true;
-  }
-
-  void _detachPageScrollListener() {
-    if (!_pageScrollListenerAttached || !pageController.hasClients) {
-      _pageScrollListenerAttached = false;
-      return;
-    }
-
-    if (pageController.positions.length == 1) {
-      pageController.position.isScrollingNotifier.removeListener(
-        _handlePageScrollStateChanged,
-      );
-    }
-
-    _pageScrollListenerAttached = false;
-  }
-
-  void _handlePageScrollStateChanged() {
-    if (!mounted || !pageController.hasClients) {
-      return;
-    }
-
-    if (pageController.positions.length != 1) {
-      _detachPageScrollListener();
-      _scheduleDeferredPageSyncRetry();
-      return;
-    }
-
-    if (pageController.position.isScrollingNotifier.value) {
-      return;
-    }
-
-    _retryPendingPageSync();
   }
 
   void _goToVisibleDay(
