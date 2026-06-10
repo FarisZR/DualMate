@@ -30,7 +30,7 @@ The canteen feature provides a performant, swipeable daily menu for the DHBW Kar
 - Karlsruhe remains on the legacy Studierendenwerk Karlsruhe scraper path:
   - URL: `https://www.sw-ka.de/de/hochschulgastronomie/speiseplan/mensa_erzberger/?kw=<week>`
   - Week calculation uses ISO week numbers (see `_isoWeekNumber()` in `CanteenScraper`).
-- Other currently supported locations use dhbw.app mensa endpoints through `DhbwAppCanteenSource`, keyed by the selected site and mensa id.
+- Other currently supported locations use dhbw.app mensa endpoints through `DhbwAppCanteenSource`, keyed by the selected site and mensa id. The location picker shows a small `powered by dhbw.app` attribution for those entries.
 - Settings and the canteen page header can change the selected mensa later; switching locations clears the active cached meal table and repopulates it for the newly selected location.
 
 ## Parsing Rules

@@ -18,6 +18,7 @@ class CanteenLocation {
   });
 
   bool get isKarlsruheLegacy => source == CanteenLocationSource.karlsruheLegacy;
+  bool get usesDhbwApp => source == CanteenLocationSource.dhbwApp;
 }
 
 enum CanteenLocationSource { karlsruheLegacy, openMensa, dhbwApp }
@@ -127,14 +128,6 @@ class CanteenLocations {
       source: CanteenLocationSource.dhbwApp,
       dhbwAppSite: 'FN',
       dhbwAppMensaId: 10,
-    ),
-    CanteenLocation(
-      id: 'karlsruhe_dhbw_app_erzbergerstrasse',
-      name: 'DHBW Karlsruhe',
-      subtitle: 'Mensa Erzbergerstraße (dhbw.app)',
-      source: CanteenLocationSource.dhbwApp,
-      dhbwAppSite: 'KA',
-      dhbwAppMensaId: 12,
     ),
   ];
 

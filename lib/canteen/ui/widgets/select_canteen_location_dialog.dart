@@ -1,5 +1,6 @@
 import 'package:dualmate/canteen/business/canteen_location_service.dart';
 import 'package:dualmate/canteen/model/canteen_location.dart';
+import 'package:dualmate/canteen/ui/widgets/canteen_location_subtitle.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -40,17 +41,17 @@ class SelectCanteenLocationDialog {
                       },
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
-                        children: _locationService.supportedLocations().map(
-                          (location) {
-                            return RadioListTile<CanteenLocation>(
-                              value: location,
-                              title: Text(location.name),
-                              subtitle: location.subtitle == null
-                                  ? null
-                                  : Text(location.subtitle!),
-                            );
-                          },
-                        ).toList(),
+                        children: _locationService.supportedLocations().map((
+                          location,
+                        ) {
+                          return RadioListTile<CanteenLocation>(
+                            value: location,
+                            title: Text(location.name),
+                            subtitle: CanteenLocationSubtitle(
+                              location: location,
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ),
                   ],

@@ -40,9 +40,18 @@ void main() {
         'horb',
         'heidenheim',
         'friedrichshafen_fallenbrunnen',
-        'karlsruhe_dhbw_app_erzbergerstrasse',
       }),
     );
+  });
+
+  test('supported locations do not include duplicate Karlsruhe choices', () {
+    final karlsruheLocations = CanteenLocations.supported.where(
+      (location) => location.name == 'DHBW Karlsruhe',
+    );
+
+    expect(karlsruheLocations, hasLength(1));
+    expect(karlsruheLocations.single.id, CanteenLocations.karlsruheId);
+    expect(karlsruheLocations.single.usesDhbwApp, isFalse);
   });
 }
 
