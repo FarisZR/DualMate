@@ -34,6 +34,7 @@ class CanteenViewModel extends BaseViewModel {
   bool _visibleContentDaysDirty = true;
   CanteenLocation _selectedLocation = CanteenLocations.defaultLocation;
   int _locationGeneration = 0;
+  CanteenMenuUpdatedCallback? _menuUpdatedCallback;
 
   CanteenLocation get selectedLocation => _selectedLocation;
   CanteenLocationService get locationService => _locationService;
@@ -44,7 +45,7 @@ class CanteenViewModel extends BaseViewModel {
   void initialize() {
     if (_initialized) return;
     _initialized = true;
-    _provider.addMenuUpdatedCallback(_onMenusUpdated);
+    _registerMenuUpdatedCallback();
     unawaited(_loadSelectedLocation());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_weeklyMenus.containsKey(todayWeekStart)) return;
@@ -303,17 +304,34 @@ class CanteenViewModel extends BaseViewModel {
   }
 
   Future<void> _onMenusUpdated(
+    int requestGeneration,
     List<DailyMenu> menus,
     DateTime start,
     DateTime end,
   ) async {
+    if (!_isCurrentLocationRequest(requestGeneration)) return;
     var weekStart = toStartOfDay(toMonday(start));
     _weeklyMenus[weekStart] = menus;
     _markVisibleContentDaysDirty();
     _weekLastUpdated[weekStart] = DateTime.now();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_isCurrentLocationRequest(requestGeneration)) return;
       notifyIfMounted("weeklyMenus");
     });
+  }
+
+  void _registerMenuUpdatedCallback() {
+    final previousCallback = _menuUpdatedCallback;
+    if (previousCallback != null) {
+      _provider.removeMenuUpdatedCallback(previousCallback);
+    }
+
+    final callbackGeneration = _locationGeneration;
+    _menuUpdatedCallback =
+        (List<DailyMenu> menus, DateTime start, DateTime end) {
+          return _onMenusUpdated(callbackGeneration, menus, start, end);
+        };
+    _provider.addMenuUpdatedCallback(_menuUpdatedCallback!);
   }
 
   void _markVisibleContentDaysDirty() {
@@ -340,6 +358,7 @@ class CanteenViewModel extends BaseViewModel {
     _weekLastUpdated.clear();
     _weekLastRefreshRequestAt.clear();
     _locationGeneration++;
+    _registerMenuUpdatedCallback();
     _markVisibleContentDaysDirty();
     notifyIfMounted('weeklyMenus');
     notifyIfMounted('loadingWeeks');
@@ -351,7 +370,10 @@ class CanteenViewModel extends BaseViewModel {
   @override
   void dispose() {
     _adjacentPrefetchDebounceTimer?.cancel();
-    _provider.removeMenuUpdatedCallback(_onMenusUpdated);
+    final menuUpdatedCallback = _menuUpdatedCallback;
+    if (menuUpdatedCallback != null) {
+      _provider.removeMenuUpdatedCallback(menuUpdatedCallback);
+    }
     super.dispose();
   }
 }

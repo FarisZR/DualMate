@@ -1,5 +1,6 @@
 import 'package:dualmate/canteen/business/canteen_provider.dart';
 import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
+import 'package:dualmate/canteen/model/canteen_location.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
@@ -53,6 +54,38 @@ void main() {
       thursday,
     );
   });
+
+  test(
+    'ignores menu update callbacks captured before location changes',
+    () async {
+      final monday = DateTime(2026, 2, 9);
+      final weekStart = toStartOfDay(toMonday(monday));
+      final tuesday = weekStart.add(const Duration(days: 1));
+      final oldLocationMenus = _buildMenus(weekStart, <DateTime>{tuesday});
+      final locationService = TestCanteenLocationService();
+      final provider = _FakeCanteenProvider({weekStart: oldLocationMenus});
+      final model = CanteenViewModel(provider, locationService);
+      addTearDown(model.dispose);
+
+      model.initialize();
+      await Future<void>.delayed(Duration.zero);
+      final staleCallback = provider.callbacks.single;
+
+      await locationService.setSelectedLocation(
+        CanteenLocations.fromId('mannheim_mensaria_metropol'),
+      );
+      await model.reloadSelectedLocation();
+
+      await staleCallback(
+        oldLocationMenus,
+        weekStart,
+        weekStart.add(const Duration(days: 5)),
+      );
+
+      expect(model.hasWeekData(weekStart), isFalse);
+      expect(model.visibleContentDays, isEmpty);
+    },
+  );
 }
 
 List<DailyMenu> _buildMenus(DateTime weekStart, Set<DateTime> mealDays) {
@@ -81,6 +114,9 @@ List<DailyMenu> _buildMenus(DateTime weekStart, Set<DateTime> mealDays) {
 class _FakeCanteenProvider extends CanteenProvider {
   final Map<DateTime, List<DailyMenu>> _menusByWeek;
   final List<CanteenMenuUpdatedCallback> _callbacks = [];
+
+  List<CanteenMenuUpdatedCallback> get callbacks =>
+      List.unmodifiable(_callbacks);
 
   _FakeCanteenProvider(this._menusByWeek)
     : super(
