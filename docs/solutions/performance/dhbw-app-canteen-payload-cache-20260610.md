@@ -13,6 +13,10 @@ decode the same site payload twice in quick succession.
 
 - `DhbwAppCanteenSource` now keeps a short-lived per-site decoded payload cache.
 - Failed payload fetches are evicted so later attempts can retry normally.
+- JSON decoding and weekly menu parsing run through Flutter `compute` workers
+  instead of doing the CPU-bound payload work on the main isolate.
+- Caller-token-bound fetches no longer share an uncached in-flight request;
+  successful token-bound fetches only populate the cache after completion.
 - The source exposes injectable payload loading and clock hooks for focused
   tests without changing the app's production wiring.
 - `CanteenPage` page-sync timer/listener retry state moved into
