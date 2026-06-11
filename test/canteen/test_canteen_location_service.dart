@@ -3,27 +3,10 @@ import 'package:dualmate/canteen/model/canteen_location.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 
 class TestCanteenLocationService extends CanteenLocationService {
-  CanteenLocation? _configuredLocation;
   String? _cachedLocationId;
 
   TestCanteenLocationService({CanteenLocation? initialLocation})
-    : _configuredLocation = initialLocation,
-      super(_NoopPreferencesProvider());
-
-  @override
-  Future<CanteenLocation> getSelectedLocation() async {
-    return _configuredLocation ?? CanteenLocations.defaultLocation;
-  }
-
-  @override
-  Future<CanteenLocation?> getConfiguredLocation() async {
-    return _configuredLocation;
-  }
-
-  @override
-  Future<void> setSelectedLocation(CanteenLocation location) async {
-    _configuredLocation = location;
-  }
+    : super(_InMemoryPreferencesProvider(initialLocation?.id));
 
   @override
   Future<String?> getCachedLocationId() async {
@@ -36,7 +19,21 @@ class TestCanteenLocationService extends CanteenLocationService {
   }
 }
 
-class _NoopPreferencesProvider implements PreferencesProvider {
+class _InMemoryPreferencesProvider implements PreferencesProvider {
+  String? selectedCanteenLocationId;
+
+  _InMemoryPreferencesProvider(this.selectedCanteenLocationId);
+
+  @override
+  Future<String?> getSelectedCanteenLocationId() async {
+    return selectedCanteenLocationId;
+  }
+
+  @override
+  Future<void> setSelectedCanteenLocationId(String id) async {
+    selectedCanteenLocationId = id;
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

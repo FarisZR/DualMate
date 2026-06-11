@@ -35,6 +35,7 @@ class CanteenViewModel extends BaseViewModel {
   CanteenLocation _selectedLocation = CanteenLocations.defaultLocation;
   int _locationGeneration = 0;
   CanteenMenuUpdatedCallback? _menuUpdatedCallback;
+  StreamSubscription<CanteenLocation>? _locationChangeSubscription;
 
   CanteenLocation get selectedLocation => _selectedLocation;
   CanteenLocationService get locationService => _locationService;
@@ -46,6 +47,10 @@ class CanteenViewModel extends BaseViewModel {
     if (_initialized) return;
     _initialized = true;
     _registerMenuUpdatedCallback();
+    _locationChangeSubscription = _locationService.selectedLocationChanges
+        .listen((_) {
+          unawaited(reloadSelectedLocation());
+        });
     unawaited(_loadSelectedLocation());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_weeklyMenus.containsKey(todayWeekStart)) return;
@@ -370,6 +375,7 @@ class CanteenViewModel extends BaseViewModel {
   @override
   void dispose() {
     _adjacentPrefetchDebounceTimer?.cancel();
+    unawaited(_locationChangeSubscription?.cancel());
     final menuUpdatedCallback = _menuUpdatedCallback;
     if (menuUpdatedCallback != null) {
       _provider.removeMenuUpdatedCallback(menuUpdatedCallback);

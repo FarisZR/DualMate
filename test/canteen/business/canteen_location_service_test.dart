@@ -53,6 +53,21 @@ void main() {
     expect(karlsruheLocations.single.id, CanteenLocations.karlsruheId);
     expect(karlsruheLocations.single.usesDhbwApp, isFalse);
   });
+
+  test('notifies listeners when selected location changes', () async {
+    final preferencesProvider = _MutableFakePreferencesProvider();
+    final service = CanteenLocationService(preferencesProvider);
+    final changes = <CanteenLocation>[];
+    final subscription = service.selectedLocationChanges.listen(changes.add);
+    addTearDown(subscription.cancel);
+    final location = CanteenLocations.fromId('mannheim_mensaria_metropol');
+
+    await service.setSelectedLocation(location);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(await service.getSelectedLocation(), location);
+    expect(changes, <CanteenLocation>[location]);
+  });
 }
 
 class _FakePreferencesProvider implements PreferencesProvider {
@@ -63,6 +78,23 @@ class _FakePreferencesProvider implements PreferencesProvider {
   @override
   Future<String?> getSelectedCanteenLocationId() async {
     return selectedCanteenLocationId;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _MutableFakePreferencesProvider implements PreferencesProvider {
+  String? selectedCanteenLocationId;
+
+  @override
+  Future<String?> getSelectedCanteenLocationId() async {
+    return selectedCanteenLocationId;
+  }
+
+  @override
+  Future<void> setSelectedCanteenLocationId(String id) async {
+    selectedCanteenLocationId = id;
   }
 
   @override

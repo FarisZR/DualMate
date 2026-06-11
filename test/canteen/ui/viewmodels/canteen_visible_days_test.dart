@@ -85,6 +85,37 @@ void main() {
       expect(model.visibleContentDays, isEmpty);
     },
   );
+
+  test(
+    'reloads selected location when shared location service changes',
+    () async {
+      final monday = DateTime(2026, 2, 9);
+      final weekStart = toStartOfDay(toMonday(monday));
+      final tuesday = weekStart.add(const Duration(days: 1));
+      final locationService = TestCanteenLocationService();
+      final provider = _FakeCanteenProvider({
+        weekStart: _buildMenus(weekStart, <DateTime>{tuesday}),
+      });
+      final model = CanteenViewModel(provider, locationService);
+      addTearDown(model.dispose);
+
+      model.initialize();
+      await model.loadWeek(weekStart, allowNetworkRefresh: false);
+      expect(model.hasWeekData(weekStart), isTrue);
+      expect(model.visibleContentDays, <DateTime>[tuesday]);
+
+      final nextLocation = CanteenLocations.fromId(
+        'mannheim_mensaria_metropol',
+      );
+      await locationService.setSelectedLocation(nextLocation);
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(model.selectedLocation, nextLocation);
+      expect(model.hasWeekData(weekStart), isFalse);
+      expect(model.visibleContentDays, isEmpty);
+    },
+  );
 }
 
 List<DailyMenu> _buildMenus(DateTime weekStart, Set<DateTime> mealDays) {
