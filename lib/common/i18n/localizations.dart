@@ -463,6 +463,16 @@ class L {
   String get lastUpdatedLabel => _getValue("lastUpdatedLabel");
   String get canteenHelpDialogTitle => _getValue("canteenHelpDialogTitle");
   String get canteenHelpDialogContent => _getValue("canteenHelpDialogContent");
+  String get onboardingCanteenLocationTitle =>
+      _getValue("onboardingCanteenLocationTitle");
+  String get onboardingCanteenLocationDescription =>
+      _getValue("onboardingCanteenLocationDescription");
+  String get onboardingCanteenLocationRequired =>
+      _getValue("onboardingCanteenLocationRequired");
+  String get settingsCanteenTitle => _getValue("settingsCanteenTitle");
+  String get settingsSetupCanteenLocation =>
+      _getValue("settingsSetupCanteenLocation");
+  String get canteenPoweredByDhbwApp => _getValue("canteenPoweredByDhbwApp");
 
   static L of(BuildContext context) {
     return Localizations.of<L>(context, L)!;

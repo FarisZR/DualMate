@@ -1,13 +1,17 @@
 import 'package:dualmate/canteen/business/canteen_provider.dart';
 import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
+import 'package:dualmate/canteen/model/canteen_location.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
+import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
 import 'package:dualmate/canteen/ui/viewmodels/canteen_view_model.dart';
 import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../test_canteen_location_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +25,7 @@ void main() {
     final provider = _FakeCanteenProvider({
       weekStart: _buildMenus(weekStart, <DateTime>{tuesday, thursday}),
     });
-    final model = CanteenViewModel(provider);
+    final model = CanteenViewModel(provider, TestCanteenLocationService());
     addTearDown(model.dispose);
 
     await model.loadWeek(weekStart);
@@ -38,16 +42,80 @@ void main() {
     final provider = _FakeCanteenProvider({
       weekStart: _buildMenus(weekStart, <DateTime>{tuesday, thursday}),
     });
-    final model = CanteenViewModel(provider);
+    final model = CanteenViewModel(provider, TestCanteenLocationService());
     addTearDown(model.dispose);
 
     await model.loadWeek(weekStart);
 
     expect(model.nearestVisibleContentDay(weekStart), tuesday);
     expect(
-        model.nearestVisibleContentDay(weekStart.add(const Duration(days: 4))),
-        thursday);
+      model.nearestVisibleContentDay(weekStart.add(const Duration(days: 4))),
+      thursday,
+    );
   });
+
+  test(
+    'ignores menu update callbacks captured before location changes',
+    () async {
+      final monday = DateTime(2026, 2, 9);
+      final weekStart = toStartOfDay(toMonday(monday));
+      final tuesday = weekStart.add(const Duration(days: 1));
+      final oldLocationMenus = _buildMenus(weekStart, <DateTime>{tuesday});
+      final locationService = TestCanteenLocationService();
+      final provider = _FakeCanteenProvider({weekStart: oldLocationMenus});
+      final model = CanteenViewModel(provider, locationService);
+      addTearDown(model.dispose);
+
+      model.initialize();
+      await Future<void>.delayed(Duration.zero);
+      final staleCallback = provider.callbacks.single;
+
+      await locationService.setSelectedLocation(
+        CanteenLocations.fromId('mannheim_mensaria_metropol'),
+      );
+      await model.reloadSelectedLocation();
+
+      await staleCallback(
+        oldLocationMenus,
+        weekStart,
+        weekStart.add(const Duration(days: 5)),
+      );
+
+      expect(model.hasWeekData(weekStart), isFalse);
+      expect(model.visibleContentDays, isEmpty);
+    },
+  );
+
+  test(
+    'reloads selected location when shared location service changes',
+    () async {
+      final monday = DateTime(2026, 2, 9);
+      final weekStart = toStartOfDay(toMonday(monday));
+      final tuesday = weekStart.add(const Duration(days: 1));
+      final locationService = TestCanteenLocationService();
+      final provider = _FakeCanteenProvider({
+        weekStart: _buildMenus(weekStart, <DateTime>{tuesday}),
+      });
+      final model = CanteenViewModel(provider, locationService);
+      addTearDown(model.dispose);
+
+      model.initialize();
+      await model.loadWeek(weekStart, allowNetworkRefresh: false);
+      expect(model.hasWeekData(weekStart), isTrue);
+      expect(model.visibleContentDays, <DateTime>[tuesday]);
+
+      final nextLocation = CanteenLocations.fromId(
+        'mannheim_mensaria_metropol',
+      );
+      await locationService.setSelectedLocation(nextLocation);
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(model.selectedLocation, nextLocation);
+      expect(model.hasWeekData(weekStart), isFalse);
+      expect(model.visibleContentDays, isEmpty);
+    },
+  );
 }
 
 List<DailyMenu> _buildMenus(DateTime weekStart, Set<DateTime> mealDays) {
@@ -77,8 +145,16 @@ class _FakeCanteenProvider extends CanteenProvider {
   final Map<DateTime, List<DailyMenu>> _menusByWeek;
   final List<CanteenMenuUpdatedCallback> _callbacks = [];
 
+  List<CanteenMenuUpdatedCallback> get callbacks =>
+      List.unmodifiable(_callbacks);
+
   _FakeCanteenProvider(this._menusByWeek)
-      : super(CanteenMealRepository(_FakeDatabaseAccess()), CanteenScraper());
+    : super(
+        CanteenMealRepository(_FakeDatabaseAccess()),
+        TestCanteenLocationService(),
+        CanteenScraper(),
+        DhbwAppCanteenSource(),
+      );
 
   @override
   void addMenuUpdatedCallback(CanteenMenuUpdatedCallback callback) {
@@ -141,28 +217,34 @@ class _FakeCanteenProvider extends CanteenProvider {
 
 class _FakeDatabaseAccess extends DatabaseAccess {
   @override
-  Future<List<Map<String, dynamic>>> queryRows(String table,
-      {bool? distinct,
-      List<String>? columns,
-      String? where,
-      List<dynamic>? whereArgs,
-      String? groupBy,
-      String? having,
-      String? orderBy,
-      int? limit,
-      int? offset}) async {
+  Future<List<Map<String, dynamic>>> queryRows(
+    String table, {
+    bool? distinct,
+    List<String>? columns,
+    String? where,
+    List<dynamic>? whereArgs,
+    String? groupBy,
+    String? having,
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) async {
     return <Map<String, dynamic>>[];
   }
 
   @override
   Future<List<Map<String, dynamic>>> rawQuery(
-      String sql, List<dynamic> parameters) async {
+    String sql,
+    List<dynamic> parameters,
+  ) async {
     return <Map<String, dynamic>>[];
   }
 
   @override
   Future<void> insertBatch(
-      String table, List<Map<String, dynamic>> rows) async {
+    String table,
+    List<Map<String, dynamic>> rows,
+  ) async {
     return;
   }
 

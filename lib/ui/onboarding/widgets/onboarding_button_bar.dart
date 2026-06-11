@@ -23,7 +23,7 @@ class OnboardingButtonBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
           _buildPreviousButton(context),
-          _buildNextButton(context)
+          _buildNextButton(context),
         ],
       ),
     );
@@ -45,13 +45,15 @@ class OnboardingButtonBar extends StatelessWidget {
   }
 
   Widget _buildNextButton(BuildContext context) {
+    final page = viewModel.pages[viewModel.currentStep];
+    final canSkip = page?.viewModel().canSkip ?? false;
     String buttonText;
     if (viewModel.isLastStep) {
       buttonText = L.of(context).onboardingFinishButton;
     } else {
       buttonText = L.of(context).onboardingNextButton;
     }
-    if (!viewModel.currentPageValid) {
+    if (!viewModel.currentPageValid && canSkip) {
       buttonText = L.of(context).onboardingSkipButton;
     }
 
@@ -59,7 +61,7 @@ class OnboardingButtonBar extends StatelessWidget {
       duration: const Duration(milliseconds: 100),
       child: TextButton.icon(
         key: ValueKey(buttonText),
-        onPressed: onNext,
+        onPressed: !viewModel.currentPageValid && !canSkip ? null : onNext,
         icon: viewModel.isLastStep
             ? Icon(Icons.arrow_forward)
             : Icon(Icons.navigate_next),

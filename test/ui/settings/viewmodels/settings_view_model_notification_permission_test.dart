@@ -1,3 +1,4 @@
+import 'package:dualmate/canteen/business/canteen_location_service.dart';
 import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/data/preferences/preferences_access.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
@@ -18,8 +19,12 @@ void main() {
       },
     );
 
-    final viewModel =
-        SettingsViewModel(preferencesProvider, task, notificationApi);
+    final viewModel = SettingsViewModel(
+      preferencesProvider,
+      CanteenLocationService(preferencesProvider),
+      task,
+      notificationApi,
+    );
 
     await viewModel.setNotifyAboutNextDay(true);
 
@@ -29,50 +34,62 @@ void main() {
     expect(viewModel.notifyAboutNextDay, isTrue);
   });
 
-  test('denied next-day notification permission keeps the toggle disabled',
-      () async {
-    final preferencesProvider = _FakePreferencesProvider();
-    final task = _FakeTaskCallback();
-    var permissionRequests = 0;
-    final notificationApi = NotificationApi(
-      runtimePermissionRequester: (_) async {
-        permissionRequests++;
-        return false;
-      },
-    );
+  test(
+    'denied next-day notification permission keeps the toggle disabled',
+    () async {
+      final preferencesProvider = _FakePreferencesProvider();
+      final task = _FakeTaskCallback();
+      var permissionRequests = 0;
+      final notificationApi = NotificationApi(
+        runtimePermissionRequester: (_) async {
+          permissionRequests++;
+          return false;
+        },
+      );
 
-    final viewModel =
-        SettingsViewModel(preferencesProvider, task, notificationApi);
+      final viewModel = SettingsViewModel(
+        preferencesProvider,
+        CanteenLocationService(preferencesProvider),
+        task,
+        notificationApi,
+      );
 
-    await viewModel.setNotifyAboutNextDay(true);
+      await viewModel.setNotifyAboutNextDay(true);
 
-    expect(permissionRequests, 1);
-    expect(viewModel.notifyAboutNextDay, isFalse);
-    expect(task.scheduleCalls, 0);
-    expect(task.cancelCalls, 1);
-  });
+      expect(permissionRequests, 1);
+      expect(viewModel.notifyAboutNextDay, isFalse);
+      expect(task.scheduleCalls, 0);
+      expect(task.cancelCalls, 1);
+    },
+  );
 
-  test('schedule-change toggle only requests permission when enabling',
-      () async {
-    final preferencesProvider = _FakePreferencesProvider();
-    final task = _FakeTaskCallback();
-    var permissionRequests = 0;
-    final notificationApi = NotificationApi(
-      runtimePermissionRequester: (_) async {
-        permissionRequests++;
-        return true;
-      },
-    );
+  test(
+    'schedule-change toggle only requests permission when enabling',
+    () async {
+      final preferencesProvider = _FakePreferencesProvider();
+      final task = _FakeTaskCallback();
+      var permissionRequests = 0;
+      final notificationApi = NotificationApi(
+        runtimePermissionRequester: (_) async {
+          permissionRequests++;
+          return true;
+        },
+      );
 
-    final viewModel =
-        SettingsViewModel(preferencesProvider, task, notificationApi);
+      final viewModel = SettingsViewModel(
+        preferencesProvider,
+        CanteenLocationService(preferencesProvider),
+        task,
+        notificationApi,
+      );
 
-    await viewModel.setNotifyAboutScheduleChanges(true);
-    await viewModel.setNotifyAboutScheduleChanges(false);
+      await viewModel.setNotifyAboutScheduleChanges(true);
+      await viewModel.setNotifyAboutScheduleChanges(false);
 
-    expect(permissionRequests, 1);
-    expect(viewModel.notifyAboutScheduleChanges, isFalse);
-  });
+      expect(permissionRequests, 1);
+      expect(viewModel.notifyAboutScheduleChanges, isFalse);
+    },
+  );
 }
 
 class _FakeTaskCallback implements TaskCallback {
@@ -106,7 +123,7 @@ class _FakePreferencesProvider extends PreferencesProvider {
   final Map<String, Object?> _values = <String, Object?>{};
 
   _FakePreferencesProvider()
-      : super(_FakePreferencesAccess(), _FakeSecureStorageAccess());
+    : super(_FakePreferencesAccess(), _FakeSecureStorageAccess());
 
   @override
   Future<T?> get<T>(String key) async {
@@ -157,6 +174,9 @@ class _FakePreferencesProvider extends PreferencesProvider {
   Future<void> setUseDhMineForDates(bool value) async {
     _useDhMineForDates = value;
   }
+
+  @override
+  Future<String?> getSelectedCanteenLocationId() async => null;
 }
 
 class _FakePreferencesAccess extends PreferencesAccess {

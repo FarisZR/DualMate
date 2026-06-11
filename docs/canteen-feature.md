@@ -26,9 +26,12 @@ The canteen feature provides a performant, swipeable daily menu for the DHBW Kar
 - Widget: `android/app/src/main/kotlin/com/fariszr/dualmate/widget/canteen` + `android/app/src/main/res/layout/widget_canteen_today.xml`
 
 ## Data Source
-- Provider: Studierendenwerk Karlsruhe
-- URL: `https://www.sw-ka.de/de/hochschulgastronomie/speiseplan/mensa_erzberger/?kw=<week>`
-- Week calculation uses ISO week numbers (see `_isoWeekNumber()` in `CanteenScraper`).
+- On first onboarding completion, users must choose the exact mensa to use.
+- Karlsruhe remains on the legacy Studierendenwerk Karlsruhe scraper path:
+  - URL: `https://www.sw-ka.de/de/hochschulgastronomie/speiseplan/mensa_erzberger/?kw=<week>`
+  - Week calculation uses ISO week numbers (see `_isoWeekNumber()` in `CanteenScraper`).
+- Other currently supported locations use dhbw.app mensa endpoints through `DhbwAppCanteenSource`, keyed by the selected site and mensa id. The location picker shows a small `powered by dhbw.app` attribution for those entries.
+- Settings and the canteen page header can change the selected mensa later; switching locations clears the active cached meal table and repopulates it for the newly selected location.
 
 ## Parsing Rules
 - Days are read from `#canteen_day_nav_1..5` using their `rel` date attribute.
@@ -65,6 +68,7 @@ To avoid frame drops while loading a new week:
 - The UI shows animated skeleton cards while a week is loading.
 - The day list switches from skeleton to real content using a short fade.
 - Chips are not rendered in the list (notes are shown as a lightweight text row).
+- The selected mensa remains the single active cache source for the page, widget, and background updater.
 
 ### Filters
 The filter dropdown (top-right) uses `CanteenFilter` to filter the list in-memory, without re-querying the network or database.

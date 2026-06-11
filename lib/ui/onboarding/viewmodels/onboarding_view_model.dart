@@ -15,6 +15,7 @@ class OnboardingViewModel extends BaseViewModel {
     "mannheim",
     "ical",
     "dualis",
+    "canteenLocation",
   ];
 
   final Map<String, OnboardingStep> pages = {
@@ -23,6 +24,7 @@ class OnboardingViewModel extends BaseViewModel {
     "ical": IcalOnboardingStep(),
     "dualis": DualisCredentialsOnboardingStep(),
     "mannheim": MannheimOnboardingStep(),
+    "canteenLocation": SelectCanteenLocationOnboardingStep(),
   };
 
   final Map<String, int> stepsBackstack = {};
@@ -72,6 +74,10 @@ class OnboardingViewModel extends BaseViewModel {
   }
 
   Future<void> nextPage() async {
+    if (!currentPageValid && !(pages[currentStep]?.viewModel().canSkip ?? true)) {
+      return;
+    }
+
     if (_stepIndex == steps.length - 1) {
       stepsBackstack[currentStep] = _stepIndex;
       await finishOnboarding();

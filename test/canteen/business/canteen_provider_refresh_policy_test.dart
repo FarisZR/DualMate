@@ -2,13 +2,18 @@ import 'dart:async';
 
 import 'package:dualmate/canteen/business/canteen_provider.dart';
 import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
+import 'package:dualmate/canteen/model/canteen_location.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
+import 'package:dualmate/canteen/model/meal_type.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
+import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
 import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../test_canteen_location_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -17,7 +22,12 @@ void main() {
     final database = _InMemoryDatabaseAccess();
     final repository = CanteenMealRepository(database);
     final scraper = _FakeCanteenScraper();
-    final provider = CanteenProvider(repository, scraper);
+    final provider = CanteenProvider(
+      repository,
+      TestCanteenLocationService(),
+      scraper,
+      DhbwAppCanteenSource(),
+    );
     final monday = DateTime(2026, 2, 9);
 
     await provider.refreshWeekIfStale(
@@ -36,69 +46,180 @@ void main() {
     expect(scraper.loadWeekCalls, 1);
   });
 
-  test('refreshWeekIfStale deduplicates concurrent same-week refresh',
-      () async {
+  test(
+    'refreshWeekIfStale deduplicates concurrent same-week refresh',
+    () async {
+      final database = _InMemoryDatabaseAccess();
+      final repository = CanteenMealRepository(database);
+      final scraper = _FakeCanteenScraper();
+      final provider = CanteenProvider(
+        repository,
+        TestCanteenLocationService(),
+        scraper,
+        DhbwAppCanteenSource(),
+      );
+      final monday = DateTime(2026, 2, 9);
+      final blocker = Completer<void>();
+
+      scraper.blocker = blocker;
+      final first = provider.refreshWeekIfStale(
+        monday,
+        staleAfter: Duration.zero,
+        prefetchNextWeek: false,
+      );
+      final second = provider.refreshWeekIfStale(
+        monday,
+        staleAfter: Duration.zero,
+        prefetchNextWeek: false,
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(scraper.loadWeekCalls, 1);
+
+      blocker.complete();
+      await Future.wait([first, second]);
+      expect(scraper.loadWeekCalls, 1);
+    },
+  );
+
+  test(
+    'refreshWeek tolerates callbacks removing listeners mid-notify',
+    () async {
+      final database = _InMemoryDatabaseAccess();
+      final repository = CanteenMealRepository(database);
+      final scraper = _FakeCanteenScraper();
+      final provider = CanteenProvider(
+        repository,
+        TestCanteenLocationService(),
+        scraper,
+        DhbwAppCanteenSource(),
+      );
+      final monday = DateTime(2026, 2, 9);
+      final callbackOrder = <String>[];
+
+      late final CanteenMenuUpdatedCallback secondCallback;
+      secondCallback = (_, __, ___) async {
+        callbackOrder.add('second');
+      };
+
+      provider.addMenuUpdatedCallback((_, __, ___) async {
+        callbackOrder.add('first');
+        provider.removeMenuUpdatedCallback(secondCallback);
+      });
+      provider.addMenuUpdatedCallback(secondCallback);
+
+      await provider.refreshWeekIfStale(
+        monday,
+        staleAfter: Duration.zero,
+        prefetchNextWeek: false,
+      );
+
+      expect(callbackOrder, ['first', 'second']);
+
+      callbackOrder.clear();
+      await provider.refreshWeek(monday.add(const Duration(days: 7)));
+      expect(callbackOrder, ['first']);
+    },
+  );
+
+  test('refreshWeek uses DHBW.app for non-Karlsruhe locations', () async {
     final database = _InMemoryDatabaseAccess();
     final repository = CanteenMealRepository(database);
     final scraper = _FakeCanteenScraper();
-    final provider = CanteenProvider(repository, scraper);
-    final monday = DateTime(2026, 2, 9);
-    final blocker = Completer<void>();
+    final dhbwApp = _FakeDhbwAppSource();
+    final locationService = TestCanteenLocationService(
+      initialLocation: CanteenLocations.fromId('mannheim_dhbw_eppelheim'),
+    );
+    final provider = CanteenProvider(
+      repository,
+      locationService,
+      scraper,
+      dhbwApp,
+    );
+    final monday = DateTime(2026, 6, 1);
 
-    scraper.blocker = blocker;
-    final first = provider.refreshWeekIfStale(
+    final menus = await provider.refreshWeekIfStale(
       monday,
       staleAfter: Duration.zero,
       prefetchNextWeek: false,
     );
-    final second = provider.refreshWeekIfStale(
-      monday,
-      staleAfter: Duration.zero,
-      prefetchNextWeek: false,
-    );
 
-    await Future<void>.delayed(const Duration(milliseconds: 20));
-    expect(scraper.loadWeekCalls, 1);
-
-    blocker.complete();
-    await Future.wait([first, second]);
-    expect(scraper.loadWeekCalls, 1);
+    expect(scraper.loadWeekCalls, 0);
+    expect(dhbwApp.calls, <int>[7]);
+    expect(menus.first.meals.first.name, 'DhbwAppMeal');
   });
 
-  test('refreshWeek tolerates callbacks removing listeners mid-notify',
-      () async {
-    final database = _InMemoryDatabaseAccess();
-    final repository = CanteenMealRepository(database);
-    final scraper = _FakeCanteenScraper();
-    final provider = CanteenProvider(repository, scraper);
-    final monday = DateTime(2026, 2, 9);
-    final callbackOrder = <String>[];
+  test(
+    'getCachedWeek preserves persisted cache on provider cold start',
+    () async {
+      final database = _InMemoryDatabaseAccess();
+      final repository = CanteenMealRepository(database);
+      final locationService = TestCanteenLocationService();
+      await locationService.setCachedLocation(CanteenLocations.defaultLocation);
+      final provider = CanteenProvider(
+        repository,
+        locationService,
+        _FakeCanteenScraper(),
+        DhbwAppCanteenSource(),
+      );
+      final monday = DateTime(2026, 2, 9);
+      final weekStart = toStartOfDay(toMonday(monday));
 
-    late final CanteenMenuUpdatedCallback secondCallback;
-    secondCallback = (_, __, ___) async {
-      callbackOrder.add('second');
-    };
+      await repository.saveMeals([
+        Meal(
+          date: weekStart,
+          name: 'CachedMeal',
+          category: 'Wahlessen 1',
+          price: 3.5,
+          notes: const <String>[],
+          mealTypes: const <MealType>[],
+        ),
+      ]);
 
-    provider.addMenuUpdatedCallback((_, __, ___) async {
-      callbackOrder.add('first');
-      provider.removeMenuUpdatedCallback(secondCallback);
-    });
-    provider.addMenuUpdatedCallback(secondCallback);
+      final menus = await provider.getCachedWeek(monday);
 
-    await provider.refreshWeekIfStale(
-      monday,
-      staleAfter: Duration.zero,
-      prefetchNextWeek: false,
-    );
+      expect(menus.first.meals.first.name, 'CachedMeal');
+    },
+  );
 
-    expect(callbackOrder, ['first', 'second']);
+  test(
+    'getCachedWeek clears persisted cache when selected location changes',
+    () async {
+      final database = _InMemoryDatabaseAccess();
+      final repository = CanteenMealRepository(database);
+      final locationService = TestCanteenLocationService(
+        initialLocation: CanteenLocations.fromId('mannheim_mensaria_metropol'),
+      );
+      await locationService.setCachedLocation(CanteenLocations.defaultLocation);
+      final provider = CanteenProvider(
+        repository,
+        locationService,
+        _FakeCanteenScraper(),
+        DhbwAppCanteenSource(),
+      );
+      final monday = DateTime(2026, 2, 9);
+      final weekStart = toStartOfDay(toMonday(monday));
 
-    callbackOrder.clear();
-    await provider.refreshWeek(
-      monday.add(const Duration(days: 7)),
-    );
-    expect(callbackOrder, ['first']);
-  });
+      await repository.saveMeals([
+        Meal(
+          date: weekStart,
+          name: 'OldLocationMeal',
+          category: 'Wahlessen 1',
+          price: 3.5,
+          notes: const <String>[],
+          mealTypes: const <MealType>[],
+        ),
+      ]);
+
+      final menus = await provider.getCachedWeek(monday);
+
+      expect(menus.expand((menu) => menu.meals), isEmpty);
+      expect(
+        await locationService.getCachedLocationId(),
+        'mannheim_mensaria_metropol',
+      );
+    },
+  );
 }
 
 class _FakeCanteenScraper extends CanteenScraper {
@@ -132,6 +253,36 @@ class _FakeCanteenScraper extends CanteenScraper {
   }
 }
 
+class _FakeDhbwAppSource extends DhbwAppCanteenSource {
+  final List<int> calls = <int>[];
+
+  @override
+  Future<List<DailyMenu>> loadWeek(
+    String site,
+    int mensaId,
+    DateTime weekStart, [
+    CancellationToken? cancellationToken,
+  ]) async {
+    calls.add(mensaId);
+
+    return <DailyMenu>[
+      DailyMenu(
+        date: weekStart,
+        meals: <Meal>[
+          Meal(
+            date: weekStart,
+            name: 'DhbwAppMeal',
+            category: 'main',
+            price: 0,
+            notes: const <String>[],
+            mealTypes: const <MealType>[],
+          ),
+        ],
+      ),
+    ];
+  }
+}
+
 class _InMemoryDatabaseAccess extends DatabaseAccess {
   final List<Map<String, dynamic>> _rows = <Map<String, dynamic>>[];
   int _idCounter = 0;
@@ -161,8 +312,16 @@ class _InMemoryDatabaseAccess extends DatabaseAccess {
     int? limit,
     int? offset,
   }) async {
-    final start = whereArgs![0] as int;
-    final end = whereArgs[1] as int;
+    final args = whereArgs;
+    if (args == null || args.length < 2) {
+      if (where == null) {
+        return _rows.map((row) => Map<String, dynamic>.from(row)).toList();
+      }
+      throw ArgumentError.value(whereArgs, 'whereArgs');
+    }
+
+    final start = args[0] as int;
+    final end = args[1] as int;
     final filtered = _rows.where((row) {
       final date = row['date'] as int;
       return date >= start && date < end;
@@ -170,8 +329,9 @@ class _InMemoryDatabaseAccess extends DatabaseAccess {
     filtered.sort((a, b) {
       final byDate = (a['date'] as int).compareTo(b['date'] as int);
       if (byDate != 0) return byDate;
-      final byCategory =
-          (a['category'] as String).compareTo(b['category'] as String);
+      final byCategory = (a['category'] as String).compareTo(
+        b['category'] as String,
+      );
       if (byCategory != 0) return byCategory;
       return (a['name'] as String).compareTo(b['name'] as String);
     });
@@ -204,8 +364,18 @@ class _InMemoryDatabaseAccess extends DatabaseAccess {
     String? where,
     List<dynamic>? whereArgs,
   }) async {
-    final start = whereArgs![0] as int;
-    final end = whereArgs[1] as int;
+    final args = whereArgs;
+    if (args == null || args.length < 2) {
+      if (where == null) {
+        final removed = _rows.length;
+        _rows.clear();
+        return removed;
+      }
+      throw ArgumentError.value(whereArgs, 'whereArgs');
+    }
+
+    final start = args[0] as int;
+    final end = args[1] as int;
     final before = _rows.length;
     _rows.removeWhere((row) {
       final date = row['date'] as int;

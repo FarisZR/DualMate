@@ -46,9 +46,7 @@ void main() {
   ) async {
     final viewModel = _buildViewModel(
       now: DateTime(2026, 2, 10, 10),
-      entries: <ScheduleEntry>[
-        _entry(DateTime(2026, 2, 9), 'CURRENT_WEEK'),
-      ],
+      entries: <ScheduleEntry>[_entry(DateTime(2026, 2, 9), 'CURRENT_WEEK')],
     );
     await viewModel.updateSchedule(
       DateTime(2026, 2, 9),
@@ -116,8 +114,12 @@ void main() {
     final fixedAxisHourLabel = find.text('7:00').first;
     final fixedAxisPositionBeforeDrag = tester.getTopLeft(fixedAxisHourLabel);
 
-    final gesture = await tester.startGesture(tester.getCenter(pagerFinder));
-    await gesture.moveBy(const Offset(-180, 0));
+    final pagerRect = tester.getRect(pagerFinder);
+    final gesture = await tester.startGesture(
+      Offset(pagerRect.right - 24, pagerRect.center.dy),
+    );
+    await gesture.moveBy(const Offset(-260, 0));
+    await gesture.moveBy(const Offset(-120, 0));
     await tester.pump();
 
     final draggedPage = controller.page ?? 10000.0;
@@ -179,58 +181,58 @@ void main() {
   });
 
   testWidgets(
-      'current week button stays hidden on current week and appears away', (
-    tester,
-  ) async {
-    final viewModel = _buildViewModel(
-      now: DateTime(2026, 2, 10, 10),
-      entries: <ScheduleEntry>[
-        _entry(DateTime(2026, 2, 9), 'CURRENT_WEEK'),
-        _entry(DateTime(2026, 2, 16), 'NEXT_WEEK'),
-      ],
-    );
-    await viewModel.updateSchedule(
-      DateTime(2026, 2, 9),
-      DateTime(2026, 2, 16),
-      force: true,
-    );
+    'current week button stays hidden on current week and appears away',
+    (tester) async {
+      final viewModel = _buildViewModel(
+        now: DateTime(2026, 2, 10, 10),
+        entries: <ScheduleEntry>[
+          _entry(DateTime(2026, 2, 9), 'CURRENT_WEEK'),
+          _entry(DateTime(2026, 2, 16), 'NEXT_WEEK'),
+        ],
+      );
+      await viewModel.updateSchedule(
+        DateTime(2026, 2, 9),
+        DateTime(2026, 2, 16),
+        force: true,
+      );
 
-    await tester.pumpWidget(_wrapWithApp(viewModel));
-    await tester.pump();
+      await tester.pumpWidget(_wrapWithApp(viewModel));
+      await tester.pump();
 
-    final currentWeekButton = find.byKey(
-      const ValueKey<String>('weekly_current_week_button'),
-    );
-    expect(currentWeekButton, findsNothing);
+      final currentWeekButton = find.byKey(
+        const ValueKey<String>('weekly_current_week_button'),
+      );
+      expect(currentWeekButton, findsNothing);
 
-    final pagerFinder = find.byKey(
-      const ValueKey<String>('weekly_schedule_page_view'),
-    );
-    await tester.fling(pagerFinder, const Offset(-420, 0), 1400);
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 80));
+      final pagerFinder = find.byKey(
+        const ValueKey<String>('weekly_schedule_page_view'),
+      );
+      await tester.fling(pagerFinder, const Offset(-420, 0), 1400);
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 80));
 
-    expect(viewModel.currentDateStart, DateTime(2026, 2, 16));
-    expect(currentWeekButton, findsOneWidget);
-    expect(
-      find.descendant(
-        of: currentWeekButton,
-        matching: find.byIcon(Icons.arrow_back_rounded),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: currentWeekButton,
-        matching: find.byIcon(Icons.arrow_forward_rounded),
-      ),
-      findsNothing,
-    );
+      expect(viewModel.currentDateStart, DateTime(2026, 2, 16));
+      expect(currentWeekButton, findsOneWidget);
+      expect(
+        find.descendant(
+          of: currentWeekButton,
+          matching: find.byIcon(Icons.arrow_back_rounded),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: currentWeekButton,
+          matching: find.byIcon(Icons.arrow_forward_rounded),
+        ),
+        findsNothing,
+      );
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-    viewModel.dispose();
-  });
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      viewModel.dispose();
+    },
+  );
 
   testWidgets('current week button points right when browsing past weeks', (
     tester,
@@ -353,9 +355,7 @@ Widget _wrapWithApp(WeeklyScheduleViewModel viewModel) {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('en'), Locale('de')],
-      home: const Scaffold(
-        body: WeeklySchedulePage(),
-      ),
+      home: const Scaffold(body: WeeklySchedulePage()),
     ),
   );
 }

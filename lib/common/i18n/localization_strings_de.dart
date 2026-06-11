@@ -219,5 +219,13 @@ final de = {
   "lastUpdatedLabel": "Zuletzt aktualisiert %0",
   "canteenHelpDialogTitle": "Mensaspeiseplan",
   "canteenHelpDialogContent":
-      "Zeigt den täglichen Speiseplan der DHBW Karlsruhe Mensa (Menseria Erzbergerstraße). Daten vom Studierendenwerk Karlsruhe.",
+      "Zeigt den täglichen Speiseplan der ausgewählten Mensa.",
+  "onboardingCanteenLocationTitle": "Mensa",
+  "onboardingCanteenLocationDescription":
+      "Wähle die genaue Mensa aus, die in der App verwendet werden soll.",
+  "onboardingCanteenLocationRequired":
+      "Diese Auswahl ist erforderlich und kann später in den Einstellungen geändert werden.",
+  "settingsCanteenTitle": "Mensa",
+  "settingsSetupCanteenLocation": "Mensa auswählen",
+  "canteenPoweredByDhbwApp": "bereitgestellt von dhbw.app",
 };
