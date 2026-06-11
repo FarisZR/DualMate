@@ -7,7 +7,7 @@ class DateFilterOptions extends StatefulWidget {
   final DateManagementViewModel viewModel;
 
   const DateFilterOptions({Key? key, required this.viewModel})
-      : super(key: key);
+    : super(key: key);
 
   @override
   _DateFilterOptionsState createState() => _DateFilterOptionsState(viewModel);
@@ -26,8 +26,9 @@ class _DateFilterOptionsState extends State<DateFilterOptions> {
       secondChild: _fixAbsorbPointer(_buildExpanded()),
       firstChild: _fixAbsorbPointer(_buildCollapsed()),
       duration: const Duration(milliseconds: 200),
-      crossFadeState:
-          _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+      crossFadeState: _isExpanded
+          ? CrossFadeState.showSecond
+          : CrossFadeState.showFirst,
     );
   }
 
@@ -37,10 +38,8 @@ class _DateFilterOptionsState extends State<DateFilterOptions> {
     // More details here: https://github.com/flutter/flutter/issues/10168
     return Stack(
       children: [
-        const Positioned.fill(
-          child: AbsorbPointer(),
-        ),
-        widget
+        const Positioned.fill(child: AbsorbPointer()),
+        widget,
       ],
     );
   }
@@ -56,9 +55,7 @@ class _DateFilterOptionsState extends State<DateFilterOptions> {
         mainAxisAlignment: MainAxisAlignment.end,
         mainAxisSize: MainAxisSize.max,
         children: <Widget>[
-          Expanded(
-            child: _buildCollapsedChips(),
-          ),
+          Expanded(child: _buildCollapsedChips()),
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 16, 0),
             child: ButtonTheme(
@@ -84,27 +81,26 @@ class _DateFilterOptionsState extends State<DateFilterOptions> {
 
     if (!viewModel.useDhMineForDates) {
       if (viewModel.showPassedDates && viewModel.showFutureDates) {
-        chips.add(Chip(
-          label: Text(L.of(context).dateManagementChipFutureAndPast),
-          visualDensity: VisualDensity.compact,
-        ));
+        chips.add(
+          Chip(
+            label: Text(L.of(context).dateManagementChipFutureAndPast),
+            visualDensity: VisualDensity.compact,
+          ),
+        );
       } else if (viewModel.showFutureDates) {
-        chips.add(Chip(
-          label: Text(L.of(context).dateManagementChipOnlyFuture),
-          visualDensity: VisualDensity.compact,
-        ));
+        chips.add(
+          Chip(
+            label: Text(L.of(context).dateManagementChipOnlyFuture),
+            visualDensity: VisualDensity.compact,
+          ),
+        );
       } else if (viewModel.showPassedDates) {
-        chips.add(Chip(
-          label: Text(L.of(context).dateManagementChipOnlyPassed),
-          visualDensity: VisualDensity.compact,
-        ));
-      }
-
-      if (viewModel.showOutOfStudyEvents) {
-        chips.add(Chip(
-          label: Text(L.of(context).dateManagementChipOutsideStudy),
-          visualDensity: VisualDensity.compact,
-        ));
+        chips.add(
+          Chip(
+            label: Text(L.of(context).dateManagementChipOnlyPassed),
+            visualDensity: VisualDensity.compact,
+          ),
+        );
       }
 
       return Padding(
@@ -123,41 +119,45 @@ class _DateFilterOptionsState extends State<DateFilterOptions> {
     }
 
     if (viewModel.showPassedDates && viewModel.showFutureDates) {
-      chips.add(Chip(
-        label: Text(L.of(context).dateManagementChipFutureAndPast),
-        visualDensity: VisualDensity.compact,
-      ));
+      chips.add(
+        Chip(
+          label: Text(L.of(context).dateManagementChipFutureAndPast),
+          visualDensity: VisualDensity.compact,
+        ),
+      );
     } else if (viewModel.showFutureDates) {
-      chips.add(Chip(
-        label: Text(L.of(context).dateManagementChipOnlyFuture),
-        visualDensity: VisualDensity.compact,
-      ));
+      chips.add(
+        Chip(
+          label: Text(L.of(context).dateManagementChipOnlyFuture),
+          visualDensity: VisualDensity.compact,
+        ),
+      );
     } else if (viewModel.showPassedDates) {
-      chips.add(Chip(
-        label: Text(L.of(context).dateManagementChipOnlyPassed),
-        visualDensity: VisualDensity.compact,
-      ));
+      chips.add(
+        Chip(
+          label: Text(L.of(context).dateManagementChipOnlyPassed),
+          visualDensity: VisualDensity.compact,
+        ),
+      );
     }
 
-    chips.add(Chip(
-      label: Text(viewModel.currentSelectedYear),
-      visualDensity: VisualDensity.compact,
-    ));
-  
+    chips.add(
+      Chip(
+        label: Text(viewModel.currentSelectedYear),
+        visualDensity: VisualDensity.compact,
+      ),
+    );
+
     var database = viewModel.currentDateDatabase.displayName;
     if (database != "") {
-      chips.add(Chip(
-        label: Text(database),
-        visualDensity: VisualDensity.compact,
-      ));
+      chips.add(
+        Chip(label: Text(database), visualDensity: VisualDensity.compact),
+      );
     }
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
-      child: Wrap(
-        spacing: 8,
-        children: chips,
-      ),
+      child: Wrap(spacing: 8, children: chips),
     );
   }
 
@@ -189,16 +189,6 @@ class _DateFilterOptionsState extends State<DateFilterOptions> {
                   onChanged: (bool? value) {
                     if (value != null) {
                       viewModel.setShowPassedDates(value);
-                    }
-                  },
-                ),
-                CheckboxListTile(
-                  title: Text(L.of(context).dateManagementCheckBoxOutsideStudy),
-                  value: viewModel.showOutOfStudyEvents,
-                  dense: true,
-                  onChanged: (bool? value) {
-                    if (value != null) {
-                      viewModel.setShowOutOfStudyEvents(value);
                     }
                   },
                 ),
@@ -241,9 +231,7 @@ class _DateFilterOptionsState extends State<DateFilterOptions> {
                     flex: 1,
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                      child: Text(
-                        L.of(context).dateManagementDropDownDatabase,
-                      ),
+                      child: Text(L.of(context).dateManagementDropDownDatabase),
                     ),
                   ),
                   Expanded(
@@ -267,9 +255,7 @@ class _DateFilterOptionsState extends State<DateFilterOptions> {
                     flex: 1,
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                      child: Text(
-                        L.of(context).dateManagementDropDownYear,
-                      ),
+                      child: Text(L.of(context).dateManagementDropDownYear),
                     ),
                   ),
                   Expanded(
@@ -335,10 +321,7 @@ class _DateFilterOptionsState extends State<DateFilterOptions> {
     var yearMenuItems = <DropdownMenuItem<String>>[];
 
     for (var year in viewModel.years) {
-      yearMenuItems.add(DropdownMenuItem(
-        child: Text(year),
-        value: year,
-      ));
+      yearMenuItems.add(DropdownMenuItem(child: Text(year), value: year));
     }
     return yearMenuItems;
   }
@@ -347,10 +330,9 @@ class _DateFilterOptionsState extends State<DateFilterOptions> {
     var databaseMenuItems = <DropdownMenuItem<DateDatabase>>[];
 
     for (var database in viewModel.allDateDatabases) {
-      databaseMenuItems.add(DropdownMenuItem(
-        child: Text(database.displayName),
-        value: database,
-      ));
+      databaseMenuItems.add(
+        DropdownMenuItem(child: Text(database.displayName), value: database),
+      );
     }
     return databaseMenuItems;
   }

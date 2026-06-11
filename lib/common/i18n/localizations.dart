@@ -264,9 +264,6 @@ class L {
   String get dateManagementCheckBoxFutureDates =>
       _getValue("dateManagementCheckBoxFutureDates");
 
-  String get dateManagementCheckBoxOutsideStudy =>
-      _getValue("dateManagementCheckBoxOutsideStudy");
-
   String get dateManagementDropDownYear =>
       _getValue("dateManagementDropDownYear");
 
@@ -281,9 +278,6 @@ class L {
 
   String get dateManagementChipFutureAndPast =>
       _getValue("dateManagementChipFutureAndPast");
-
-  String get dateManagementChipOutsideStudy =>
-      _getValue("dateManagementChipOutsideStudy");
 
   String get dialogOk => _getValue("dialogOk");
 

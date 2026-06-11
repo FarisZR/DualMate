@@ -31,8 +31,9 @@ the last Rapla result for faster loads. The Dates page refreshes Rapla data in
 the background on open. Exams are never merged.
 
 `ImportantEventOrganizer` groups exams under their Klausurwoche range and
-filters events that happen outside the study phases derived from
-"Beginn der X. Theoriephase" and Klausurwoche events.
+does not suppress events based on inferred study phases. Rapla windows can
+start mid-semester, so phase inference is not reliable enough to decide which
+student-facing events should be hidden.
 
 ### Settings
 Users can toggle the source under Settings:
@@ -53,8 +54,9 @@ Each Rapla event shows a colored dot:
 
 Klausurwoche entries appear as section headers with nested exam rows underneath.
 Exam rows show lecturer names when Rapla provides `Personen:` metadata.
-Events outside of detected study phases are hidden by default; users can enable
-them via the filter toggle on the Dates page.
+All important Rapla events remain visible; practice periods typically have no
+important entries, and operational notices such as Rapla migration warnings are
+student-facing.
 
 ## Tests
 
@@ -85,7 +87,7 @@ Run on a device with USB debugging enabled:
    - Default Rapla list shows exams in red and test weeks in blue.
    - Holidays display in gray.
    - Exam weeks appear as section headers with nested exams.
-   - Toggle "Outside study phases" to show hidden holidays.
+   - Student-facing Rapla notices remain visible.
    - Multi-day events show a date range.
 4. Toggle `Use DHmine for dates` and confirm the DHmine table shows.
 5. Disable network and confirm error handling.

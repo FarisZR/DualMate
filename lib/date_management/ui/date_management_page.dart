@@ -38,8 +38,10 @@ class _DateManagementPageState extends State<DateManagementPage> {
       _initializeTimer?.cancel();
       _initializeTimer = Timer(_initialLoadDelay, () {
         if (!mounted) return;
-        var viewModel =
-            Provider.of<DateManagementViewModel>(context, listen: false);
+        var viewModel = Provider.of<DateManagementViewModel>(
+          context,
+          listen: false,
+        );
         SchedulerBinding.instance.scheduleTask<void>(
           viewModel.initialize,
           Priority.idle,
@@ -58,8 +60,10 @@ class _DateManagementPageState extends State<DateManagementPage> {
 
   @override
   Widget build(BuildContext context) {
-    DateManagementViewModel viewModel =
-        Provider.of<DateManagementViewModel>(context, listen: false);
+    DateManagementViewModel viewModel = Provider.of<DateManagementViewModel>(
+      context,
+      listen: false,
+    );
 
     return PropertyChangeProvider<DateManagementViewModel, String>(
       value: viewModel,
@@ -73,34 +77,38 @@ class _DateManagementPageState extends State<DateManagementPage> {
               "isLoadingNextRaplaPage",
               "importantEventSections",
             ],
-            builder: (
-              BuildContext context,
-              DateManagementViewModel? model,
-              Set<String>? properties,
-            ) {
-              final headerModel = model ?? viewModel;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  if (headerModel.useDhMineForDates)
-                    DateFilterOptions(viewModel: headerModel),
-                  Stack(
+            builder:
+                (
+                  BuildContext context,
+                  DateManagementViewModel? model,
+                  Set<String>? properties,
+                ) {
+                  final headerModel = model ?? viewModel;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      const Divider(),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        child: (headerModel.isLoading ||
-                                (!headerModel.useDhMineForDates &&
-                                    headerModel.isLoadingNextRaplaPage &&
-                                    headerModel.importantEventSections.isEmpty))
-                            ? const LinearProgressIndicator()
-                            : Container(),
+                      if (headerModel.useDhMineForDates)
+                        DateFilterOptions(viewModel: headerModel),
+                      Stack(
+                        children: <Widget>[
+                          const Divider(),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            child:
+                                (headerModel.isLoading ||
+                                    (!headerModel.useDhMineForDates &&
+                                        headerModel.isLoadingNextRaplaPage &&
+                                        headerModel
+                                            .importantEventSections
+                                            .isEmpty))
+                                ? const LinearProgressIndicator()
+                                : Container(),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                ],
-              );
-            },
+                  );
+                },
           ),
           _buildBody(viewModel, context),
         ],
@@ -123,18 +131,18 @@ class _DateManagementPageState extends State<DateManagementPage> {
               "isLoadingNextRaplaPage",
               "nextRaplaPageFailed",
               "hasMoreRaplaPages",
-              "showOutOfStudyEvents",
               "currentDateDatabase",
               "currentSelectedYear",
             ],
-            builder: (
-              BuildContext context,
-              DateManagementViewModel? model,
-              Set<String>? properties,
-            ) {
-              if (model == null) return Container();
-              return _buildContent(model, context);
-            },
+            builder:
+                (
+                  BuildContext context,
+                  DateManagementViewModel? model,
+                  Set<String>? properties,
+                ) {
+                  if (model == null) return Container();
+                  return _buildContent(model, context);
+                },
           ),
           Align(
             child: buildErrorDisplay(context),
@@ -156,9 +164,7 @@ class _DateManagementPageState extends State<DateManagementPage> {
         DataColumn(
           label: Text(L.of(context).dateManagementTableHeaderDescription),
         ),
-        DataColumn(
-          label: Text(L.of(context).dateManagementTableHeaderDate),
-        ),
+        DataColumn(label: Text(L.of(context).dateManagementTableHeaderDate)),
       ],
     );
   }
@@ -173,39 +179,48 @@ class _DateManagementPageState extends State<DateManagementPage> {
         DataRow(
           cells: <DataCell>[
             DataCell(
-                Text(dateEntry.description,
-                    style: dateEntry.end.isBefore(DateTime.now())
-                        ? TextStyle(decoration: TextDecoration.lineThrough)
-                        : null), onTap: () {
-              showDateEntryDetailBottomSheet(context, dateEntry);
-            }),
+              Text(
+                dateEntry.description,
+                style: dateEntry.end.isBefore(DateTime.now())
+                    ? TextStyle(decoration: TextDecoration.lineThrough)
+                    : null,
+              ),
+              onTap: () {
+                showDateEntryDetailBottomSheet(context, dateEntry);
+              },
+            ),
             DataCell(
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      DateFormat(
-                              'dd/MM/yyyy', L.of(context).locale.languageCode)
-                          .format(dateEntry.start),
-                      style: Theme.of(context).textTheme.bodyLarge ??
-                          const TextStyle(),
-                    ),
-                    // When the date entry has a time of 00:00 don't show it.
-                    // It means the date entry is for the whole day
-                    isAtMidnight(dateEntry.start)
-                        ? Container()
-                        : Padding(
-                            padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
-                            child: Text(
-                              DateFormat.Hm(L.of(context).locale.languageCode)
-                                  .format(dateEntry.start),
-                            ),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    DateFormat(
+                      'dd/MM/yyyy',
+                      L.of(context).locale.languageCode,
+                    ).format(dateEntry.start),
+                    style:
+                        Theme.of(context).textTheme.bodyLarge ??
+                        const TextStyle(),
+                  ),
+                  // When the date entry has a time of 00:00 don't show it.
+                  // It means the date entry is for the whole day
+                  isAtMidnight(dateEntry.start)
+                      ? Container()
+                      : Padding(
+                          padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
+                          child: Text(
+                            DateFormat.Hm(
+                              L.of(context).locale.languageCode,
+                            ).format(dateEntry.start),
                           ),
-                  ],
-                ), onTap: () {
-              showDateEntryDetailBottomSheet(context, dateEntry);
-            }),
+                        ),
+                ],
+              ),
+              onTap: () {
+                showDateEntryDetailBottomSheet(context, dateEntry);
+              },
+            ),
           ],
         ),
       );
@@ -261,11 +276,7 @@ class _DateManagementPageState extends State<DateManagementPage> {
         padding: const EdgeInsets.all(16),
         children: [
           if (!model.isLoading && !model.isLoadingNextRaplaPage)
-            Center(
-              child: Text(
-                L.of(context).dateManagementRaplaEmpty,
-              ),
-            ),
+            Center(child: Text(L.of(context).dateManagementRaplaEmpty)),
           _buildRaplaFooter(model, context),
         ],
       );
@@ -288,7 +299,8 @@ class _DateManagementPageState extends State<DateManagementPage> {
         itemBuilder: (context, index) {
           if (index < sections.length) {
             final section = sections[index];
-            final sectionKey = section.header?.start.toIso8601String() ??
+            final sectionKey =
+                section.header?.start.toIso8601String() ??
                 (section.events.isNotEmpty
                     ? section.events.first.start.toIso8601String()
                     : 'section_$index');
@@ -368,9 +380,7 @@ class _DateManagementPageState extends State<DateManagementPage> {
     showModalBottomSheet(
       useRootNavigator: true,
       context: context,
-      builder: (context) => DateDetailBottomSheet(
-        dateEntry: entry,
-      ),
+      builder: (context) => DateDetailBottomSheet(dateEntry: entry),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
       ),
@@ -380,11 +390,12 @@ class _DateManagementPageState extends State<DateManagementPage> {
   Widget buildErrorDisplay(BuildContext context) {
     return PropertyChangeConsumer<DateManagementViewModel, String>(
       properties: const ["updateFailed"],
-      builder: (BuildContext context, DateManagementViewModel? model,
-              Set<String>? properties) =>
-          ErrorDisplay(
-        show: model?.updateFailed ?? false,
-      ),
+      builder:
+          (
+            BuildContext context,
+            DateManagementViewModel? model,
+            Set<String>? properties,
+          ) => ErrorDisplay(show: model?.updateFailed ?? false),
     );
   }
 }
