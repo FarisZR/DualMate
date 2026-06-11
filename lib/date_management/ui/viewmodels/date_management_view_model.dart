@@ -31,15 +31,19 @@ class DateManagementViewModel extends BaseViewModel {
     DateDatabase("BWL-Bank", "Termine_BWL_Bank"),
     DateDatabase("Immobilienwirtschaft", "Termine_BWL_Immo"),
     DateDatabase(
-        "Dienstleistungsmanagement Consulting & Sales", "Termine_DLM_Consult"),
+      "Dienstleistungsmanagement Consulting & Sales",
+      "Termine_DLM_Consult",
+    ),
     DateDatabase("Dienstleistungsmanagement Logistik", "Termine_DLM_Logistik"),
     DateDatabase("Campus Horb Informatik", "Termine_Horb_INF"),
     DateDatabase("Campus Horb Maschinenbau", "Termine_Horb_MB"),
     DateDatabase("International Business", "Termine_IB"),
     DateDatabase("Informatik", "Termine_Informatik"),
     DateDatabase("MUK (DLM - C&S, LogM, MUK)", "Termine_MUK"),
-    DateDatabase("SO_GuO (Abweichungen und Ergänzungen zum Vorlesungsplan)",
-        "Termine_SO_GuO"),
+    DateDatabase(
+      "SO_GuO (Abweichungen und Ergänzungen zum Vorlesungsplan)",
+      "Termine_SO_GuO",
+    ),
     DateDatabase("Wirtschaftsingenieurwesen", "Termine_WIW"),
   ];
   List<DateDatabase> get allDateDatabases => _allDateDatabases;
@@ -64,15 +68,17 @@ class DateManagementViewModel extends BaseViewModel {
     }
 
     return _visibleImportantEvents
-        .map((event) => DateEntry(
-              description: event.title,
-              year: event.start.year.toString(),
-              comment: '',
-              databaseName: 'Rapla',
-              start: event.start,
-              end: event.end,
-              room: '',
-            ))
+        .map(
+          (event) => DateEntry(
+            description: event.title,
+            year: event.start.year.toString(),
+            comment: '',
+            databaseName: 'Rapla',
+            start: event.start,
+            end: event.end,
+            room: '',
+          ),
+        )
         .toList(growable: false);
   }
 
@@ -105,9 +111,6 @@ class DateManagementViewModel extends BaseViewModel {
 
   bool _showFutureDates = true;
   bool get showFutureDates => _showFutureDates;
-
-  bool _showOutOfStudyEvents = false;
-  bool get showOutOfStudyEvents => _showOutOfStudyEvents;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -147,11 +150,11 @@ class DateManagementViewModel extends BaseViewModel {
   bool get updateFailed => _updateFailed;
 
   DateSearchParameters get dateSearchParameters => DateSearchParameters(
-        showPassedDates,
-        showFutureDates,
-        currentSelectedYear,
-        currentDateDatabase.id,
-      );
+    showPassedDates,
+    showFutureDates,
+    currentSelectedYear,
+    currentDateDatabase.id,
+  );
 
   void _notifySafely(String property) {
     notifyIfMounted(property);
@@ -351,10 +354,7 @@ class DateManagementViewModel extends BaseViewModel {
     _notifySafely("allDates");
   }
 
-  void _setImportantEvents(
-    List<ImportantEvent> events, {
-    bool notify = true,
-  }) {
+  void _setImportantEvents(List<ImportantEvent> events, {bool notify = true}) {
     _importantEvents = events;
     _updateLastNonHolidayEventEnd(events);
     _setImportantEventSections(notify: notify);
@@ -383,13 +383,17 @@ class DateManagementViewModel extends BaseViewModel {
     bool notify = true,
   }) {
     _trackRaplaWindow(window);
-    var trimmed = _importantEvents.where((event) {
-      var endsBefore = event.end.isBefore(window.start) ||
-          event.end.isAtSameMomentAs(window.start);
-      var startsAfter = event.start.isAfter(window.end) ||
-          event.start.isAtSameMomentAs(window.end);
-      return endsBefore || startsAfter;
-    }).toList(growable: false);
+    var trimmed = _importantEvents
+        .where((event) {
+          var endsBefore =
+              event.end.isBefore(window.start) ||
+              event.end.isAtSameMomentAs(window.start);
+          var startsAfter =
+              event.start.isAfter(window.end) ||
+              event.start.isAtSameMomentAs(window.end);
+          return endsBefore || startsAfter;
+        })
+        .toList(growable: false);
     _importantEvents = _mergeImportantEvents(trimmed, events);
     _updateLastNonHolidayEventEnd(_importantEvents);
     _setImportantEventSections(notify: notify);
@@ -399,8 +403,10 @@ class DateManagementViewModel extends BaseViewModel {
   }
 
   void _trackRaplaWindow(DateRange window) {
-    if (_loadedRaplaWindows.any((existing) =>
-        existing.start == window.start && existing.end == window.end)) {
+    if (_loadedRaplaWindows.any(
+      (existing) =>
+          existing.start == window.start && existing.end == window.end,
+    )) {
       return;
     }
     _loadedRaplaWindows.add(window);
@@ -415,8 +421,9 @@ class DateManagementViewModel extends BaseViewModel {
     var deduped = <ImportantEvent>[];
 
     for (var event in combined) {
-      var professorSuffix =
-          event.type == ScheduleEntryType.Exam ? '-${event.professor}' : '';
+      var professorSuffix = event.type == ScheduleEntryType.Exam
+          ? '-${event.professor}'
+          : '';
       var key =
           '${event.title}-${event.type}-${event.start.toIso8601String()}-${event.end.toIso8601String()}$professorSuffix';
       if (seenKeys.add(key)) {
@@ -431,7 +438,6 @@ class DateManagementViewModel extends BaseViewModel {
   void _setImportantEventSections({bool notify = true}) {
     _importantEventSections = _importantEventOrganizer.buildSections(
       _importantEvents,
-      includeOutsideStudy: _showOutOfStudyEvents,
     );
     if (notify) {
       _notifySafely("importantEventSections");
@@ -443,8 +449,9 @@ class DateManagementViewModel extends BaseViewModel {
     Set<String> seenKeys,
     ImportantEvent event,
   ) {
-    var professorSuffix =
-        event.type == ScheduleEntryType.Exam ? '-${event.professor}' : '';
+    var professorSuffix = event.type == ScheduleEntryType.Exam
+        ? '-${event.professor}'
+        : '';
     var key =
         '${event.title}-${event.type}-${event.start.toIso8601String()}-${event.end.toIso8601String()}$professorSuffix';
     if (seenKeys.add(key)) {
@@ -472,16 +479,6 @@ class DateManagementViewModel extends BaseViewModel {
     }
 
     updateDates();
-  }
-
-  void setShowOutOfStudyEvents(bool value) {
-    _showOutOfStudyEvents = value;
-    _notifySafely("showOutOfStudyEvents");
-    if (_useDhMineForDates) {
-      return;
-    }
-
-    _setImportantEventSections();
   }
 
   void setCurrentDateDatabase(DateDatabase database) {
@@ -555,10 +552,7 @@ class DateManagementViewModel extends BaseViewModel {
       return maxEnd;
     }
 
-    var nonHolidayCutoff = addDays(
-      toStartOfDay(_lastNonHolidayEventEnd!),
-      365,
-    );
+    var nonHolidayCutoff = addDays(toStartOfDay(_lastNonHolidayEventEnd!), 365);
 
     return nonHolidayCutoff.isBefore(maxEnd) ? nonHolidayCutoff : maxEnd;
   }
@@ -718,18 +712,18 @@ class DateManagementViewModel extends BaseViewModel {
 
     if (updated != null) {
       _markRaplaWindowFetched(window, DateTime.now());
-      var refreshed =
-          await _raplaImportantEventsProvider.getCachedImportantEvents(
-        toStartOfDay(window.start),
-        toStartOfDay(window.end).add(const Duration(days: 1)),
-      );
+      var refreshed = await _raplaImportantEventsProvider
+          .getCachedImportantEvents(
+            toStartOfDay(window.start),
+            toStartOfDay(window.end).add(const Duration(days: 1)),
+          );
       _replaceImportantEvents(window, refreshed);
     }
   }
 
   Future<void> _recordRaplaWindowEnd(DateRange window) async {
-    var cachedEnd =
-        await _preferencesProvider.getRaplaImportantEventsWindowEnd();
+    var cachedEnd = await _preferencesProvider
+        .getRaplaImportantEventsWindowEnd();
     var currentEnd = cachedEnd == null || cachedEnd.isEmpty
         ? null
         : DateTime.tryParse(cachedEnd);
@@ -738,8 +732,9 @@ class DateManagementViewModel extends BaseViewModel {
     var clampedEnd = window.end.isAfter(maxEnd) ? maxEnd : window.end;
 
     if (currentEnd == null || clampedEnd.isAfter(currentEnd)) {
-      await _preferencesProvider
-          .setRaplaImportantEventsWindowEnd(clampedEnd.toIso8601String());
+      await _preferencesProvider.setRaplaImportantEventsWindowEnd(
+        clampedEnd.toIso8601String(),
+      );
       _cachedRaplaWindowEnd = DateRange(
         start: _buildInitialRaplaWindow().start,
         end: clampedEnd,
@@ -798,16 +793,18 @@ class DateManagementViewModel extends BaseViewModel {
     var windowStart = start;
 
     while (windowStart.isBefore(end)) {
-      var window =
-          DateRange(start: windowStart, end: _addMonths(windowStart, 3));
+      var window = DateRange(
+        start: windowStart,
+        end: _addMonths(windowStart, 3),
+      );
       await _refreshRaplaWindow(window, CancellationToken());
       windowStart = window.end;
     }
   }
 
   Future<void> _applyCachedRaplaWindows() async {
-    var cachedEnd =
-        await _preferencesProvider.getRaplaImportantEventsWindowEnd();
+    var cachedEnd = await _preferencesProvider
+        .getRaplaImportantEventsWindowEnd();
     if (_isDisposed) return;
     if (cachedEnd == null || cachedEnd.isEmpty) {
       return;
@@ -830,8 +827,10 @@ class DateManagementViewModel extends BaseViewModel {
     var lastWindowEnd = start;
     var didChangeEvents = false;
     while (windowStart.isBefore(end)) {
-      var window =
-          DateRange(start: windowStart, end: _addMonths(windowStart, 3));
+      var window = DateRange(
+        start: windowStart,
+        end: _addMonths(windowStart, 3),
+      );
       final beforeCount = _importantEvents.length;
       final loadedEvents = await _loadRaplaWindow(
         window,
@@ -891,13 +890,10 @@ class DateManagementViewModel extends BaseViewModel {
   void _cancelErrorInFuture() async {
     _errorResetTimer?.cancel();
 
-    _errorResetTimer = Timer(
-      const Duration(seconds: 5),
-      () {
-        _updateFailed = false;
-        _notifySafely("updateFailed");
-      },
-    );
+    _errorResetTimer = Timer(const Duration(seconds: 5), () {
+      _updateFailed = false;
+      _notifySafely("updateFailed");
+    });
   }
 
   @override
