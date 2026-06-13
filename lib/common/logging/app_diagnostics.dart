@@ -131,7 +131,7 @@ class AppDiagnostics {
   }) {
     return _bestEffort(
       () => _recorder.captureException(
-        sanitizeDiagnosticsThrowable(exception),
+        exception,
         stackTrace,
         message: message == null
             ? null
@@ -222,7 +222,7 @@ class AppDiagnosticsSpan {
     final span = _span;
     if (span == null) return;
     try {
-      span.throwable = sanitizeDiagnosticsThrowable(error);
+      span.throwable = error;
     } catch (attachError, stackTrace) {
       _logDiagnosticsFailure('span.attachError', attachError, stackTrace);
     }

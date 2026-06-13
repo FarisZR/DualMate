@@ -82,6 +82,31 @@ const Map<String, String> _routeAliases = <String, String>{
   'shell': 'shell',
 };
 
+final RegExp _embeddedUrlPattern = RegExp(
+  r'(?:(?:https?|webcal)://|www\.)[^\s<>"'
+  '()]+',
+  caseSensitive: false,
+);
+
+final RegExp _emailPattern = RegExp(
+  r'\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b',
+  caseSensitive: false,
+);
+
+final RegExp _authorizationTokenPattern = RegExp(
+  r'\b(?:bearer|basic)\s+[A-Za-z0-9._~+/=-]+',
+  caseSensitive: false,
+);
+
+final RegExp _jwtPattern = RegExp(
+  r'\beyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b',
+);
+
+final RegExp _tokenAssignmentPattern = RegExp(
+  r'\b(?:access[_-]?token|refresh[_-]?token|id[_-]?token|api[_-]?key|secret)=([^\s&;]+)',
+  caseSensitive: false,
+);
+
 bool _containsSensitiveTerm(String value) {
   final normalized = value.toLowerCase();
   if (normalized.contains('technical')) {
@@ -111,7 +136,11 @@ String sanitizeDiagnosticsName(String name) {
   if (_containsSensitiveTerm(trimmed) || _looksLikeUrl(trimmed)) {
     return sentryRedactedValue;
   }
-  return trimmed.length > 80 ? trimmed.substring(0, 80) : trimmed;
+  final sanitized = _sanitizeStringValue(trimmed);
+  final truncated = sanitized.length > 80
+      ? sanitized.substring(0, 80)
+      : sanitized;
+  return truncated;
 }
 
 String sanitizeRouteName(String? name) {
@@ -188,11 +217,6 @@ Map<String, String> sanitizeDiagnosticsTags(Map<String, String> source) {
   );
 }
 
-Object sanitizeDiagnosticsThrowable(Object exception) {
-  if (exception is SanitizedDiagnosticsException) return exception;
-  return SanitizedDiagnosticsException(exception);
-}
-
 SentryEvent? scrubSentryEvent(SentryEvent event, Hint hint) {
   event.user = null;
   event.transaction = event.transaction == null
@@ -257,32 +281,37 @@ Breadcrumb? scrubSentryBreadcrumb(Breadcrumb? breadcrumb, [Hint? hint]) {
   );
 }
 
-class SanitizedDiagnosticsException implements Exception {
-  final String type;
-  final String message;
-
-  SanitizedDiagnosticsException(Object source)
-    : type = source.runtimeType.toString(),
-      message = sanitizeDiagnosticsValue(source.toString()).toString();
-
-  @override
-  String toString() {
-    return message == sentryRedactedValue ? type : '$type: $message';
-  }
-}
-
 String _sanitizeStringValue(String value) {
   final trimmed = value.trim();
   if (trimmed.isEmpty) return trimmed;
   if (_looksLikeUrl(trimmed)) return sentryRedactedValue;
   if (_isGenericValue(trimmed)) return trimmed;
+  final embeddedRedacted = _redactEmbeddedSensitiveValues(trimmed);
+  if (embeddedRedacted != trimmed) return embeddedRedacted;
   if (_containsSensitiveTerm(trimmed)) return sentryRedactedValue;
   return trimmed;
 }
 
 bool _looksLikeUrl(String value) {
+  final match = _embeddedUrlPattern.firstMatch(value);
+  if (match == null || match.start != 0 || match.end != value.length) {
+    return false;
+  }
   final uri = Uri.tryParse(value);
   return uri != null && uri.hasScheme && uri.host.isNotEmpty;
+}
+
+String _redactEmbeddedSensitiveValues(String value) {
+  return value
+      .replaceAll(_embeddedUrlPattern, sentryRedactedValue)
+      .replaceAll(_emailPattern, sentryRedactedValue)
+      .replaceAll(_authorizationTokenPattern, sentryRedactedValue)
+      .replaceAll(_jwtPattern, sentryRedactedValue)
+      .replaceAllMapped(
+        _tokenAssignmentPattern,
+        (match) =>
+            match.group(0)!.replaceFirst(match.group(1)!, sentryRedactedValue),
+      );
 }
 
 String _stripUrlQuery(String value) {

@@ -1,5 +1,4 @@
 import 'package:dualmate/common/logging/app_diagnostics.dart';
-import 'package:dualmate/common/logging/sentry_scrubber.dart';
 import 'package:sentry/sentry.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -39,8 +38,7 @@ void main() {
 
     expect(recorder.capturedExceptions, hasLength(1));
     final captured = recorder.capturedExceptions.single;
-    expect(captured.exception, isA<SanitizedDiagnosticsException>());
-    expect(captured.exception.toString(), 'StateError: Bad state: boom');
+    expect(captured.exception, same(error));
     expect(captured.stackTrace, same(trace));
     expect(captured.message?.formatted, 'Root init failed');
     expect(captured.tags['feature'], 'startup');
@@ -166,11 +164,7 @@ void main() {
     span.attachError(error);
 
     final sentrySpan = recorder.currentSpan as _RecordingSentrySpan;
-    expect(sentrySpan.throwable, isA<SanitizedDiagnosticsException>());
-    expect(
-      sentrySpan.throwable.toString(),
-      'StateError: Bad state: task failed',
-    );
+    expect(sentrySpan.throwable, same(error));
 
     await span.finish(status: const SpanStatus.internalError());
   });

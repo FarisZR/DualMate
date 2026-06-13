@@ -37,6 +37,33 @@ void main() {
     );
   });
 
+  test('embedded identifiers in free-form strings are redacted', () {
+    expect(
+      sanitizeDiagnosticsValue('Bad state: login failed for jane@example.com'),
+      'Bad state: login failed for $sentryRedactedValue',
+    );
+    expect(
+      sanitizeDiagnosticsValue(
+        'GET https://example.com/path?token=secret failed',
+      ),
+      'GET $sentryRedactedValue failed',
+    );
+    expect(
+      sanitizeDiagnosticsValue('Authorization: Bearer abc.def-123'),
+      'Authorization: $sentryRedactedValue',
+    );
+    expect(
+      sanitizeDiagnosticsValue('request failed id_token=abc.def.ghi'),
+      'request failed id_token=$sentryRedactedValue',
+    );
+    expect(
+      sanitizeDiagnosticsValue(
+        'jwt eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.signature failed',
+      ),
+      'jwt $sentryRedactedValue failed',
+    );
+  });
+
   test('Dualis, grade, and schedule fields are redacted', () {
     final sanitized = sanitizeDiagnosticsMap({
       'dualis': {'student': 'Jane Example'},
@@ -114,7 +141,7 @@ void main() {
       exceptions: [
         SentryException(
           type: 'StateError',
-          value: 'Dualis grade parse failed: 1.3',
+          value: 'login failed for jane@example.com',
         ),
       ],
     )..contexts['dualis'] = {'grade': '1.3'};
@@ -123,7 +150,10 @@ void main() {
 
     expect(scrubbed.user, isNull);
     expect(scrubbed.transaction, 'dualis');
-    expect(scrubbed.message!.formatted, sentryRedactedValue);
+    expect(
+      scrubbed.message!.formatted,
+      'Schedule failed for $sentryRedactedValue',
+    );
     expect(scrubbed.tags!['feature'], 'schedule');
     expect(scrubbed.tags!['platform'], 'android');
     // ignore: deprecated_member_use
@@ -135,7 +165,10 @@ void main() {
     expect(scrubbed.request!.data, isNull);
     expect(scrubbed.breadcrumbs!.single.message, sentryRedactedValue);
     expect(scrubbed.breadcrumbs!.single.data!['room'], sentryRedactedValue);
-    expect(scrubbed.exceptions!.single.value, sentryRedactedValue);
+    expect(
+      scrubbed.exceptions!.single.value,
+      'login failed for $sentryRedactedValue',
+    );
     expect(scrubbed.contexts['dualis'], sentryRedactedValue);
   });
 
