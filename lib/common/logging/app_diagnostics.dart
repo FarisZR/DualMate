@@ -227,6 +227,7 @@ class AppDiagnosticsSpan {
         'errorMessage',
         sanitizeDiagnosticsValue(error.toString()).toString(),
       );
+      span.status = const SpanStatus.internalError();
     } catch (attachErrorError, stackTrace) {
       _logDiagnosticsFailure('span.attachError', attachErrorError, stackTrace);
     }

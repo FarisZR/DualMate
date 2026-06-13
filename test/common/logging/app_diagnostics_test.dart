@@ -174,6 +174,7 @@ void main() {
         sentrySpan.data['errorMessage'],
         'Bad state: login failed for [redacted] with [redacted]',
       );
+      expect(sentrySpan.status, const SpanStatus.internalError());
 
       await span.finish(status: const SpanStatus.internalError());
     },

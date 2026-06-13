@@ -10,8 +10,8 @@ define. Builds without a DSN do not start Sentry.
 
 Sentry remains enabled for crash reporting and low-sample performance tracing.
 Production tracing uses `tracesSampleRate = 0.1` so startup and route
-performance remain observable. Auto session tracking is disabled; release-health
-session metrics are not collected.
+performance remain observable. Auto session tracking is enabled for Sentry
+Release Health crash-free session diagnostics.
 
 Collected data:
 
@@ -24,12 +24,12 @@ Collected data:
 - Sanitized breadcrumbs for navigation, app diagnostics, and performance
   checkpoints.
 - Span error metadata limited to `errorType` and a scrubbed `errorMessage`.
+- Release Health session diagnostics for crash-free session reporting.
 
 Not collected:
 
 - Screenshots.
 - Session replay.
-- Auto session tracking / release-health sessions.
 - Default PII.
 - Raw Sentry user identifiers.
 - Raw errors attached to performance spans.
