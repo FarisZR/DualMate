@@ -3,6 +3,8 @@ import 'dart:developer' as developer;
 
 import 'package:sentry/sentry.dart';
 
+import 'sentry_scrubber.dart';
+
 void _logDiagnosticsFailure(
   String operation,
   Object error, [
@@ -81,7 +83,7 @@ class AppDiagnostics {
   final DiagnosticsRecorder _recorder;
 
   AppDiagnostics({DiagnosticsRecorder? recorder})
-      : _recorder = recorder ?? const SentryDiagnosticsRecorder();
+    : _recorder = recorder ?? const SentryDiagnosticsRecorder();
 
   static final AppDiagnostics instance = AppDiagnostics();
 
@@ -94,8 +96,8 @@ class AppDiagnostics {
         Breadcrumb(
           category: 'navigation',
           type: 'navigation',
-          message: name,
-          data: data,
+          message: sanitizeDiagnosticsName(name),
+          data: sanitizeDiagnosticsMap(data),
           level: SentryLevel.info,
         ),
       ),
@@ -110,10 +112,10 @@ class AppDiagnostics {
     return _bestEffort(
       () => _recorder.addBreadcrumb(
         Breadcrumb(
-          category: category,
+          category: sanitizeDiagnosticsName(category),
           type: 'default',
-          message: message,
-          data: data,
+          message: sanitizeDiagnosticsName(message),
+          data: sanitizeDiagnosticsMap(data),
           level: SentryLevel.info,
         ),
       ),
@@ -129,11 +131,13 @@ class AppDiagnostics {
   }) {
     return _bestEffort(
       () => _recorder.captureException(
-        exception,
+        sanitizeDiagnosticsThrowable(exception),
         stackTrace,
-        message: message == null ? null : SentryMessage(message),
-        tags: tags,
-        contexts: contexts,
+        message: message == null
+            ? null
+            : SentryMessage(sanitizeDiagnosticsName(message)),
+        tags: sanitizeDiagnosticsTags(tags),
+        contexts: sanitizeDiagnosticsMap(contexts),
       ),
     );
   }
@@ -154,11 +158,19 @@ class AppDiagnostics {
   }) {
     try {
       final parent = _recorder.getCurrentSpan();
-      final span = parent?.startChild(
-            operation,
-            description: description,
+      final sanitizedOperation = sanitizeDiagnosticsName(operation);
+      final sanitizedDescription = description == null
+          ? null
+          : sanitizeDiagnosticsName(description);
+      final span =
+          parent?.startChild(
+            sanitizedOperation,
+            description: sanitizedDescription,
           ) ??
-          _recorder.startTransaction(operation, description: description);
+          _recorder.startTransaction(
+            sanitizedOperation,
+            description: sanitizedDescription,
+          );
 
       final diagnosticsSpan = AppDiagnosticsSpan._(span);
       for (final entry in data.entries) {
@@ -187,7 +199,10 @@ class AppDiagnosticsSpan {
     final span = _span;
     if (span == null) return;
     try {
-      span.setData(key, value);
+      final sanitized = sanitizeDiagnosticsValue(value, key: key);
+      if (sanitized != null && sanitized != sentryRedactedValue) {
+        span.setData(key, sanitized);
+      }
     } catch (error, stackTrace) {
       _logDiagnosticsFailure('span.setData', error, stackTrace);
     }
@@ -197,7 +212,7 @@ class AppDiagnosticsSpan {
     final span = _span;
     if (span == null) return;
     try {
-      span.setTag(key, value);
+      span.setTag(key, sanitizeDiagnosticsValue(value, key: key).toString());
     } catch (error, stackTrace) {
       _logDiagnosticsFailure('span.setTag', error, stackTrace);
     }
@@ -207,7 +222,7 @@ class AppDiagnosticsSpan {
     final span = _span;
     if (span == null) return;
     try {
-      span.throwable = error;
+      span.throwable = sanitizeDiagnosticsThrowable(error);
     } catch (attachError, stackTrace) {
       _logDiagnosticsFailure('span.attachError', attachError, stackTrace);
     }

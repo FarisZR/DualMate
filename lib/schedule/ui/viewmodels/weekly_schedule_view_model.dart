@@ -17,6 +17,7 @@ import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_freshness_gate.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_update_request_gate.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 class WeeklyScheduleViewModel extends BaseViewModel {
@@ -53,8 +54,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   final ScheduleUpdateRequestGate _updateRequestGate =
       ScheduleUpdateRequestGate(minInterval: const Duration(seconds: 1));
   final ScheduleFreshnessGate _freshnessGate = ScheduleFreshnessGate();
-  final ScheduleFreshnessGate _entryRefreshGate =
-      ScheduleFreshnessGate(staleAfter: const Duration(minutes: 20));
+  final ScheduleFreshnessGate _entryRefreshGate = ScheduleFreshnessGate(
+    staleAfter: const Duration(minutes: 20),
+  );
   Schedule? weekSchedule;
   Schedule? _lastCachedSchedule;
   final Map<String, ScheduleFreshnessGate> _windowFreshnessGates = {};
@@ -96,9 +98,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     this.scheduleProvider,
     this.scheduleSourceProvider, {
     DateTime Function()? nowProvider,
-  })  : _nowProvider = nowProvider ?? DateTime.now,
-        currentDateStart = _resolveInitialWeekStart(nowProvider),
-        currentDateEnd = toNextWeek(_resolveInitialWeekStart(nowProvider));
+  }) : _nowProvider = nowProvider ?? DateTime.now,
+       currentDateStart = _resolveInitialWeekStart(nowProvider),
+       currentDateEnd = toNextWeek(_resolveInitialWeekStart(nowProvider));
 
   static DateTime _resolveInitialWeekStart(DateTime Function()? nowProvider) {
     final now = (nowProvider ?? DateTime.now)();
@@ -123,8 +125,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     DateTime referenceStart,
     Schedule? schedule,
   ) {
-    final weekStart =
-        toStartOfDay(toDayOfWeek(referenceStart, DateTime.monday));
+    final weekStart = toStartOfDay(
+      toDayOfWeek(referenceStart, DateTime.monday),
+    );
     final weekEnd = toStartOfDay(toDayOfWeek(referenceStart, DateTime.friday));
 
     if (schedule == null) {
@@ -132,8 +135,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
 
     var displayEnd = weekEnd;
-    final saturday =
-        toStartOfDay(toDayOfWeek(referenceStart, DateTime.saturday));
+    final saturday = toStartOfDay(
+      toDayOfWeek(referenceStart, DateTime.saturday),
+    );
 
     if (_hasEntriesOnDay(schedule, saturday)) {
       displayEnd = saturday;
@@ -160,8 +164,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       ensureUpdateNowTimerRunning();
       _ensureWindowRefreshTimer();
 
-      scheduleSourceProvider
-          .addDidChangeScheduleSourceCallback(_onDidChangeScheduleSource);
+      scheduleSourceProvider.addDidChangeScheduleSourceCallback(
+        _onDidChangeScheduleSource,
+      );
     } catch (error, trace) {
       initializeFailed = true;
       notifyIfMounted("initializeFailed");
@@ -205,12 +210,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     var end = addDays(start, 14);
     try {
       // Keep widget data fresh without changing the currently visible week.
-      await updateSchedule(
-        start,
-        end,
-        force: true,
-        applyToVisibleState: false,
-      );
+      await updateSchedule(start, end, force: true, applyToVisibleState: false);
     } catch (error, trace) {
       print("Weekly schedule widget refresh failed: $error");
       print(trace);
@@ -267,8 +267,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _evictDistantWindowData(start);
 
     if (weekSchedule != null) {
-      var displayRange =
-          resolveWeeklyDisplayRange(currentDateStart, weekSchedule);
+      var displayRange = resolveWeeklyDisplayRange(
+        currentDateStart,
+        weekSchedule,
+      );
       clippedDateStart = displayRange.start;
       clippedDateEnd = displayRange.end;
 
@@ -345,7 +347,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   Future<void> _openWeekFromCache(DateTime start, DateTime end) async {
     try {
       final cacheKey = _windowKey(start, end);
-      final cachedSchedule = getCachedWeek(start, end) ??
+      final cachedSchedule =
+          getCachedWeek(start, end) ??
           await scheduleProvider.getCachedSchedule(start, end);
       if (_isDisposed) return;
       _memoryWeekCache[cacheKey] = cachedSchedule;
@@ -456,13 +459,11 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
     final cacheTask = PerformanceTelemetry.instance.startTask(
       'schedule.cache',
-      args: {
-        'start': start.toIso8601String(),
-        'end': end.toIso8601String(),
-      },
+      args: {'start': start.toIso8601String(), 'end': end.toIso8601String()},
     );
     var cacheKey = _windowKey(start, end);
-    var cachedSchedule = _memoryWeekCache[cacheKey] ??
+    var cachedSchedule =
+        _memoryWeekCache[cacheKey] ??
         await scheduleProvider.getCachedSchedule(start, end);
     _memoryWeekCache[cacheKey] = cachedSchedule;
     unawaited(cacheTask.finish());
@@ -474,7 +475,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
 
     final nowValue = now;
-    final shouldForceFetch = awaitRefresh ||
+    final shouldForceFetch =
+        awaitRefresh ||
         (cachedSchedule.entries.isEmpty &&
             scheduleSourceProvider.currentScheduleSource.canQuery());
     final isStale = shouldForceFetch || _isWindowStale(start, end, nowValue);
@@ -526,7 +528,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       } on OperationCancelledException {
         return;
       } catch (e, stack) {
-        print("Schedule update failed: $e");
+        if (kDebugMode) {
+          debugPrint("Schedule update failed: $e");
+        }
         task.setTag('result', 'failed');
         task.setData('error', '$e');
         await reportException(e, stack);
@@ -584,10 +588,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         error,
         trace,
         message: 'Weekly schedule background refresh failed',
-        tags: {
-          'feature': 'schedule',
-          'origin': origin.name,
-        },
+        tags: {'feature': 'schedule', 'origin': origin.name},
         contexts: {
           'schedule_refresh': {
             'start': start.toIso8601String(),
@@ -639,14 +640,11 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   void _cancelErrorInFuture() {
     _errorResetTimer?.cancel();
 
-    _errorResetTimer = Timer(
-      const Duration(seconds: 5),
-      () {
-        if (_isDisposed) return;
-        updateFailed = false;
-        notifyIfMounted("updateFailed");
-      },
-    );
+    _errorResetTimer = Timer(const Duration(seconds: 5), () {
+      if (_isDisposed) return;
+      updateFailed = false;
+      notifyIfMounted("updateFailed");
+    });
   }
 
   void ensureUpdateNowTimerRunning() {
@@ -698,8 +696,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
     if (!_memoryWeekCache.containsKey(nextKey)) {
       try {
-        _memoryWeekCache[nextKey] =
-            await scheduleProvider.getCachedSchedule(nextStart, nextEnd);
+        _memoryWeekCache[nextKey] = await scheduleProvider.getCachedSchedule(
+          nextStart,
+          nextEnd,
+        );
       } catch (_) {}
     }
 
@@ -794,8 +794,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   void dispose() {
     _isDisposed = true;
 
-    scheduleSourceProvider
-        .removeDidChangeScheduleSourceCallback(_onDidChangeScheduleSource);
+    scheduleSourceProvider.removeDidChangeScheduleSourceCallback(
+      _onDidChangeScheduleSource,
+    );
 
     _updateMutex.cancel();
 

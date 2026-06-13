@@ -5,6 +5,7 @@ import 'package:dualmate/common/logging/analytics.dart';
 import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/logging/perf_overlay_controller.dart';
+import 'package:dualmate/common/logging/sentry_scrubber.dart';
 import 'package:dualmate/common/ui/colors.dart';
 import 'package:dualmate/common/ui/viewmodels/root_view_model.dart';
 import 'package:dualmate/common/appstart/app_initializer.dart';
@@ -40,19 +41,23 @@ class RootPage extends StatefulWidget {
 }
 
 class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
-  static const Duration _deferredBackgroundInitDelay =
-      Duration(milliseconds: 1800);
-  static const Duration _foregroundHeavyInitDelay =
-      Duration(milliseconds: 2800);
-  static const Duration _foregroundCanteenPrewarmDelay =
-      Duration(milliseconds: 7000);
+  static const Duration _deferredBackgroundInitDelay = Duration(
+    milliseconds: 1800,
+  );
+  static const Duration _foregroundHeavyInitDelay = Duration(
+    milliseconds: 2800,
+  );
+  static const Duration _foregroundCanteenPrewarmDelay = Duration(
+    milliseconds: 7000,
+  );
 
   RootViewModel? _rootViewModel;
   bool _backgroundInitStarted = false;
   bool _onboardingDeferredInitListenerAttached = false;
   Stopwatch? _deferredInitStopwatch;
-  static const MethodChannel _navigationChannel =
-      MethodChannel('com.fariszr.dualmate/navigation');
+  static const MethodChannel _navigationChannel = MethodChannel(
+    'com.fariszr.dualmate/navigation',
+  );
   String? _pendingRoute;
   PerformanceTelemetryTask? _startupTask;
   bool _perfOverlayLoaded = false;
@@ -68,8 +73,9 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       _loadPerfOverlayPreference();
     });
     PerformanceTelemetry.instance.ensureFrameTimingListenerAttached();
-    _startupTask =
-        PerformanceTelemetry.instance.startTask('startup.initialize');
+    _startupTask = PerformanceTelemetry.instance.startTask(
+      'startup.initialize',
+    );
     unawaited(_setAppAttended(true));
     _initializeApp();
   }
@@ -157,7 +163,8 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     final schedulePayload = WidgetScheduleEntryPayload.fromMap(payload);
     if (!schedulePayload.isEmpty) {
       print(
-          "Widget schedule payload: ${schedulePayload.dayStart} id=${schedulePayload.id}");
+        "Widget schedule payload: ${schedulePayload.dayStart} id=${schedulePayload.id}",
+      );
       WidgetNavigationPayloadStore.instance.setSchedulePayload(schedulePayload);
     }
 
@@ -189,14 +196,13 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
       unawaited(_saveLastStartLanguage());
       print(
-          "Root init: save language deferred ${stopwatch.elapsedMilliseconds}ms");
+        "Root init: save language deferred ${stopwatch.elapsedMilliseconds}ms",
+      );
       PerformanceTelemetry.instance.logInstant(
         'startup.root.language.done',
         args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
       );
-      _rootViewModel ??= RootViewModel(
-        KiwiContainer().resolve(),
-      );
+      _rootViewModel ??= RootViewModel(KiwiContainer().resolve());
       if (!mounted) {
         return;
       }
@@ -228,9 +234,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       unawaited(_startupTask?.fail(error));
 
       if (_rootViewModel == null) {
-        _rootViewModel = RootViewModel(
-          KiwiContainer().resolve(),
-        );
+        _rootViewModel = RootViewModel(KiwiContainer().resolve());
       }
 
       if (mounted) {
@@ -247,8 +251,8 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   Future<void> _setAppAttended(bool attended) async {
     try {
       await KiwiContainer().resolve<PreferencesProvider>().setIsAppAttended(
-            attended,
-          );
+        attended,
+      );
     } catch (_) {}
   }
 
@@ -296,8 +300,8 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   Future<void> _loadPerfOverlayPreference() async {
     if (_perfOverlayLoaded) return;
     try {
-      final preferencesProvider =
-          KiwiContainer().resolve<PreferencesProvider>();
+      final preferencesProvider = KiwiContainer()
+          .resolve<PreferencesProvider>();
       await PerformanceOverlayController.load(preferencesProvider);
       _perfOverlayLoaded = true;
     } catch (error, trace) {
@@ -356,49 +360,49 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     return PropertyChangeProvider<RootViewModel, String>(
       child: PropertyChangeConsumer<RootViewModel, String>(
         properties: const ["appTheme", "isOnboarding", "hasLoadedPreferences"],
-        builder: (
-          BuildContext context,
-          RootViewModel? model,
-          Set<String>? properties,
-        ) {
-          if (model == null) return Container();
-          if (!model.hasLoadedPreferences) {
-            return _buildStartupPlaceholder();
-          }
-          return ValueListenableBuilder<bool>(
-            valueListenable: PerformanceOverlayController.enabled,
-            builder: (context, perfEnabled, _) => SentryUserInteractionWidget(
-              child: MaterialApp(
-                theme: ColorPalettes.buildTheme(model.appTheme),
-                showPerformanceOverlay: perfEnabled,
-                initialRoute:
-                    model.isOnboarding ? "onboarding" : _resolveInitialRoute(),
-                navigatorKey: NavigatorKey.rootKey,
-                navigatorObservers: [
-                  SentryNavigatorObserver(
-                    setRouteNameAsTransaction: true,
-                    enableAutoTransactions: true,
-                    autoFinishAfter: const Duration(seconds: 5),
-                    ignoreRoutes: const ['main'],
-                  ),
-                  rootNavigationObserver,
-                ],
-                localizationsDelegates: [
-                  const LocalizationDelegate(),
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                  DefaultCupertinoLocalizations.delegate,
-                ],
-                supportedLocales: const [
-                  Locale('en'),
-                  Locale('de'),
-                ],
-                onGenerateRoute: generateRoute,
-              ),
-            ),
-          );
-        },
+        builder:
+            (
+              BuildContext context,
+              RootViewModel? model,
+              Set<String>? properties,
+            ) {
+              if (model == null) return Container();
+              if (!model.hasLoadedPreferences) {
+                return _buildStartupPlaceholder();
+              }
+              return ValueListenableBuilder<bool>(
+                valueListenable: PerformanceOverlayController.enabled,
+                builder: (context, perfEnabled, _) => MaterialApp(
+                  theme: ColorPalettes.buildTheme(model.appTheme),
+                  showPerformanceOverlay: perfEnabled,
+                  initialRoute: model.isOnboarding
+                      ? "onboarding"
+                      : _resolveInitialRoute(),
+                  navigatorKey: NavigatorKey.rootKey,
+                  navigatorObservers: [
+                    SentryNavigatorObserver(
+                      setRouteNameAsTransaction: true,
+                      enableAutoTransactions: true,
+                      autoFinishAfter: const Duration(seconds: 5),
+                      ignoreRoutes: const ['main'],
+                      routeNameExtractor: sanitizeSentryRouteSettings,
+                      additionalInfoProvider: (_, __) =>
+                          const <String, dynamic>{'source': 'navigator'},
+                    ),
+                    rootNavigationObserver,
+                  ],
+                  localizationsDelegates: [
+                    const LocalizationDelegate(),
+                    GlobalMaterialLocalizations.delegate,
+                    GlobalWidgetsLocalizations.delegate,
+                    GlobalCupertinoLocalizations.delegate,
+                    DefaultCupertinoLocalizations.delegate,
+                  ],
+                  supportedLocales: const [Locale('en'), Locale('de')],
+                  onGenerateRoute: generateRoute,
+                ),
+              );
+            },
       ),
       value: _rootViewModel!,
     );
@@ -408,9 +412,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     return MaterialApp(
       home: const ColoredBox(
         color: Color(0xFFFFFFFF),
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
+        child: Center(child: CircularProgressIndicator()),
       ),
     );
   }
@@ -442,7 +444,8 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         debugLabel: 'startup.backgroundInit',
       );
       print(
-          "Root init: deferred background ${stopwatch.elapsedMilliseconds}ms");
+        "Root init: deferred background ${stopwatch.elapsedMilliseconds}ms",
+      );
       SchedulerBinding.instance.scheduleTask<void>(
         () {
           unawaited(_prewarmScheduleCache());
@@ -560,10 +563,9 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     }
 
     _onboardingDeferredInitListenerAttached = true;
-    _rootViewModel!.addListener(
-      _onOnboardingStateChanged,
-      const ["isOnboarding"],
-    );
+    _rootViewModel!.addListener(_onOnboardingStateChanged, const [
+      "isOnboarding",
+    ]);
   }
 
   void _detachOnboardingDeferredInitListener() {
@@ -572,10 +574,9 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     }
 
     _onboardingDeferredInitListenerAttached = false;
-    _rootViewModel!.removeListener(
-      _onOnboardingStateChanged,
-      const ["isOnboarding"],
-    );
+    _rootViewModel!.removeListener(_onOnboardingStateChanged, const [
+      "isOnboarding",
+    ]);
   }
 
   void _onOnboardingStateChanged() {
