@@ -141,8 +141,8 @@ RouteSettings? sanitizeSentryRouteSettings(RouteSettings? settings) {
 }
 
 Object? sanitizeDiagnosticsValue(Object? value, {Object? key, int depth = 0}) {
-  if (value == null || value is num || value is bool) return value;
   if (isSensitiveDiagnosticsKey(key)) return sentryRedactedValue;
+  if (value == null || value is num || value is bool) return value;
   if (depth >= 4) return value is String ? _sanitizeStringValue(value) : null;
 
   if (value is Uri) {
@@ -274,11 +274,10 @@ class SanitizedDiagnosticsException implements Exception {
 String _sanitizeStringValue(String value) {
   final trimmed = value.trim();
   if (trimmed.isEmpty) return trimmed;
-  final withoutQuery = _stripUrlQuery(trimmed);
-  if (_looksLikeUrl(trimmed)) return withoutQuery;
+  if (_looksLikeUrl(trimmed)) return sentryRedactedValue;
   if (_isGenericValue(trimmed)) return trimmed;
   if (_containsSensitiveTerm(trimmed)) return sentryRedactedValue;
-  return withoutQuery;
+  return trimmed;
 }
 
 bool _looksLikeUrl(String value) {
@@ -322,7 +321,7 @@ SentryException _scrubException(SentryException exception) {
 SentryRequest? _scrubRequest(SentryRequest? request) {
   if (request == null) return null;
   return SentryRequest(
-    url: request.url == null ? null : _stripUrlQuery(request.url!),
+    url: request.url == null ? null : sentryRedactedValue,
     method: request.method,
     queryString: '',
     headers: sanitizeDiagnosticsTags(request.headers),

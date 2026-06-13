@@ -94,13 +94,28 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   bool _initialized = false;
   DateTime? _lastWarmedWeekStart;
 
-  WeeklyScheduleViewModel(
+  factory WeeklyScheduleViewModel(
+    ScheduleProvider scheduleProvider,
+    ScheduleSourceProvider scheduleSourceProvider, {
+    DateTime Function()? nowProvider,
+  }) {
+    final initialStart = _resolveInitialWeekStart(nowProvider);
+    return WeeklyScheduleViewModel._withInitialStart(
+      scheduleProvider,
+      scheduleSourceProvider,
+      nowProvider: nowProvider,
+      initialStart: initialStart,
+    );
+  }
+
+  WeeklyScheduleViewModel._withInitialStart(
     this.scheduleProvider,
     this.scheduleSourceProvider, {
+    required DateTime initialStart,
     DateTime Function()? nowProvider,
   }) : _nowProvider = nowProvider ?? DateTime.now,
-       currentDateStart = _resolveInitialWeekStart(nowProvider),
-       currentDateEnd = toNextWeek(_resolveInitialWeekStart(nowProvider));
+       currentDateStart = initialStart,
+       currentDateEnd = toNextWeek(initialStart);
 
   static DateTime _resolveInitialWeekStart(DateTime Function()? nowProvider) {
     final now = (nowProvider ?? DateTime.now)();

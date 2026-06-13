@@ -402,6 +402,16 @@ class _ThrowingSentrySpan extends _RecordingSentrySpan {
   _ThrowingSentrySpan(super.operation);
 
   @override
+  ISentrySpan startChild(
+    String operation, {
+    String? description,
+    DateTime? startTimestamp,
+  }) {
+    return _ThrowingSentrySpan(operation)
+      ..startTimestamp = startTimestamp ?? DateTime.now();
+  }
+
+  @override
   void setData(String key, dynamic value) {
     throw StateError('failed setData');
   }

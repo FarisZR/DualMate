@@ -21,6 +21,7 @@ import 'package:dualmate/ui/navigation/main_section_controller.dart';
 import 'package:dualmate/ui/navigation/navigator_key.dart';
 import 'package:dualmate/ui/navigation/router.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -162,15 +163,17 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     if (payload is! Map) return;
     final schedulePayload = WidgetScheduleEntryPayload.fromMap(payload);
     if (!schedulePayload.isEmpty) {
-      print(
-        "Widget schedule payload: ${schedulePayload.dayStart} id=${schedulePayload.id}",
-      );
+      if (kDebugMode) {
+        debugPrint('Widget schedule payload received');
+      }
       WidgetNavigationPayloadStore.instance.setSchedulePayload(schedulePayload);
     }
 
     final canteenPayload = WidgetCanteenDayPayload.fromMap(payload);
     if (!canteenPayload.isEmpty) {
-      print("Widget canteen payload: ${canteenPayload.dayStart}");
+      if (kDebugMode) {
+        debugPrint('Widget canteen payload received');
+      }
       WidgetNavigationPayloadStore.instance.setCanteenPayload(canteenPayload);
     }
   }

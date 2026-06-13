@@ -20,7 +20,7 @@ void main() {
     expect(sanitized['feature'], 'startup');
   });
 
-  test('URLs lose query parameters', () {
+  test('URLs are redacted', () {
     final sanitized = sanitizeDiagnosticsMap({
       'endpoint': 'https://example.com/path?token=secret&course=WDCM21B1',
       'nested': {
@@ -30,10 +30,10 @@ void main() {
       },
     });
 
-    expect(sanitized['endpoint'], 'https://example.com/path');
+    expect(sanitized['endpoint'], sentryRedactedValue);
     expect(
       (sanitized['nested'] as Map<String, Object?>)['callback'],
-      'https://dualis.example.test/results',
+      sentryRedactedValue,
     );
   });
 
@@ -51,6 +51,20 @@ void main() {
     expect(sanitized['scheduleEventTitle'], sentryRedactedValue);
     expect(sanitized['room'], sentryRedactedValue);
     expect(sanitized['technicalPhase'], 'startup');
+  });
+
+  test('numeric sensitive fields are redacted', () {
+    final sanitized = sanitizeDiagnosticsMap({
+      'grade': 1.3,
+      'session': 42,
+      'scheduleEventCount': 3,
+      'buildNumber': 42,
+    });
+
+    expect(sanitized['grade'], sentryRedactedValue);
+    expect(sanitized['session'], sentryRedactedValue);
+    expect(sanitized['scheduleEventCount'], sentryRedactedValue);
+    expect(sanitized['buildNumber'], 42);
   });
 
   test('normal technical fields and generic route names remain', () {
@@ -114,7 +128,7 @@ void main() {
     expect(scrubbed.tags!['platform'], 'android');
     // ignore: deprecated_member_use
     expect(scrubbed.extra!['rawUrl'], sentryRedactedValue);
-    expect(scrubbed.request!.url, 'https://example.test/api');
+    expect(scrubbed.request!.url, sentryRedactedValue);
     expect(scrubbed.request!.queryString, isEmpty);
     expect(scrubbed.request!.cookies, isNull);
     expect(scrubbed.request!.headers['Authorization'], sentryRedactedValue);
