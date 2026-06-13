@@ -20,6 +20,13 @@ import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+void _debugScheduleError(String message, Object error, StackTrace trace) {
+  if (kDebugMode) {
+    debugPrint('$message: $error');
+    debugPrint('$trace');
+  }
+}
+
 class WeeklyScheduleViewModel extends BaseViewModel {
   static const Duration weekDuration = Duration(days: 7);
   static const int _maxRetainedWeeks = 12;
@@ -28,8 +35,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   final ScheduleSourceProvider scheduleSourceProvider;
   final DateTime Function() _nowProvider;
 
-  DateTime currentDateStart;
-  DateTime currentDateEnd;
+  late DateTime currentDateStart;
+  late DateTime currentDateEnd;
 
   bool _hasCurrentDateRange = false;
 
@@ -94,28 +101,15 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   bool _initialized = false;
   DateTime? _lastWarmedWeekStart;
 
-  factory WeeklyScheduleViewModel(
-    ScheduleProvider scheduleProvider,
-    ScheduleSourceProvider scheduleSourceProvider, {
-    DateTime Function()? nowProvider,
-  }) {
-    final initialStart = _resolveInitialWeekStart(nowProvider);
-    return WeeklyScheduleViewModel._withInitialStart(
-      scheduleProvider,
-      scheduleSourceProvider,
-      nowProvider: nowProvider,
-      initialStart: initialStart,
-    );
-  }
-
-  WeeklyScheduleViewModel._withInitialStart(
+  WeeklyScheduleViewModel(
     this.scheduleProvider,
     this.scheduleSourceProvider, {
-    required DateTime initialStart,
     DateTime Function()? nowProvider,
-  }) : _nowProvider = nowProvider ?? DateTime.now,
-       currentDateStart = initialStart,
-       currentDateEnd = toNextWeek(initialStart);
+  }) : _nowProvider = nowProvider ?? DateTime.now {
+    final initialStart = _resolveInitialWeekStart(nowProvider);
+    currentDateStart = initialStart;
+    currentDateEnd = toNextWeek(initialStart);
+  }
 
   static DateTime _resolveInitialWeekStart(DateTime Function()? nowProvider) {
     final now = (nowProvider ?? DateTime.now)();
@@ -130,8 +124,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     } catch (error, trace) {
       initializeFailed = true;
       notifyIfMounted("initializeFailed");
-      print("Weekly schedule init failed: $error");
-      print(trace);
+      _debugScheduleError("Weekly schedule init failed", error, trace);
       await reportException(error, trace);
     }
   }
@@ -185,8 +178,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     } catch (error, trace) {
       initializeFailed = true;
       notifyIfMounted("initializeFailed");
-      print("Weekly schedule init failed: $error");
-      print(trace);
+      _debugScheduleError("Weekly schedule init failed", error, trace);
       await reportException(error, trace);
       ensureUpdateNowTimerRunning();
       _ensureWindowRefreshTimer();
@@ -204,8 +196,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         }
         await updateSchedule(currentDateStart, currentDateEnd);
       } catch (error, trace) {
-        print("Weekly schedule refresh failed: $error");
-        print(trace);
+        _debugScheduleError("Weekly schedule refresh failed", error, trace);
         await reportException(error, trace);
       }
     });
@@ -227,8 +218,11 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       // Keep widget data fresh without changing the currently visible week.
       await updateSchedule(start, end, force: true, applyToVisibleState: false);
     } catch (error, trace) {
-      print("Weekly schedule widget refresh failed: $error");
-      print(trace);
+      _debugScheduleError(
+        "Weekly schedule widget refresh failed",
+        error,
+        trace,
+      );
       await reportException(error, trace);
     }
   }
@@ -250,8 +244,11 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         if (_isDisposed) return;
         await updateSchedule(currentDateStart, currentDateEnd, force: true);
       } catch (error, trace) {
-        print("Weekly schedule source refresh failed: $error");
-        print(trace);
+        _debugScheduleError(
+          "Weekly schedule source refresh failed",
+          error,
+          trace,
+        );
         await reportException(error, trace);
       }
     }
@@ -369,8 +366,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       _memoryWeekCache[cacheKey] = cachedSchedule;
       _setSchedule(cachedSchedule, start, end);
     } catch (error, trace) {
-      print("Failed to open cached week: $error");
-      print(trace);
+      _debugScheduleError("Failed to open cached week", error, trace);
       await reportException(error, trace);
     }
   }
@@ -597,8 +593,11 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         _cancelErrorInFuture();
       }
     } catch (error, trace) {
-      print("Weekly schedule background refresh failed: $error");
-      print(trace);
+      _debugScheduleError(
+        "Weekly schedule background refresh failed",
+        error,
+        trace,
+      );
       await AppDiagnostics.instance.reportCaughtException(
         error,
         trace,

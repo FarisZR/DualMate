@@ -222,9 +222,13 @@ class AppDiagnosticsSpan {
     final span = _span;
     if (span == null) return;
     try {
-      span.throwable = error;
-    } catch (attachError, stackTrace) {
-      _logDiagnosticsFailure('span.attachError', attachError, stackTrace);
+      span.setData('errorType', error.runtimeType.toString());
+      span.setData(
+        'errorMessage',
+        sanitizeDiagnosticsValue(error.toString()).toString(),
+      );
+    } catch (attachErrorError, stackTrace) {
+      _logDiagnosticsFailure('span.attachError', attachErrorError, stackTrace);
     }
   }
 

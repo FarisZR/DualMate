@@ -154,20 +154,30 @@ void main() {
     },
   );
 
-  test('AppDiagnosticsSpan.attachError records error on span', () async {
-    final recorder = _RecordingDiagnosticsRecorder();
-    final diagnostics = AppDiagnostics(recorder: recorder);
+  test(
+    'AppDiagnosticsSpan.attachError records sanitized error data on span',
+    () async {
+      final recorder = _RecordingDiagnosticsRecorder();
+      final diagnostics = AppDiagnostics(recorder: recorder);
 
-    final span = diagnostics.startSpan('task.execute');
-    final error = StateError('task failed');
+      final span = diagnostics.startSpan('task.execute');
+      final error = StateError(
+        'login failed for jane@example.com with https://example.test/path?token=secret',
+      );
 
-    span.attachError(error);
+      span.attachError(error);
 
-    final sentrySpan = recorder.currentSpan as _RecordingSentrySpan;
-    expect(sentrySpan.throwable, same(error));
+      final sentrySpan = recorder.currentSpan as _RecordingSentrySpan;
+      expect(sentrySpan.throwable, isNull);
+      expect(sentrySpan.data['errorType'], 'StateError');
+      expect(
+        sentrySpan.data['errorMessage'],
+        'Bad state: login failed for [redacted] with [redacted]',
+      );
 
-    await span.finish(status: const SpanStatus.internalError());
-  });
+      await span.finish(status: const SpanStatus.internalError());
+    },
+  );
 
   test(
     'AppDiagnosticsSpan swallows errors from underlying span methods',

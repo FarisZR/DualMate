@@ -29,7 +29,7 @@ Future<void> configureSentryOptions(SentryFlutterOptions options) async {
   options.enableLogs = false;
   options.enableAutoPerformanceTracing = true;
   options.enableFramesTracking = true;
-  options.enableAutoSessionTracking = true;
+  options.enableAutoSessionTracking = false;
   options.enableNativeCrashHandling = true;
   options.enableUserInteractionBreadcrumbs = false;
   options.enableUserInteractionTracing = false;

@@ -28,6 +28,20 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
+void _debugRootLog(String message) {
+  if (kDebugMode) {
+    debugPrint(message);
+  }
+}
+
+void _debugRootError(String message, Object error, StackTrace trace) {
+  if (kDebugMode) {
+    debugPrint(message);
+    debugPrint('$error');
+    debugPrint('$trace');
+  }
+}
+
 ///
 /// This is the top level widget of the app. It handles navigation of the
 /// root navigator and rebuilds its child widgets on theme changes
@@ -191,14 +205,14 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     try {
       await initializeAppBase(false);
       await _setAppAttended(true);
-      print("Root init: base ${stopwatch.elapsedMilliseconds}ms");
+      _debugRootLog("Root init: base ${stopwatch.elapsedMilliseconds}ms");
       PerformanceTelemetry.instance.logInstant(
         'startup.root.base.done',
         args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
       );
 
       unawaited(_saveLastStartLanguage());
-      print(
+      _debugRootLog(
         "Root init: save language deferred ${stopwatch.elapsedMilliseconds}ms",
       );
       PerformanceTelemetry.instance.logInstant(
@@ -213,13 +227,13 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
       _applyPendingRoute();
 
-      print("Root init: allow first frame ${stopwatch.elapsedMilliseconds}ms");
+      _debugRootLog(
+        "Root init: allow first frame ${stopwatch.elapsedMilliseconds}ms",
+      );
       unawaited(_startupTask?.finish());
       unawaited(_loadRootPreferences(stopwatch));
     } catch (error, trace) {
-      print("Root init failed");
-      print(error);
-      print(trace);
+      _debugRootError("Root init failed", error, trace);
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
@@ -262,15 +276,13 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   Future<void> _loadRootPreferences(Stopwatch stopwatch) async {
     try {
       await _rootViewModel?.loadFromPreferences();
-      print("Root init: prefs ${stopwatch.elapsedMilliseconds}ms");
+      _debugRootLog("Root init: prefs ${stopwatch.elapsedMilliseconds}ms");
       PerformanceTelemetry.instance.logInstant(
         'startup.root.preferences.done',
         args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
       );
     } catch (error, trace) {
-      print("Root init: prefs failed");
-      print(error);
-      print(trace);
+      _debugRootError("Root init: prefs failed", error, trace);
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
@@ -308,9 +320,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       await PerformanceOverlayController.load(preferencesProvider);
       _perfOverlayLoaded = true;
     } catch (error, trace) {
-      print("Perf overlay load failed");
-      print(error);
-      print(trace);
+      _debugRootError("Perf overlay load failed", error, trace);
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
@@ -330,9 +340,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     try {
       await saveLastStartLanguage();
     } catch (error, trace) {
-      print("Root init: save language failed");
-      print(error);
-      print(trace);
+      _debugRootError("Root init: save language failed", error, trace);
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
@@ -446,7 +454,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         Priority.idle,
         debugLabel: 'startup.backgroundInit',
       );
-      print(
+      _debugRootLog(
         "Root init: deferred background ${stopwatch.elapsedMilliseconds}ms",
       );
       SchedulerBinding.instance.scheduleTask<void>(
@@ -467,9 +475,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         _scheduleIdleCanteenPrewarm();
       });
     } catch (error, trace) {
-      print("Root init: deferred background failed");
-      print(error);
-      print(trace);
+      _debugRootError("Root init: deferred background failed", error, trace);
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
@@ -488,9 +494,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     try {
       await initializeAppForegroundHeavy();
     } catch (error, trace) {
-      print("Root init: foreground heavy failed");
-      print(error);
-      print(trace);
+      _debugRootError("Root init: foreground heavy failed", error, trace);
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
@@ -519,9 +523,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     try {
       await prewarmCanteenIfStale();
     } catch (error, trace) {
-      print("Root init: canteen prewarm failed");
-      print(error);
-      print(trace);
+      _debugRootError("Root init: canteen prewarm failed", error, trace);
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
@@ -543,9 +545,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       final end = toNextWeek(start);
       await scheduleProvider.warmScheduleCache(start, end);
     } catch (error, trace) {
-      print("Root init: schedule cache warm failed");
-      print(error);
-      print(trace);
+      _debugRootError("Root init: schedule cache warm failed", error, trace);
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
