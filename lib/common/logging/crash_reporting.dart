@@ -1,4 +1,5 @@
 import 'package:dualmate/common/logging/app_diagnostics.dart';
+import 'package:flutter/foundation.dart';
 
 typedef ExceptionReporter = Future<void> Function(Object ex, StackTrace trace);
 
@@ -9,12 +10,16 @@ Future<void> reportExceptionToSentry(Object ex, StackTrace trace) async {
 ExceptionReporter reportExceptionImpl = reportExceptionToSentry;
 
 Future<void> reportException(Object ex, StackTrace trace) async {
-  print("Exception: $ex with stack trace $trace");
+  if (kDebugMode) {
+    debugPrint("Exception: $ex with stack trace $trace");
+  }
 
   try {
     await reportExceptionImpl(ex, trace);
   } catch (error, stackTrace) {
-    print("Failed to report exception to Sentry: $error");
-    print(stackTrace);
+    if (kDebugMode) {
+      debugPrint("Failed to report exception to Sentry: $error");
+      debugPrint("$stackTrace");
+    }
   }
 }

@@ -5,6 +5,7 @@ import 'package:dualmate/common/logging/analytics.dart';
 import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/logging/perf_overlay_controller.dart';
+import 'package:dualmate/common/logging/sentry_scrubber.dart';
 import 'package:dualmate/common/ui/colors.dart';
 import 'package:dualmate/common/ui/viewmodels/root_view_model.dart';
 import 'package:dualmate/common/appstart/app_initializer.dart';
@@ -20,11 +21,26 @@ import 'package:dualmate/ui/navigation/main_section_controller.dart';
 import 'package:dualmate/ui/navigation/navigator_key.dart';
 import 'package:dualmate/ui/navigation/router.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+
+void _debugRootLog(String message) {
+  if (kDebugMode) {
+    debugPrint(message);
+  }
+}
+
+void _debugRootError(String message, Object error, StackTrace trace) {
+  if (kDebugMode) {
+    debugPrint(message);
+    debugPrint('$error');
+    debugPrint('$trace');
+  }
+}
 
 ///
 /// This is the top level widget of the app. It handles navigation of the
@@ -40,19 +56,23 @@ class RootPage extends StatefulWidget {
 }
 
 class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
-  static const Duration _deferredBackgroundInitDelay =
-      Duration(milliseconds: 1800);
-  static const Duration _foregroundHeavyInitDelay =
-      Duration(milliseconds: 2800);
-  static const Duration _foregroundCanteenPrewarmDelay =
-      Duration(milliseconds: 7000);
+  static const Duration _deferredBackgroundInitDelay = Duration(
+    milliseconds: 1800,
+  );
+  static const Duration _foregroundHeavyInitDelay = Duration(
+    milliseconds: 2800,
+  );
+  static const Duration _foregroundCanteenPrewarmDelay = Duration(
+    milliseconds: 7000,
+  );
 
   RootViewModel? _rootViewModel;
   bool _backgroundInitStarted = false;
   bool _onboardingDeferredInitListenerAttached = false;
   Stopwatch? _deferredInitStopwatch;
-  static const MethodChannel _navigationChannel =
-      MethodChannel('com.fariszr.dualmate/navigation');
+  static const MethodChannel _navigationChannel = MethodChannel(
+    'com.fariszr.dualmate/navigation',
+  );
   String? _pendingRoute;
   PerformanceTelemetryTask? _startupTask;
   bool _perfOverlayLoaded = false;
@@ -68,8 +88,9 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       _loadPerfOverlayPreference();
     });
     PerformanceTelemetry.instance.ensureFrameTimingListenerAttached();
-    _startupTask =
-        PerformanceTelemetry.instance.startTask('startup.initialize');
+    _startupTask = PerformanceTelemetry.instance.startTask(
+      'startup.initialize',
+    );
     unawaited(_setAppAttended(true));
     _initializeApp();
   }
@@ -156,14 +177,17 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     if (payload is! Map) return;
     final schedulePayload = WidgetScheduleEntryPayload.fromMap(payload);
     if (!schedulePayload.isEmpty) {
-      print(
-          "Widget schedule payload: ${schedulePayload.dayStart} id=${schedulePayload.id}");
+      if (kDebugMode) {
+        debugPrint('Widget schedule payload received');
+      }
       WidgetNavigationPayloadStore.instance.setSchedulePayload(schedulePayload);
     }
 
     final canteenPayload = WidgetCanteenDayPayload.fromMap(payload);
     if (!canteenPayload.isEmpty) {
-      print("Widget canteen payload: ${canteenPayload.dayStart}");
+      if (kDebugMode) {
+        debugPrint('Widget canteen payload received');
+      }
       WidgetNavigationPayloadStore.instance.setCanteenPayload(canteenPayload);
     }
   }
@@ -181,22 +205,21 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     try {
       await initializeAppBase(false);
       await _setAppAttended(true);
-      print("Root init: base ${stopwatch.elapsedMilliseconds}ms");
+      _debugRootLog("Root init: base ${stopwatch.elapsedMilliseconds}ms");
       PerformanceTelemetry.instance.logInstant(
         'startup.root.base.done',
         args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
       );
 
       unawaited(_saveLastStartLanguage());
-      print(
-          "Root init: save language deferred ${stopwatch.elapsedMilliseconds}ms");
+      _debugRootLog(
+        "Root init: save language deferred ${stopwatch.elapsedMilliseconds}ms",
+      );
       PerformanceTelemetry.instance.logInstant(
         'startup.root.language.done',
         args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
       );
-      _rootViewModel ??= RootViewModel(
-        KiwiContainer().resolve(),
-      );
+      _rootViewModel ??= RootViewModel(KiwiContainer().resolve());
       if (!mounted) {
         return;
       }
@@ -204,13 +227,13 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
       _applyPendingRoute();
 
-      print("Root init: allow first frame ${stopwatch.elapsedMilliseconds}ms");
+      _debugRootLog(
+        "Root init: allow first frame ${stopwatch.elapsedMilliseconds}ms",
+      );
       unawaited(_startupTask?.finish());
       unawaited(_loadRootPreferences(stopwatch));
     } catch (error, trace) {
-      print("Root init failed");
-      print(error);
-      print(trace);
+      _debugRootError("Root init failed", error, trace);
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
@@ -228,9 +251,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       unawaited(_startupTask?.fail(error));
 
       if (_rootViewModel == null) {
-        _rootViewModel = RootViewModel(
-          KiwiContainer().resolve(),
-        );
+        _rootViewModel = RootViewModel(KiwiContainer().resolve());
       }
 
       if (mounted) {
@@ -247,23 +268,21 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   Future<void> _setAppAttended(bool attended) async {
     try {
       await KiwiContainer().resolve<PreferencesProvider>().setIsAppAttended(
-            attended,
-          );
+        attended,
+      );
     } catch (_) {}
   }
 
   Future<void> _loadRootPreferences(Stopwatch stopwatch) async {
     try {
       await _rootViewModel?.loadFromPreferences();
-      print("Root init: prefs ${stopwatch.elapsedMilliseconds}ms");
+      _debugRootLog("Root init: prefs ${stopwatch.elapsedMilliseconds}ms");
       PerformanceTelemetry.instance.logInstant(
         'startup.root.preferences.done',
         args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
       );
     } catch (error, trace) {
-      print("Root init: prefs failed");
-      print(error);
-      print(trace);
+      _debugRootError("Root init: prefs failed", error, trace);
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
@@ -296,14 +315,12 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   Future<void> _loadPerfOverlayPreference() async {
     if (_perfOverlayLoaded) return;
     try {
-      final preferencesProvider =
-          KiwiContainer().resolve<PreferencesProvider>();
+      final preferencesProvider = KiwiContainer()
+          .resolve<PreferencesProvider>();
       await PerformanceOverlayController.load(preferencesProvider);
       _perfOverlayLoaded = true;
     } catch (error, trace) {
-      print("Perf overlay load failed");
-      print(error);
-      print(trace);
+      _debugRootError("Perf overlay load failed", error, trace);
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
@@ -323,9 +340,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     try {
       await saveLastStartLanguage();
     } catch (error, trace) {
-      print("Root init: save language failed");
-      print(error);
-      print(trace);
+      _debugRootError("Root init: save language failed", error, trace);
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
@@ -356,49 +371,49 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     return PropertyChangeProvider<RootViewModel, String>(
       child: PropertyChangeConsumer<RootViewModel, String>(
         properties: const ["appTheme", "isOnboarding", "hasLoadedPreferences"],
-        builder: (
-          BuildContext context,
-          RootViewModel? model,
-          Set<String>? properties,
-        ) {
-          if (model == null) return Container();
-          if (!model.hasLoadedPreferences) {
-            return _buildStartupPlaceholder();
-          }
-          return ValueListenableBuilder<bool>(
-            valueListenable: PerformanceOverlayController.enabled,
-            builder: (context, perfEnabled, _) => SentryUserInteractionWidget(
-              child: MaterialApp(
-                theme: ColorPalettes.buildTheme(model.appTheme),
-                showPerformanceOverlay: perfEnabled,
-                initialRoute:
-                    model.isOnboarding ? "onboarding" : _resolveInitialRoute(),
-                navigatorKey: NavigatorKey.rootKey,
-                navigatorObservers: [
-                  SentryNavigatorObserver(
-                    setRouteNameAsTransaction: true,
-                    enableAutoTransactions: true,
-                    autoFinishAfter: const Duration(seconds: 5),
-                    ignoreRoutes: const ['main'],
-                  ),
-                  rootNavigationObserver,
-                ],
-                localizationsDelegates: [
-                  const LocalizationDelegate(),
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                  DefaultCupertinoLocalizations.delegate,
-                ],
-                supportedLocales: const [
-                  Locale('en'),
-                  Locale('de'),
-                ],
-                onGenerateRoute: generateRoute,
-              ),
-            ),
-          );
-        },
+        builder:
+            (
+              BuildContext context,
+              RootViewModel? model,
+              Set<String>? properties,
+            ) {
+              if (model == null) return Container();
+              if (!model.hasLoadedPreferences) {
+                return _buildStartupPlaceholder();
+              }
+              return ValueListenableBuilder<bool>(
+                valueListenable: PerformanceOverlayController.enabled,
+                builder: (context, perfEnabled, _) => MaterialApp(
+                  theme: ColorPalettes.buildTheme(model.appTheme),
+                  showPerformanceOverlay: perfEnabled,
+                  initialRoute: model.isOnboarding
+                      ? "onboarding"
+                      : _resolveInitialRoute(),
+                  navigatorKey: NavigatorKey.rootKey,
+                  navigatorObservers: [
+                    SentryNavigatorObserver(
+                      setRouteNameAsTransaction: true,
+                      enableAutoTransactions: true,
+                      autoFinishAfter: const Duration(seconds: 5),
+                      ignoreRoutes: const ['main'],
+                      routeNameExtractor: sanitizeSentryRouteSettings,
+                      additionalInfoProvider: (_, __) =>
+                          const <String, dynamic>{'source': 'navigator'},
+                    ),
+                    rootNavigationObserver,
+                  ],
+                  localizationsDelegates: [
+                    const LocalizationDelegate(),
+                    GlobalMaterialLocalizations.delegate,
+                    GlobalWidgetsLocalizations.delegate,
+                    GlobalCupertinoLocalizations.delegate,
+                    DefaultCupertinoLocalizations.delegate,
+                  ],
+                  supportedLocales: const [Locale('en'), Locale('de')],
+                  onGenerateRoute: generateRoute,
+                ),
+              );
+            },
       ),
       value: _rootViewModel!,
     );
@@ -408,9 +423,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     return MaterialApp(
       home: const ColoredBox(
         color: Color(0xFFFFFFFF),
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
+        child: Center(child: CircularProgressIndicator()),
       ),
     );
   }
@@ -441,8 +454,9 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         Priority.idle,
         debugLabel: 'startup.backgroundInit',
       );
-      print(
-          "Root init: deferred background ${stopwatch.elapsedMilliseconds}ms");
+      _debugRootLog(
+        "Root init: deferred background ${stopwatch.elapsedMilliseconds}ms",
+      );
       SchedulerBinding.instance.scheduleTask<void>(
         () {
           unawaited(_prewarmScheduleCache());
@@ -461,9 +475,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         _scheduleIdleCanteenPrewarm();
       });
     } catch (error, trace) {
-      print("Root init: deferred background failed");
-      print(error);
-      print(trace);
+      _debugRootError("Root init: deferred background failed", error, trace);
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
@@ -482,9 +494,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     try {
       await initializeAppForegroundHeavy();
     } catch (error, trace) {
-      print("Root init: foreground heavy failed");
-      print(error);
-      print(trace);
+      _debugRootError("Root init: foreground heavy failed", error, trace);
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
@@ -513,9 +523,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     try {
       await prewarmCanteenIfStale();
     } catch (error, trace) {
-      print("Root init: canteen prewarm failed");
-      print(error);
-      print(trace);
+      _debugRootError("Root init: canteen prewarm failed", error, trace);
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
@@ -537,9 +545,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       final end = toNextWeek(start);
       await scheduleProvider.warmScheduleCache(start, end);
     } catch (error, trace) {
-      print("Root init: schedule cache warm failed");
-      print(error);
-      print(trace);
+      _debugRootError("Root init: schedule cache warm failed", error, trace);
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
@@ -560,10 +566,9 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     }
 
     _onboardingDeferredInitListenerAttached = true;
-    _rootViewModel!.addListener(
-      _onOnboardingStateChanged,
-      const ["isOnboarding"],
-    );
+    _rootViewModel!.addListener(_onOnboardingStateChanged, const [
+      "isOnboarding",
+    ]);
   }
 
   void _detachOnboardingDeferredInitListener() {
@@ -572,10 +577,9 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     }
 
     _onboardingDeferredInitListenerAttached = false;
-    _rootViewModel!.removeListener(
-      _onOnboardingStateChanged,
-      const ["isOnboarding"],
-    );
+    _rootViewModel!.removeListener(_onOnboardingStateChanged, const [
+      "isOnboarding",
+    ]);
   }
 
   void _onOnboardingStateChanged() {

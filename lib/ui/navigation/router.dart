@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dualmate/canteen/ui/canteen_navigation_entry.dart';
 import 'package:dualmate/date_management/ui/date_management_navigation_entry.dart';
 import 'package:dualmate/dualis/ui/dualis_navigation_entry.dart';
@@ -27,7 +28,9 @@ WidgetBuilder _resolveRoute(RouteSettings settings) {
 }
 
 Route<dynamic> generateDrawerRoute(RouteSettings settings) {
-  print("=== === === === === === Navigating to: ${settings.name}");
+  if (kDebugMode) {
+    debugPrint("=== === === === === === Navigating to: ${settings.name}");
+  }
 
   final args = settings.arguments;
   if (args is Map && args["disableTransitions"] == true) {
@@ -67,13 +70,17 @@ Route<dynamic> generateDrawerRoute(RouteSettings settings) {
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       const offsetBegin = Offset(0.0, 0.005);
       final offsetEnd = Offset.zero;
-      final offsetTween = Tween(begin: offsetBegin, end: offsetEnd)
-          .chain(CurveTween(curve: Curves.fastOutSlowIn));
+      final offsetTween = Tween(
+        begin: offsetBegin,
+        end: offsetEnd,
+      ).chain(CurveTween(curve: Curves.fastOutSlowIn));
 
       const opacityBegin = 0.0;
       const opacityEnd = 1.0;
-      final opacityTween = Tween(begin: opacityBegin, end: opacityEnd)
-          .chain(CurveTween(curve: Curves.fastOutSlowIn));
+      final opacityTween = Tween(
+        begin: opacityBegin,
+        end: opacityEnd,
+      ).chain(CurveTween(curve: Curves.fastOutSlowIn));
 
       return SlideTransition(
         position: animation.drive(offsetTween),
@@ -90,7 +97,9 @@ Route<dynamic> generateDrawerRoute(RouteSettings settings) {
 }
 
 Route<dynamic> generateRoute(RouteSettings settings) {
-  print("=== === === === === === Navigating to: ${settings.name}");
+  if (kDebugMode) {
+    debugPrint("=== === === === === === Navigating to: ${settings.name}");
+  }
   Widget target;
 
   switch (settings.name) {
@@ -104,7 +113,9 @@ Route<dynamic> generateRoute(RouteSettings settings) {
       target = SettingsPage();
       break;
     default:
-      print("Failed to navigate to: " + (settings.name ?? ""));
+      if (kDebugMode) {
+        debugPrint("Failed to navigate to: ${settings.name ?? ""}");
+      }
       target = Container();
   }
 

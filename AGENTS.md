@@ -80,6 +80,20 @@ Important runtime behavior:
 - Android method channel helper: `lib/native/widget/android_widget_helper.dart`
 - Widget payloads are routed into app via `RootPage` method channel and `WidgetNavigationPayloadStore`.
 
+### Diagnostics and Sentry (`lib/common/logging`)
+
+- Sentry initializes only when `SENTRY_DSN` is set.
+- Keep crash reporting and performance tracing enabled, but keep production
+  sampling low.
+- Privacy-sensitive Sentry features stay disabled: screenshots, session replay,
+  default PII, release log capture, and user interaction breadcrumbs/tracing.
+- Route transactions must use stable generic names only; do not send route
+  arguments, URLs, user IDs, schedule payloads, canteen payloads, Dualis data,
+  grades, credentials, cookies, or tokens.
+- Use `sentry_scrubber.dart` and `AppDiagnostics` for diagnostics data so
+  `beforeSend`, `beforeBreadcrumb`, and transaction scrubbing remain the
+  central privacy boundary.
+
 ## Background Jobs and Scheduling
 
 - Background scheduler setup: `lib/common/appstart/background_initialize.dart`

@@ -44,8 +44,9 @@ void main() {
     expect(captured.tags['feature'], 'startup');
     final diagnosticsContext = captured.contexts['diagnostics'];
     expect(diagnosticsContext, isNotNull);
-    final diagnosticsMap =
-        Map<String, dynamic>.from(diagnosticsContext! as Map<Object?, Object?>);
+    final diagnosticsMap = Map<String, dynamic>.from(
+      diagnosticsContext! as Map<Object?, Object?>,
+    );
     expect(diagnosticsMap['operation'], 'root.initialize');
   });
 
@@ -57,10 +58,7 @@ void main() {
       diagnostics.recordNavigation('drawer.tab.schedule'),
       completes,
     );
-    await expectLater(
-      diagnostics.recordInfo('startup', 'init'),
-      completes,
-    );
+    await expectLater(diagnostics.recordInfo('startup', 'init'), completes);
     await expectLater(
       diagnostics.reportCaughtException(StateError('boom'), StackTrace.current),
       completes,
@@ -86,7 +84,7 @@ void main() {
     final child = parent.startedChildren.single;
     expect(child.operation, 'schedule.refresh');
     expect(child.description, 'refresh visible week');
-    expect(child.data['origin'], 'userBrowsing');
+    expect(child.data.containsKey('origin'), isFalse);
     expect(child.tags['feature'], 'schedule');
 
     await span.finish(status: const SpanStatus.ok());
@@ -137,51 +135,69 @@ void main() {
     expect(transaction.status, const SpanStatus.ok());
   });
 
-  test('startSpan falls back to noop span when recorder span creation fails',
-      () async {
-    final diagnostics = AppDiagnostics(recorder: _FailingStartSpanRecorder());
+  test(
+    'startSpan falls back to noop span when recorder span creation fails',
+    () async {
+      final diagnostics = AppDiagnostics(recorder: _FailingStartSpanRecorder());
 
-    final span = diagnostics.startSpan(
-      'schedule.refresh',
-      description: 'refresh visible week',
-      data: {'origin': 'userBrowsing'},
-      tags: {'feature': 'schedule'},
-    );
+      final span = diagnostics.startSpan(
+        'schedule.refresh',
+        description: 'refresh visible week',
+        data: {'origin': 'userBrowsing'},
+        tags: {'feature': 'schedule'},
+      );
 
-    expect(() => span.setData('key', 'value'), returnsNormally);
-    expect(() => span.setTag('feature', 'schedule'), returnsNormally);
-    expect(() => span.attachError(StateError('boom')), returnsNormally);
-    await expectLater(span.finish(), completes);
-  });
+      expect(() => span.setData('key', 'value'), returnsNormally);
+      expect(() => span.setTag('feature', 'schedule'), returnsNormally);
+      expect(() => span.attachError(StateError('boom')), returnsNormally);
+      await expectLater(span.finish(), completes);
+    },
+  );
 
-  test('AppDiagnosticsSpan.attachError records error on span', () async {
-    final recorder = _RecordingDiagnosticsRecorder();
-    final diagnostics = AppDiagnostics(recorder: recorder);
+  test(
+    'AppDiagnosticsSpan.attachError records sanitized error data on span',
+    () async {
+      final recorder = _RecordingDiagnosticsRecorder();
+      final diagnostics = AppDiagnostics(recorder: recorder);
 
-    final span = diagnostics.startSpan('task.execute');
-    final error = StateError('task failed');
+      final span = diagnostics.startSpan('task.execute');
+      final error = StateError(
+        'login failed for jane@example.com with https://example.test/path?token=secret',
+      );
 
-    span.attachError(error);
+      span.attachError(error);
 
-    final sentrySpan = recorder.currentSpan as _RecordingSentrySpan;
-    expect(sentrySpan.throwable, same(error));
+      final sentrySpan = recorder.currentSpan as _RecordingSentrySpan;
+      expect(sentrySpan.throwable, isNull);
+      expect(sentrySpan.data['errorType'], 'StateError');
+      expect(
+        sentrySpan.data['errorMessage'],
+        'Bad state: login failed for [redacted] with [redacted]',
+      );
+      expect(sentrySpan.status, const SpanStatus.internalError());
 
-    await span.finish(status: const SpanStatus.internalError());
-  });
+      await span.finish(status: const SpanStatus.internalError());
+    },
+  );
 
-  test('AppDiagnosticsSpan swallows errors from underlying span methods',
-      () async {
-    final recorder = _RecordingDiagnosticsRecorder();
-    recorder.currentSpan = _ThrowingSentrySpan('parent');
-    final diagnostics = AppDiagnostics(recorder: recorder);
+  test(
+    'AppDiagnosticsSpan swallows errors from underlying span methods',
+    () async {
+      final recorder = _RecordingDiagnosticsRecorder();
+      recorder.currentSpan = _ThrowingSentrySpan('parent');
+      final diagnostics = AppDiagnostics(recorder: recorder);
 
-    final span = diagnostics.startSpan('task.execute');
+      final span = diagnostics.startSpan('task.execute');
 
-    expect(() => span.setData('phase', 'startup'), returnsNormally);
-    expect(() => span.setTag('feature', 'task'), returnsNormally);
-    expect(() => span.attachError(StateError('task failed')), returnsNormally);
-    await expectLater(span.finish(status: const SpanStatus.ok()), completes);
-  });
+      expect(() => span.setData('phase', 'startup'), returnsNormally);
+      expect(() => span.setTag('feature', 'task'), returnsNormally);
+      expect(
+        () => span.attachError(StateError('task failed')),
+        returnsNormally,
+      );
+      await expectLater(span.finish(status: const SpanStatus.ok()), completes);
+    },
+  );
 }
 
 class _RecordingDiagnosticsRecorder implements DiagnosticsRecorder {
@@ -370,10 +386,8 @@ class _RecordingSentrySpan extends ISentrySpan {
     String? description,
     DateTime? startTimestamp,
   }) {
-    final child = _RecordingSentrySpan(
-      operation,
-      description: description,
-    )..startTimestamp = startTimestamp ?? DateTime.now();
+    final child = _RecordingSentrySpan(operation, description: description)
+      ..startTimestamp = startTimestamp ?? DateTime.now();
     startedChildren.add(child);
     return child;
   }
@@ -382,11 +396,8 @@ class _RecordingSentrySpan extends ISentrySpan {
   SentryBaggageHeader? toBaggageHeader() => null;
 
   @override
-  SentryTraceHeader toSentryTrace() => SentryTraceHeader(
-        SentryId.newId(),
-        SpanId.newId(),
-        sampled: true,
-      );
+  SentryTraceHeader toSentryTrace() =>
+      SentryTraceHeader(SentryId.newId(), SpanId.newId(), sampled: true);
 
   @override
   SentryTraceContextHeader? traceContext() => null;
@@ -394,6 +405,16 @@ class _RecordingSentrySpan extends ISentrySpan {
 
 class _ThrowingSentrySpan extends _RecordingSentrySpan {
   _ThrowingSentrySpan(super.operation);
+
+  @override
+  ISentrySpan startChild(
+    String operation, {
+    String? description,
+    DateTime? startTimestamp,
+  }) {
+    return _ThrowingSentrySpan(operation)
+      ..startTimestamp = startTimestamp ?? DateTime.now();
+  }
 
   @override
   void setData(String key, dynamic value) {
