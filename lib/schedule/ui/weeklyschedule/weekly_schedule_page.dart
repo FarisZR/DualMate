@@ -32,6 +32,8 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   static const double _defaultWideAxisWidth = 54.0;
   static const Duration _currentWeekButtonFadeDuration =
       Duration(milliseconds: 180);
+  static final Map<String, _WeeklyHeaderDateFormatters>
+      _headerFormattersByLocale = <String, _WeeklyHeaderDateFormatters>{};
 
   late final PageController _weekPageController;
   late WeeklyScheduleViewModel viewModel;
@@ -144,12 +146,12 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     unawaited(_openVisibleWeek(todayWeekStart));
   }
 
-  bool get _showCurrentWeekButton {
+  bool _shouldShowCurrentWeekButton(WeeklyScheduleViewModel model) {
     if (!_pagerInitialized) {
       return false;
     }
-    final currentWeekStart = _normalizeWeekStart(viewModel.currentDateStart);
-    final todayWeekStart = _normalizeWeekStart(viewModel.now);
+    final currentWeekStart = _normalizeWeekStart(model.currentDateStart);
+    final todayWeekStart = _normalizeWeekStart(model.now);
     return !isAtSameDay(currentWeekStart, todayWeekStart);
   }
 
@@ -177,7 +179,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
 
   @override
   Widget build(BuildContext context) {
-    viewModel = Provider.of<WeeklyScheduleViewModel>(context);
+    viewModel = Provider.of<WeeklyScheduleViewModel>(context, listen: false);
 
     return PropertyChangeProvider<WeeklyScheduleViewModel, String>(
       value: viewModel,
@@ -197,7 +199,19 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
-                        _buildNavigationHeader(context),
+                        PropertyChangeConsumer<WeeklyScheduleViewModel, String>(
+                          properties: const ['weekSchedule', 'now'],
+                          builder: (
+                            BuildContext context,
+                            WeeklyScheduleViewModel? model,
+                            Set<String>? properties,
+                          ) {
+                            if (model == null) {
+                              return const SizedBox.shrink();
+                            }
+                            return _buildNavigationHeader(context, model);
+                          },
+                        ),
                         Expanded(
                           child: Stack(
                             children: <Widget>[
@@ -242,7 +256,23 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                               Positioned(
                                 right: 20,
                                 bottom: 16,
-                                child: _buildCurrentWeekButton(context),
+                                child: PropertyChangeConsumer<
+                                    WeeklyScheduleViewModel, String>(
+                                  properties: const ['weekSchedule', 'now'],
+                                  builder: (
+                                    BuildContext context,
+                                    WeeklyScheduleViewModel? model,
+                                    Set<String>? properties,
+                                  ) {
+                                    if (model == null) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return _buildCurrentWeekButton(
+                                      context,
+                                      model,
+                                    );
+                                  },
+                                ),
                               ),
                             ],
                           ),
@@ -581,14 +611,19 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     }
   }
 
-  Widget _buildNavigationHeader(BuildContext context) {
+  Widget _buildNavigationHeader(
+    BuildContext context,
+    WeeklyScheduleViewModel model,
+  ) {
     final locale = L.of(context).locale.toString();
-    final monthFormatter = DateFormat.yMMMM(locale);
-    final dayFormatter = DateFormat('d MMM', locale);
-    final weekStart = viewModel.currentDateStart;
-    final weekEnd = viewModel.currentDateEnd.subtract(const Duration(days: 1));
+    final formatters = _headerFormattersByLocale.putIfAbsent(
+      locale,
+      () => _WeeklyHeaderDateFormatters(locale),
+    );
+    final weekStart = model.currentDateStart;
+    final weekEnd = model.currentDateEnd.subtract(const Duration(days: 1));
     final weekRange =
-        '${dayFormatter.format(weekStart)} - ${dayFormatter.format(weekEnd)}';
+        '${formatters.day.format(weekStart)} - ${formatters.day.format(weekEnd)}';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
@@ -608,7 +643,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    monthFormatter.format(weekStart),
+                    formatters.month.format(weekStart),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -643,10 +678,13 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     );
   }
 
-  Widget _buildCurrentWeekButton(BuildContext context) {
+  Widget _buildCurrentWeekButton(
+    BuildContext context,
+    WeeklyScheduleViewModel model,
+  ) {
     final label = L.of(context).scheduleBackToCurrentWeek;
-    final currentWeekStart = _normalizeWeekStart(viewModel.currentDateStart);
-    final todayWeekStart = _normalizeWeekStart(viewModel.now);
+    final currentWeekStart = _normalizeWeekStart(model.currentDateStart);
+    final todayWeekStart = _normalizeWeekStart(model.now);
     final icon = currentWeekStart.isBefore(todayWeekStart)
         ? Icons.arrow_forward_rounded
         : Icons.arrow_back_rounded;
@@ -669,7 +707,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
           ),
         );
       },
-      child: !_showCurrentWeekButton
+      child: !_shouldShowCurrentWeekButton(model)
           ? const SizedBox.shrink()
           : Tooltip(
               message: label,
@@ -873,6 +911,15 @@ class _AxisLayoutMetrics {
     required this.dayLabelsHeight,
     required this.compactPhone,
   });
+}
+
+class _WeeklyHeaderDateFormatters {
+  final DateFormat month;
+  final DateFormat day;
+
+  _WeeklyHeaderDateFormatters(String locale)
+      : month = DateFormat.yMMMM(locale),
+        day = DateFormat('d MMM', locale);
 }
 
 class _FixedHourAxis extends StatelessWidget {

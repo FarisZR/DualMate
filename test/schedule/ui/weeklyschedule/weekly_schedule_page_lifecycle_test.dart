@@ -44,9 +44,11 @@ void main() {
   );
 
   testWidgets(
-    'pull to refresh reloads the visible week',
+    'initialization loads cache before deferring first network refresh',
     (tester) async {
-      final provider = _TrackingScheduleProvider(const <ScheduleEntry>[]);
+      final provider = _TrackingScheduleProvider(<ScheduleEntry>[
+        _entry(DateTime(2026, 2, 9), 'CACHED_ENTRY'),
+      ]);
       final sourceProvider = _FakeScheduleSourceProvider();
       final viewModel = WeeklyScheduleViewModel(
         provider,
@@ -54,30 +56,59 @@ void main() {
         nowProvider: () => DateTime(2026, 2, 10, 10, 0),
       );
 
-      await viewModel.updateSchedule(
-        DateTime(2026, 2, 9),
-        DateTime(2026, 2, 16),
-        force: true,
-      );
-
-      await tester.pumpWidget(_wrapWithApp(viewModel));
+      await viewModel.initialize();
       await tester.pump();
 
-      await tester.drag(find.byType(SingleChildScrollView), const Offset(0, 300));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.pump(const Duration(milliseconds: 300));
+      expect(provider.cachedRequests, isNotEmpty);
+      expect(viewModel.weekSchedule?.entries.single.title, 'CACHED_ENTRY');
+      expect(provider.updatedOrigins, isEmpty);
 
+      await tester.pump(const Duration(seconds: 5));
+      expect(provider.updatedOrigins, isEmpty);
+
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pump();
       expect(
         provider.updatedOrigins,
         contains(ScheduleRefreshOrigin.userBrowsing),
       );
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
       viewModel.dispose();
     },
   );
+
+  testWidgets('pull to refresh reloads the visible week', (tester) async {
+    final provider = _TrackingScheduleProvider(const <ScheduleEntry>[]);
+    final sourceProvider = _FakeScheduleSourceProvider();
+    final viewModel = WeeklyScheduleViewModel(
+      provider,
+      sourceProvider,
+      nowProvider: () => DateTime(2026, 2, 10, 10, 0),
+    );
+
+    await viewModel.updateSchedule(
+      DateTime(2026, 2, 9),
+      DateTime(2026, 2, 16),
+      force: true,
+    );
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump();
+
+    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, 300));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(
+      provider.updatedOrigins,
+      contains(ScheduleRefreshOrigin.userBrowsing),
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
 
   testWidgets(
     'resume-triggered background refresh keeps monday lessons visible',
@@ -183,101 +214,109 @@ void main() {
     },
   );
 
-  testWidgets(
-    'shows delayed loading line while refresh is running',
-    (tester) async {
-      final provider = _QueuedBlockingTrackingScheduleProvider(
-        const <ScheduleEntry>[],
-      );
-      final sourceProvider = _FakeScheduleSourceProvider();
-      final viewModel = WeeklyScheduleViewModel(
-        provider,
-        sourceProvider,
-        nowProvider: () => DateTime(2026, 2, 10, 11, 0),
-      );
+  testWidgets('shows delayed loading line while refresh is running', (
+    tester,
+  ) async {
+    final provider = _QueuedBlockingTrackingScheduleProvider(
+      const <ScheduleEntry>[],
+    );
+    final sourceProvider = _FakeScheduleSourceProvider();
+    final viewModel = WeeklyScheduleViewModel(
+      provider,
+      sourceProvider,
+      nowProvider: () => DateTime(2026, 2, 10, 11, 0),
+    );
 
-      await viewModel.updateSchedule(
-        DateTime(2026, 2, 9),
-        DateTime(2026, 2, 16),
-        force: true,
-      );
-      expect(viewModel.isUpdating, isTrue);
-      provider.completeNextUpdate();
-      await tester.pump(const Duration(milliseconds: 40));
+    await viewModel.updateSchedule(
+      DateTime(2026, 2, 9),
+      DateTime(2026, 2, 16),
+      force: true,
+    );
+    expect(viewModel.isUpdating, isTrue);
+    provider.completeNextUpdate();
+    await tester.pump(const Duration(milliseconds: 40));
 
-      await viewModel.updateSchedule(
-        DateTime(2026, 2, 9),
-        DateTime(2026, 2, 16),
-        force: true,
-      );
+    await viewModel.updateSchedule(
+      DateTime(2026, 2, 9),
+      DateTime(2026, 2, 16),
+      force: true,
+    );
 
-      await tester.pumpWidget(_wrapWithApp(viewModel));
-      await tester.pump();
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump();
 
-      expect(
-        find.byKey(const ValueKey<String>('weekly_schedule_loading_line')),
-        findsNothing,
-      );
+    expect(
+      find.byKey(const ValueKey<String>('weekly_schedule_loading_line')),
+      findsNothing,
+    );
 
-      await tester.pump(const Duration(milliseconds: 260));
+    await tester.pump(const Duration(milliseconds: 260));
 
-      expect(
-        find.byKey(const ValueKey<String>('weekly_schedule_loading_line')),
-        findsOneWidget,
-      );
+    expect(
+      find.byKey(const ValueKey<String>('weekly_schedule_loading_line')),
+      findsOneWidget,
+    );
 
-      provider.completeNextUpdate();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(viewModel.isUpdating, isFalse);
+    provider.completeNextUpdate();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(viewModel.isUpdating, isFalse);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-      viewModel.dispose();
-    },
-  );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
 
-  testWidgets(
-    'shows loading line immediately for an unfetched week',
-    (tester) async {
-      final provider = _QueuedBlockingTrackingScheduleProvider(
-        const <ScheduleEntry>[],
-      );
-      final sourceProvider = _FakeScheduleSourceProvider();
-      final viewModel = WeeklyScheduleViewModel(
-        provider,
-        sourceProvider,
-        nowProvider: () => DateTime(2026, 2, 10, 11, 0),
-      );
+  testWidgets('defers unfetched week refresh until swipe navigation settles', (
+    tester,
+  ) async {
+    final provider = _QueuedBlockingTrackingScheduleProvider(
+      const <ScheduleEntry>[],
+    );
+    final sourceProvider = _FakeScheduleSourceProvider();
+    final viewModel = WeeklyScheduleViewModel(
+      provider,
+      sourceProvider,
+      nowProvider: () => DateTime(2026, 2, 10, 11, 0),
+    );
 
-      await viewModel.updateSchedule(
-        DateTime(2026, 2, 9),
-        DateTime(2026, 2, 16),
-        force: true,
-      );
-      expect(viewModel.isUpdating, isTrue);
-      provider.completeNextUpdate();
-      await tester.pump(const Duration(milliseconds: 40));
-      expect(viewModel.isUpdating, isFalse);
+    await viewModel.updateSchedule(
+      DateTime(2026, 2, 9),
+      DateTime(2026, 2, 16),
+      force: true,
+    );
+    expect(viewModel.isUpdating, isTrue);
+    provider.completeNextUpdate();
+    await tester.pump(const Duration(milliseconds: 40));
+    expect(viewModel.isUpdating, isFalse);
 
-      await tester.pumpWidget(_wrapWithApp(viewModel));
-      await tester.pump();
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump();
 
-      unawaited(viewModel.openWeekContaining(DateTime(2026, 2, 17)));
-      await tester.pump(const Duration(milliseconds: 40));
+    unawaited(viewModel.openWeekContaining(DateTime(2026, 2, 17)));
+    await tester.pump(const Duration(milliseconds: 40));
 
-      expect(
-        find.byKey(const ValueKey<String>('weekly_schedule_loading_line')),
-        findsOneWidget,
-      );
+    expect(
+      find.byKey(const ValueKey<String>('weekly_schedule_loading_line')),
+      findsNothing,
+    );
+    expect(provider.updatedOrigins.length, 1);
 
-      provider.completeNextUpdate();
-      await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 2500));
+    await tester.pump(const Duration(milliseconds: 40));
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-      viewModel.dispose();
-    },
-  );
+    expect(
+      find.byKey(const ValueKey<String>('weekly_schedule_loading_line')),
+      findsOneWidget,
+    );
+    expect(provider.updatedOrigins.length, 2);
+
+    provider.completeNextUpdate();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
 }
 
 Widget _wrapWithApp(WeeklyScheduleViewModel viewModel) {
@@ -291,9 +330,7 @@ Widget _wrapWithApp(WeeklyScheduleViewModel viewModel) {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('en'), Locale('de')],
-      home: Scaffold(
-        body: WeeklySchedulePage(),
-      ),
+      home: Scaffold(body: WeeklySchedulePage()),
     ),
   );
 }

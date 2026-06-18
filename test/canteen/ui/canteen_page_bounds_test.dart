@@ -66,7 +66,7 @@ void main() {
     );
   });
 
-  testWidgets('disables implicit page prebuild on canteen pager', (
+  testWidgets('prebuilds adjacent canteen pages before first swipe', (
     tester,
   ) async {
     final now = DateTime.now();
@@ -83,7 +83,7 @@ void main() {
     await _pumpFor(tester, const Duration(milliseconds: 700));
 
     final pageView = tester.widget<PageView>(find.byType(PageView));
-    expect(pageView.allowImplicitScrolling, isFalse);
+    expect(pageView.allowImplicitScrolling, isTrue);
   });
 
   testWidgets('does not allow paging to empty days before/after content', (

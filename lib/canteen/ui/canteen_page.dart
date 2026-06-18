@@ -349,7 +349,7 @@ class _CanteenPageState extends State<CanteenPage> {
       axisDirection: AxisDirection.right,
       child: PageView.builder(
         controller: pageController,
-        allowImplicitScrolling: false,
+        allowImplicitScrolling: true,
         findChildIndexCallback: (key) {
           return findCanteenDayIndexByKey(key, visibleDays);
         },
