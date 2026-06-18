@@ -28,17 +28,19 @@ void main() {
 
     expect(find.text('Klausur'), findsOneWidget);
     expect(find.text('Prof. Schmidt'), findsOneWidget);
-    expect(find.byKey(const Key('important_event_professor_scroll')),
+    expect(find.byKey(const Key('important_event_professor_text')),
         findsOneWidget);
 
-    final scrollView = tester.widget<SingleChildScrollView>(
-      find.byKey(const Key('important_event_professor_scroll')),
+    final professorText = tester.widget<Text>(
+      find.byKey(const Key('important_event_professor_text')),
     );
-    expect(scrollView.scrollDirection, Axis.horizontal);
-    expect(scrollView.controller, isNotNull);
+    expect(professorText.maxLines, 1);
+    expect(professorText.overflow, TextOverflow.ellipsis);
   });
 
-  testWidgets('auto scrolls long professor names', (WidgetTester tester) async {
+  testWidgets('long professor names do not start autonomous scroll animations', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       _wrapWithApp(
         SizedBox(
@@ -58,17 +60,13 @@ void main() {
       ),
     );
 
-    final scrollView = tester.widget<SingleChildScrollView>(
-      find.byKey(const Key('important_event_professor_scroll')),
+    final professorText = tester.widget<Text>(
+      find.byKey(const Key('important_event_professor_text')),
     );
 
-    expect(scrollView.controller, isNotNull);
-    expect(scrollView.controller!.offset, 0);
-
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pump(const Duration(seconds: 2));
-
-    expect(scrollView.controller!.offset, greaterThan(0));
+    expect(professorText.maxLines, 1);
+    expect(professorText.overflow, TextOverflow.ellipsis);
+    expect(find.byType(SingleChildScrollView), findsNothing);
   });
 
   testWidgets('hides professor for non exam events', (
