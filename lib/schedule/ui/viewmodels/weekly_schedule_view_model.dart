@@ -18,7 +18,6 @@ import 'package:dualmate/schedule/ui/viewmodels/schedule_freshness_gate.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_update_request_gate.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
 
 void _debugScheduleError(String message, Object error, StackTrace trace) {
   if (kDebugMode) {
@@ -29,6 +28,10 @@ void _debugScheduleError(String message, Object error, StackTrace trace) {
 
 class WeeklyScheduleViewModel extends BaseViewModel {
   static const Duration weekDuration = Duration(days: 7);
+  static const Duration _initialRefreshDelay = Duration(seconds: 8);
+  static const Duration _visibleRefreshDebounceDelay = Duration(
+    milliseconds: 2500,
+  );
   static const int _maxRetainedWeeks = 12;
 
   final ScheduleProvider scheduleProvider;
@@ -85,6 +88,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   Timer? _errorResetTimer;
   Timer? _updateNowTimer;
   Timer? _visibleRefreshDebounce;
+  Timer? _initialRefreshTimer;
 
   bool _isDisposed = false;
 
@@ -186,11 +190,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   void _scheduleInitialRefresh() {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
+    _initialRefreshTimer?.cancel();
+    _initialRefreshTimer = Timer(_initialRefreshDelay, () async {
       if (_isDisposed) return;
       try {
-        await Future.delayed(const Duration(milliseconds: 150));
-        if (_isDisposed) return;
         if (!scheduleSourceProvider.didSetupCorrectly()) {
           return;
         }
@@ -328,12 +331,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   Future openWeekContaining(DateTime date) async {
     final weekStart = toStartOfDay(toDayOfWeek(date, DateTime.monday));
     final weekEnd = toNextWeek(weekStart);
-    final needsInitialFetch = _needsInitialFetchForWindow(weekStart, weekEnd);
     await _openWeekFromCache(weekStart, weekEnd);
-    if (needsInitialFetch) {
-      unawaited(updateSchedule(weekStart, weekEnd, force: true));
-      return;
-    }
     _debounceVisibleRefresh(weekStart, weekEnd);
   }
 
@@ -769,7 +767,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   void _debounceVisibleRefresh(DateTime start, DateTime end) {
     _visibleRefreshDebounce?.cancel();
-    _visibleRefreshDebounce = Timer(const Duration(milliseconds: 420), () {
+    _visibleRefreshDebounce = Timer(_visibleRefreshDebounceDelay, () {
       if (_isDisposed) return;
       unawaited(updateSchedule(start, end));
     });
@@ -817,6 +815,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _updateNowTimer?.cancel();
     _windowRefreshTimer?.cancel();
     _visibleRefreshDebounce?.cancel();
+    _initialRefreshTimer?.cancel();
 
     _errorResetTimer?.cancel();
     _prefetchInFlight.clear();

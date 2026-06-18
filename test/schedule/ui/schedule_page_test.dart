@@ -32,11 +32,9 @@ void main() {
   ) async {
     final sourceProvider = _FakeScheduleSourceProvider();
     _registerScheduleDependencies(
-      scheduleProvider: _FakeScheduleProvider(
-        <ScheduleEntry>[
-          _entry(DateTime(2026, 3, 9), 'CURRENT_WEEK'),
-        ],
-      ),
+      scheduleProvider: _FakeScheduleProvider(<ScheduleEntry>[
+        _entry(DateTime(2026, 3, 9), 'CURRENT_WEEK'),
+      ]),
       sourceProvider: sourceProvider,
     );
 
@@ -108,6 +106,45 @@ void main() {
 
     await _disposeHarness(tester, scheduleViewModel);
   });
+
+  testWidgets('defers weekly initialization while schedule tab is hidden', (
+    tester,
+  ) async {
+    final sourceProvider = _FakeScheduleSourceProvider();
+    final scheduleProvider = _FakeScheduleProvider(<ScheduleEntry>[
+      _entry(DateTime(2026, 3, 9), 'CURRENT_WEEK'),
+    ]);
+    _registerScheduleDependencies(
+      scheduleProvider: scheduleProvider,
+      sourceProvider: sourceProvider,
+    );
+
+    final scheduleViewModel = ScheduleViewModel(sourceProvider);
+    final currentEntryIndex = ValueNotifier<int>(1);
+
+    await tester.pumpWidget(
+      _wrapSchedulePage(
+        scheduleViewModel,
+        currentEntryIndex: currentEntryIndex,
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    await tester.idle();
+
+    expect(scheduleProvider.cachedRequests, 0);
+
+    currentEntryIndex.value = 0;
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.idle();
+
+    expect(scheduleProvider.cachedRequests, greaterThan(0));
+
+    await _disposeHarness(tester, scheduleViewModel);
+    currentEntryIndex.dispose();
+  });
 }
 
 void _registerScheduleDependencies({
@@ -119,8 +156,11 @@ void _registerScheduleDependencies({
   container.registerInstance<ScheduleSourceProvider>(sourceProvider);
 }
 
-Widget _wrapSchedulePage(ScheduleViewModel scheduleViewModel) {
-  return ChangeNotifierProvider<ScheduleViewModel>.value(
+Widget _wrapSchedulePage(
+  ScheduleViewModel scheduleViewModel, {
+  ValueNotifier<int>? currentEntryIndex,
+}) {
+  final child = ChangeNotifierProvider<ScheduleViewModel>.value(
     value: scheduleViewModel,
     child: MaterialApp(
       localizationsDelegates: const [
@@ -132,6 +172,13 @@ Widget _wrapSchedulePage(ScheduleViewModel scheduleViewModel) {
       supportedLocales: const [Locale('en'), Locale('de')],
       home: SchedulePage(),
     ),
+  );
+  if (currentEntryIndex == null) {
+    return child;
+  }
+  return ChangeNotifierProvider<ValueNotifier<int>>.value(
+    value: currentEntryIndex,
+    child: child,
   );
 }
 
@@ -160,11 +207,13 @@ ScheduleEntry _entry(DateTime day, String title) {
 
 class _FakeScheduleProvider implements ScheduleProvider {
   final List<ScheduleEntry> _entries;
+  int cachedRequests = 0;
 
   _FakeScheduleProvider(this._entries);
 
   @override
   Future<Schedule> getCachedSchedule(DateTime start, DateTime end) async {
+    cachedRequests += 1;
     final entries = _entries.where((entry) {
       return start.isBefore(entry.end) && end.isAfter(entry.start);
     }).toList();

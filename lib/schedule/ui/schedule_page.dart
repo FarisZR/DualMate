@@ -30,6 +30,7 @@ class SchedulePage extends StatefulWidget {
 }
 
 class _SchedulePageState extends State<SchedulePage> {
+  static const int _scheduleNavigationIndex = 0;
   static const Duration _weeklyInitDelay = Duration(milliseconds: 520);
   static const Duration _filterWarmDelay = Duration(milliseconds: 1200);
 
@@ -43,6 +44,10 @@ class _SchedulePageState extends State<SchedulePage> {
 
   Timer? _weeklyInitTimer;
   Timer? _filterWarmTimer;
+  ValueNotifier<int>? _currentEntryIndex;
+  bool _scheduleSourceInitialized = false;
+  bool _weeklyInitializationStarted = false;
+  bool _filterWarmupStarted = false;
 
   @override
   void initState() {
@@ -53,16 +58,13 @@ class _SchedulePageState extends State<SchedulePage> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final scheduleViewModel =
-          Provider.of<ScheduleViewModel>(context, listen: false);
-      scheduleViewModel.initialize();
-      _scheduleDeferredWeeklyInitialization();
-      _scheduleDeferredFilterWarmup();
+      _syncDeferredWorkWithVisibility();
     });
   }
 
   @override
   void dispose() {
+    _currentEntryIndex?.removeListener(_handleNavigationIndexChanged);
     _weeklyInitTimer?.cancel();
     _filterWarmTimer?.cancel();
     super.dispose();
@@ -116,8 +118,10 @@ class _SchedulePageState extends State<SchedulePage> {
                         KiwiContainer().resolve(),
                       ).show(context);
                     },
-                    buttonText:
-                        L.of(context).scheduleEmptyStateSetUrl.toUpperCase(),
+                    buttonText: L
+                        .of(context)
+                        .scheduleEmptyStateSetUrl
+                        .toUpperCase(),
                   ),
                 ),
                 Expanded(child: weeklyPage),
@@ -134,12 +138,29 @@ class _SchedulePageState extends State<SchedulePage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    ValueNotifier<int>? nextEntryIndex;
+    try {
+      nextEntryIndex = Provider.of<ValueNotifier<int>>(context, listen: false);
+    } on ProviderNotFoundException {
+      nextEntryIndex = null;
+    }
+
+    if (_currentEntryIndex == nextEntryIndex) {
+      return;
+    }
+
+    _currentEntryIndex?.removeListener(_handleNavigationIndexChanged);
+    _currentEntryIndex = nextEntryIndex;
+    _currentEntryIndex?.addListener(_handleNavigationIndexChanged);
+    _syncDeferredWorkWithVisibility();
   }
 
   Future<void> _warmFilterPageState() async {
     try {
-      final scheduleViewModel =
-          Provider.of<ScheduleViewModel>(context, listen: false);
+      final scheduleViewModel = Provider.of<ScheduleViewModel>(
+        context,
+        listen: false,
+      );
       final deadline = DateTime.now().add(const Duration(seconds: 3));
       while (mounted &&
           scheduleViewModel.isInitializingScheduleSource &&
@@ -163,13 +184,58 @@ class _SchedulePageState extends State<SchedulePage> {
     }
   }
 
+  void _handleNavigationIndexChanged() {
+    _syncDeferredWorkWithVisibility();
+  }
+
+  void _syncDeferredWorkWithVisibility() {
+    if (!mounted) return;
+    if (!_isScheduleSectionVisible) {
+      _weeklyInitTimer?.cancel();
+      _weeklyInitTimer = null;
+      _filterWarmTimer?.cancel();
+      _filterWarmTimer = null;
+      return;
+    }
+
+    _initializeScheduleSourceIfNeeded();
+    _scheduleDeferredWeeklyInitialization();
+    _scheduleDeferredFilterWarmup();
+  }
+
+  bool get _isScheduleSectionVisible {
+    final currentEntryIndex = _currentEntryIndex;
+    if (currentEntryIndex == null) {
+      return true;
+    }
+    return currentEntryIndex.value == _scheduleNavigationIndex;
+  }
+
+  void _initializeScheduleSourceIfNeeded() {
+    if (_scheduleSourceInitialized) return;
+    _scheduleSourceInitialized = true;
+    final scheduleViewModel = Provider.of<ScheduleViewModel>(
+      context,
+      listen: false,
+    );
+    scheduleViewModel.initialize();
+  }
+
   void _scheduleDeferredWeeklyInitialization() {
-    _weeklyInitTimer?.cancel();
+    if (_weeklyInitializationStarted || _weeklyInitTimer != null) {
+      return;
+    }
     _weeklyInitTimer = Timer(_weeklyInitDelay, () {
       if (!mounted) return;
+      if (!_isScheduleSectionVisible) {
+        _weeklyInitTimer = null;
+        return;
+      }
+      _weeklyInitializationStarted = true;
+      _weeklyInitTimer = null;
       SchedulerBinding.instance.scheduleTask<void>(
         () async {
-          if (!mounted) return;
+          if (!mounted || !_isScheduleSectionVisible) return;
           await weeklyScheduleViewModel.initialize();
         },
         Priority.idle,
@@ -179,11 +245,20 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   void _scheduleDeferredFilterWarmup() {
-    _filterWarmTimer?.cancel();
+    if (_filterWarmupStarted || _filterWarmTimer != null) {
+      return;
+    }
     _filterWarmTimer = Timer(_filterWarmDelay, () {
       if (!mounted) return;
+      if (!_isScheduleSectionVisible) {
+        _filterWarmTimer = null;
+        return;
+      }
+      _filterWarmupStarted = true;
+      _filterWarmTimer = null;
       SchedulerBinding.instance.scheduleTask<void>(
         () {
+          if (!mounted || !_isScheduleSectionVisible) return;
           unawaited(_warmFilterPageState());
         },
         Priority.idle,

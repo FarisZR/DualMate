@@ -118,14 +118,9 @@ class ScheduleWidget extends StatelessWidget {
         ),
         Padding(
           padding: EdgeInsets.fromLTRB(timeLabelsWidth, dayLabelsHeight, 0, 0),
-          child: Stack(
-            clipBehavior: Clip.hardEdge,
-            children: entryWidgets,
-          ),
+          child: Stack(clipBehavior: Clip.hardEdge, children: entryWidgets),
         ),
-        Stack(
-          children: labelWidgets,
-        ),
+        Stack(children: labelWidgets),
         Padding(
           padding: EdgeInsets.fromLTRB(timeLabelsWidth, dayLabelsHeight, 0, 0),
           child: SchedulePastOverlay(
@@ -181,15 +176,13 @@ class ScheduleWidget extends StatelessWidget {
     }
 
     final yOffset = (nowMinutes - startMinutes) * minuteHeight;
-    return _CurrentTimeIndicatorGeometry(
-      dayIndex: dayIndex,
-      yOffset: yOffset,
-    );
+    return _CurrentTimeIndicatorGeometry(dayIndex: dayIndex, yOffset: yOffset);
   }
 
   int calculateDisplayedDays() {
-    var startEndDifference =
-        toStartOfDay(displayEnd).difference(toStartOfDay(displayStart));
+    var startEndDifference = toStartOfDay(
+      displayEnd,
+    ).difference(toStartOfDay(displayStart));
 
     var days = startEndDifference.inDays + 1;
 
@@ -243,9 +236,11 @@ class ScheduleWidget extends StatelessWidget {
 
     var loopEnd = toStartOfDay(tomorrow(displayEnd));
 
-    for (var columnDate = toStartOfDay(displayStart);
-        columnDate.isBefore(loopEnd);
-        columnDate = tomorrow(columnDate)) {
+    for (
+      var columnDate = toStartOfDay(displayStart);
+      columnDate.isBefore(loopEnd);
+      columnDate = tomorrow(columnDate)
+    ) {
       final isToday = isAtSameDay(columnDate, now);
       final dayNumber = formatters.dayNumber.format(columnDate);
       final monthShort = formatters.monthShort.format(columnDate);
@@ -268,10 +263,9 @@ class ScheduleWidget extends StatelessWidget {
               children: <Widget>[
                 Text(
                   formatters.dayShort.format(columnDate).toUpperCase(),
-                  style:
-                      textStyleScheduleWidgetColumnTitleDay(context).copyWith(
-                    letterSpacing: 0.6,
-                  ),
+                  style: textStyleScheduleWidgetColumnTitleDay(
+                    context,
+                  ).copyWith(letterSpacing: 0.6),
                 ),
                 const SizedBox(height: 2),
                 if (layoutProfile.compactPhone)
@@ -280,16 +274,12 @@ class ScheduleWidget extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.clip,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: isToday
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.color
-                                  ?.withValues(alpha: 0.86),
-                          fontWeight:
-                              isToday ? FontWeight.w700 : FontWeight.w500,
-                        ),
+                      color: isToday
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).textTheme.bodySmall?.color
+                                ?.withValues(alpha: 0.86),
+                      fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                    ),
                   )
                 else ...[
                   if (isToday)
@@ -301,9 +291,7 @@ class ScheduleWidget extends StatelessWidget {
                       ),
                       child: Text(
                         dayNumber,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
+                        style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               color: Theme.of(context).colorScheme.onPrimary,
                               fontWeight: FontWeight.w700,
@@ -315,20 +303,18 @@ class ScheduleWidget extends StatelessWidget {
                     Text(
                       dayNumber,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            height: 1.0,
-                          ),
+                        fontWeight: FontWeight.w600,
+                        height: 1.0,
+                      ),
                     ),
                   const SizedBox(height: 1),
                   Text(
                     monthShort,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.color
-                              ?.withValues(alpha: 0.8),
-                        ),
+                      color: Theme.of(
+                        context,
+                      ).textTheme.labelSmall?.color?.withValues(alpha: 0.8),
+                    ),
                   ),
                 ],
               ],
@@ -362,14 +348,16 @@ class ScheduleWidget extends StatelessWidget {
       var xPosition = columnWidth * i;
       var maxWidth = columnWidth;
 
-      entryWidgets.addAll(buildEntryWidgetsForColumn(
-        maxWidth,
-        hourHeight,
-        minuteHeight,
-        xPosition,
-        entriesByColumn[columnStartDate] ?? const <ScheduleEntry>[],
-        layoutProfile,
-      ));
+      entryWidgets.addAll(
+        buildEntryWidgetsForColumn(
+          maxWidth,
+          hourHeight,
+          minuteHeight,
+          xPosition,
+          entriesByColumn[columnStartDate] ?? const <ScheduleEntry>[],
+          layoutProfile,
+        ),
+      );
 
       columnStartDate = tomorrow(columnStartDate);
     }
@@ -410,16 +398,19 @@ class ScheduleWidget extends StatelessWidget {
   ) {
     var entryWidgets = <Widget>[];
 
-    var laidOutEntries =
-        ScheduleEntryAlignmentAlgorithm().layoutEntries(entries);
+    var laidOutEntries = ScheduleEntryAlignmentAlgorithm().layoutEntries(
+      entries,
+    );
 
     for (var value in laidOutEntries) {
       var entry = value.entry;
 
-      var rawYStart = hourHeight * (entry.start.hour - displayStartHour) +
+      var rawYStart =
+          hourHeight * (entry.start.hour - displayStartHour) +
           minuteHeight * entry.start.minute;
 
-      var rawYEnd = hourHeight * (entry.end.hour - displayStartHour) +
+      var rawYEnd =
+          hourHeight * (entry.end.hour - displayStartHour) +
           minuteHeight * entry.end.minute;
 
       var rawEntryLeft = maxWidth * value.leftColumn;
@@ -428,15 +419,15 @@ class ScheduleWidget extends StatelessWidget {
       final compactMinInset = layoutProfile.compactPhone ? 0.1 : 1.0;
       var verticalInset =
           rawYEnd - rawYStart > (layoutProfile.eventVerticalGap + 6)
-              ? layoutProfile.eventVerticalGap / 2
-              : compactMinInset;
+          ? layoutProfile.eventVerticalGap / 2
+          : compactMinInset;
       final spansMultipleOverlapColumns =
           (value.rightColumn - value.leftColumn) < _fullColumnThreshold;
       final overlapMinInset = layoutProfile.compactPhone ? 0.25 : 1.0;
       final horizontalInset = spansMultipleOverlapColumns
           ? (rawEntryWidth > (layoutProfile.overlapColumnGap + 10)
-              ? layoutProfile.overlapColumnGap / 2
-              : overlapMinInset)
+                ? layoutProfile.overlapColumnGap / 2
+                : overlapMinInset)
           : layoutProfile.dayBoundaryInset;
 
       var yStart = rawYStart + verticalInset;
@@ -457,6 +448,8 @@ class ScheduleWidget extends StatelessWidget {
         child: ScheduleEntryWidget(
           scheduleEntry: entry,
           onScheduleEntryTap: onScheduleEntryTap,
+          renderedWidth: entryWidth,
+          renderedHeight: eventHeight,
         ),
       );
 
@@ -523,9 +516,9 @@ class _ScheduleDateFormatters {
   final DateFormat monthShort;
 
   _ScheduleDateFormatters(Locale locale)
-      : dayShort = DateFormat("E", locale.toLanguageTag()),
-        dayNumber = DateFormat("d", locale.toLanguageTag()),
-        monthShort = DateFormat("MMM", locale.toLanguageTag());
+    : dayShort = DateFormat("E", locale.toLanguageTag()),
+      dayNumber = DateFormat("d", locale.toLanguageTag()),
+      monthShort = DateFormat("MMM", locale.toLanguageTag());
 }
 
 class _CurrentTimeIndicatorGeometry {
