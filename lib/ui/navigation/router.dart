@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:dualmate/canteen/ui/canteen_navigation_entry.dart';
 import 'package:dualmate/date_management/ui/date_management_navigation_entry.dart';
 import 'package:dualmate/dualis/ui/dualis_navigation_entry.dart';
-import 'package:dualmate/information/ui/useful_information_navigation_entry.dart';
 import 'package:dualmate/schedule/ui/schedule_navigation_entry.dart';
 import 'package:dualmate/ui/main_page.dart';
 import 'package:dualmate/ui/navigation/navigation_entry.dart';
@@ -15,7 +14,6 @@ final List<NavigationEntry> navigationEntries = [
   CanteenNavigationEntry(),
   DualisNavigationEntry(),
   DateManagementNavigationEntry(),
-  UsefulInformationNavigationEntry(),
 ];
 
 WidgetBuilder _resolveRoute(RouteSettings settings) {

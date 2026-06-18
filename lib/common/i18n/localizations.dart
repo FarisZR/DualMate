@@ -104,24 +104,6 @@ class L {
   String get notificationScheduleChangedClassTitle =>
       _getValue("notificationScheduleChangedClassTitle");
 
-  String get informationPageDHBWHomepage =>
-      _getValue("informationPageDHBWHomepage");
-
-  String get informationPageDualis => _getValue("informationPageDualis");
-
-  String get informationPageRoundcube => _getValue("informationPageRoundcube");
-
-  String get informationPageMoodle => _getValue("informationPageMoodle");
-
-  String get informationPageLocation => _getValue("informationPageLocation");
-
-  String get informationPageEduroam => _getValue("informationPageEduroam");
-
-  String get informationPageStuV => _getValue("informationPageStuV");
-
-  String get informationPageDHBWSports =>
-      _getValue("informationPageDHBWSports");
-
   String get settingsNotificationsTitle =>
       _getValue("settingsNotificationsTitle");
 
@@ -134,8 +116,6 @@ class L {
   String get screenScheduleTitle => _getValue("screenScheduleTitle");
 
   String get screenCanteenTitle => _getValue("screenCanteenTitle");
-
-  String get screenUsefulLinks => _getValue("screenUsefulLinks");
 
   String get dualisExamResultsExamColumnHeader =>
       _getValue("dualisExamResultsExamColumnHeader");

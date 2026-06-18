@@ -70,10 +70,6 @@ Important runtime behavior:
 - Widget navigation payloads from `WidgetNavigationPayloadStore` open the relevant week directly, and the background updater under `lib/schedule/background` keeps shared caches fresh every few hours.
 - The `business`, `data`, `model`, and `service` packages contain the schedule cache logic, repositories, and DTO mapping that feed the UI layers.
 
-### Information (`lib/information`)
-
-- `UsefulInformationNavigationEntry` wires into the main navigation, and `UsefulInformationPage` exposes the curated quick links (DHBW homepage, Dualis, Roundcube, Moodle, campus info, Eduroam, StuV, Hochschulsport) via `url_launcher` taps.
-
 ### Widgets and native bridge (`lib/native`, `android/.../widget`)
 
 - Widget refresh bridging: `lib/native/widget/widget_update_callback.dart`
