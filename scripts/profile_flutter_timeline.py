@@ -52,7 +52,7 @@ def load_events(path: Path) -> list[dict]:
 
 def collect_durations(events: list[dict]) -> dict[str, list[float]]:
     durations: dict[str, list[float]] = defaultdict(list)
-    open_events: dict[tuple[object, object, object], list[int]] = defaultdict(list)
+    open_events: dict[tuple[object, ...], list[int]] = defaultdict(list)
 
     for event in events:
         name = event.get("name")
@@ -66,24 +66,26 @@ def collect_durations(events: list[dict]) -> dict[str, list[float]]:
             continue
 
         if phase == "B" and timestamp is not None:
-            open_events[(name, event.get("tid"), None)].append(timestamp)
+            open_events[(event.get("pid"), name, event.get("tid"), None)].append(
+                timestamp,
+            )
             continue
 
         if phase == "E" and timestamp is not None:
-            key = (name, event.get("tid"), None)
+            key = (event.get("pid"), name, event.get("tid"), None)
             if open_events[key]:
                 start = open_events[key].pop()
                 durations[name].append((timestamp - start) / 1000.0)
             continue
 
         if phase == "b" and timestamp is not None:
-            open_events[(name, event.get("tid"), event.get("id"))].append(
-                timestamp,
-            )
+            open_events[
+                (event.get("pid"), name, event.get("tid"), event.get("id"))
+            ].append(timestamp)
             continue
 
         if phase == "e" and timestamp is not None:
-            key = (name, event.get("tid"), event.get("id"))
+            key = (event.get("pid"), name, event.get("tid"), event.get("id"))
             if open_events[key]:
                 start = open_events[key].pop()
                 durations[name].append((timestamp - start) / 1000.0)
@@ -93,7 +95,7 @@ def collect_durations(events: list[dict]) -> dict[str, list[float]]:
 
 def collect_spans(events: list[dict]) -> list[tuple[str, int, int, float]]:
     spans: list[tuple[str, int, int, float]] = []
-    open_events: dict[tuple[object, object, object], list[int]] = defaultdict(list)
+    open_events: dict[tuple[object, ...], list[int]] = defaultdict(list)
 
     for event in events:
         name = event.get("name")
@@ -108,22 +110,26 @@ def collect_spans(events: list[dict]) -> list[tuple[str, int, int, float]]:
             continue
 
         if phase == "B":
-            open_events[(name, event.get("tid"), None)].append(timestamp)
+            open_events[(event.get("pid"), name, event.get("tid"), None)].append(
+                timestamp,
+            )
             continue
 
         if phase == "E":
-            key = (name, event.get("tid"), None)
+            key = (event.get("pid"), name, event.get("tid"), None)
             if open_events[key]:
                 start = open_events[key].pop()
                 spans.append((name, start, timestamp, (timestamp - start) / 1000.0))
             continue
 
         if phase == "b":
-            open_events[(name, event.get("tid"), event.get("id"))].append(timestamp)
+            open_events[
+                (event.get("pid"), name, event.get("tid"), event.get("id"))
+            ].append(timestamp)
             continue
 
         if phase == "e":
-            key = (name, event.get("tid"), event.get("id"))
+            key = (event.get("pid"), name, event.get("tid"), event.get("id"))
             if open_events[key]:
                 start = open_events[key].pop()
                 spans.append((name, start, timestamp, (timestamp - start) / 1000.0))
@@ -156,7 +162,7 @@ def print_summary(durations: dict[str, list[float]], event_names: tuple[str, ...
 
 def print_top_frames(spans: list[tuple[str, int, int, float]], limit: int = 8):
     frames = sorted(
-        (span for span in spans if span[0] == "Frame"),
+        (span for span in spans if span[0] == "Frame" and span[3] > 8.33),
         key=lambda span: span[3],
         reverse=True,
     )

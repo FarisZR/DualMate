@@ -231,11 +231,11 @@ class _SchedulePageState extends State<SchedulePage> {
         _weeklyInitTimer = null;
         return;
       }
-      _weeklyInitializationStarted = true;
       _weeklyInitTimer = null;
       SchedulerBinding.instance.scheduleTask<void>(
         () async {
           if (!mounted || !_isScheduleSectionVisible) return;
+          _weeklyInitializationStarted = true;
           await weeklyScheduleViewModel.initialize();
         },
         Priority.idle,
@@ -254,11 +254,11 @@ class _SchedulePageState extends State<SchedulePage> {
         _filterWarmTimer = null;
         return;
       }
-      _filterWarmupStarted = true;
       _filterWarmTimer = null;
       SchedulerBinding.instance.scheduleTask<void>(
         () {
           if (!mounted || !_isScheduleSectionVisible) return;
+          _filterWarmupStarted = true;
           unawaited(_warmFilterPageState());
         },
         Priority.idle,
