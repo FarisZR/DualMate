@@ -339,7 +339,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       weekEnd,
       isCurrentRequest: isCurrentRequest,
     );
-    _debounceVisibleRefresh(weekStart, weekEnd);
+    if (isCurrentRequest == null || isCurrentRequest()) {
+      _debounceVisibleRefresh(weekStart, weekEnd);
+    }
   }
 
   Future<void> refreshVisibleWeek() {

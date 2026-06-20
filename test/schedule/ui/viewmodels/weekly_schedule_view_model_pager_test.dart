@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
@@ -6,6 +8,7 @@ import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:dualmate/schedule/ui/viewmodels/weekly_schedule_view_model.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -68,6 +71,47 @@ void main() {
 
       expect(viewModel.currentDateStart, DateTime(2026, 2, 16));
       expect(viewModel.weekSchedule?.entries.single.title, 'WEEK_B');
+    },
+  );
+
+  test(
+    'stale openWeekContaining does not schedule a delayed refresh overwriting the newer week',
+    () {
+      fakeAsync((async) {
+        final viewModel = WeeklyScheduleViewModel(
+          _FakeScheduleProvider(<ScheduleEntry>[
+            _entry(DateTime(2026, 2, 9), 'WEEK_A'),
+            _entry(DateTime(2026, 2, 16), 'WEEK_B'),
+          ]),
+          _FakeScheduleSourceProvider(),
+          nowProvider: () => DateTime(2026, 2, 10, 10),
+        );
+
+        // Open week B; it becomes the current (newer) week and schedules its own
+        // debounced visible refresh.
+        unawaited(viewModel.openWeekContaining(DateTime(2026, 2, 16)));
+        async.flushMicrotasks();
+        expect(viewModel.currentDateStart, DateTime(2026, 2, 16));
+
+        // A stale request for week A must neither commit nor schedule a delayed
+        // refresh that overwrites week B (which would also cancel B's refresh).
+        unawaited(
+          viewModel.openWeekContaining(
+            DateTime(2026, 2, 9),
+            isCurrentRequest: () => false,
+          ),
+        );
+        async.flushMicrotasks();
+        expect(viewModel.currentDateStart, DateTime(2026, 2, 16));
+
+        // Elapsing past the visible-refresh debounce window must not let the
+        // stale week A overwrite the newer week B.
+        async.elapse(const Duration(seconds: 3));
+        async.flushMicrotasks();
+
+        expect(viewModel.currentDateStart, DateTime(2026, 2, 16));
+        viewModel.dispose();
+      });
     },
   );
 }
