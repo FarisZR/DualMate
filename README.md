@@ -1,66 +1,121 @@
 <p align="center">
-<img src="https://raw.githubusercontent.com/FarisZR/DualMate/master/icons/ic_launcher.svg" width="200">
-<br />
-<a href="https://play.google.com/store/apps/details?id=com.fariszr.dualmate"><img src="https://raw.githubusercontent.com/FarisZR/DualMate/master/icons/play_store_get.svg" height="75"/></a>
-<a href="https://apps.apple.com/us/app/id1535213934"><img src="https://raw.githubusercontent.com/FarisZR/DualMate/master/icons/app_store_get.svg" height="50"/></a>
+  <img src="icons/ic_launcher.svg" width="160" alt="DualMate app icon" />
 </p>
 
+<h1 align="center">DualMate</h1>
 
-[![No Maintenance Intended](http://unmaintained.tech/badge.svg)](http://unmaintained.tech/)
+<p align="center">
+  <strong>Your DHBW day, one glance away.</strong>
+</p>
 
+<p align="center">
+  DualMate brings your schedule, canteen menu, Dualis grades, important dates, useful links, and home-screen widgets into one modern student app.
+</p>
 
+<p align="center">
+  <a href="https://play.google.com/store/apps/details?id=com.fariszr.dualmate">
+    <img src="icons/play_store_get.svg" height="72" alt="Get it on Google Play" />
+  </a>
+</p>
 
+---
 
-# DualMate
+## Overview
 
-TODO: New readme.
+DualMate is an unofficial companion app for DHBW students. It is built around the information students check every day: what is happening next, where to go, what is available in the canteen, which important dates are coming up, and whether new Dualis results are available.
 
-DualMate bietet Dir eine Möglichkeit deinen Vorlesungsplan auf dem Smartphone abzurufen. Du kannst auch die Noten aus Dualis direkt in der App abrufen.
+The app is designed to feel fast, clean, and easy to glance at. Instead of jumping between different websites, portals, and PDFs, DualMate keeps the most relevant study information together in one place.
 
-Schaue auf deinen Vorlesungsplan immer und überall, auch ohne Internetverbindung - z.B. morgens in der S-Bahn.
+## Core features
 
-Bisher verfügbare Funktionen:
+### Schedule
 
-- Vorlesungsplan aus Rapla und Dualis anzeigen
-- Komplette Übersicht über deine Woche
-- Wischen zwischen Wochen im Wochenplan
-- Simple Tagesübersicht
-- Noten aus Dualis abrufen
-- Offline modus: Du kannst auf deinen Vorlesungsplan zugreifen, auch wenn du keine Internetverbindung hast
-- Benachrichtigung am Vorabend zum nächsten Tag
-- Benachrichtigung, wenn sich etwas im Plan geändert hat
-- Integration der [Termindatenbank](https://it.dhbw-stuttgart.de/DHermine/) der DHBW
-- Rapla-Termine (Klausuren, Klausurwochen, Feiertage) auf der Terminseite
-- Mensa-Speiseplan für die DHBW Karlsruhe inklusive Home-Screen-Widget
-- Mehrtägige Home-Screen-Widgets für Vorlesungsplan und Mensa (adaptive Höhe)
-- Helles und dunkles Design 👻
-- Landscape support on phones and tablets
+DualMate gives you a clear weekly schedule that is easy to use during a busy university day.
 
+- Browse your week and move between weeks quickly.
+- See lectures, rooms, lecturers, online classes, exams, public holidays, and special events in one overview.
+- Open schedule entries for more details.
+- Filter schedule entries so your view stays focused.
+- Keep using cached schedule data when the network is unreliable.
+- Get local notifications for the next day and for schedule changes.
+- Use schedule sources such as Rapla, Dualis, iCal calendars, and DHBW Mannheim schedules.
 
-Diese App ist für alle DHBW-Standorte verfügbar. Dies ist kein offizielles Angebot der DHBW und wurde von Studenten in Eigeninitiative entwickelt!
+### Canteen
 
+The canteen page helps you decide where and what to eat without leaving the app.
 
+- View daily menus for your selected canteen.
+- Switch between supported DHBW canteen locations.
+- See meal names, categories, prices, notes, and allergens when available.
+- Filter meals, including vegetarian, vegan, and no-pork options.
+- Jump back to today when browsing other days.
 
-Fehlt Dir eine Funktion oder hast Du einen Fehler gefunden? Dann trage ein [Issue](https://github.com/FarisZR/DualMate/issues) dazu ein!
+Supported canteen locations include DHBW Karlsruhe, DHBW CAS / Heilbronn, DHBW Mannheim, DHBW Mosbach, DHBW Stuttgart, DHBW Ravensburg, DHBW Villingen-Schwenningen, DHBW Lörrach, DHBW Horb, DHBW Heidenheim, and DHBW Friedrichshafen.
 
+### Dates
 
-## Problemlösung
+The Dates page keeps upcoming study-related events visible, not buried in a separate portal.
 
-- Rapla lädt im Browser, aber nicht in der App: Prüfe, ob die gespeicherte
-	Rapla-URL ein gültiges Schema enthält. Falls kein Schema angegeben ist,
-	verwendet die App automatisch HTTPS und überschreibt nur die Datum-Parameter.
+- See upcoming public holidays, exams, test weeks, and special events.
+- Focus on future dates, past dates, or both.
+- Use important events from your Rapla schedule.
+- Use DHmine date information where available.
+- Open date details when you need more context.
 
+### Dualis integration
 
+DualMate integrates with Dualis so your grades and exam results are always close by.
+
+- View modules, exams, credits, grades, and pass status directly in the app.
+- Keep an overview of your study progress without repeatedly opening Dualis in the browser.
+- Save your Dualis login locally if you want the app to refresh your results automatically.
+
+### Home-screen widgets
+
+DualMate includes modern widgets for the information you want to see without opening the app.
+
+- Schedule widget: shows upcoming classes and important schedule entries directly on your home screen.
+- Canteen widget: shows the current canteen menu at a glance.
+- Widgets are designed to fit into a modern Android home screen and stay useful throughout the day.
+
+<p align="center">
+  <img src="android/app/src/main/res/drawable-nodpi/schedule_now_widget_preview.png" width="360" alt="DualMate schedule widget preview" />
+  <img src="android/app/src/main/res/drawable-nodpi/canteen_today_widget_preview.png" width="360" alt="DualMate canteen widget preview" />
+</p>
+
+### Useful links
+
+DualMate also gives you quick access to commonly used DHBW resources such as Dualis, Moodle, webmail, DHBW pages, eduroam information, StuV, and university sports.
 
 ## Screenshots
 
-Hier gibt es ein paar Screenshots aus der App: 
-
 <p align="center">
-<img src="https://raw.githubusercontent.com/FarisZR/DualMate/master/screenshots/screenshot_weekly.png" alt="screenshot" width="300" />
-<img src="https://raw.githubusercontent.com/FarisZR/DualMate/master/screenshots/screenshot_weekly_dark.png" alt="screenshot" width="300" /> 
-<img src="https://raw.githubusercontent.com/FarisZR/DualMate/master/screenshots/screenshot_daily.png" alt="screenshot" width="300" /> 
-<img src="https://raw.githubusercontent.com/FarisZR/DualMate/master/screenshots/screenshot_daily_dark.png" alt="screenshot" width="300" /> 
-<img src="https://raw.githubusercontent.com/FarisZR/DualMate/master/screenshots/screenshot_dualis_modules.png" alt="screenshot" width="300" /> 
-<img src="https://raw.githubusercontent.com/FarisZR/DualMate/master/screenshots/screenshot_dualis_exams.png" alt="screenshot" width="300" /> 
+  <img src="screenshots/screenshot_weekly.png" alt="Weekly schedule screenshot" width="260" />
+  <img src="screenshots/screenshot_weekly_dark.png" alt="Weekly schedule dark mode screenshot" width="260" />
+  <img src="screenshots/screenshot_daily.png" alt="Daily schedule screenshot" width="260" />
+  <img src="screenshots/screenshot_dualis_modules.png" alt="Dualis module overview screenshot" width="260" />
+  <img src="screenshots/screenshot_dualis_exams.png" alt="Dualis exam results screenshot" width="260" />
+  <img src="screenshots/screenshot_links.png" alt="Useful links screenshot" width="260" />
 </p>
+
+## Multiple locations and sources
+
+DualMate is no longer limited to a single location or one fixed source of data. Depending on what your DHBW location provides, you can use the app with different schedule sources and canteen locations.
+
+The app currently supports schedule setup through Rapla, Dualis, iCal calendars, and DHBW Mannheim course schedules. Canteen support covers several DHBW locations, so the app can be useful outside a single campus setup.
+
+## Unofficial app
+
+DualMate is an independent student project and is not an official DHBW app. The displayed data comes from the sources you configure or select in the app, so availability and correctness can depend on those external services.
+
+DualMate was developed by FarisZR and is based on the original work of Benedikt Kolb.
+
+## Feedback
+
+Found a bug, missing location, broken schedule source, or feature idea? Open an issue on GitHub:
+
+[github.com/FarisZR/DualMate/issues](https://github.com/FarisZR/DualMate/issues)
+
+## License
+
+DualMate is licensed under the GNU Affero General Public License v3.0. See [LICENSE](LICENSE) for details.
