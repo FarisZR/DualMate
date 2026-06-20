@@ -9,7 +9,7 @@ import 'package:dualmate/schedule/ui/viewmodels/weekly_schedule_view_model.dart'
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('cached pager week commit avoids weekSchedule notification', () async {
+  test('cached week commit updates weekSchedule after pager settles', () async {
     final viewModel = WeeklyScheduleViewModel(
       _FakeScheduleProvider(<ScheduleEntry>[
         _entry(DateTime(2026, 2, 9), 'CURRENT_WEEK'),
@@ -35,11 +35,11 @@ void main() {
       'weekSchedule',
     ]);
 
-    await viewModel.openWeekContainingFromPager(DateTime(2026, 2, 16));
+    await viewModel.openWeekContaining(DateTime(2026, 2, 16));
 
     expect(viewModel.currentDateStart, DateTime(2026, 2, 16));
-    expect(visibleWeekNotifications, 1);
-    expect(weekScheduleNotifications, 0);
+    expect(visibleWeekNotifications, 0);
+    expect(weekScheduleNotifications, 1);
 
     viewModel.dispose();
   });

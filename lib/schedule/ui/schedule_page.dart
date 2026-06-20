@@ -49,7 +49,6 @@ class _SchedulePageState extends State<SchedulePage> {
   bool _scheduleSourceInitialized = false;
   bool _weeklyInitializationStarted = false;
   bool _filterWarmupStarted = false;
-  bool _visibilitySyncPostFrameScheduled = false;
 
   @override
   void initState() {
@@ -57,6 +56,10 @@ class _SchedulePageState extends State<SchedulePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       PerformanceTelemetry.instance.markNavEvent(name: "schedule.entry");
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _syncDeferredWorkWithVisibility();
     });
   }
 
@@ -136,14 +139,7 @@ class _SchedulePageState extends State<SchedulePage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final nextScheduleViewModel = Provider.of<ScheduleViewModel>(
-      context,
-      listen: false,
-    );
-    final didChangeScheduleViewModel =
-        _scheduleViewModel != nextScheduleViewModel;
-    _scheduleViewModel = nextScheduleViewModel;
-
+    _scheduleViewModel = Provider.of<ScheduleViewModel>(context, listen: false);
     ValueNotifier<int>? nextEntryIndex;
     try {
       nextEntryIndex = Provider.of<ValueNotifier<int>>(context, listen: false);
@@ -151,17 +147,14 @@ class _SchedulePageState extends State<SchedulePage> {
       nextEntryIndex = null;
     }
 
-    if (_currentEntryIndex == nextEntryIndex && !didChangeScheduleViewModel) {
+    if (_currentEntryIndex == nextEntryIndex) {
       return;
     }
 
-    if (_currentEntryIndex != nextEntryIndex) {
-      _currentEntryIndex?.removeListener(_handleNavigationIndexChanged);
-      _currentEntryIndex = nextEntryIndex;
-      _currentEntryIndex?.addListener(_handleNavigationIndexChanged);
-    }
-
-    _syncDeferredWorkWithVisibilityAfterFrame();
+    _currentEntryIndex?.removeListener(_handleNavigationIndexChanged);
+    _currentEntryIndex = nextEntryIndex;
+    _currentEntryIndex?.addListener(_handleNavigationIndexChanged);
+    _syncDeferredWorkWithVisibility();
   }
 
   Future<void> _warmFilterPageState() async {
@@ -195,16 +188,6 @@ class _SchedulePageState extends State<SchedulePage> {
     _syncDeferredWorkWithVisibility();
   }
 
-  void _syncDeferredWorkWithVisibilityAfterFrame() {
-    if (_visibilitySyncPostFrameScheduled) return;
-    _visibilitySyncPostFrameScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _visibilitySyncPostFrameScheduled = false;
-      if (!mounted) return;
-      _syncDeferredWorkWithVisibility();
-    });
-  }
-
   void _syncDeferredWorkWithVisibility() {
     if (!mounted) return;
     if (!_isScheduleSectionVisible) {
@@ -231,8 +214,10 @@ class _SchedulePageState extends State<SchedulePage> {
   void _initializeScheduleSourceIfNeeded() {
     if (_scheduleSourceInitialized) return;
     _scheduleSourceInitialized = true;
-    final scheduleViewModel = _scheduleViewModel;
-    if (scheduleViewModel == null) return;
+    final scheduleViewModel = Provider.of<ScheduleViewModel>(
+      context,
+      listen: false,
+    );
     scheduleViewModel.initialize();
   }
 

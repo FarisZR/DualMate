@@ -202,11 +202,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
                         PropertyChangeConsumer<WeeklyScheduleViewModel, String>(
-                          properties: const [
-                            'visibleWeek',
-                            'weekSchedule',
-                            'now',
-                          ],
+                          properties: const ['weekSchedule', 'now'],
                           builder:
                               (
                                 BuildContext context,
@@ -229,11 +225,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                                       WeeklyScheduleViewModel,
                                       String
                                     >(
-                                      properties: const [
-                                        'visibleWeek',
-                                        'weekSchedule',
-                                        'now',
-                                      ],
+                                      properties: const ['weekSchedule', 'now'],
                                       builder:
                                           (
                                             BuildContext context,
@@ -246,11 +238,6 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                                             return _buildAnimatedScheduleViewport(
                                               context,
                                               model,
-                                              animateViewport:
-                                                  properties?.contains(
-                                                    'visibleWeek',
-                                                  ) !=
-                                                  true,
                                             );
                                           },
                                     ),
@@ -260,7 +247,6 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                                 String
                               >(
                                 properties: const [
-                                  'visibleWeek',
                                   'isUpdating',
                                   'weekSchedule',
                                 ],
@@ -288,11 +274,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                                       WeeklyScheduleViewModel,
                                       String
                                     >(
-                                      properties: const [
-                                        'visibleWeek',
-                                        'weekSchedule',
-                                        'now',
-                                      ],
+                                      properties: const ['weekSchedule', 'now'],
                                       builder:
                                           (
                                             BuildContext context,
@@ -328,9 +310,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   Widget _buildAnimatedScheduleViewport(
     BuildContext context,
     WeeklyScheduleViewModel model,
-    {
-    required bool animateViewport,
-  }) {
+  ) {
     final modelViewport = _resolveTargetViewport(model);
     _lockedViewport ??= modelViewport;
     if (!_isPagerScrolling) {
@@ -346,8 +326,12 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
           displayedDays,
         );
 
-        Widget buildViewport(_HourViewport viewport) {
-          return Row(
+        return TweenAnimationBuilder<_HourViewport>(
+          tween: _HourViewportTween(end: targetViewport),
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          builder: (context, viewport, child) {
+            return Row(
               children: [
                 SizedBox(
                   key: const ValueKey<String>('weekly_fixed_hour_axis'),
@@ -362,17 +346,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                 Expanded(child: _buildWeeklyPager(context, model, viewport)),
               ],
             );
-        }
-
-        if (!animateViewport) {
-          return buildViewport(targetViewport);
-        }
-
-        return TweenAnimationBuilder<_HourViewport>(
-          tween: _HourViewportTween(end: targetViewport),
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          builder: (context, viewport, child) => buildViewport(viewport),
+          },
         );
       },
     );
@@ -454,7 +428,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
 
   Future<void> _openVisibleWeek(DateTime weekStart) async {
     final requestId = ++_weekOpenRequestId;
-    await viewModel.openWeekContainingFromPager(weekStart);
+    await viewModel.openWeekContaining(weekStart);
     if (!mounted || requestId != _weekOpenRequestId) return;
 
     unawaited(
@@ -785,6 +759,17 @@ class _HourViewport {
   final double endHour;
 
   const _HourViewport({required this.startHour, required this.endHour});
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is _HourViewport &&
+            other.startHour == startHour &&
+            other.endHour == endHour;
+  }
+
+  @override
+  int get hashCode => Object.hash(startHour, endHour);
 }
 
 class _TopLoadingIndicator extends StatefulWidget {
