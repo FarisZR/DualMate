@@ -18,6 +18,7 @@ void main() {
       _FakeScheduleSourceProvider(),
       nowProvider: () => DateTime(2026, 2, 10, 10),
     );
+    addTearDown(viewModel.dispose);
 
     await viewModel.updateSchedule(
       DateTime(2026, 2, 9),
@@ -40,9 +41,35 @@ void main() {
     expect(viewModel.currentDateStart, DateTime(2026, 2, 16));
     expect(visibleWeekNotifications, 0);
     expect(weekScheduleNotifications, 1);
-
-    viewModel.dispose();
   });
+
+  test(
+    'openWeekContaining skips state mutation when isCurrentRequest reports stale',
+    () async {
+      final viewModel = WeeklyScheduleViewModel(
+        _FakeScheduleProvider(<ScheduleEntry>[
+          _entry(DateTime(2026, 2, 9), 'WEEK_A'),
+          _entry(DateTime(2026, 2, 16), 'WEEK_B'),
+        ]),
+        _FakeScheduleSourceProvider(),
+        nowProvider: () => DateTime(2026, 2, 10, 10),
+      );
+      addTearDown(viewModel.dispose);
+
+      await viewModel.openWeekContaining(DateTime(2026, 2, 16));
+      expect(viewModel.currentDateStart, DateTime(2026, 2, 16));
+      expect(viewModel.weekSchedule?.entries.single.title, 'WEEK_B');
+
+      // A stale request for week A must not overwrite the newer week B state.
+      await viewModel.openWeekContaining(
+        DateTime(2026, 2, 9),
+        isCurrentRequest: () => false,
+      );
+
+      expect(viewModel.currentDateStart, DateTime(2026, 2, 16));
+      expect(viewModel.weekSchedule?.entries.single.title, 'WEEK_B');
+    },
+  );
 }
 
 ScheduleEntry _entry(DateTime day, String title) {

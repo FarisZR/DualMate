@@ -428,7 +428,10 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
 
   Future<void> _openVisibleWeek(DateTime weekStart) async {
     final requestId = ++_weekOpenRequestId;
-    await viewModel.openWeekContaining(weekStart);
+    await viewModel.openWeekContaining(
+      weekStart,
+      isCurrentRequest: () => requestId == _weekOpenRequestId,
+    );
     if (!mounted || requestId != _weekOpenRequestId) return;
 
     unawaited(
@@ -552,11 +555,15 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   }
 
   int _pageIndexForWeek(DateTime weekStart) {
-    final normalizedWeekStartUtc = _normalizeWeekStart(weekStart).toUtc();
-    final anchorWeekStartUtc = _anchorWeekStart.toUtc();
-    final dayDelta = normalizedWeekStartUtc
-        .difference(anchorWeekStartUtc)
-        .inDays;
+    final normalized = _normalizeWeekStart(weekStart);
+    final anchor = _anchorWeekStart;
+    final normalizedUtc = DateTime.utc(
+      normalized.year,
+      normalized.month,
+      normalized.day,
+    );
+    final anchorUtc = DateTime.utc(anchor.year, anchor.month, anchor.day);
+    final dayDelta = normalizedUtc.difference(anchorUtc).inDays;
     return _initialPageIndex + (dayDelta ~/ _daysPerWeek);
   }
 
