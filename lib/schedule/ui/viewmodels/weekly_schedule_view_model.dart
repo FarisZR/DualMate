@@ -328,11 +328,20 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _debounceVisibleRefresh(currentDateStart, currentDateEnd);
   }
 
-  Future openWeekContaining(DateTime date) async {
+  Future openWeekContaining(
+    DateTime date, {
+    bool Function()? isCurrentRequest,
+  }) async {
     final weekStart = toStartOfDay(toDayOfWeek(date, DateTime.monday));
     final weekEnd = toNextWeek(weekStart);
-    await _openWeekFromCache(weekStart, weekEnd);
-    _debounceVisibleRefresh(weekStart, weekEnd);
+    await _openWeekFromCache(
+      weekStart,
+      weekEnd,
+      isCurrentRequest: isCurrentRequest,
+    );
+    if (isCurrentRequest == null || isCurrentRequest()) {
+      _debounceVisibleRefresh(weekStart, weekEnd);
+    }
   }
 
   Future<void> refreshVisibleWeek() {
@@ -354,13 +363,18 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     await updateSchedule(weekStart, weekEnd, force: true);
   }
 
-  Future<void> _openWeekFromCache(DateTime start, DateTime end) async {
+  Future<void> _openWeekFromCache(
+    DateTime start,
+    DateTime end, {
+    bool Function()? isCurrentRequest,
+  }) async {
     try {
       final cacheKey = _windowKey(start, end);
       final cachedSchedule =
           getCachedWeek(start, end) ??
           await scheduleProvider.getCachedSchedule(start, end);
       if (_isDisposed) return;
+      if (isCurrentRequest != null && !isCurrentRequest()) return;
       _memoryWeekCache[cacheKey] = cachedSchedule;
       _setSchedule(cachedSchedule, start, end);
     } catch (error, trace) {

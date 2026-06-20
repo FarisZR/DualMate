@@ -2,12 +2,15 @@ import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
+import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:dualmate/schedule/ui/schedule_page.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_view_model.dart';
+import 'package:dualmate/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/weekly_schedule_page.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_empty_state.dart';
 import 'package:flutter/material.dart';
@@ -19,11 +22,13 @@ import 'package:provider/provider.dart';
 void main() {
   setUp(() {
     KiwiContainer().clear();
+    FilterViewModel.resetCachedStateForTesting();
     SchedulePage.resetSharedState();
   });
 
   tearDown(() {
     SchedulePage.resetSharedState();
+    FilterViewModel.resetCachedStateForTesting();
     KiwiContainer().clear();
   });
 
@@ -145,15 +150,51 @@ void main() {
     await _disposeHarness(tester, scheduleViewModel);
     currentEntryIndex.dispose();
   });
+
+  testWidgets('deferred filter warmup uses cached dependencies', (
+    tester,
+  ) async {
+    final sourceProvider = _FakeScheduleSourceProvider();
+    final entryRepository = _FakeScheduleEntryRepository(['CURRENT_WEEK']);
+    final filterRepository = _FakeScheduleFilterRepository([]);
+    _registerScheduleDependencies(
+      scheduleProvider: _FakeScheduleProvider(<ScheduleEntry>[
+        _entry(DateTime(2026, 3, 9), 'CURRENT_WEEK'),
+      ]),
+      sourceProvider: sourceProvider,
+      entryRepository: entryRepository,
+      filterRepository: filterRepository,
+    );
+
+    final scheduleViewModel = ScheduleViewModel(sourceProvider);
+
+    await tester.pumpWidget(_wrapSchedulePage(scheduleViewModel));
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1300));
+    await tester.idle();
+
+    expect(entryRepository.queryAllNamesCallCount, 1);
+
+    await _disposeHarness(tester, scheduleViewModel);
+  });
 }
 
 void _registerScheduleDependencies({
   required ScheduleProvider scheduleProvider,
   required ScheduleSourceProvider sourceProvider,
+  ScheduleEntryRepository? entryRepository,
+  ScheduleFilterRepository? filterRepository,
 }) {
   final container = KiwiContainer();
   container.registerInstance<ScheduleProvider>(scheduleProvider);
   container.registerInstance<ScheduleSourceProvider>(sourceProvider);
+  if (entryRepository != null) {
+    container.registerInstance<ScheduleEntryRepository>(entryRepository);
+  }
+  if (filterRepository != null) {
+    container.registerInstance<ScheduleFilterRepository>(filterRepository);
+  }
 }
 
 Widget _wrapSchedulePage(
@@ -242,6 +283,45 @@ class _ThrowingCachedScheduleProvider extends _FakeScheduleProvider {
   @override
   Future<Schedule> getCachedSchedule(DateTime start, DateTime end) async {
     throw Exception('cache read failed');
+  }
+}
+
+class _FakeScheduleEntryRepository implements ScheduleEntryRepository {
+  final List<String> names;
+  int queryAllNamesCallCount = 0;
+
+  _FakeScheduleEntryRepository(this.names);
+
+  @override
+  Future<List<String>> queryAllNamesOfScheduleEntries() async {
+    queryAllNamesCallCount += 1;
+    final sortedNames = List<String>.from(names)..sort();
+    return sortedNames;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw UnsupportedError(
+      'Unexpected ScheduleEntryRepository call: $invocation',
+    );
+  }
+}
+
+class _FakeScheduleFilterRepository implements ScheduleFilterRepository {
+  final List<String> hiddenNames;
+
+  _FakeScheduleFilterRepository(this.hiddenNames);
+
+  @override
+  Future<List<String>> queryAllHiddenNames() async {
+    return List<String>.from(hiddenNames);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw UnsupportedError(
+      'Unexpected ScheduleFilterRepository call: $invocation',
+    );
   }
 }
 

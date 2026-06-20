@@ -23,10 +23,13 @@ class ScheduleViewModel extends BaseViewModel {
   void initialize() {
     if (_initialized) return;
     _initialized = true;
-    _isInitializingScheduleSource = true;
-    notifyIfMounted("isInitializingScheduleSource");
-    _scheduleSourceProvider
-        .addDidChangeScheduleSourceCallback(onDidChangeScheduleSource);
+    if (!_isInitializingScheduleSource) {
+      _isInitializingScheduleSource = true;
+      notifyIfMounted("isInitializingScheduleSource");
+    }
+    _scheduleSourceProvider.addDidChangeScheduleSourceCallback(
+      onDidChangeScheduleSource,
+    );
     _didSetupProperly = _scheduleSourceProvider.didSetupCorrectly();
     _scheduleInitialSetup();
   }
@@ -62,8 +65,9 @@ class ScheduleViewModel extends BaseViewModel {
   void dispose() {
     _isDisposed = true;
     _initialSetupTimer?.cancel();
-    _scheduleSourceProvider
-        .removeDidChangeScheduleSourceCallback(onDidChangeScheduleSource);
+    _scheduleSourceProvider.removeDidChangeScheduleSourceCallback(
+      onDidChangeScheduleSource,
+    );
     super.dispose();
   }
 }
