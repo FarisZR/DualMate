@@ -78,15 +78,7 @@ class _SettingsPageState extends State<SettingsPage> {
       TitleListTile(title: L.of(context).settingsAboutTitle),
       ListTile(
         title: Text(L.of(context).settingsAbout),
-        onTap: () {
-          showAboutDialog(
-            context: context,
-            applicationIcon: Image.asset("assets/app_icon.png", width: 75),
-            applicationLegalese: L.of(context).applicationLegalese,
-            applicationName: L.of(context).applicationName,
-            applicationVersion: ApplicationVersion,
-          );
-        },
+        onTap: () => _showAboutDialog(context),
       ),
       ListTile(
         title: Text(L.of(context).settingsViewSourceCode),
@@ -96,6 +88,86 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       const Divider(),
     ];
+  }
+
+  /// Shows an about dialog that mirrors Flutter's [AboutDialog] but adds a
+  /// privacy policy action button next to the "View licenses" button.
+  void _showAboutDialog(BuildContext context) {
+    final theme = Theme.of(context);
+    final localizations = MaterialLocalizations.of(context);
+    final useUpperCase = !theme.useMaterial3;
+    String label(String text) =>
+        useUpperCase ? text.toUpperCase() : text;
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          scrollable: true,
+          content: ListBody(
+            children: <Widget>[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  IconTheme(
+                    data: theme.iconTheme,
+                    child: Image.asset("assets/app_icon.png", width: 75),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: ListBody(
+                        children: <Widget>[
+                          Text(
+                            L.of(dialogContext).applicationName,
+                            style: theme.textTheme.headlineSmall,
+                          ),
+                          Text(
+                            ApplicationVersion,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 18),
+                          Text(
+                            L.of(dialogContext).applicationLegalese,
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () =>
+                  launchUrl(Uri.parse(ApplicationPrivacyPolicyUrl)),
+              child: Text(label(L.of(dialogContext).settingsPrivacyPolicy)),
+            ),
+            TextButton(
+              onPressed: () {
+                showLicensePage(
+                  context: dialogContext,
+                  applicationName: L.of(dialogContext).applicationName,
+                  applicationVersion: ApplicationVersion,
+                  applicationIcon:
+                      Image.asset("assets/app_icon.png", width: 75),
+                  applicationLegalese: L.of(dialogContext).applicationLegalese,
+                );
+              },
+              child: Text(
+                label(localizations.viewLicensesButtonLabel),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(label(localizations.closeButtonLabel)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   List<Widget> buildScheduleSourceSettings(BuildContext context) {

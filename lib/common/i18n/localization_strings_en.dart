@@ -3,6 +3,7 @@ final en = {
   "scheduleBackToCurrentWeek": "Current week",
   "noConnectionMessage": "No connection!",
   "settingsViewSourceCode": "View the source code on GitHub",
+  "settingsPrivacyPolicy": "Privacy policy",
   "applicationName": "DualMate",
   "applicationLegalese":
       "Developed by FarisZR, based on the work of Benedikt Kolb. This is not an official app of the DHBW.",

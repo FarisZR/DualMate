@@ -27,6 +27,9 @@ String _getBuildDate() {
 
 const String ApplicationSourceCodeUrl = "https://github.com/FarisZR/DualMate";
 
+const String ApplicationPrivacyPolicyUrl =
+    "https://terms.remal.org/dualmate/privacy-policy/";
+
 const int RateInStoreLaunchAfter = 16;
 const int WidgetHelpLaunchAfter = 8;
 const int DonateLaunchAfter = 35;
