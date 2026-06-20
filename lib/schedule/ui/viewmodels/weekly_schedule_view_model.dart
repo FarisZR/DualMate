@@ -257,7 +257,12 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
   }
 
-  void _setSchedule(Schedule? schedule, DateTime start, DateTime end) {
+  void _setSchedule(
+    Schedule? schedule,
+    DateTime start,
+    DateTime end, {
+    String notificationProperty = "weekSchedule",
+  }) {
     if (schedule != null && initializeFailed) {
       initializeFailed = false;
       notifyIfMounted("initializeFailed");
@@ -300,7 +305,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       clippedDateEnd = displayRange.end;
     }
 
-    notifyIfMounted("weekSchedule");
+    notifyIfMounted(notificationProperty);
     if (shouldWarmAdjacent && _lastWarmedWeekStart != start) {
       _lastWarmedWeekStart = start;
       unawaited(_warmAdjacentWeeks(start));
@@ -335,6 +340,17 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _debounceVisibleRefresh(weekStart, weekEnd);
   }
 
+  Future openWeekContainingFromPager(DateTime date) async {
+    final weekStart = toStartOfDay(toDayOfWeek(date, DateTime.monday));
+    final weekEnd = toNextWeek(weekStart);
+    await _openWeekFromCache(
+      weekStart,
+      weekEnd,
+      preferLightweightNotification: true,
+    );
+    _debounceVisibleRefresh(weekStart, weekEnd);
+  }
+
   Future<void> refreshVisibleWeek() {
     return updateSchedule(
       currentDateStart,
@@ -354,15 +370,28 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     await updateSchedule(weekStart, weekEnd, force: true);
   }
 
-  Future<void> _openWeekFromCache(DateTime start, DateTime end) async {
+  Future<void> _openWeekFromCache(
+    DateTime start,
+    DateTime end, {
+    bool preferLightweightNotification = false,
+  }) async {
     try {
       final cacheKey = _windowKey(start, end);
+      final memoryCachedSchedule = getCachedWeek(start, end);
       final cachedSchedule =
-          getCachedWeek(start, end) ??
+          memoryCachedSchedule ??
           await scheduleProvider.getCachedSchedule(start, end);
       if (_isDisposed) return;
       _memoryWeekCache[cacheKey] = cachedSchedule;
-      _setSchedule(cachedSchedule, start, end);
+      _setSchedule(
+        cachedSchedule,
+        start,
+        end,
+        notificationProperty:
+            preferLightweightNotification && memoryCachedSchedule != null
+            ? "visibleWeek"
+            : "weekSchedule",
+      );
     } catch (error, trace) {
       _debugScheduleError("Failed to open cached week", error, trace);
       await reportException(error, trace);

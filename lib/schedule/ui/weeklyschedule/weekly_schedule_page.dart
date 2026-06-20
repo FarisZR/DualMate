@@ -30,10 +30,11 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   static const int _initialPageIndex = 10000;
   static const int _daysPerWeek = 7;
   static const double _defaultWideAxisWidth = 54.0;
-  static const Duration _currentWeekButtonFadeDuration =
-      Duration(milliseconds: 180);
+  static const Duration _currentWeekButtonFadeDuration = Duration(
+    milliseconds: 180,
+  );
   static final Map<String, _WeeklyHeaderDateFormatters>
-      _headerFormattersByLocale = <String, _WeeklyHeaderDateFormatters>{};
+  _headerFormattersByLocale = <String, _WeeklyHeaderDateFormatters>{};
 
   late final PageController _weekPageController;
   late WeeklyScheduleViewModel viewModel;
@@ -92,7 +93,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                   launchUrl(Uri.parse(url));
                 }
               },
-            )
+            ),
           ],
         ),
         duration: const Duration(seconds: 15),
@@ -168,9 +169,8 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     showModalBottomSheet(
       useRootNavigator: true,
       context: context,
-      builder: (context) => ScheduleEntryDetailBottomSheet(
-        scheduleEntry: entry,
-      ),
+      builder: (context) =>
+          ScheduleEntryDetailBottomSheet(scheduleEntry: entry),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
       ),
@@ -188,7 +188,9 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
-              key: const ValueKey<String>('weekly_schedule_refresh_scroll_view'),
+              key: const ValueKey<String>(
+                'weekly_schedule_refresh_scroll_view',
+              ),
               physics: const AlwaysScrollableScrollPhysics(),
               child: SizedBox(
                 height: constraints.maxHeight,
@@ -200,79 +202,112 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
                         PropertyChangeConsumer<WeeklyScheduleViewModel, String>(
-                          properties: const ['weekSchedule', 'now'],
-                          builder: (
-                            BuildContext context,
-                            WeeklyScheduleViewModel? model,
-                            Set<String>? properties,
-                          ) {
-                            if (model == null) {
-                              return const SizedBox.shrink();
-                            }
-                            return _buildNavigationHeader(context, model);
-                          },
+                          properties: const [
+                            'visibleWeek',
+                            'weekSchedule',
+                            'now',
+                          ],
+                          builder:
+                              (
+                                BuildContext context,
+                                WeeklyScheduleViewModel? model,
+                                Set<String>? properties,
+                              ) {
+                                if (model == null) {
+                                  return const SizedBox.shrink();
+                                }
+                                return _buildNavigationHeader(context, model);
+                              },
                         ),
                         Expanded(
                           child: Stack(
                             children: <Widget>[
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                                child: PropertyChangeConsumer<
-                                    WeeklyScheduleViewModel, String>(
-                                  properties: const ['weekSchedule', 'now'],
-                                  builder: (
-                                    BuildContext context,
-                                    WeeklyScheduleViewModel? model,
-                                    Set<String>? properties,
-                                  ) {
-                                    if (model == null) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    return _buildAnimatedScheduleViewport(
-                                      context,
-                                      model,
-                                    );
-                                  },
-                                ),
+                                child:
+                                    PropertyChangeConsumer<
+                                      WeeklyScheduleViewModel,
+                                      String
+                                    >(
+                                      properties: const [
+                                        'visibleWeek',
+                                        'weekSchedule',
+                                        'now',
+                                      ],
+                                      builder:
+                                          (
+                                            BuildContext context,
+                                            WeeklyScheduleViewModel? model,
+                                            Set<String>? properties,
+                                          ) {
+                                            if (model == null) {
+                                              return const SizedBox.shrink();
+                                            }
+                                            return _buildAnimatedScheduleViewport(
+                                              context,
+                                              model,
+                                              animateViewport:
+                                                  properties?.contains(
+                                                    'visibleWeek',
+                                                  ) !=
+                                                  true,
+                                            );
+                                          },
+                                    ),
                               ),
-                              PropertyChangeConsumer<WeeklyScheduleViewModel,
-                                  String>(
-                                properties: const ['isUpdating', 'weekSchedule'],
-                                builder: (
-                                  BuildContext context,
-                                  WeeklyScheduleViewModel? model,
-                                  Set<String>? properties,
-                                ) {
-                                  if (model == null) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  return _TopLoadingIndicator(
-                                    isUpdating: model.isUpdating,
-                                    showWithoutDelay:
-                                        model.visibleWeekNeedsInitialFetch,
-                                  );
-                                },
+                              PropertyChangeConsumer<
+                                WeeklyScheduleViewModel,
+                                String
+                              >(
+                                properties: const [
+                                  'visibleWeek',
+                                  'isUpdating',
+                                  'weekSchedule',
+                                ],
+                                builder:
+                                    (
+                                      BuildContext context,
+                                      WeeklyScheduleViewModel? model,
+                                      Set<String>? properties,
+                                    ) {
+                                      if (model == null) {
+                                        return const SizedBox.shrink();
+                                      }
+                                      return _TopLoadingIndicator(
+                                        isUpdating: model.isUpdating,
+                                        showWithoutDelay:
+                                            model.visibleWeekNeedsInitialFetch,
+                                      );
+                                    },
                               ),
                               Positioned(
                                 right: 20,
                                 bottom: 16,
-                                child: PropertyChangeConsumer<
-                                    WeeklyScheduleViewModel, String>(
-                                  properties: const ['weekSchedule', 'now'],
-                                  builder: (
-                                    BuildContext context,
-                                    WeeklyScheduleViewModel? model,
-                                    Set<String>? properties,
-                                  ) {
-                                    if (model == null) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    return _buildCurrentWeekButton(
-                                      context,
-                                      model,
-                                    );
-                                  },
-                                ),
+                                child:
+                                    PropertyChangeConsumer<
+                                      WeeklyScheduleViewModel,
+                                      String
+                                    >(
+                                      properties: const [
+                                        'visibleWeek',
+                                        'weekSchedule',
+                                        'now',
+                                      ],
+                                      builder:
+                                          (
+                                            BuildContext context,
+                                            WeeklyScheduleViewModel? model,
+                                            Set<String>? properties,
+                                          ) {
+                                            if (model == null) {
+                                              return const SizedBox.shrink();
+                                            }
+                                            return _buildCurrentWeekButton(
+                                              context,
+                                              model,
+                                            );
+                                          },
+                                    ),
                               ),
                             ],
                           ),
@@ -293,7 +328,9 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   Widget _buildAnimatedScheduleViewport(
     BuildContext context,
     WeeklyScheduleViewModel model,
-  ) {
+    {
+    required bool animateViewport,
+  }) {
     final modelViewport = _resolveTargetViewport(model);
     _lockedViewport ??= modelViewport;
     if (!_isPagerScrolling) {
@@ -309,12 +346,8 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
           displayedDays,
         );
 
-        return TweenAnimationBuilder<_HourViewport>(
-          tween: _HourViewportTween(end: targetViewport),
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          builder: (context, viewport, child) {
-            return Row(
+        Widget buildViewport(_HourViewport viewport) {
+          return Row(
               children: [
                 SizedBox(
                   key: const ValueKey<String>('weekly_fixed_hour_axis'),
@@ -326,16 +359,20 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                     compactPhone: axisMetrics.compactPhone,
                   ),
                 ),
-                Expanded(
-                  child: _buildWeeklyPager(
-                    context,
-                    model,
-                    viewport,
-                  ),
-                ),
+                Expanded(child: _buildWeeklyPager(context, model, viewport)),
               ],
             );
-          },
+        }
+
+        if (!animateViewport) {
+          return buildViewport(targetViewport);
+        }
+
+        return TweenAnimationBuilder<_HourViewport>(
+          tween: _HourViewportTween(end: targetViewport),
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          builder: (context, viewport, child) => buildViewport(viewport),
         );
       },
     );
@@ -360,9 +397,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
       child: PageView.builder(
         key: const ValueKey<String>('weekly_schedule_page_view'),
         controller: _weekPageController,
-        physics: const PageScrollPhysics(
-          parent: ClampingScrollPhysics(),
-        ),
+        physics: const PageScrollPhysics(parent: ClampingScrollPhysics()),
         allowImplicitScrolling: false,
         dragStartBehavior: DragStartBehavior.start,
         onPageChanged: (pageIndex) {
@@ -401,7 +436,9 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
 
     final targetWeekStart = _weekStartForPage(page);
     if (isAtSameDay(
-        targetWeekStart, _normalizeWeekStart(viewModel.currentDateStart))) {
+      targetWeekStart,
+      _normalizeWeekStart(viewModel.currentDateStart),
+    )) {
       return;
     }
 
@@ -412,22 +449,17 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     if (_isPagerScrolling == value) {
       return;
     }
-    if (!mounted) {
-      _isPagerScrolling = value;
-      return;
-    }
-    setState(() {
-      _isPagerScrolling = value;
-    });
+    _isPagerScrolling = value;
   }
 
   Future<void> _openVisibleWeek(DateTime weekStart) async {
     final requestId = ++_weekOpenRequestId;
-    await viewModel.openWeekContaining(weekStart);
+    await viewModel.openWeekContainingFromPager(weekStart);
     if (!mounted || requestId != _weekOpenRequestId) return;
 
-    unawaited(_prefetchAdjacentWeeks(
-        _normalizeWeekStart(viewModel.currentDateStart)));
+    unawaited(
+      _prefetchAdjacentWeeks(_normalizeWeekStart(viewModel.currentDateStart)),
+    );
   }
 
   Future<void> _prefetchAdjacentWeeks(DateTime centerWeekStart) async {
@@ -495,22 +527,21 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   }
 
   _HourViewport _resolveTargetViewport(WeeklyScheduleViewModel model) {
-    final startHour =
-        (model.displayStartHour > 0 ? model.displayStartHour : 7).toDouble();
-    final endHourRaw =
-        (model.displayEndHour > 0 ? model.displayEndHour : 17).toDouble();
+    final startHour = (model.displayStartHour > 0 ? model.displayStartHour : 7)
+        .toDouble();
+    final endHourRaw = (model.displayEndHour > 0 ? model.displayEndHour : 17)
+        .toDouble();
     final endHour = endHourRaw <= startHour + 1 ? startHour + 1 : endHourRaw;
-    return _HourViewport(
-      startHour: startHour,
-      endHour: endHour,
-    );
+    return _HourViewport(startHour: startHour, endHour: endHour);
   }
 
   int _resolveDisplayedDays(WeeklyScheduleViewModel model) {
-    final displayStart =
-        toStartOfDay(model.clippedDateStart ?? model.currentDateStart);
-    final displayEnd =
-        toStartOfDay(model.clippedDateEnd ?? model.currentDateEnd);
+    final displayStart = toStartOfDay(
+      model.clippedDateStart ?? model.currentDateStart,
+    );
+    final displayEnd = toStartOfDay(
+      model.clippedDateEnd ?? model.currentDateEnd,
+    );
     var days = displayEnd.difference(displayStart).inDays + 1;
     if (days > 7) {
       days = 7;
@@ -521,8 +552,10 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   }
 
   _AxisLayoutMetrics _resolveAxisLayoutMetrics(double totalWidth, int days) {
-    final pagerWidth =
-        (totalWidth - _defaultWideAxisWidth).clamp(0.0, double.infinity);
+    final pagerWidth = (totalWidth - _defaultWideAxisWidth).clamp(
+      0.0,
+      double.infinity,
+    );
     final compactPhone = ScheduleWidget.isCompactLayout(
       width: pagerWidth,
       days: days,
@@ -547,8 +580,9 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   int _pageIndexForWeek(DateTime weekStart) {
     final normalizedWeekStartUtc = _normalizeWeekStart(weekStart).toUtc();
     final anchorWeekStartUtc = _anchorWeekStart.toUtc();
-    final dayDelta =
-        normalizedWeekStartUtc.difference(anchorWeekStartUtc).inDays;
+    final dayDelta = normalizedWeekStartUtc
+        .difference(anchorWeekStartUtc)
+        .inDays;
     return _initialPageIndex + (dayDelta ~/ _daysPerWeek);
   }
 
@@ -645,19 +679,17 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
                   Text(
                     formatters.month.format(weekStart),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     weekRange,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.color
-                              ?.withValues(alpha: 0.75),
-                        ),
+                      color: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.color?.withValues(alpha: 0.75),
+                    ),
                   ),
                 ],
               ),
@@ -701,10 +733,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
 
         return FadeTransition(
           opacity: animation,
-          child: SlideTransition(
-            position: slideAnimation,
-            child: child,
-          ),
+          child: SlideTransition(position: slideAnimation, child: child),
         );
       },
       child: !_shouldShowCurrentWeekButton(model)
@@ -725,15 +754,16 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   Widget buildErrorDisplay(BuildContext context) {
     return PropertyChangeConsumer<WeeklyScheduleViewModel, String>(
       properties: const ['updateFailed', 'initializeFailed'],
-      builder: (
-        BuildContext context,
-        WeeklyScheduleViewModel? model,
-        Set<String>? properties,
-      ) =>
-          ErrorDisplay(
-        show: (model?.updateFailed ?? false) ||
-            (model?.initializeFailed ?? false),
-      ),
+      builder:
+          (
+            BuildContext context,
+            WeeklyScheduleViewModel? model,
+            Set<String>? properties,
+          ) => ErrorDisplay(
+            show:
+                (model?.updateFailed ?? false) ||
+                (model?.initializeFailed ?? false),
+          ),
     );
   }
 }
@@ -754,10 +784,7 @@ class _HourViewport {
   final double startHour;
   final double endHour;
 
-  const _HourViewport({
-    required this.startHour,
-    required this.endHour,
-  });
+  const _HourViewport({required this.startHour, required this.endHour});
 }
 
 class _TopLoadingIndicator extends StatefulWidget {
@@ -885,7 +912,7 @@ class _TopLoadingIndicatorState extends State<_TopLoadingIndicator> {
 
 class _HourViewportTween extends Tween<_HourViewport> {
   _HourViewportTween({_HourViewport? begin, required _HourViewport end})
-      : super(begin: begin, end: end);
+    : super(begin: begin, end: end);
 
   @override
   _HourViewport lerp(double t) {
@@ -893,9 +920,11 @@ class _HourViewportTween extends Tween<_HourViewport> {
     final endValue = end!;
 
     return _HourViewport(
-      startHour: lerpDouble(beginValue.startHour, endValue.startHour, t) ??
+      startHour:
+          lerpDouble(beginValue.startHour, endValue.startHour, t) ??
           endValue.startHour,
-      endHour: lerpDouble(beginValue.endHour, endValue.endHour, t) ??
+      endHour:
+          lerpDouble(beginValue.endHour, endValue.endHour, t) ??
           endValue.endHour,
     );
   }
@@ -918,8 +947,8 @@ class _WeeklyHeaderDateFormatters {
   final DateFormat day;
 
   _WeeklyHeaderDateFormatters(String locale)
-      : month = DateFormat.yMMMM(locale),
-        day = DateFormat('d MMM', locale);
+    : month = DateFormat.yMMMM(locale),
+      day = DateFormat('d MMM', locale);
 }
 
 class _FixedHourAxis extends StatelessWidget {
@@ -940,16 +969,16 @@ class _FixedHourAxis extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final visibleHours = (endHour - startHour).clamp(1.0, 24.0);
-        final usableHeight = (constraints.maxHeight - dayLabelsHeight)
-            .clamp(1.0, double.infinity);
+        final usableHeight = (constraints.maxHeight - dayLabelsHeight).clamp(
+          1.0,
+          double.infinity,
+        );
         final hourHeight = usableHeight / visibleHours;
         final firstHour = startHour.floor();
         final lastHour = endHour.ceil();
-        final textColor = Theme.of(context)
-            .textTheme
-            .bodyMedium
-            ?.color
-            ?.withValues(alpha: 0.92);
+        final textColor = Theme.of(
+          context,
+        ).textTheme.bodyMedium?.color?.withValues(alpha: 0.92);
 
         return Stack(
           fit: StackFit.expand,
@@ -965,9 +994,9 @@ class _FixedHourAxis extends StatelessWidget {
                       : const EdgeInsets.fromLTRB(4, 4, 4, 8),
                   child: Text(
                     '$hour:00',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: textColor,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: textColor),
                   ),
                 ),
               ),
