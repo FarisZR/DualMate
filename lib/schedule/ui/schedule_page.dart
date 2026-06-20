@@ -45,6 +45,7 @@ class _SchedulePageState extends State<SchedulePage> {
   Timer? _weeklyInitTimer;
   Timer? _filterWarmTimer;
   ValueNotifier<int>? _currentEntryIndex;
+  ScheduleViewModel? _scheduleViewModel;
   bool _scheduleSourceInitialized = false;
   bool _weeklyInitializationStarted = false;
   bool _filterWarmupStarted = false;
@@ -138,6 +139,7 @@ class _SchedulePageState extends State<SchedulePage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _scheduleViewModel = Provider.of<ScheduleViewModel>(context, listen: false);
     ValueNotifier<int>? nextEntryIndex;
     try {
       nextEntryIndex = Provider.of<ValueNotifier<int>>(context, listen: false);
@@ -157,10 +159,8 @@ class _SchedulePageState extends State<SchedulePage> {
 
   Future<void> _warmFilterPageState() async {
     try {
-      final scheduleViewModel = Provider.of<ScheduleViewModel>(
-        context,
-        listen: false,
-      );
+      final scheduleViewModel = _scheduleViewModel;
+      if (scheduleViewModel == null) return;
       final deadline = DateTime.now().add(const Duration(seconds: 3));
       while (mounted &&
           scheduleViewModel.isInitializingScheduleSource &&
