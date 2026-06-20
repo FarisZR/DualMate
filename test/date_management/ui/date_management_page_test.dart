@@ -72,6 +72,58 @@ void main() {
     viewModel.dispose();
   });
 
+  testWidgets('pull to refresh triggers updateDates in rapla mode',
+      (WidgetTester tester) async {
+    final viewModel = _buildRefreshTrackingViewModel(
+      useDhMineForDates: false,
+      raplaUrl: 'https://rapla.dhbw-stuttgart.de/rapla?key=abc',
+      importantEvents: _sampleEvents(),
+    );
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump(const Duration(milliseconds: 420));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RefreshIndicator), findsOneWidget);
+
+    final before = viewModel.updateDatesCalls;
+    await tester.drag(find.byType(RefreshIndicator), const Offset(0, 250));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(viewModel.updateDatesCalls, greaterThan(before));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
+
+  testWidgets('pull to refresh triggers updateDates in DHmine mode',
+      (WidgetTester tester) async {
+    final viewModel = _buildRefreshTrackingViewModel(
+      useDhMineForDates: true,
+      raplaUrl: '',
+      importantEvents: const [],
+    );
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump(const Duration(milliseconds: 420));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RefreshIndicator), findsOneWidget);
+
+    final before = viewModel.updateDatesCalls;
+    await tester.drag(find.byType(RefreshIndicator), const Offset(0, 250));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(viewModel.updateDatesCalls, greaterThan(before));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
+
   testWidgets('defers dates initialization to keep first drawer open smooth',
       (WidgetTester tester) async {
     final viewModel = _buildTrackingViewModel(
@@ -174,6 +226,35 @@ _TrackingDateManagementViewModel _buildTrackingViewModel({
   );
 }
 
+_RefreshTrackingDateManagementViewModel _buildRefreshTrackingViewModel({
+  required bool useDhMineForDates,
+  required String raplaUrl,
+  List<ImportantEvent> importantEvents = const [],
+}) {
+  final preferencesAccess = _FakePreferencesAccess({
+    PreferencesProvider.UseDhMineForDates: useDhMineForDates,
+    PreferencesProvider.RaplaUrlKey: raplaUrl,
+    PreferencesProvider.LastViewedDateEntryDatabase: '',
+    PreferencesProvider.LastViewedDateEntryYear: DateTime.now().year.toString(),
+  });
+  final preferencesProvider = PreferencesProvider(
+    preferencesAccess,
+    _FakeSecureStorageAccess(),
+  );
+
+  final dateEntryProvider = _FakeDateEntryProvider();
+  final raplaProvider = _FakeRaplaImportantEventsProvider(
+    preferencesProvider,
+    importantEvents,
+  );
+
+  return _RefreshTrackingDateManagementViewModel(
+    dateEntryProvider,
+    preferencesProvider,
+    raplaProvider,
+  );
+}
+
 class _TrackingDateManagementViewModel extends DateManagementViewModel {
   int initializeCalls = 0;
 
@@ -190,6 +271,27 @@ class _TrackingDateManagementViewModel extends DateManagementViewModel {
   @override
   void initialize() {
     initializeCalls += 1;
+  }
+}
+
+class _RefreshTrackingDateManagementViewModel
+    extends DateManagementViewModel {
+  int updateDatesCalls = 0;
+
+  _RefreshTrackingDateManagementViewModel(
+    DateEntryProvider dateEntryProvider,
+    PreferencesProvider preferencesProvider,
+    RaplaImportantEventsProvider raplaImportantEventsProvider,
+  ) : super(
+          dateEntryProvider,
+          preferencesProvider,
+          raplaImportantEventsProvider,
+        );
+
+  @override
+  Future<void> updateDates() async {
+    updateDatesCalls += 1;
+    return super.updateDates();
   }
 }
 
