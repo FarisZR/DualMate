@@ -29,6 +29,8 @@ class L {
 
   String get settingsViewSourceCode => _getValue("settingsViewSourceCode");
 
+  String get settingsPrivacyPolicy => _getValue("settingsPrivacyPolicy");
+
   String get applicationName => _getValue("applicationName");
 
   String get applicationLegalese => _getValue("applicationLegalese");

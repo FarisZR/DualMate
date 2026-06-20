@@ -8,10 +8,23 @@ import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/logging/sentry_configuration.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:kiwi/kiwi.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 import 'common/util/platform_util.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+
+/// Registers the upstream DHBWStudentInformationApp license (AGPL v3) so that it
+/// is listed alongside the Flutter package licenses in the "View licenses" page.
+void _registerAdditionalLicenses() {
+  LicenseRegistry.addLicense(() async* {
+    final license = await rootBundle.loadString(
+      'assets/licenses/DHBWStudentInformationApp_LICENSE.txt',
+    );
+    yield LicenseEntryWithLineBreaks(['DHBWStudentInformationApp'], license);
+  });
+}
 
 final Stopwatch _startupStopwatch = Stopwatch()..start();
 
@@ -21,6 +34,7 @@ final Stopwatch _startupStopwatch = Stopwatch()..start();
 Future<void> main() async {
   // Setup the flutter bindings and the error reporting as early as possible
   WidgetsFlutterBinding.ensureInitialized();
+  _registerAdditionalLicenses();
   PerformanceTelemetry.instance.ensureFrameTimingListenerAttached();
   PerformanceTelemetry.instance.logInstant(
     'startup.binding.ready',

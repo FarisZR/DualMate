@@ -3,6 +3,7 @@ final de = {
   "scheduleBackToCurrentWeek": "Aktuelle Woche",
   "noConnectionMessage": "Keine Verbindung!",
   "settingsViewSourceCode": "Source code auf GitHub ansehen",
+  "settingsPrivacyPolicy": "Datenschutzerklärung",
   "calendarSyncPageTitle": "Kalender synchronisieren",
   "calendarSyncPageSubtitle":
       "Wähle den Kalender aus, in den der Vorlesungsplan übertragen werden soll:",

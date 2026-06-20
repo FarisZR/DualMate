@@ -77,6 +77,7 @@ flutter:
     - assets/onboarding_bottom_foreground_dark.png
     - assets/schedule_empty_state.png
     - assets/schedule_empty_state_dark.png
+    - assets/licenses/
 
   fonts:
     - family:  CustomIcons
