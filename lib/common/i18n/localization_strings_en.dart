@@ -5,7 +5,7 @@ final en = {
   "settingsViewSourceCode": "View the source code on GitHub",
   "applicationName": "DualMate",
   "applicationLegalese":
-      "Developed by FarisZR, based on the work of Benedikt Kolb. This is not an official app of the DHBW Stuttgart.",
+      "Developed by FarisZR, based on the work of Benedikt Kolb. This is not an official app of the DHBW.",
   "settingsAbout": "About this app",
   "settingsAboutTitle": "About",
   "settingsDarkMode": "Dark mode",
@@ -24,7 +24,7 @@ final en = {
   "notificationNextClassTomorrow": "Tomorrow starts with %0 at %1!",
   "notificationNextClassTitle": "Next class",
   "disclaimer":
-      "This is not an official DHBW Stuttgart app. There is no warranty for the correctness and completeness of the displayed data!",
+      "This is not an official DHBW app. There is no warranty for the correctness and completeness of the displayed data!",
   "notificationScheduleChangedNewClass": "New class: %0 on %1 at %2",
   "notificationScheduleChangedNewClassTitle": "New class",
   "notificationScheduleChangedRemovedClass":
