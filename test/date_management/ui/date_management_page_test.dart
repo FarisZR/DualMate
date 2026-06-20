@@ -74,7 +74,7 @@ void main() {
 
   testWidgets('pull to refresh triggers updateDates in rapla mode',
       (WidgetTester tester) async {
-    final viewModel = _buildRefreshTrackingViewModel(
+    final viewModel = _buildViewModel(
       useDhMineForDates: false,
       raplaUrl: 'https://rapla.dhbw-stuttgart.de/rapla?key=abc',
       importantEvents: _sampleEvents(),
@@ -100,7 +100,7 @@ void main() {
 
   testWidgets('pull to refresh triggers updateDates in DHmine mode',
       (WidgetTester tester) async {
-    final viewModel = _buildRefreshTrackingViewModel(
+    final viewModel = _buildViewModel(
       useDhMineForDates: true,
       raplaUrl: '',
       importantEvents: const [],
@@ -126,7 +126,7 @@ void main() {
 
   testWidgets('defers dates initialization to keep first drawer open smooth',
       (WidgetTester tester) async {
-    final viewModel = _buildTrackingViewModel(
+    final viewModel = _buildViewModel(
       useDhMineForDates: false,
       raplaUrl: 'https://rapla.dhbw-stuttgart.de/rapla?key=abc',
       importantEvents: _sampleEvents(),
@@ -168,36 +168,7 @@ Widget _wrapWithApp(DateManagementViewModel viewModel) {
   );
 }
 
-DateManagementViewModel _buildViewModel({
-  required bool useDhMineForDates,
-  required String raplaUrl,
-  List<ImportantEvent> importantEvents = const [],
-}) {
-  final preferencesAccess = _FakePreferencesAccess({
-    PreferencesProvider.UseDhMineForDates: useDhMineForDates,
-    PreferencesProvider.RaplaUrlKey: raplaUrl,
-    PreferencesProvider.LastViewedDateEntryDatabase: '',
-    PreferencesProvider.LastViewedDateEntryYear: DateTime.now().year.toString(),
-  });
-  final preferencesProvider = PreferencesProvider(
-    preferencesAccess,
-    _FakeSecureStorageAccess(),
-  );
-
-  final dateEntryProvider = _FakeDateEntryProvider();
-  final raplaProvider = _FakeRaplaImportantEventsProvider(
-    preferencesProvider,
-    importantEvents,
-  );
-
-  return DateManagementViewModel(
-    dateEntryProvider,
-    preferencesProvider,
-    raplaProvider,
-  );
-}
-
-_TrackingDateManagementViewModel _buildTrackingViewModel({
+_TrackingDateManagementViewModel _buildViewModel({
   required bool useDhMineForDates,
   required String raplaUrl,
   List<ImportantEvent> importantEvents = const [],
@@ -226,37 +197,9 @@ _TrackingDateManagementViewModel _buildTrackingViewModel({
   );
 }
 
-_RefreshTrackingDateManagementViewModel _buildRefreshTrackingViewModel({
-  required bool useDhMineForDates,
-  required String raplaUrl,
-  List<ImportantEvent> importantEvents = const [],
-}) {
-  final preferencesAccess = _FakePreferencesAccess({
-    PreferencesProvider.UseDhMineForDates: useDhMineForDates,
-    PreferencesProvider.RaplaUrlKey: raplaUrl,
-    PreferencesProvider.LastViewedDateEntryDatabase: '',
-    PreferencesProvider.LastViewedDateEntryYear: DateTime.now().year.toString(),
-  });
-  final preferencesProvider = PreferencesProvider(
-    preferencesAccess,
-    _FakeSecureStorageAccess(),
-  );
-
-  final dateEntryProvider = _FakeDateEntryProvider();
-  final raplaProvider = _FakeRaplaImportantEventsProvider(
-    preferencesProvider,
-    importantEvents,
-  );
-
-  return _RefreshTrackingDateManagementViewModel(
-    dateEntryProvider,
-    preferencesProvider,
-    raplaProvider,
-  );
-}
-
 class _TrackingDateManagementViewModel extends DateManagementViewModel {
   int initializeCalls = 0;
+  int updateDatesCalls = 0;
 
   _TrackingDateManagementViewModel(
     DateEntryProvider dateEntryProvider,
@@ -271,22 +214,8 @@ class _TrackingDateManagementViewModel extends DateManagementViewModel {
   @override
   void initialize() {
     initializeCalls += 1;
+    super.initialize();
   }
-}
-
-class _RefreshTrackingDateManagementViewModel
-    extends DateManagementViewModel {
-  int updateDatesCalls = 0;
-
-  _RefreshTrackingDateManagementViewModel(
-    DateEntryProvider dateEntryProvider,
-    PreferencesProvider preferencesProvider,
-    RaplaImportantEventsProvider raplaImportantEventsProvider,
-  ) : super(
-          dateEntryProvider,
-          preferencesProvider,
-          raplaImportantEventsProvider,
-        );
 
   @override
   Future<void> updateDates() async {

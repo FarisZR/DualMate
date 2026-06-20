@@ -231,9 +231,9 @@ class _DateManagementPageState extends State<DateManagementPage> {
 
   Widget _buildContent(DateManagementViewModel model, BuildContext context) {
     if (model.useDhMineForDates) {
-      return _wrapWithRefresh(
-        model,
-        SingleChildScrollView(
+      return RefreshIndicator(
+        onRefresh: () => model.updateDates(),
+        child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: _buildAllDatesDataTable(model, context),
         ),
@@ -267,11 +267,10 @@ class _DateManagementPageState extends State<DateManagementPage> {
       );
     }
 
-    return _wrapWithRefresh(model, _buildImportantEventsList(model, context));
-  }
-
-  Widget _wrapWithRefresh(DateManagementViewModel model, Widget child) {
-    return RefreshIndicator(onRefresh: () => model.updateDates(), child: child);
+    return RefreshIndicator(
+      onRefresh: () => model.updateDates(),
+      child: _buildImportantEventsList(model, context),
+    );
   }
 
   Widget _buildImportantEventsList(
