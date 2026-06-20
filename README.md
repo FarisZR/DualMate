@@ -29,7 +29,7 @@ Bisher verfügbare Funktionen:
 - Offline modus: Du kannst auf deinen Vorlesungsplan zugreifen, auch wenn du keine Internetverbindung hast
 - Benachrichtigung am Vorabend zum nächsten Tag
 - Benachrichtigung, wenn sich etwas im Plan geändert hat
-- Integration der [Termindatenbank](https://it.dhbw-stuttgart.de/DHermine/) der DHBW Stuttgart
+- Integration der [Termindatenbank](https://it.dhbw-stuttgart.de/DHermine/) der DHBW
 - Rapla-Termine (Klausuren, Klausurwochen, Feiertage) auf der Terminseite
 - Mensa-Speiseplan für die DHBW Karlsruhe inklusive Home-Screen-Widget
 - Mehrtägige Home-Screen-Widgets für Vorlesungsplan und Mensa (adaptive Höhe)
@@ -37,7 +37,7 @@ Bisher verfügbare Funktionen:
 - Landscape support on phones and tablets
 
 
-Diese App ist optimiert für die DHBW Stuttgart und manche Funktionen werden  an anderen Standorten möglicherweise nicht unterstützt. Dies ist kein offizielles Angebot der DHBW Stuttgart und wurde von Studenten in Eigeninitiative entwickelt!
+Diese App ist für alle DHBW-Standorte verfügbar. Dies ist kein offizielles Angebot der DHBW und wurde von Studenten in Eigeninitiative entwickelt!
 
 
 

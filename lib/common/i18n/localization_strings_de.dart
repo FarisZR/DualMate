@@ -10,7 +10,7 @@ final de = {
   "calendarSyncPageBeginSync": "Kalender synchronisieren",
   "applicationName": "DualMate",
   "applicationLegalese":
-      "Entwickelt von FarisZR, basierend auf der Arbeit von Benedikt Kolb. Dies ist keine offizielle App der DHBW Stuttgart und wird in Eigeninitiative entwickelt.",
+      "Entwickelt von FarisZR, basierend auf der Arbeit von Benedikt Kolb. Dies ist keine offizielle App der DHBW und wird in Eigeninitiative entwickelt.",
   "settingsAbout": "Über DualMate",
   "settingsAboutTitle": "Über",
   "settingsDarkMode": "Dark mode",
@@ -31,7 +31,7 @@ final de = {
   "notificationNextClassTomorrow": "Morgen geht's los mit %0 um %1!",
   "notificationNextClassTitle": "Nächste Vorlesung",
   "disclaimer":
-      "Dies ist keine offizielle App der DHBW Stuttgart. Es besteht keine Garantie für Korrektheit und Vollständigkeit der angezeigten Daten!",
+      "Dies ist keine offizielle App der DHBW. Es besteht keine Garantie für Korrektheit und Vollständigkeit der angezeigten Daten!",
   "notificationScheduleChangedNewClass": "Weitere Vorlesung: %0 am %1 um %2",
   "notificationScheduleChangedNewClassTitle": "Weitere Vorlesung",
   "notificationScheduleChangedRemovedClass": "%0 am %1 um %2 entfällt",
