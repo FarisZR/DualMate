@@ -181,6 +181,28 @@ void main() {
   );
 
   test(
+    'AppDiagnosticsSpan.attachError can omit error message for performance spans',
+    () async {
+      final recorder = _RecordingDiagnosticsRecorder();
+      final diagnostics = AppDiagnostics(recorder: recorder);
+
+      final span = diagnostics.startSpan('schedule.remote.fetch');
+      final error = StateError(
+        'failed for jane@example.com in room A.1.23 with token=secret',
+      );
+
+      span.attachError(error, includeErrorMessage: false);
+      await span.finish(status: const SpanStatus.internalError());
+
+      final sentrySpan = recorder.currentSpan as _RecordingSentrySpan;
+      expect(sentrySpan.data['errorType'], 'StateError');
+      expect(sentrySpan.data.containsKey('errorMessage'), isFalse);
+      expect(sentrySpan.finished, isTrue);
+      expect(sentrySpan.status, const SpanStatus.internalError());
+    },
+  );
+
+  test(
     'AppDiagnosticsSpan swallows errors from underlying span methods',
     () async {
       final recorder = _RecordingDiagnosticsRecorder();

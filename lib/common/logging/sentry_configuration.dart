@@ -13,6 +13,10 @@ bool isSentryConfigured({String? dsn}) {
   return (dsn ?? _sentryDsn).trim().isNotEmpty;
 }
 
+double sentryTraceSampleRate({bool releaseMode = kReleaseMode}) {
+  return releaseMode ? 0.1 : 1.0;
+}
+
 Future<void> configureSentryOptions(SentryFlutterOptions options) async {
   options.dsn = sentryDsn;
   options.debug = !kReleaseMode;
@@ -34,7 +38,7 @@ Future<void> configureSentryOptions(SentryFlutterOptions options) async {
   options.enableUserInteractionBreadcrumbs = false;
   options.enableUserInteractionTracing = false;
   options.attachScreenshot = false;
-  options.tracesSampleRate = kReleaseMode ? 0.1 : 1.0;
+  options.tracesSampleRate = sentryTraceSampleRate();
   options.replay.sessionSampleRate = 0.0;
   options.replay.onErrorSampleRate = 0.0;
   options.beforeSend = scrubSentryEvent;

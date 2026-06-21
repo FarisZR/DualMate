@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/util/cancelable_mutex.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
@@ -10,6 +11,7 @@ import 'package:dualmate/dualis/model/semester.dart';
 import 'package:dualmate/dualis/model/study_grades.dart';
 import 'package:dualmate/dualis/service/dualis_service.dart';
 import 'package:dualmate/schedule/model/schedule_source_type.dart';
+import 'package:flutter/foundation.dart';
 
 enum LoginState {
   Initializing,
@@ -88,25 +90,31 @@ class StudyGradesViewModel extends BaseViewModel {
       return;
     }
 
-    _pageActivationInFlight = true;
-    try {
-      if (_loginState == LoginState.LoggedIn) {
-        if (await _isRefreshStale()) {
-          await refreshData(force: true);
+    await PerformanceTelemetry.instance.measureTask(
+      'dualis.open',
+      args: {'sourceType': 'unknown'},
+      action: (_) async {
+        _pageActivationInFlight = true;
+        try {
+          if (_loginState == LoginState.LoggedIn) {
+            if (await _isRefreshStale()) {
+              await refreshData(force: true);
+            }
+            return;
+          }
+
+          if (_loginState == LoginState.LoggingIn ||
+              _loginState == LoginState.LoggingOut ||
+              _loginState == LoginState.RestoringSession) {
+            return;
+          }
+
+          await restoreSessionIfPossible();
+        } finally {
+          _pageActivationInFlight = false;
         }
-        return;
-      }
-
-      if (_loginState == LoginState.LoggingIn ||
-          _loginState == LoginState.LoggingOut ||
-          _loginState == LoginState.RestoringSession) {
-        return;
-      }
-
-      await restoreSessionIfPossible();
-    } finally {
-      _pageActivationInFlight = false;
-    }
+      },
+    );
   }
 
   Future<bool> restoreSessionIfPossible() async {
@@ -168,8 +176,20 @@ class StudyGradesViewModel extends BaseViewModel {
     }
 
     try {
-      _studyGrades = await _dualisService
-          .queryStudyGrades(_studyGradesCancellationToken.token);
+      final loadedStudyGrades = await PerformanceTelemetry.instance.measureTask(
+        'dualis.results.parse',
+        args: {'sourceType': 'unknown'},
+        action: (task) async {
+          final grades = await _dualisService.queryStudyGrades(
+            _studyGradesCancellationToken.token,
+          );
+          task.setData('loadedEntryCount', 1);
+          return grades;
+        },
+      );
+      _applyDualisState(() {
+        _studyGrades = loadedStudyGrades;
+      });
     } on OperationCancelledException catch (_) {
     } finally {
       _studyGradesCancellationToken.release();
@@ -195,9 +215,20 @@ class StudyGradesViewModel extends BaseViewModel {
     }
 
     try {
-      _allModules = await _dualisService.queryAllModules(
-        _allModulesCancellationToken.token,
+      final loadedModules = await PerformanceTelemetry.instance.measureTask(
+        'dualis.results.parse',
+        args: {'sourceType': 'unknown'},
+        action: (task) async {
+          final modules = await _dualisService.queryAllModules(
+            _allModulesCancellationToken.token,
+          );
+          task.setData('loadedEntryCount', modules.length);
+          return modules;
+        },
       );
+      _applyDualisState(() {
+        _allModules = loadedModules;
+      });
     } on OperationCancelledException catch (_) {
     } finally {
       _allModulesCancellationToken.release();
@@ -243,10 +274,21 @@ class StudyGradesViewModel extends BaseViewModel {
     }
 
     try {
-      _currentSemester = await _dualisService.querySemester(
-        semesterName,
-        _currentSemesterCancellationToken.token,
+      final loadedSemester = await PerformanceTelemetry.instance.measureTask(
+        'dualis.results.parse',
+        args: {'sourceType': 'unknown'},
+        action: (task) async {
+          final semester = await _dualisService.querySemester(
+            semesterName,
+            _currentSemesterCancellationToken.token,
+          );
+          task.setData('loadedEntryCount', semester.modules.length);
+          return semester;
+        },
       );
+      _applyDualisState(() {
+        _currentSemester = loadedSemester;
+      });
     } on OperationCancelledException catch (_) {
     } finally {
       _currentSemesterCancellationToken.release();
@@ -280,9 +322,21 @@ class StudyGradesViewModel extends BaseViewModel {
     }
 
     try {
-      _semesterNames = await _dualisService.querySemesterNames(
-        _semesterNamesCancellationToken.token,
-      );
+      final loadedSemesterNames = await PerformanceTelemetry.instance
+          .measureTask(
+            'dualis.results.parse',
+            args: {'sourceType': 'unknown'},
+            action: (task) async {
+              final semesterNames = await _dualisService.querySemesterNames(
+                _semesterNamesCancellationToken.token,
+              );
+              task.setData('loadedEntryCount', semesterNames.length);
+              return semesterNames;
+            },
+          );
+      _applyDualisState(() {
+        _semesterNames = loadedSemesterNames;
+      });
     } on OperationCancelledException catch (_) {
     } finally {
       _semesterNamesCancellationToken.release();
@@ -337,7 +391,8 @@ class StudyGradesViewModel extends BaseViewModel {
     if (_semesterNames.isEmpty) return;
 
     var requestedSemester = preferredSemesterName ?? _currentSemesterName;
-    if (requestedSemester.isNotEmpty && _semesterNames.contains(requestedSemester)) {
+    if (requestedSemester.isNotEmpty &&
+        _semesterNames.contains(requestedSemester)) {
       await loadSemesterByName(requestedSemester, force: force);
       return;
     }
@@ -389,9 +444,20 @@ class StudyGradesViewModel extends BaseViewModel {
     bool success;
 
     try {
-      var result = await _dualisService.login(
-        credentials.username,
-        credentials.password,
+      var result = await PerformanceTelemetry.instance.measureTask(
+        'dualis.login.request',
+        args: {'sourceType': 'unknown'},
+        action: (task) async {
+          final loginResult = await _dualisService.login(
+            credentials.username,
+            credentials.password,
+          );
+          task.setData(
+            'status',
+            loginResult == LoginResult.LoggedIn ? 'success' : 'network_error',
+          );
+          return loginResult;
+        },
       );
 
       success = result == LoginResult.LoggedIn;
@@ -411,6 +477,16 @@ class StudyGradesViewModel extends BaseViewModel {
 
     unawaited(refreshData(force: true));
     return true;
+  }
+
+  void _applyDualisState(VoidCallback action) {
+    PerformanceTelemetry.instance.measureSync(
+      'dualis.state.apply',
+      args: {'sourceType': 'unknown'},
+      action: (_) {
+        action();
+      },
+    );
   }
 
   Future<bool> _isRefreshStale() async {

@@ -218,15 +218,17 @@ class AppDiagnosticsSpan {
     }
   }
 
-  void attachError(Object error) {
+  void attachError(Object error, {bool includeErrorMessage = true}) {
     final span = _span;
     if (span == null) return;
     try {
       span.setData('errorType', error.runtimeType.toString());
-      span.setData(
-        'errorMessage',
-        sanitizeDiagnosticsValue(error.toString()).toString(),
-      );
+      if (includeErrorMessage) {
+        span.setData(
+          'errorMessage',
+          sanitizeDiagnosticsValue(error.toString()).toString(),
+        );
+      }
       span.status = const SpanStatus.internalError();
     } catch (attachErrorError, stackTrace) {
       _logDiagnosticsFailure('span.attachError', attachErrorError, stackTrace);

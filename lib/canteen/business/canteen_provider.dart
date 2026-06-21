@@ -7,6 +7,7 @@ import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/business/canteen_location_service.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
 import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
+import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 
@@ -137,7 +138,15 @@ class CanteenProvider {
       cancellationToken,
     );
     _throwIfLocationChanged(locationId);
-    var normalizedMenus = _normalizeMenus(weekStart, menus);
+    var normalizedMenus = PerformanceTelemetry.instance.measureSync(
+      'canteen.menu.parse',
+      args: {'entryCount': menus.length, 'sourceType': 'unknown'},
+      action: (task) {
+        final normalized = _normalizeMenus(weekStart, menus);
+        task.setData('loadedEntryCount', normalized.length);
+        return normalized;
+      },
+    );
 
     await _repository.deleteMealsBetween(weekStart, weekEnd);
     _throwIfLocationChanged(locationId);
@@ -173,7 +182,15 @@ class CanteenProvider {
         cancellationToken,
       );
       _throwIfLocationChanged(locationId);
-      var normalizedNextMenus = _normalizeMenus(nextWeekStart, nextMenus);
+      var normalizedNextMenus = PerformanceTelemetry.instance.measureSync(
+        'canteen.menu.parse',
+        args: {'entryCount': nextMenus.length, 'sourceType': 'unknown'},
+        action: (task) {
+          final normalized = _normalizeMenus(nextWeekStart, nextMenus);
+          task.setData('loadedEntryCount', normalized.length);
+          return normalized;
+        },
+      );
 
       await _repository.deleteMealsBetween(nextWeekStart, nextWeekEnd);
       _throwIfLocationChanged(locationId);

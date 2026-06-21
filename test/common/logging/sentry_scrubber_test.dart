@@ -115,6 +115,94 @@ void main() {
     expect(sanitizeRouteName('/student/jane@example.com'), 'unknown');
   });
 
+  test(
+    'static performance span names remain but sensitive names are redacted',
+    () {
+      const allowedNames = [
+        'schedule.open',
+        'schedule.week.change',
+        'schedule.cache.read',
+        'schedule.entries.filter',
+        'schedule.remote.fetch',
+        'schedule.remote.parse',
+        'schedule.state.apply',
+        'schedule.list.build',
+        'canteen.open',
+        'canteen.cache.read',
+        'canteen.remote.fetch',
+        'canteen.menu.parse',
+        'canteen.state.apply',
+        'dualis.open',
+        'dualis.login.request',
+        'dualis.results.parse',
+        'dualis.state.apply',
+      ];
+
+      for (final name in allowedNames) {
+        expect(sanitizeDiagnosticsName(name), name);
+      }
+
+      expect(
+        sanitizeDiagnosticsName('schedule.math lecture room A.1.23'),
+        sentryRedactedValue,
+      );
+      expect(
+        sanitizeDiagnosticsName('/dualis/results?student=jane@example.com'),
+        'dualis',
+      );
+    },
+  );
+
+  test('performance span data keeps numeric and coarse fields only', () {
+    final sanitized = sanitizeDiagnosticsMap({
+      'entryCount': 42,
+      'cachedEntryCount': 12,
+      'loadedEntryCount': 30,
+      'filteredEntryCount': 20,
+      'durationMs': 153,
+      'weekOffset': -1,
+      'isCacheHit': true,
+      'isForcedRefresh': false,
+      'sourceType': 'rapla',
+      'status': 'success',
+      'buildMs': 18,
+      'rasterMs': 21,
+      'jankyFrameCount': 2,
+      'maxBuildMs': 34,
+      'maxRasterMs': 28,
+      'refreshRateHz': 120,
+      'deviceTier': 'high_refresh',
+      'room': 'A.1.23',
+      'privateUrl': 'https://rapla.example.test?key=secret',
+      'username': 'jane@example.com',
+      'grade': '1.3',
+      'token': 'secret',
+    });
+
+    expect(sanitized['entryCount'], 42);
+    expect(sanitized['cachedEntryCount'], 12);
+    expect(sanitized['loadedEntryCount'], 30);
+    expect(sanitized['filteredEntryCount'], 20);
+    expect(sanitized['durationMs'], 153);
+    expect(sanitized['weekOffset'], -1);
+    expect(sanitized['isCacheHit'], isTrue);
+    expect(sanitized['isForcedRefresh'], isFalse);
+    expect(sanitized['sourceType'], 'rapla');
+    expect(sanitized['status'], 'success');
+    expect(sanitized['buildMs'], 18);
+    expect(sanitized['rasterMs'], 21);
+    expect(sanitized['jankyFrameCount'], 2);
+    expect(sanitized['maxBuildMs'], 34);
+    expect(sanitized['maxRasterMs'], 28);
+    expect(sanitized['refreshRateHz'], 120);
+    expect(sanitized['deviceTier'], 'high_refresh');
+    expect(sanitized['room'], sentryRedactedValue);
+    expect(sanitized['privateUrl'], sentryRedactedValue);
+    expect(sanitized['username'], sentryRedactedValue);
+    expect(sanitized['grade'], sentryRedactedValue);
+    expect(sanitized['token'], sentryRedactedValue);
+  });
+
   test('beforeSend removes user and scrubs event payloads', () {
     final event = SentryEvent(
       message: SentryMessage('Schedule failed for jane@example.com'),
