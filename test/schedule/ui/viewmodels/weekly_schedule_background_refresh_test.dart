@@ -279,6 +279,14 @@ class _FakeScheduleProvider implements ScheduleProvider {
     return ScheduleQueryResult(_trim(start, end), const []);
   }
 
+  @override
+  Future<DateTime?> getLastQueryTimeForWindow(
+    DateTime start,
+    DateTime end,
+  ) async {
+    return null;
+  }
+
   Schedule _trim(DateTime start, DateTime end) {
     final entries = _entries.where((entry) {
       return start.isBefore(entry.end) && end.isAfter(entry.start);

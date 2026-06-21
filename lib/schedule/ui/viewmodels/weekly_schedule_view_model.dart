@@ -29,6 +29,9 @@ void _debugScheduleError(String message, Object error, StackTrace trace) {
 class WeeklyScheduleViewModel extends BaseViewModel {
   static const Duration weekDuration = Duration(days: 7);
   static const Duration _initialRefreshDelay = Duration(seconds: 8);
+  static const Duration _visibleInitialRefreshDelay = Duration(
+    milliseconds: 80,
+  );
   static const Duration _visibleRefreshDebounceDelay = Duration(
     milliseconds: 2500,
   );
@@ -70,6 +73,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   Schedule? weekSchedule;
   Schedule? _lastCachedSchedule;
   final Map<String, ScheduleFreshnessGate> _windowFreshnessGates = {};
+  final Set<String> _knownFetchedWindows = <String>{};
   final Map<String, Schedule> _memoryWeekCache = {};
   final Map<String, Future<void>> _prefetchInFlight = {};
   Timer? _windowRefreshTimer;
@@ -82,12 +86,17 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     if (!_hasCurrentDateRange) {
       return false;
     }
+    if (!scheduleSourceProvider.didSetupCorrectly() ||
+        !scheduleSourceProvider.currentScheduleSource.canQuery()) {
+      return false;
+    }
     return _needsInitialFetchForWindow(currentDateStart, currentDateEnd);
   }
 
   Timer? _errorResetTimer;
   Timer? _updateNowTimer;
   Timer? _visibleRefreshDebounce;
+  Timer? _visibleInitialRefreshTimer;
   Timer? _initialRefreshTimer;
 
   bool _isDisposed = false;
@@ -238,6 +247,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       try {
         _memoryWeekCache.clear();
         _windowFreshnessGates.clear();
+        _knownFetchedWindows.clear();
         _lastWarmedWeekStart = null;
         _freshnessGate.reset();
         _entryRefreshGate.reset();
@@ -311,21 +321,21 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     final nextStart = toNextWeek(currentDateStart);
     final nextEnd = toNextWeek(currentDateEnd);
     await _openWeekFromCache(nextStart, nextEnd);
-    _debounceVisibleRefresh(nextStart, nextEnd);
+    await _scheduleVisibleRefreshAfterOpen(nextStart, nextEnd);
   }
 
   Future previousWeek() async {
     final previousStart = toPreviousWeek(currentDateStart);
     final previousEnd = toPreviousWeek(currentDateEnd);
     await _openWeekFromCache(previousStart, previousEnd);
-    _debounceVisibleRefresh(previousStart, previousEnd);
+    await _scheduleVisibleRefreshAfterOpen(previousStart, previousEnd);
   }
 
   Future goToToday() async {
     currentDateStart = toStartOfDay(toDayOfWeek(now, DateTime.monday));
     currentDateEnd = toNextWeek(currentDateStart);
     await _openWeekFromCache(currentDateStart, currentDateEnd);
-    _debounceVisibleRefresh(currentDateStart, currentDateEnd);
+    await _scheduleVisibleRefreshAfterOpen(currentDateStart, currentDateEnd);
   }
 
   Future openWeekContaining(
@@ -340,7 +350,11 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       isCurrentRequest: isCurrentRequest,
     );
     if (isCurrentRequest == null || isCurrentRequest()) {
-      _debounceVisibleRefresh(weekStart, weekEnd);
+      await _scheduleVisibleRefreshAfterOpen(
+        weekStart,
+        weekEnd,
+        isCurrentRequest: isCurrentRequest,
+      );
     }
   }
 
@@ -358,6 +372,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     final weekEnd = toNextWeek(weekStart);
     _lockWidgetWeek(weekStart, weekEnd);
     _updateMutex.cancel();
+    _visibleInitialRefreshTimer?.cancel();
+    _visibleRefreshDebounce?.cancel();
 
     await _openWeekFromCache(weekStart, weekEnd);
     await updateSchedule(weekStart, weekEnd, force: true);
@@ -446,6 +462,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         visibleUpdateRequestId: visibleUpdateRequestId,
         applyToVisibleState: applyToVisibleState,
         awaitRefresh: awaitRefresh,
+        forceRefresh: force,
         origin: applyToVisibleState
             ? ScheduleRefreshOrigin.userBrowsing
             : ScheduleRefreshOrigin.foregroundMaintenance,
@@ -464,6 +481,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     int? visibleUpdateRequestId,
     bool applyToVisibleState = true,
     bool awaitRefresh = false,
+    bool forceRefresh = false,
     ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
   }) async {
     final task = PerformanceTelemetry.instance.startTask(
@@ -499,9 +517,11 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
     final nowValue = now;
     final shouldForceFetch =
+        forceRefresh ||
         awaitRefresh ||
         (cachedSchedule.entries.isEmpty &&
-            scheduleSourceProvider.currentScheduleSource.canQuery());
+            scheduleSourceProvider.currentScheduleSource.canQuery() &&
+            !await _isKnownFetchedWindow(start, end));
     final isStale = shouldForceFetch || _isWindowStale(start, end, nowValue);
 
     if (!isStale) {
@@ -546,8 +566,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
           cancellationToken,
           origin: origin,
         );
-        _freshnessGate.markFetched(start, end, now);
-        _markWindowFetched(start, end, now);
+        if (updatedSchedule != null) {
+          _freshnessGate.markFetched(start, end, now);
+          _markWindowFetched(start, end, now);
+        }
       } on OperationCancelledException {
         return;
       } catch (e, stack) {
@@ -688,13 +710,84 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   bool _needsInitialFetchForWindow(DateTime start, DateTime end) {
-    return !_windowFreshnessGates.containsKey(_windowKey(start, end));
+    final cacheKey = _windowKey(start, end);
+    final schedule = currentDateStart == start && currentDateEnd == end
+        ? weekSchedule
+        : _memoryWeekCache[cacheKey];
+    if (schedule == null || schedule.entries.isNotEmpty) {
+      return false;
+    }
+    return !_knownFetchedWindows.contains(cacheKey);
   }
 
   void _markWindowFetched(DateTime start, DateTime end, DateTime now) {
     var key = _windowKey(start, end);
+    _knownFetchedWindows.add(key);
     var gate = _windowFreshnessGates[key] ??= ScheduleFreshnessGate();
     gate.markFetched(start, end, now);
+  }
+
+  Future<bool> _isKnownFetchedWindow(DateTime start, DateTime end) async {
+    final key = _windowKey(start, end);
+    if (_knownFetchedWindows.contains(key)) {
+      return true;
+    }
+
+    final queryTime = await scheduleProvider.getLastQueryTimeForWindow(
+      start,
+      end,
+    );
+    if (queryTime == null) {
+      return false;
+    }
+
+    _markWindowFetched(start, end, queryTime);
+    return true;
+  }
+
+  Future<bool> _visibleWeekNeedsInitialFetch(
+    DateTime start,
+    DateTime end,
+  ) async {
+    if (_isDisposed) return false;
+    if (currentDateStart != start || currentDateEnd != end) {
+      return false;
+    }
+    if (!scheduleSourceProvider.didSetupCorrectly() ||
+        !scheduleSourceProvider.currentScheduleSource.canQuery()) {
+      return false;
+    }
+    if (!_needsInitialFetchForWindow(start, end)) {
+      return false;
+    }
+    return !await _isKnownFetchedWindow(start, end);
+  }
+
+  Future<void> _scheduleVisibleRefreshAfterOpen(
+    DateTime start,
+    DateTime end, {
+    bool Function()? isCurrentRequest,
+  }) async {
+    if (isCurrentRequest != null && !isCurrentRequest()) {
+      return;
+    }
+
+    final needsInitialFetch = await _visibleWeekNeedsInitialFetch(start, end);
+
+    if (isCurrentRequest != null && !isCurrentRequest()) {
+      return;
+    }
+
+    if (needsInitialFetch) {
+      _scheduleVisibleInitialRefresh(
+        start,
+        end,
+        isCurrentRequest: isCurrentRequest,
+      );
+      return;
+    }
+
+    _debounceVisibleRefresh(start, end);
   }
 
   String _windowKey(DateTime start, DateTime end) {
@@ -780,10 +873,34 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   void _debounceVisibleRefresh(DateTime start, DateTime end) {
+    _visibleInitialRefreshTimer?.cancel();
     _visibleRefreshDebounce?.cancel();
     _visibleRefreshDebounce = Timer(_visibleRefreshDebounceDelay, () {
       if (_isDisposed) return;
       unawaited(updateSchedule(start, end));
+    });
+  }
+
+  void _scheduleVisibleInitialRefresh(
+    DateTime start,
+    DateTime end, {
+    bool Function()? isCurrentRequest,
+  }) {
+    if (isCurrentRequest != null && !isCurrentRequest()) {
+      return;
+    }
+    _visibleRefreshDebounce?.cancel();
+    _visibleInitialRefreshTimer?.cancel();
+    _visibleInitialRefreshTimer = Timer(_visibleInitialRefreshDelay, () async {
+      if (_isDisposed) return;
+      if (isCurrentRequest != null && !isCurrentRequest()) return;
+      if (currentDateStart != start || currentDateEnd != end) return;
+      if (!await _visibleWeekNeedsInitialFetch(start, end)) return;
+      if (_isDisposed) return;
+      if (isCurrentRequest != null && !isCurrentRequest()) return;
+      if (currentDateStart != start || currentDateEnd != end) return;
+
+      unawaited(updateSchedule(start, end, force: true));
     });
   }
 
@@ -803,6 +920,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     final retained = sortedKeys.take(_maxRetainedWeeks).toSet();
     _memoryWeekCache.removeWhere((key, _) => !retained.contains(key));
     _windowFreshnessGates.removeWhere((key, _) => !retained.contains(key));
+    _knownFetchedWindows.removeWhere((key) => !retained.contains(key));
   }
 
   int _windowDistanceFromCenter(String key, DateTime centerWeekStart) {
@@ -829,6 +947,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _updateNowTimer?.cancel();
     _windowRefreshTimer?.cancel();
     _visibleRefreshDebounce?.cancel();
+    _visibleInitialRefreshTimer?.cancel();
     _initialRefreshTimer?.cancel();
 
     _errorResetTimer?.cancel();

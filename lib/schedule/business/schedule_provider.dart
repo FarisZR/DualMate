@@ -99,6 +99,24 @@ class ScheduleProvider {
     return cachedSchedule;
   }
 
+  Future<DateTime?> getLastQueryTimeForWindow(
+    DateTime start,
+    DateTime end,
+  ) async {
+    final queryInformation = await _scheduleQueryInformationRepository
+        .getQueryInformationBetweenDates(start, end);
+
+    DateTime? newestQueryTime;
+    for (final information in queryInformation) {
+      final queryTime = information.queryTime;
+      if (newestQueryTime == null || queryTime.isAfter(newestQueryTime)) {
+        newestQueryTime = queryTime;
+      }
+    }
+
+    return newestQueryTime;
+  }
+
   Future<ScheduleQueryResult> getUpdatedSchedule(
     DateTime start,
     DateTime end,
