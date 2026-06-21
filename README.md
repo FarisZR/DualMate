@@ -90,12 +90,21 @@ DualMate also gives you quick access to commonly used DHBW resources such as Dua
 ## Screenshots
 
 <p align="center">
-  <img src="screenshots/screenshot_weekly.png" alt="Weekly schedule screenshot" width="260" />
-  <img src="screenshots/screenshot_weekly_dark.png" alt="Weekly schedule dark mode screenshot" width="260" />
-  <img src="screenshots/screenshot_daily.png" alt="Daily schedule screenshot" width="260" />
-  <img src="screenshots/screenshot_dualis_modules.png" alt="Dualis module overview screenshot" width="260" />
-  <img src="screenshots/screenshot_dualis_exams.png" alt="Dualis exam results screenshot" width="260" />
-  <img src="screenshots/screenshot_links.png" alt="Useful links screenshot" width="260" />
+  <!-- Phone (light mode) screenshots -->
+  <img src="screenshots/phone-light-schedule.png" alt="Phone - schedule (light)" width="200" />
+  <img src="screenshots/phone-light-canteen.png" alt="Phone - canteen (light)" width="200" />
+  <img src="screenshots/phone-light-dates.png" alt="Phone - dates (light)" width="200" />
+  <img src="screenshots/phone-light-dualis.png" alt="Phone - dualis (light)" width="200" />
+  <img src="screenshots/phone-light-exams.png" alt="Phone - exams (light)" width="200" />
+</p>
+
+<p align="center">
+  <!-- Tablet (dark mode) screenshots -->
+  <img src="screenshots/tablet-schedule.jpg" alt="Tablet - schedule (dark)" width="760" />
+  <img src="screenshots/tablet-canteen.jpg" alt="Tablet - canteen (dark)" width="380" />
+  <img src="screenshots/tablet-dates.jpg" alt="Tablet - dates (dark)" width="380" />
+  <img src="screenshots/tablet-dualis.jpg" alt="Tablet - dualis (dark)" width="380" />
+  <img src="screenshots/tablet-exams.jpg" alt="Tablet - exams (dark)" width="380" />
 </p>
 
 ## Multiple locations and sources
