@@ -26,6 +26,28 @@ DualMate is an unofficial companion app for DHBW students. It is built around th
 
 The app is designed to feel fast, clean, and easy to glance at. Instead of jumping between different websites, portals, and PDFs, DualMate keeps the most relevant study information together in one place.
 
+
+## Screenshots
+
+<p align="center">
+  <!-- Phone (light mode) screenshots -->
+  <img src="screenshots/phone-light-schedule.png" alt="Phone - schedule (light)" width="200" />
+  <img src="screenshots/phone-light-canteen.png" alt="Phone - canteen (light)" width="200" />
+  <img src="screenshots/phone-light-dates.png" alt="Phone - dates (light)" width="200" />
+  <img src="screenshots/phone-light-dualis.png" alt="Phone - dualis (light)" width="200" />
+  <img src="screenshots/phone-light-exams.png" alt="Phone - exams (light)" width="200" />
+</p>
+
+<p align="center">
+  <!-- Tablet (dark mode) screenshots -->
+  <img src="screenshots/tablet-schedule.jpg" alt="Tablet - schedule (dark)" width="760" />
+  <img src="screenshots/tablet-canteen.jpg" alt="Tablet - canteen (dark)" width="380" />
+  <img src="screenshots/tablet-dates.jpg" alt="Tablet - dates (dark)" width="380" />
+  <img src="screenshots/tablet-dualis.jpg" alt="Tablet - dualis (dark)" width="380" />
+  <img src="screenshots/tablet-exams.jpg" alt="Tablet - exams (dark)" width="380" />
+</p>
+
+
 ## Core features
 
 ### Schedule
@@ -81,26 +103,6 @@ DualMate includes modern widgets for the information you want to see without ope
 <p align="center">
   <img src="android/app/src/main/res/drawable-nodpi/schedule_now_widget_preview.png" width="360" alt="DualMate schedule widget preview" />
   <img src="android/app/src/main/res/drawable-nodpi/canteen_today_widget_preview.png" width="360" alt="DualMate canteen widget preview" />
-</p>
-
-## Screenshots
-
-<p align="center">
-  <!-- Phone (light mode) screenshots -->
-  <img src="screenshots/phone-light-schedule.png" alt="Phone - schedule (light)" width="200" />
-  <img src="screenshots/phone-light-canteen.png" alt="Phone - canteen (light)" width="200" />
-  <img src="screenshots/phone-light-dates.png" alt="Phone - dates (light)" width="200" />
-  <img src="screenshots/phone-light-dualis.png" alt="Phone - dualis (light)" width="200" />
-  <img src="screenshots/phone-light-exams.png" alt="Phone - exams (light)" width="200" />
-</p>
-
-<p align="center">
-  <!-- Tablet (dark mode) screenshots -->
-  <img src="screenshots/tablet-schedule.jpg" alt="Tablet - schedule (dark)" width="760" />
-  <img src="screenshots/tablet-canteen.jpg" alt="Tablet - canteen (dark)" width="380" />
-  <img src="screenshots/tablet-dates.jpg" alt="Tablet - dates (dark)" width="380" />
-  <img src="screenshots/tablet-dualis.jpg" alt="Tablet - dualis (dark)" width="380" />
-  <img src="screenshots/tablet-exams.jpg" alt="Tablet - exams (dark)" width="380" />
 </p>
 
 ## Multiple locations and sources
