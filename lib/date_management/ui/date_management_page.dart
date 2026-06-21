@@ -231,7 +231,13 @@ class _DateManagementPageState extends State<DateManagementPage> {
 
   Widget _buildContent(DateManagementViewModel model, BuildContext context) {
     if (model.useDhMineForDates) {
-      return _buildAllDatesDataTable(model, context);
+      return RefreshIndicator(
+        onRefresh: () => model.updateDates(),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: _buildAllDatesDataTable(model, context),
+        ),
+      );
     }
 
     if (model.bothSourcesUnconfigured) {
@@ -261,7 +267,10 @@ class _DateManagementPageState extends State<DateManagementPage> {
       );
     }
 
-    return _buildImportantEventsList(model, context);
+    return RefreshIndicator(
+      onRefresh: () => model.updateDates(),
+      child: _buildImportantEventsList(model, context),
+    );
   }
 
   Widget _buildImportantEventsList(
@@ -273,6 +282,7 @@ class _DateManagementPageState extends State<DateManagementPage> {
       _scheduleRaplaAutoload(model);
       return ListView(
         controller: _raplaScrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         children: [
           if (!model.isLoading && !model.isLoadingNextRaplaPage)
@@ -294,6 +304,7 @@ class _DateManagementPageState extends State<DateManagementPage> {
       },
       child: ListView.separated(
         controller: _raplaScrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         cacheExtent: _importantEventsCacheExtent,
         itemBuilder: (context, index) {

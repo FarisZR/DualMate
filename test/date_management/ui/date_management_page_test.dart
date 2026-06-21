@@ -72,9 +72,61 @@ void main() {
     viewModel.dispose();
   });
 
+  testWidgets('pull to refresh triggers updateDates in rapla mode',
+      (WidgetTester tester) async {
+    final viewModel = _buildViewModel(
+      useDhMineForDates: false,
+      raplaUrl: 'https://rapla.dhbw-stuttgart.de/rapla?key=abc',
+      importantEvents: _sampleEvents(),
+    );
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump(const Duration(milliseconds: 420));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RefreshIndicator), findsOneWidget);
+
+    final before = viewModel.updateDatesCalls;
+    await tester.drag(find.byType(RefreshIndicator), const Offset(0, 250));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(viewModel.updateDatesCalls, greaterThan(before));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
+
+  testWidgets('pull to refresh triggers updateDates in DHmine mode',
+      (WidgetTester tester) async {
+    final viewModel = _buildViewModel(
+      useDhMineForDates: true,
+      raplaUrl: '',
+      importantEvents: const [],
+    );
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump(const Duration(milliseconds: 420));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RefreshIndicator), findsOneWidget);
+
+    final before = viewModel.updateDatesCalls;
+    await tester.drag(find.byType(RefreshIndicator), const Offset(0, 250));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(viewModel.updateDatesCalls, greaterThan(before));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
+
   testWidgets('defers dates initialization to keep first drawer open smooth',
       (WidgetTester tester) async {
-    final viewModel = _buildTrackingViewModel(
+    final viewModel = _buildViewModel(
       useDhMineForDates: false,
       raplaUrl: 'https://rapla.dhbw-stuttgart.de/rapla?key=abc',
       importantEvents: _sampleEvents(),
@@ -116,36 +168,7 @@ Widget _wrapWithApp(DateManagementViewModel viewModel) {
   );
 }
 
-DateManagementViewModel _buildViewModel({
-  required bool useDhMineForDates,
-  required String raplaUrl,
-  List<ImportantEvent> importantEvents = const [],
-}) {
-  final preferencesAccess = _FakePreferencesAccess({
-    PreferencesProvider.UseDhMineForDates: useDhMineForDates,
-    PreferencesProvider.RaplaUrlKey: raplaUrl,
-    PreferencesProvider.LastViewedDateEntryDatabase: '',
-    PreferencesProvider.LastViewedDateEntryYear: DateTime.now().year.toString(),
-  });
-  final preferencesProvider = PreferencesProvider(
-    preferencesAccess,
-    _FakeSecureStorageAccess(),
-  );
-
-  final dateEntryProvider = _FakeDateEntryProvider();
-  final raplaProvider = _FakeRaplaImportantEventsProvider(
-    preferencesProvider,
-    importantEvents,
-  );
-
-  return DateManagementViewModel(
-    dateEntryProvider,
-    preferencesProvider,
-    raplaProvider,
-  );
-}
-
-_TrackingDateManagementViewModel _buildTrackingViewModel({
+_TrackingDateManagementViewModel _buildViewModel({
   required bool useDhMineForDates,
   required String raplaUrl,
   List<ImportantEvent> importantEvents = const [],
@@ -176,6 +199,7 @@ _TrackingDateManagementViewModel _buildTrackingViewModel({
 
 class _TrackingDateManagementViewModel extends DateManagementViewModel {
   int initializeCalls = 0;
+  int updateDatesCalls = 0;
 
   _TrackingDateManagementViewModel(
     DateEntryProvider dateEntryProvider,
@@ -190,6 +214,13 @@ class _TrackingDateManagementViewModel extends DateManagementViewModel {
   @override
   void initialize() {
     initializeCalls += 1;
+    super.initialize();
+  }
+
+  @override
+  Future<void> updateDates() async {
+    updateDatesCalls += 1;
+    return super.updateDates();
   }
 }
 
