@@ -260,6 +260,20 @@ void main() {
     expect(scrubbed.contexts['dualis'], sentryRedactedValue);
   });
 
+  test('beforeSend keeps typed Sentry contexts serializable', () {
+    final event = SentryEvent(
+      contexts: Contexts(
+        culture: SentryCulture(locale: 'en_US', timezone: 'CEST'),
+      ),
+    )..contexts['dualis'] = {'grade': '1.3'};
+
+    final scrubbed = scrubSentryEvent(event, Hint())!;
+
+    expect(scrubbed.contexts.culture, isA<SentryCulture>());
+    expect(scrubbed.contexts['dualis'], sentryRedactedValue);
+    expect(() => scrubbed.toJson(), returnsNormally);
+  });
+
   test('route settings sanitizer keeps only stable route names', () {
     final sanitized = sanitizeSentryRouteSettings(
       const RouteSettings(

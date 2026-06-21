@@ -103,6 +103,20 @@ const Map<String, String> _routeAliases = <String, String>{
   'shell': 'shell',
 };
 
+const Set<String> _sentryTypedContextKeys = <String>{
+  SentryDevice.type,
+  SentryOperatingSystem.type,
+  SentryRuntime.listType,
+  SentryApp.type,
+  SentryBrowser.type,
+  SentryCulture.type,
+  SentryGpu.type,
+  SentryTraceContext.type,
+  SentryResponse.type,
+  SentryFeedback.type,
+  SentryFeatureFlags.type,
+};
+
 final RegExp _embeddedUrlPattern = RegExp(
   r'(?:(?:https?|webcal)://|www\.)[^\s<>"'
   '()]+',
@@ -385,11 +399,7 @@ SentryRequest? _scrubRequest(SentryRequest? request) {
 
 void _scrubContexts(Contexts contexts) {
   for (final key in contexts.keys.toList(growable: false)) {
-    if (key == SentryDevice.type ||
-        key == SentryOperatingSystem.type ||
-        key == SentryRuntime.listType ||
-        key == SentryApp.type ||
-        key == SentryTraceContext.type) {
+    if (_sentryTypedContextKeys.contains(key)) {
       continue;
     }
     final value = contexts[key];
