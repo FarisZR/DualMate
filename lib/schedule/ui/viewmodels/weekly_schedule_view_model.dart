@@ -566,8 +566,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
           cancellationToken,
           origin: origin,
         );
-        _freshnessGate.markFetched(start, end, now);
-        _markWindowFetched(start, end, now);
+        if (updatedSchedule != null) {
+          _freshnessGate.markFetched(start, end, now);
+          _markWindowFetched(start, end, now);
+        }
       } on OperationCancelledException {
         return;
       } catch (e, stack) {
@@ -766,7 +768,17 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     DateTime end, {
     bool Function()? isCurrentRequest,
   }) async {
-    if (await _visibleWeekNeedsInitialFetch(start, end)) {
+    if (isCurrentRequest != null && !isCurrentRequest()) {
+      return;
+    }
+
+    final needsInitialFetch = await _visibleWeekNeedsInitialFetch(start, end);
+
+    if (isCurrentRequest != null && !isCurrentRequest()) {
+      return;
+    }
+
+    if (needsInitialFetch) {
       _scheduleVisibleInitialRefresh(
         start,
         end,
@@ -874,6 +886,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     DateTime end, {
     bool Function()? isCurrentRequest,
   }) {
+    if (isCurrentRequest != null && !isCurrentRequest()) {
+      return;
+    }
     _visibleRefreshDebounce?.cancel();
     _visibleInitialRefreshTimer?.cancel();
     _visibleInitialRefreshTimer = Timer(_visibleInitialRefreshDelay, () async {

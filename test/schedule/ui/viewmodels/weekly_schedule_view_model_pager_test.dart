@@ -229,6 +229,88 @@ void main() {
       });
     },
   );
+
+  test(
+    'failed initial refresh keeps empty week eligible for another initial fetch',
+    () {
+      fakeAsync((async) {
+        final provider = _FailingFirstUpdateScheduleProvider();
+        final viewModel = WeeklyScheduleViewModel(
+          provider,
+          _FakeScheduleSourceProvider(),
+          nowProvider: () => DateTime(2026, 2, 10, 10),
+        );
+
+        unawaited(viewModel.openWeekContaining(DateTime(2026, 2, 16)));
+        async.flushMicrotasks();
+        async.elapse(const Duration(milliseconds: 120));
+        async.flushMicrotasks();
+
+        expect(provider.updatedScheduleRequests, 1);
+        expect(viewModel.visibleWeekNeedsInitialFetch, isTrue);
+
+        unawaited(viewModel.openWeekContaining(DateTime(2026, 2, 16)));
+        async.flushMicrotasks();
+        async.elapse(const Duration(milliseconds: 120));
+        async.flushMicrotasks();
+
+        expect(provider.updatedScheduleRequests, 2);
+        expect(viewModel.visibleWeekNeedsInitialFetch, isFalse);
+        viewModel.dispose();
+      });
+    },
+  );
+
+  test(
+    'stale metadata checks do not cancel newer visible initial refresh timers',
+    () {
+      fakeAsync((async) {
+        final provider = _MetadataBlockingScheduleProvider();
+        var requestId = 1;
+        final viewModel = WeeklyScheduleViewModel(
+          provider,
+          _FakeScheduleSourceProvider(),
+          nowProvider: () => DateTime(2026, 2, 10, 10),
+        );
+
+        unawaited(
+          viewModel.openWeekContaining(
+            DateTime(2026, 2, 16),
+            isCurrentRequest: () => requestId == 1,
+          ),
+        );
+        async.flushMicrotasks();
+
+        requestId = 2;
+        unawaited(
+          viewModel.openWeekContaining(
+            DateTime(2026, 2, 23),
+            isCurrentRequest: () => requestId == 2,
+          ),
+        );
+        async.flushMicrotasks();
+
+        provider.completeQueryInformation(
+          DateTime(2026, 2, 23),
+          DateTime(2026, 3, 2),
+        );
+        async.flushMicrotasks();
+
+        provider.completeQueryInformation(
+          DateTime(2026, 2, 16),
+          DateTime(2026, 2, 23),
+        );
+        async.flushMicrotasks();
+
+        async.elapse(const Duration(milliseconds: 120));
+        async.flushMicrotasks();
+
+        expect(viewModel.currentDateStart, DateTime(2026, 2, 23));
+        expect(provider.updatedScheduleRequests, 1);
+        viewModel.dispose();
+      });
+    },
+  );
 }
 
 ScheduleEntry _entry(DateTime day, String title) {
@@ -289,6 +371,50 @@ class _FakeScheduleProvider implements ScheduleProvider {
   @override
   dynamic noSuchMethod(Invocation invocation) {
     throw UnsupportedError('Unexpected ScheduleProvider call: $invocation');
+  }
+}
+
+class _FailingFirstUpdateScheduleProvider extends _FakeScheduleProvider {
+  var _shouldFail = true;
+
+  _FailingFirstUpdateScheduleProvider() : super(const <ScheduleEntry>[]);
+
+  @override
+  Future<ScheduleQueryResult> getUpdatedSchedule(
+    DateTime start,
+    DateTime end,
+    CancellationToken cancellationToken, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
+  }) async {
+    updatedScheduleRequests += 1;
+    if (_shouldFail) {
+      _shouldFail = false;
+      throw ScheduleQueryFailedException(Exception('schedule unavailable'));
+    }
+    markWindowQueried(start, end, DateTime.now());
+    return ScheduleQueryResult(await getCachedSchedule(start, end), const []);
+  }
+}
+
+class _MetadataBlockingScheduleProvider extends _FakeScheduleProvider {
+  final Map<String, Completer<DateTime?>> _metadataCompleters =
+      <String, Completer<DateTime?>>{};
+
+  _MetadataBlockingScheduleProvider() : super(const <ScheduleEntry>[]);
+
+  @override
+  Future<DateTime?> getLastQueryTimeForWindow(DateTime start, DateTime end) {
+    return (_metadataCompleters[_windowKey(start, end)] ??=
+            Completer<DateTime?>())
+        .future;
+  }
+
+  void completeQueryInformation(DateTime start, DateTime end) {
+    final completer = _metadataCompleters[_windowKey(start, end)];
+    if (completer == null || completer.isCompleted) {
+      return;
+    }
+    completer.complete(null);
   }
 }
 
