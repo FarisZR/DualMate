@@ -83,10 +83,6 @@ DualMate includes modern widgets for the information you want to see without ope
   <img src="android/app/src/main/res/drawable-nodpi/canteen_today_widget_preview.png" width="360" alt="DualMate canteen widget preview" />
 </p>
 
-### Useful links
-
-DualMate also gives you quick access to commonly used DHBW resources such as Dualis, Moodle, webmail, DHBW pages, eduroam information, StuV, and university sports.
-
 ## Screenshots
 
 <p align="center">
