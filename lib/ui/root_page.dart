@@ -9,10 +9,10 @@ import 'package:dualmate/common/logging/sentry_scrubber.dart';
 import 'package:dualmate/common/ui/colors.dart';
 import 'package:dualmate/common/ui/viewmodels/root_view_model.dart';
 import 'package:dualmate/common/appstart/app_initializer.dart';
+import 'package:dualmate/common/appstart/locale_preference_sync.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/util/launch_intent.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
-import 'package:dualmate/main.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:kiwi/kiwi.dart';
@@ -68,6 +68,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   bool _backgroundInitStarted = false;
   bool _onboardingDeferredInitListenerAttached = false;
   Stopwatch? _deferredInitStopwatch;
+  LocalePreferenceSync? _localePreferenceSync;
   static const MethodChannel _navigationChannel = MethodChannel(
     'com.fariszr.dualmate/navigation',
   );
@@ -96,6 +97,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   @override
   void dispose() {
     unawaited(_setAppAttended(false));
+    _localePreferenceSync?.detach();
     _detachOnboardingDeferredInitListener();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -209,7 +211,11 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
       );
 
-      unawaited(_saveLastStartLanguage());
+      _localePreferenceSync = LocalePreferenceSync(
+        preferencesProvider: KiwiContainer().resolve<PreferencesProvider>(),
+      );
+      _localePreferenceSync!.attach();
+      unawaited(_localePreferenceSync!.syncNow());
       _debugRootLog(
         "Root init: save language deferred ${stopwatch.elapsedMilliseconds}ms",
       );
@@ -331,25 +337,6 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         ),
       );
       _perfOverlayLoaded = true;
-    }
-  }
-
-  Future<void> _saveLastStartLanguage() async {
-    try {
-      await saveLastStartLanguage();
-    } catch (error, trace) {
-      _debugRootError("Root init: save language failed", error, trace);
-      unawaited(
-        AppDiagnostics.instance.reportCaughtException(
-          error,
-          trace,
-          message: 'Root init: save language failed',
-          tags: {'feature': 'startup'},
-          contexts: {
-            'startup': {'phase': 'language.save'},
-          },
-        ),
-      );
     }
   }
 

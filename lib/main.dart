@@ -1,13 +1,10 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:dualmate/ui/root_page.dart';
 import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/logging/sentry_configuration.dart';
-import 'package:dualmate/common/data/preferences/preferences_provider.dart';
-import 'package:kiwi/kiwi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -80,14 +77,3 @@ Future<void> main() async {
   }());
 }
 
-///
-/// Save the current language in the preferences.
-/// The language of the last app start is used for the background initialization.
-/// When the app runs in the background this is an easy way to get the
-/// used language
-///
-
-Future<void> saveLastStartLanguage() async {
-  PreferencesProvider preferencesProvider = KiwiContainer().resolve();
-  await preferencesProvider.setLastUsedLanguageCode(Platform.localeName);
-}
