@@ -5,6 +5,12 @@
       "source": "jeffallan/claude-skills",
       "sourceType": "github",
       "computedHash": "df37f35010c3a373afb7b5dcd0d650d1c2dd69b06dc484b3414935408000054f"
+    },
+    "sentry-flutter-sdk": {
+      "source": "getsentry/sentry-for-ai",
+      "sourceType": "github",
+      "skillPath": "skills/sentry-flutter-sdk/SKILL.md",
+      "computedHash": "2efdf0b1d74d367b7cf07702231d78b839846e5f69136bfe0a99b94d811255ec"
     }
   }
 }
