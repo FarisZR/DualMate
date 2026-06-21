@@ -211,6 +211,8 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
       );
 
+      if (!mounted) return;
+
       _localePreferenceSync = LocalePreferenceSync(
         preferencesProvider: KiwiContainer().resolve<PreferencesProvider>(),
       );
