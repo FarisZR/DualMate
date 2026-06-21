@@ -96,7 +96,7 @@ final de = {
   "dateManagementTableHeaderDate": "Datum",
   "dateManagementTableHeaderYear": "Jahrgang",
   "dateManagementTableHeaderDescription": "Beschreibung",
-  "pageDateManagementTitle": "Terminverwaltung",
+  "pageDateManagementTitle": "Termine",
   "dateManagementCheckBoxPassedDates": "Vergangene",
   "dateManagementCheckBoxFutureDates": "Zukünftige",
   "dateManagementDropDownYear": "Jahrgang",
@@ -124,9 +124,9 @@ final de = {
       "\n\nFalls Du dich nicht anmelden kannst, prüfe die Internetverbindung und Zugangsdaten.",
   "dualisHelpDialogTitle": "Dualis Anmeldung",
   "dateManagementHelpDialogContent":
-      "In der Terminverwaltung siehst Du wichtige Rapla-Termine wie Klausuren, Klausurwochen und Feiertage. "
+      "Auf der Termine-Seite siehst Du die wichtigsten anstehenden Termine und Ereignisse wie Klausuren, Klausurwochen und Feiertage. "
       "\nIn den Einstellungen kannst Du auf DHmine umschalten. DHmine ist nur für die DHBW Stuttgart verfügbar.",
-  "dateManagementHelpDialogTitle": "Terminverwaltung",
+  "dateManagementHelpDialogTitle": "Termine",
   "dateManagementExportToCalendar": "In Kalender übertragen",
   "dateManagementExportToCalendarConfirm": "Übertragen",
   "dateManagementExportToCalendarDescription":
