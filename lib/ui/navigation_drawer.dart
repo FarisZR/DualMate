@@ -150,18 +150,10 @@ class MyNavigationDrawer extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: <Widget>[
-                        Icon(
-                          Icons.settings,
-                          color: Theme.of(context).disabledColor,
-                        ),
+                        const Icon(Icons.settings),
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 0, 0, 0),
-                          child: Text(
-                            L.of(context).settingsPageTitle,
-                            style: TextStyle(
-                              color: Theme.of(context).disabledColor,
-                            ),
-                          ),
+                          child: Text(L.of(context).settingsPageTitle),
                         ),
                       ],
                     ),
