@@ -126,7 +126,7 @@ android {
         main.manifest.srcFile generatedMainManifestFile
     }
 
-    lintOptions {
+    lint {
         disable 'InvalidPackage'
     }
 
