@@ -5,14 +5,13 @@ import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/service/mannheim/mannheim_course_scraper.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
 
-enum LoadCoursesState {
-  Loading,
-  Loaded,
-  Failed,
-}
+typedef MannheimCourseLoader = Future<List<Course>> Function();
+
+enum LoadCoursesState { Loading, Loaded, Failed }
 
 class MannheimViewModel extends OnboardingStepViewModel {
   final ScheduleSourceProvider _scheduleSourceProvider;
+  final MannheimCourseLoader _loadCoursesFromSource;
 
   LoadCoursesState _loadingState = LoadCoursesState.Loading;
   LoadCoursesState get loadingState => _loadingState;
@@ -23,7 +22,11 @@ class MannheimViewModel extends OnboardingStepViewModel {
   List<Course> _courses = [];
   List<Course> get courses => _courses;
 
-  MannheimViewModel(this._scheduleSourceProvider) {
+  MannheimViewModel(
+    this._scheduleSourceProvider, {
+    MannheimCourseLoader? loadCoursesFromSource,
+  }) : _loadCoursesFromSource =
+           loadCoursesFromSource ?? MannheimCourseScraper().loadCourses {
     setIsValid(false);
     loadCourses();
   }
@@ -34,7 +37,7 @@ class MannheimViewModel extends OnboardingStepViewModel {
 
     try {
       await Future.delayed(Duration(seconds: 1));
-      _courses = await MannheimCourseScraper().loadCourses();
+      _courses = await _loadCoursesFromSource();
       _loadingState = LoadCoursesState.Loaded;
     } catch (ex, trace) {
       _courses = [];

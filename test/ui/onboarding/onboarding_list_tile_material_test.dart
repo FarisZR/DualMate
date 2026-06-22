@@ -3,9 +3,13 @@ import 'package:dualmate/common/data/preferences/preferences_access.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/data/preferences/secure_storage_access.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/schedule/service/mannheim/mannheim_course_scraper.dart';
+import 'package:dualmate/ui/onboarding/viewmodels/mannheim_view_model.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/select_canteen_location_view_model.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/select_source_view_model.dart';
+import 'package:dualmate/ui/onboarding/widgets/mannheim_page.dart';
 import 'package:dualmate/ui/onboarding/widgets/select_canteen_location_page.dart';
 import 'package:dualmate/ui/onboarding/widgets/select_source_page.dart';
 import 'package:flutter/material.dart';
@@ -59,6 +63,31 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'Mannheim course tiles keep visible material effects under color',
+    (tester) async {
+      final viewModel = MannheimViewModel(
+        _FakeScheduleSourceProvider(),
+        loadCoursesFromSource: () async => [
+          Course(
+            'WWI23A',
+            'https://example.com/mannheim.ics',
+            'Wirtschaftsinformatik',
+            'wwi23a',
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        _OnboardingTileHarness(viewModel: viewModel, child: MannheimPage()),
+      );
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('WWI23A'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 class _OnboardingTileHarness extends StatelessWidget {
@@ -88,4 +117,9 @@ class _OnboardingTileHarness extends StatelessWidget {
       ),
     );
   }
+}
+
+class _FakeScheduleSourceProvider implements ScheduleSourceProvider {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

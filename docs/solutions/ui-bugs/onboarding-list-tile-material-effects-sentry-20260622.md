@@ -38,6 +38,7 @@ can hide those effects unless each tile has its own local material surface.
 ## Test Coverage
 - `schedule source radios keep visible material effects under color`
 - `canteen location radios keep visible material effects under color`
+- `Mannheim course tiles keep visible material effects under color`
 
 ## Commands run
 ```bash
