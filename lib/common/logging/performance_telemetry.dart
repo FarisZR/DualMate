@@ -101,7 +101,7 @@ class PerformanceTelemetry {
       final result = await action(task);
       if (!task.isFinished) {
         task.setCoarseStatus(
-          successStatusForResult?.call(result) ?? successStatus,
+          _resolveSuccessStatus(result, successStatus, successStatusForResult),
         );
         task.setDurationSince(startedAt);
         await task.finish();
@@ -113,7 +113,7 @@ class PerformanceTelemetry {
       await task.fail(error, includeErrorMessage: false);
       rethrow;
     } catch (error) {
-      task.setCoarseStatus(_statusForError(error));
+      task.setCoarseStatus(statusForError(error));
       task.setDurationSince(startedAt);
       await task.fail(error, includeErrorMessage: false);
       rethrow;
@@ -142,7 +142,7 @@ class PerformanceTelemetry {
       }
       return result;
     } catch (error) {
-      task.setCoarseStatus(_statusForError(error));
+      task.setCoarseStatus(statusForError(error));
       task.setDurationSince(startedAt);
       unawaited(task.fail(error, includeErrorMessage: false));
       rethrow;
@@ -169,7 +169,6 @@ class PerformanceTelemetry {
   Map<String, Object?> _coarseDeviceContext() {
     final refreshRateHz = _refreshRateHz();
     return <String, Object?>{
-      if (refreshRateHz != null) 'refreshRateHz': refreshRateHz,
       if (refreshRateHz != null) 'deviceTier': _deviceTier(refreshRateHz),
     };
   }
@@ -192,10 +191,16 @@ class PerformanceTelemetry {
     return 'standard_refresh';
   }
 
-  static String _statusForError(Object error) {
+  @visibleForTesting
+  static String statusForError(Object error) {
     final type = error.runtimeType.toString().toLowerCase();
     if (type.contains('cancel')) return 'cancelled';
-    if (type.contains('parse')) return 'parse_error';
+    if (error is FormatException ||
+        type.contains('parse') ||
+        type.contains('parser') ||
+        type.contains('format')) {
+      return 'parse_error';
+    }
     if (type.contains('request') ||
         type.contains('socket') ||
         type.contains('http') ||
@@ -207,6 +212,19 @@ class PerformanceTelemetry {
 
   static bool isAllowedStatus(String value) =>
       _allowedStatusValues.contains(value);
+
+  static String _resolveSuccessStatus<T>(
+    T result,
+    String successStatus,
+    String Function(T result)? successStatusForResult,
+  ) {
+    if (successStatusForResult == null) return successStatus;
+    try {
+      return successStatusForResult(result);
+    } catch (_) {
+      return successStatus;
+    }
+  }
 }
 
 class PerformanceTelemetryTask {
