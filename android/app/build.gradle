@@ -126,8 +126,11 @@ android {
         main.manifest.srcFile generatedMainManifestFile
     }
 
-    lintOptions {
+    lint {
         disable 'InvalidPackage'
+        // FlutterActivity extends android.app.Activity but lint cannot resolve
+        // the Flutter embedding class hierarchy during lintVitalRelease on AGP 9.
+        disable 'Instantiatable'
     }
 
     defaultConfig {
