@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="icons/dualmate_icon_v1_refined_light.svg" width="160" alt="DualMate app icon" />
+  <img src="assets/feature-image.webp" alt="DualMate feature image" />
 </p>
 
 <h1 align="center">DualMate</h1>
@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://play.google.com/store/apps/details?id=com.fariszr.dualmate">
-    <img src="https://storage.googleapis.com/pe-portal-consumer-prod-wagtail-static/images/googleplay-badge-01-getit.width-1440.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=wagtail%40pe-portal-consumer-prod.iam.gserviceaccount.com%2F20260621%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260621T001436Z&X-Goog-Expires=86400&X-Goog-SignedHeaders=host&X-Goog-Signature=45cae4d2bc31faeef9bf233c9aaac5ccfb260c3ee7359a1a9bc633dc6d31e50e01d8c3234d73892c8e5eb67236a8e15afbeca26b5673f6933e889e4374032061c15c57c9e334efa7a4f289ac7bd24693fb462039cc053aa3d3266a9d61034ca2d950d12926be9741132ead78454ea021c9f6e6dd4cc17cc717b1513be171d7565b368320123fc0fae0361595bd643c9eb0cb908f06109a6af03368f705c3e69fe560e4110e603b4f6fcb6d4694d432946ca00acc02a6513844c9d5744e0525ec8ca1895920a5d9a89825d2ad8f09b249df5288ff89b194ce1856cabbb6c9c8283e679eba6200028b3c624feac70995131d79aff9477c176497408f6d0b3c80dc" height="180" alt="Get it on Google Play" />
+    <img src="assets/GetItOnGooglePlay_Badge_Web_color_English.svg" height="120" alt="Get it on Google Play" />
   </a>
 </p>
 
