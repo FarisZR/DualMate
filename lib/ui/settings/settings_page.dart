@@ -5,6 +5,7 @@ import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
 import 'package:dualmate/common/data/preferences/app_theme_enum.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/common/ui/viewmodels/root_view_model.dart';
 import 'package:dualmate/common/ui/widgets/title_list_tile.dart';
 import 'package:dualmate/schedule/ui/notification/next_day_information_notification.dart';
@@ -27,12 +28,10 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final SettingsViewModel settingsViewModel = SettingsViewModel(
-    KiwiContainer().resolve(),
-    KiwiContainer().resolve(),
-    KiwiContainer().resolve<TaskCallback>(NextDayInformationNotification.name),
-    KiwiContainer().resolve(),
-  );
+  late final _SettingsPageDependencies _dependencies =
+      _resolveSettingsPageDependencies();
+
+  SettingsViewModel get settingsViewModel => _dependencies.settingsViewModel;
 
   @override
   Widget build(BuildContext context) {
@@ -96,8 +95,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final theme = Theme.of(context);
     final localizations = MaterialLocalizations.of(context);
     final useUpperCase = !theme.useMaterial3;
-    String label(String text) =>
-        useUpperCase ? text.toUpperCase() : text;
+    String label(String text) => useUpperCase ? text.toUpperCase() : text;
 
     showDialog<void>(
       context: context,
@@ -151,14 +149,14 @@ class _SettingsPageState extends State<SettingsPage> {
                   context: dialogContext,
                   applicationName: L.of(dialogContext).applicationName,
                   applicationVersion: ApplicationVersion,
-                  applicationIcon:
-                      Image.asset("assets/app_icon.png", width: 75),
+                  applicationIcon: Image.asset(
+                    "assets/app_icon.png",
+                    width: 75,
+                  ),
                   applicationLegalese: L.of(dialogContext).applicationLegalese,
                 );
               },
-              child: Text(
-                label(localizations.viewLicensesButtonLabel),
-              ),
+              child: Text(label(localizations.viewLicensesButtonLabel)),
             ),
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
@@ -254,8 +252,13 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   List<Widget> buildNotificationSettings(BuildContext context) {
-    WorkSchedulerService service = KiwiContainer().resolve();
-    if (service.isSchedulingAvailable()) {
+    final service = _dependencies.workSchedulerService;
+    if (service == null) {
+      return [];
+    }
+
+    if (_dependencies.canShowNotificationSettings &&
+        service.isSchedulingAvailable()) {
       return [
         TitleListTile(title: L.of(context).settingsNotificationsTitle),
         PropertyChangeConsumer<SettingsViewModel, String>(
@@ -372,4 +375,78 @@ class _SettingsPageState extends State<SettingsPage> {
     settingsViewModel.dispose();
     super.dispose();
   }
+}
+
+_SettingsPageDependencies _resolveSettingsPageDependencies() {
+  final notificationApi = _resolveNotificationApiOrNull();
+  final nextDayTask = _resolveNextDayInformationNotificationOrNull();
+  final workSchedulerService = _resolveWorkSchedulerServiceOrNull();
+
+  return _SettingsPageDependencies(
+    settingsViewModel: SettingsViewModel(
+      KiwiContainer().resolve(),
+      KiwiContainer().resolve(),
+      nextDayTask ?? _NoopTaskCallback(NextDayInformationNotification.name),
+      notificationApi ?? VoidNotificationApi(),
+    ),
+    workSchedulerService: workSchedulerService,
+    canShowNotificationSettings:
+        notificationApi != null &&
+        nextDayTask != null &&
+        workSchedulerService != null,
+  );
+}
+
+TaskCallback? _resolveNextDayInformationNotificationOrNull() {
+  return _resolveOptional<TaskCallback>(NextDayInformationNotification.name);
+}
+
+NotificationApi? _resolveNotificationApiOrNull() {
+  return _resolveOptional<NotificationApi>();
+}
+
+WorkSchedulerService? _resolveWorkSchedulerServiceOrNull() {
+  return _resolveOptional<WorkSchedulerService>();
+}
+
+T? _resolveOptional<T>([String? name]) {
+  final container = KiwiContainer();
+  if (!container.isRegistered<T>(name: name)) {
+    return null;
+  }
+  try {
+    return container.resolve<T>(name);
+  } on NotRegisteredKiwiError {
+    return null;
+  }
+}
+
+class _SettingsPageDependencies {
+  final SettingsViewModel settingsViewModel;
+  final WorkSchedulerService? workSchedulerService;
+  final bool canShowNotificationSettings;
+
+  const _SettingsPageDependencies({
+    required this.settingsViewModel,
+    required this.workSchedulerService,
+    required this.canShowNotificationSettings,
+  });
+}
+
+class _NoopTaskCallback implements TaskCallback {
+  final String _name;
+
+  const _NoopTaskCallback(this._name);
+
+  @override
+  Future<void> cancel() async {}
+
+  @override
+  String getName() => _name;
+
+  @override
+  Future<void> run() async {}
+
+  @override
+  Future<void> schedule() async {}
 }

@@ -59,6 +59,81 @@ void main() {
     },
   );
 
+  testWidgets('settings page opens when next-day task is not registered', (
+    tester,
+  ) async {
+    KiwiContainer().clear();
+    final preferencesProvider = _FakePreferencesProvider();
+    KiwiContainer().registerInstance<PreferencesProvider>(preferencesProvider);
+    KiwiContainer().registerInstance<CanteenLocationService>(
+      CanteenLocationService(preferencesProvider),
+    );
+    KiwiContainer().registerInstance<WorkSchedulerService>(
+      VoidBackgroundWorkScheduler(),
+    );
+    KiwiContainer().registerInstance<NotificationApi>(VoidNotificationApi());
+
+    final rootViewModel = RootViewModel(KiwiContainer().resolve());
+    await rootViewModel.loadFromPreferences();
+
+    await tester.pumpWidget(_wrapWithApp(rootViewModel, SettingsPage()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Next day schedule'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('settings page opens before notification services are registered', (
+    tester,
+  ) async {
+    KiwiContainer().clear();
+    final preferencesProvider = _FakePreferencesProvider();
+    KiwiContainer().registerInstance<PreferencesProvider>(preferencesProvider);
+    KiwiContainer().registerInstance<CanteenLocationService>(
+      CanteenLocationService(preferencesProvider),
+    );
+
+    final rootViewModel = RootViewModel(KiwiContainer().resolve());
+    await rootViewModel.loadFromPreferences();
+
+    await tester.pumpWidget(_wrapWithApp(rootViewModel, SettingsPage()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Next day schedule'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('settings page opens when next-day task resolve races startup', (
+    tester,
+  ) async {
+    KiwiContainer().clear();
+    final preferencesProvider = _FakePreferencesProvider();
+    KiwiContainer().registerInstance<PreferencesProvider>(preferencesProvider);
+    KiwiContainer().registerInstance<CanteenLocationService>(
+      CanteenLocationService(preferencesProvider),
+    );
+    KiwiContainer().registerInstance<WorkSchedulerService>(
+      VoidBackgroundWorkScheduler(),
+    );
+    KiwiContainer().registerInstance<NotificationApi>(VoidNotificationApi());
+    KiwiContainer().registerFactory<TaskCallback>(
+      (_) => throw NotRegisteredKiwiError('startup race'),
+      name: NextDayInformationNotification.name,
+    );
+
+    final rootViewModel = RootViewModel(KiwiContainer().resolve());
+    await rootViewModel.loadFromPreferences();
+
+    await tester.pumpWidget(_wrapWithApp(rootViewModel, SettingsPage()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Next day schedule'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('about dialog shows privacy policy link and View licenses', (
     tester,
   ) async {
