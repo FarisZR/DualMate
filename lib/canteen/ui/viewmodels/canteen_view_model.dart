@@ -192,6 +192,8 @@ class CanteenViewModel extends BaseViewModel {
                   'isForcedRefresh': forceRefresh,
                   'sourceType': 'unknown',
                 },
+                successStatusForResult: (menus) =>
+                    menus.isEmpty ? 'empty' : 'success',
                 action: (task) async {
                   final loadedMenus = forceRefresh
                       ? await _provider.refreshWeek(weekStart)
@@ -201,10 +203,6 @@ class CanteenViewModel extends BaseViewModel {
                           prefetchNextWeek: prefetchNextWeek,
                         );
                   task.setData('loadedEntryCount', loadedMenus.length);
-                  task.setData(
-                    'status',
-                    loadedMenus.isEmpty ? 'empty' : 'success',
-                  );
                   return loadedMenus;
                 },
               );
