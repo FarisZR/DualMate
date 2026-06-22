@@ -20,30 +20,31 @@ analysis, producing a false positive that blocks the bundle build.
 
 ## Solution
 
-Disabled the `Instantiatable` lint check for the app module in
-`android/app/build.gradle`. Also migrated the deprecated `lintOptions`
-block to the modern `lint {}` DSL (AGP 9+ only reads the new DSL for
-some options).
+Scoped the `Instantiatable` suppression to the specific `<activity>`
+element using `tools:ignore` in `AndroidManifest.xml` rather than
+disabling the check module-wide:
 
-```groovy
-android {
-    lint {
-        disable 'InvalidPackage'
-        disable 'Instantiatable'
-    }
-}
+```xml
+<activity
+    android:name=".MainActivity"
+    ...
+    tools:ignore="Instantiatable">
 ```
 
-`Instantiatable` is a false positive here because the activity class
-hierarchy is valid; the check only fails because lint cannot see through
-the Flutter embedding artifact.
+This is a false positive because `MainActivity` extends
+`FlutterActivity` → `android.app.Activity`; the check only fails because
+AGP 9 lint cannot resolve the Flutter embedding artifact during
+`lintVitalRelease`. Remove the `tools:ignore` when AGP fixes Flutter
+embedding class resolution.
 
 ## Affected files
 
-- `android/app/build.gradle`
+- `android/app/src/main/AndroidManifest.xml`
 
 ## Verification
 
 - `flutter build appbundle --release` now passes `lintVitalRelease`
   (subsequent `signReleaseBundle` requires the release keystore, which is
   environment-specific and unrelated to this fix).
+- `./gradlew :app:cleanLintVitalRelease :app:lintVitalRelease` →
+  `BUILD SUCCESSFUL`.
