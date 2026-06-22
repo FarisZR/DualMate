@@ -58,11 +58,38 @@ const Set<String> _genericValues = <String>{
   'canteen.entry',
   'schedule.refresh',
   'schedule.cache',
+  'schedule.open',
+  'schedule.week.change',
+  'schedule.cache.read',
+  'schedule.entries.filter',
+  'schedule.remote.fetch',
+  'schedule.remote.parse',
+  'schedule.state.apply',
+  'schedule.list.build',
+  'canteen.open',
+  'canteen.cache.read',
+  'canteen.remote.fetch',
+  'canteen.menu.parse',
+  'canteen.state.apply',
+  'dualis.open',
+  'dualis.login.request',
+  'dualis.results.parse',
+  'dualis.state.apply',
   'perf.frame',
   'perf.instant',
   'navigation',
   'analytics.event',
   'analytics.user_property',
+  'rapla',
+  'ical',
+  'mannheim',
+  'unknown',
+  'success',
+  'empty',
+  'network_error',
+  'parse_error',
+  'cancelled',
+  'skipped',
 };
 
 const Map<String, String> _routeAliases = <String, String>{
@@ -74,6 +101,20 @@ const Map<String, String> _routeAliases = <String, String>{
   'main': 'main',
   'settings': 'settings',
   'shell': 'shell',
+};
+
+const Set<String> _sentryTypedContextKeys = <String>{
+  SentryDevice.type,
+  SentryOperatingSystem.type,
+  SentryRuntime.listType,
+  SentryApp.type,
+  SentryBrowser.type,
+  SentryCulture.type,
+  SentryGpu.type,
+  SentryTraceContext.type,
+  SentryResponse.type,
+  SentryFeedback.type,
+  SentryFeatureFlags.type,
 };
 
 final RegExp _embeddedUrlPattern = RegExp(
@@ -358,11 +399,7 @@ SentryRequest? _scrubRequest(SentryRequest? request) {
 
 void _scrubContexts(Contexts contexts) {
   for (final key in contexts.keys.toList(growable: false)) {
-    if (key == SentryDevice.type ||
-        key == SentryOperatingSystem.type ||
-        key == SentryRuntime.listType ||
-        key == SentryApp.type ||
-        key == SentryTraceContext.type) {
+    if (_sentryTypedContextKeys.contains(key)) {
       continue;
     }
     final value = contexts[key];

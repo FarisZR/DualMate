@@ -4,6 +4,7 @@ import 'package:dualmate/canteen/model/canteen_filter.dart';
 import 'package:dualmate/canteen/model/canteen_location.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
+import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'dart:async';
@@ -147,57 +148,84 @@ class CanteenViewModel extends BaseViewModel {
   }) async {
     if (_loadingWeeks.containsKey(weekStart)) return;
 
-    final requestGeneration = _locationGeneration;
-    _loadingWeeks[weekStart] = requestGeneration;
-    notifyIfMounted("loadingWeeks");
+    await PerformanceTelemetry.instance.measureTask(
+      'canteen.open',
+      args: {'isForcedRefresh': forceRefresh, 'sourceType': 'unknown'},
+      action: (_) async {
+        final requestGeneration = _locationGeneration;
+        _loadingWeeks[weekStart] = requestGeneration;
+        notifyIfMounted("loadingWeeks");
 
-    final shouldReloadFromDatabase =
-        forceRefresh || !_weeklyMenus.containsKey(weekStart);
+        try {
+          final shouldReloadFromDatabase =
+              forceRefresh || !_weeklyMenus.containsKey(weekStart);
 
-    if (shouldReloadFromDatabase) {
-      final cachedMenusFuture = _provider.getCachedWeek(weekStart);
-      final lastUpdatedFuture = _provider.lastUpdatedForWeek(weekStart);
+          if (shouldReloadFromDatabase) {
+            final cachedMenusFuture = PerformanceTelemetry.instance.measureTask(
+              'canteen.cache.read',
+              args: {'sourceType': 'unknown'},
+              action: (task) async {
+                final menus = await _provider.getCachedWeek(weekStart);
+                task.setData('cachedEntryCount', menus.length);
+                return menus;
+              },
+            );
+            final lastUpdatedFuture = _provider.lastUpdatedForWeek(weekStart);
 
-      var cachedMenus = await cachedMenusFuture;
-      if (!_isCurrentLocationRequest(requestGeneration)) return;
-      _weeklyMenus[weekStart] = cachedMenus;
-      _markVisibleContentDaysDirty();
-      var lastUpdated = await lastUpdatedFuture;
-      if (!_isCurrentLocationRequest(requestGeneration)) return;
-      if (lastUpdated != null) {
-        _weekLastUpdated[weekStart] = lastUpdated;
-      }
-      notifyIfMounted("weeklyMenus");
-    }
+            var cachedMenus = await cachedMenusFuture;
+            if (!_isCurrentLocationRequest(requestGeneration)) return;
+            _applyMenusForWeek(weekStart, cachedMenus);
+            var lastUpdated = await lastUpdatedFuture;
+            if (!_isCurrentLocationRequest(requestGeneration)) return;
+            if (lastUpdated != null) {
+              _weekLastUpdated[weekStart] = lastUpdated;
+            }
+            notifyIfMounted("weeklyMenus");
+          }
 
-    if (allowNetworkRefresh) {
-      _weekLastRefreshRequestAt[weekStart] = DateTime.now();
-      try {
-        final menus = forceRefresh
-            ? await _provider.refreshWeek(weekStart)
-            : await _provider.refreshWeekIfStale(
-                weekStart,
-                staleAfter: staleAfter,
-                prefetchNextWeek: prefetchNextWeek,
+          if (allowNetworkRefresh) {
+            _weekLastRefreshRequestAt[weekStart] = DateTime.now();
+            try {
+              final menus = await PerformanceTelemetry.instance.measureTask(
+                'canteen.remote.fetch',
+                args: {
+                  'isForcedRefresh': forceRefresh,
+                  'sourceType': 'unknown',
+                },
+                successStatusForResult: (menus) =>
+                    menus.isEmpty ? 'empty' : 'success',
+                action: (task) async {
+                  final loadedMenus = forceRefresh
+                      ? await _provider.refreshWeek(weekStart)
+                      : await _provider.refreshWeekIfStale(
+                          weekStart,
+                          staleAfter: staleAfter,
+                          prefetchNextWeek: prefetchNextWeek,
+                        );
+                  task.setData('loadedEntryCount', loadedMenus.length);
+                  return loadedMenus;
+                },
               );
-        if (!_isCurrentLocationRequest(requestGeneration)) return;
-        _weeklyMenus[weekStart] = menus;
-        _markVisibleContentDaysDirty();
-        _weekErrors[weekStart] = null;
-        _weekLastUpdated[weekStart] = DateTime.now();
-      } catch (exception) {
-        if (!_isCurrentLocationRequest(requestGeneration)) return;
-        // keep cached data visible
-        _weekErrors[weekStart] = exception.toString();
-      }
-    }
-
-    if (_loadingWeeks[weekStart] == requestGeneration) {
-      _loadingWeeks.remove(weekStart);
-    }
-    notifyIfMounted("weeklyMenus");
-    notifyIfMounted("weekErrors");
-    notifyIfMounted("loadingWeeks");
+              if (!_isCurrentLocationRequest(requestGeneration)) return;
+              _applyMenusForWeek(weekStart, menus);
+              _weekErrors[weekStart] = null;
+              _weekLastUpdated[weekStart] = DateTime.now();
+            } catch (exception) {
+              if (!_isCurrentLocationRequest(requestGeneration)) return;
+              // keep cached data visible
+              _weekErrors[weekStart] = exception.toString();
+            }
+          }
+        } finally {
+          if (_loadingWeeks[weekStart] == requestGeneration) {
+            _loadingWeeks.remove(weekStart);
+          }
+          notifyIfMounted("weeklyMenus");
+          notifyIfMounted("weekErrors");
+          notifyIfMounted("loadingWeeks");
+        }
+      },
+    );
   }
 
   void ensureWeekLoaded(
@@ -316,8 +344,7 @@ class CanteenViewModel extends BaseViewModel {
   ) async {
     if (!_isCurrentLocationRequest(requestGeneration)) return;
     var weekStart = toStartOfDay(toMonday(start));
-    _weeklyMenus[weekStart] = menus;
-    _markVisibleContentDaysDirty();
+    _applyMenusForWeek(weekStart, menus);
     _weekLastUpdated[weekStart] = DateTime.now();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_isCurrentLocationRequest(requestGeneration)) return;
@@ -341,6 +368,17 @@ class CanteenViewModel extends BaseViewModel {
 
   void _markVisibleContentDaysDirty() {
     _visibleContentDaysDirty = true;
+  }
+
+  void _applyMenusForWeek(DateTime weekStart, List<DailyMenu> menus) {
+    PerformanceTelemetry.instance.measureSync(
+      'canteen.state.apply',
+      args: {'entryCount': menus.length, 'sourceType': 'unknown'},
+      action: (_) {
+        _weeklyMenus[weekStart] = menus;
+        _markVisibleContentDaysDirty();
+      },
+    );
   }
 
   bool _isCurrentLocationRequest(int requestGeneration) {

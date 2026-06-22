@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/logging/crash_reporting.dart';
+import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/schedule/business/schedule_diff_calculator.dart';
 import 'package:dualmate/schedule/business/schedule_filter.dart';
@@ -15,21 +16,20 @@ import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/model/schedule_query_information.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
+import 'package:dualmate/schedule/model/schedule_source_type.dart';
 import 'package:dualmate/schedule/service/schedule_prettifier.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
-typedef ScheduleUpdatedCallback = Future<void> Function(
-  Schedule schedule,
-  DateTime start,
-  DateTime end,
-);
+typedef ScheduleUpdatedCallback =
+    Future<void> Function(Schedule schedule, DateTime start, DateTime end);
 
-typedef ScheduleEntryChangedCallback = Future<void> Function(
-  ScheduleDiff scheduleDiff,
-  ScheduleRefreshOrigin origin,
-);
+typedef ScheduleEntryChangedCallback =
+    Future<void> Function(
+      ScheduleDiff scheduleDiff,
+      ScheduleRefreshOrigin origin,
+    );
 
 enum ScheduleRefreshOrigin {
   userBrowsing,
@@ -62,11 +62,12 @@ class ScheduleProvider {
       LinkedHashMap<String, Schedule>();
 
   ScheduleProvider(
-      this._scheduleSource,
-      this._scheduleEntryRepository,
-      this._scheduleQueryInformationRepository,
-      this._preferencesProvider,
-      this._scheduleFilterRepository) {
+    this._scheduleSource,
+    this._scheduleEntryRepository,
+    this._scheduleQueryInformationRepository,
+    this._preferencesProvider,
+    this._scheduleFilterRepository,
+  ) {
     _scheduleFilter = ScheduleFilter(_scheduleFilterRepository);
   }
 
@@ -82,14 +83,33 @@ class ScheduleProvider {
       return inMemorySchedule;
     }
 
-    var cachedSchedule =
-        await _scheduleEntryRepository.queryScheduleBetweenDates(start, end);
+    var cachedSchedule = await PerformanceTelemetry.instance.measureTask(
+      'schedule.cache.read',
+      args: {'isCacheHit': false, 'sourceType': _coarseSourceType()},
+      action: (task) async {
+        final schedule = await _scheduleEntryRepository
+            .queryScheduleBetweenDates(start, end);
+        task.setData('cachedEntryCount', schedule.entries.length);
+        return schedule;
+      },
+    );
 
     _debugLog(
       "Read cached schedule with ${cachedSchedule.entries.length} entries",
     );
 
-    cachedSchedule = await _scheduleFilter.filter(cachedSchedule);
+    cachedSchedule = await PerformanceTelemetry.instance.measureTask(
+      'schedule.entries.filter',
+      args: {
+        'entryCount': cachedSchedule.entries.length,
+        'sourceType': _coarseSourceType(),
+      },
+      action: (task) async {
+        final filtered = await _scheduleFilter.filter(cachedSchedule);
+        task.setData('filteredEntryCount', filtered.entries.length);
+        return filtered;
+      },
+    );
 
     _debugLog(
       "Filtered cached schedule has ${cachedSchedule.entries.length} entries",
@@ -127,25 +147,76 @@ class ScheduleProvider {
       "Fetching schedule for ${DateFormat.yMd().format(start)} - ${DateFormat.yMd().format(end)}",
     );
     try {
-      var updatedSchedule = await _scheduleSource.currentScheduleSource
-          .querySchedule(start, end, cancellationToken);
+      var updatedSchedule = await PerformanceTelemetry.instance.measureTask(
+        'schedule.remote.fetch',
+        args: {'sourceType': _coarseSourceType()},
+        successStatusForResult: (result) =>
+            result.schedule.entries.isEmpty ? 'empty' : 'success',
+        action: (task) async {
+          final result = await _scheduleSource.currentScheduleSource
+              .querySchedule(start, end, cancellationToken);
+          task.setData('loadedEntryCount', result.schedule.entries.length);
+          return result;
+        },
+      );
 
       var schedule = updatedSchedule.schedule;
 
-      if (await _preferencesProvider.getPrettifySchedule()) {
-        schedule = SchedulePrettifier().prettifySchedule(schedule);
-      }
+      schedule = await PerformanceTelemetry.instance.measureTask(
+        'schedule.remote.parse',
+        args: {
+          'entryCount': schedule.entries.length,
+          'sourceType': _coarseSourceType(),
+        },
+        successStatus: updatedSchedule.errors.isEmpty
+            ? 'success'
+            : 'parse_error',
+        action: (task) async {
+          var parsedSchedule = schedule;
+          if (await _preferencesProvider.getPrettifySchedule()) {
+            parsedSchedule = SchedulePrettifier().prettifySchedule(
+              parsedSchedule,
+            );
+          }
+          task.setData('loadedEntryCount', parsedSchedule.entries.length);
+          return parsedSchedule;
+        },
+      );
 
       _debugLog("Schedule returned with ${schedule.entries.length} entries");
 
-      await _diffToCache(start, end, schedule, origin);
-      await _scheduleEntryRepository.deleteScheduleEntriesBetween(start, end);
-      await _scheduleEntryRepository.saveSchedule(schedule);
-      await _scheduleQueryInformationRepository.saveScheduleQueryInformation(
-        ScheduleQueryInformation(start, end, DateTime.now()),
+      await PerformanceTelemetry.instance.measureTask(
+        'schedule.state.apply',
+        args: {
+          'entryCount': schedule.entries.length,
+          'sourceType': _coarseSourceType(),
+        },
+        action: (_) async {
+          await _diffToCache(start, end, schedule, origin);
+          await _scheduleEntryRepository.deleteScheduleEntriesBetween(
+            start,
+            end,
+          );
+          await _scheduleEntryRepository.saveSchedule(schedule);
+          await _scheduleQueryInformationRepository
+              .saveScheduleQueryInformation(
+                ScheduleQueryInformation(start, end, DateTime.now()),
+              );
+        },
       );
 
-      schedule = await _scheduleFilter.filter(schedule);
+      schedule = await PerformanceTelemetry.instance.measureTask(
+        'schedule.entries.filter',
+        args: {
+          'entryCount': schedule.entries.length,
+          'sourceType': _coarseSourceType(),
+        },
+        action: (task) async {
+          final filtered = await _scheduleFilter.filter(schedule);
+          task.setData('filteredEntryCount', filtered.entries.length);
+          return filtered;
+        },
+      );
 
       _cacheWindow(start, end, schedule);
 
@@ -181,11 +252,15 @@ class ScheduleProvider {
     Schedule updatedSchedule,
     ScheduleRefreshOrigin origin,
   ) async {
-    var oldSchedule =
-        await _scheduleEntryRepository.queryScheduleBetweenDates(start, end);
+    var oldSchedule = await _scheduleEntryRepository.queryScheduleBetweenDates(
+      start,
+      end,
+    );
 
-    var diff =
-        ScheduleDiffCalculator().calculateDiff(oldSchedule, updatedSchedule);
+    var diff = ScheduleDiffCalculator().calculateDiff(
+      oldSchedule,
+      updatedSchedule,
+    );
 
     var cleanedDiff = await _cleanDiffFromNewlyQueriedEntries(start, end, diff);
 
@@ -210,7 +285,8 @@ class ScheduleProvider {
   }
 
   void removeScheduleEntryChangedCallback(
-      ScheduleEntryChangedCallback callback) {
+    ScheduleEntryChangedCallback callback,
+  ) {
     if (_scheduleEntryChangedCallbacks.contains(callback))
       _scheduleEntryChangedCallbacks.remove(callback);
   }
@@ -226,9 +302,10 @@ class ScheduleProvider {
     var cleanedAddedEntries = <ScheduleEntry>[];
 
     for (var addedEntry in diff.addedEntries) {
-      if (queryInformation.any((i) =>
-          addedEntry.end.isAfter(i.start) &&
-          addedEntry.start.isBefore(i.end))) {
+      if (queryInformation.any(
+        (i) =>
+            addedEntry.end.isAfter(i.start) && addedEntry.start.isBefore(i.end),
+      )) {
         cleanedAddedEntries.add(addedEntry);
       }
     }
@@ -263,5 +340,23 @@ class ScheduleProvider {
   void _debugLog(String message) {
     if (!kDebugMode) return;
     developer.log(message, name: 'schedule_provider');
+  }
+
+  String _coarseSourceType() {
+    try {
+      switch (_scheduleSource.currentScheduleSourceType) {
+        case ScheduleSourceType.Rapla:
+          return 'rapla';
+        case ScheduleSourceType.Ical:
+          return 'ical';
+        case ScheduleSourceType.Mannheim:
+          return 'mannheim';
+        case ScheduleSourceType.Dualis:
+        case ScheduleSourceType.None:
+          return 'unknown';
+      }
+    } catch (_) {
+      return 'unknown';
+    }
   }
 }

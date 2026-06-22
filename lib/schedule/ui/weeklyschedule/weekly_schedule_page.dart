@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'dart:ui' show lerpDouble;
 
 import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/ui/widgets/error_display.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
@@ -379,22 +380,31 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
         },
         itemBuilder: (context, pageIndex) {
           final weekStart = _weekStartForPage(pageIndex);
-          final pageData = _buildPageData(weekStart, model);
+          return PerformanceTelemetry.instance.measureSync(
+            'schedule.list.build',
+            args: {'weekOffset': pageIndex - _currentPageIndex},
+            action: (task) {
+              final pageData = _buildPageData(weekStart, model);
+              task.setData('entryCount', pageData.schedule.entries.length);
 
-          return RepaintBoundary(
-            key: ValueKey<String>('week_page_${weekStart.toIso8601String()}'),
-            child: ScheduleWidget(
-              schedule: pageData.schedule,
-              displayStart: pageData.displayStart,
-              displayEnd: pageData.displayEnd,
-              onScheduleEntryTap: (entry) {
-                _onScheduleEntryTap(context, entry);
-              },
-              now: model.now,
-              displayStartHour: viewport.startHour,
-              displayEndHour: viewport.endHour,
-              showTimeLabels: false,
-            ),
+              return RepaintBoundary(
+                key: ValueKey<String>(
+                  'week_page_${weekStart.toIso8601String()}',
+                ),
+                child: ScheduleWidget(
+                  schedule: pageData.schedule,
+                  displayStart: pageData.displayStart,
+                  displayEnd: pageData.displayEnd,
+                  onScheduleEntryTap: (entry) {
+                    _onScheduleEntryTap(context, entry);
+                  },
+                  now: model.now,
+                  displayStartHour: viewport.startHour,
+                  displayEndHour: viewport.endHour,
+                  showTimeLabels: false,
+                ),
+              );
+            },
           );
         },
       ),

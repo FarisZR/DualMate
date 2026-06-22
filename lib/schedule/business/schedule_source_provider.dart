@@ -14,10 +14,8 @@ import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
 import 'package:kiwi/kiwi.dart';
 
-typedef OnDidChangeScheduleSource = void Function(
-  ScheduleSource newSource,
-  bool setupSuccess,
-);
+typedef OnDidChangeScheduleSource =
+    void Function(ScheduleSource newSource, bool setupSuccess);
 
 ///
 /// The ScheduleSourceProvider manages the ScheduleSource which is used by the
@@ -31,8 +29,11 @@ class ScheduleSourceProvider {
   final ScheduleQueryInformationRepository _scheduleQueryInformationRepository;
 
   ScheduleSource _currentScheduleSource = InvalidScheduleSource();
+  ScheduleSourceType _currentScheduleSourceType = ScheduleSourceType.None;
 
   ScheduleSource get currentScheduleSource => _currentScheduleSource;
+  ScheduleSourceType get currentScheduleSourceType =>
+      _currentScheduleSourceType;
 
   List<OnDidChangeScheduleSource> _onDidChangeScheduleSourceCallbacks = [];
 
@@ -61,6 +62,9 @@ class ScheduleSourceProvider {
     }
 
     _currentScheduleSource = scheduleSource;
+    _currentScheduleSourceType = didSetupCorrectly()
+        ? scheduleSourceType
+        : ScheduleSourceType.None;
 
     var success = didSetupCorrectly();
 
@@ -140,8 +144,9 @@ class ScheduleSourceProvider {
     bool setupSource = true,
   }) async {
     await _preferencesProvider.setRaplaUrl(url);
-    await _preferencesProvider
-        .setScheduleSourceType(ScheduleSourceType.Rapla.index);
+    await _preferencesProvider.setScheduleSourceType(
+      ScheduleSourceType.Rapla.index,
+    );
 
     if (clearCachedEntries) {
       await _clearEntryCache();
@@ -150,44 +155,38 @@ class ScheduleSourceProvider {
       await setupScheduleSource();
     }
 
-    await analytics.setUserProperty(
-      name: "schedule_source",
-      value: "Rapla",
-    );
+    await analytics.setUserProperty(name: "schedule_source", value: "Rapla");
   }
 
   Future<void> setupForDualis() async {
-    await _preferencesProvider
-        .setScheduleSourceType(ScheduleSourceType.Dualis.index);
+    await _preferencesProvider.setScheduleSourceType(
+      ScheduleSourceType.Dualis.index,
+    );
 
     await _clearEntryCache();
     await setupScheduleSource();
 
-    await analytics.setUserProperty(
-      name: "schedule_source",
-      value: "Dualis",
-    );
+    await analytics.setUserProperty(name: "schedule_source", value: "Dualis");
   }
 
   Future<void> setupForIcal(String url) async {
     await _preferencesProvider.setIcalUrl(url);
-    await _preferencesProvider
-        .setScheduleSourceType(ScheduleSourceType.Ical.index);
+    await _preferencesProvider.setScheduleSourceType(
+      ScheduleSourceType.Ical.index,
+    );
 
     await _clearEntryCache();
     await setupScheduleSource();
 
-    await analytics.setUserProperty(
-      name: "schedule_source",
-      value: "Ical",
-    );
+    await analytics.setUserProperty(name: "schedule_source", value: "Ical");
   }
 
   Future<void> setupForMannheim(Course selectedCourse) async {
     await _preferencesProvider.setMannheimScheduleId(selectedCourse.scheduleId);
     await _preferencesProvider.setIcalUrl(selectedCourse.icalUrl);
-    await _preferencesProvider
-        .setScheduleSourceType(ScheduleSourceType.Mannheim.index);
+    await _preferencesProvider.setScheduleSourceType(
+      ScheduleSourceType.Mannheim.index,
+    );
 
     await _clearEntryCache();
     await setupScheduleSource();
@@ -207,14 +206,15 @@ class ScheduleSourceProvider {
   }
 
   void removeDidChangeScheduleSourceCallback(
-      OnDidChangeScheduleSource callback) {
+    OnDidChangeScheduleSource callback,
+  ) {
     _onDidChangeScheduleSourceCallbacks.remove(callback);
   }
 
   Future<void> _clearEntryCache() async {
     var scheduleEntries = _scheduleEntryRepository.deleteAllScheduleEntries();
-    var queryInformation =
-        _scheduleQueryInformationRepository.deleteAllQueryInformation();
+    var queryInformation = _scheduleQueryInformationRepository
+        .deleteAllQueryInformation();
 
     await Future.wait([scheduleEntries, queryInformation]);
   }

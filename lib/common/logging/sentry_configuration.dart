@@ -3,7 +3,8 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'sentry_scrubber.dart';
 
-const String _sentryDsn = 'https://c066b6ee9a0627975699781ebdf378bd@o4511192693014528.ingest.de.sentry.io/4511192695046224';
+const String _sentryDsn =
+    'https://c066b6ee9a0627975699781ebdf378bd@o4511192693014528.ingest.de.sentry.io/4511192695046224';
 const String _sentryRelease = String.fromEnvironment('SENTRY_RELEASE');
 const String _sentryEnvironment = String.fromEnvironment('SENTRY_ENVIRONMENT');
 
@@ -11,6 +12,10 @@ String get sentryDsn => _sentryDsn.trim();
 
 bool isSentryConfigured({String? dsn}) {
   return (dsn ?? _sentryDsn).trim().isNotEmpty;
+}
+
+double sentryTraceSampleRate({bool releaseMode = kReleaseMode}) {
+  return releaseMode ? 0.1 : 1.0;
 }
 
 Future<void> configureSentryOptions(SentryFlutterOptions options) async {
@@ -34,7 +39,7 @@ Future<void> configureSentryOptions(SentryFlutterOptions options) async {
   options.enableUserInteractionBreadcrumbs = false;
   options.enableUserInteractionTracing = false;
   options.attachScreenshot = false;
-  options.tracesSampleRate = kReleaseMode ? 0.1 : 1.0;
+  options.tracesSampleRate = sentryTraceSampleRate();
   options.replay.sessionSampleRate = 0.0;
   options.replay.onErrorSampleRate = 0.0;
   options.beforeSend = scrubSentryEvent;

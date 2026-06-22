@@ -13,6 +13,7 @@ import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
+import 'package:dualmate/schedule/model/schedule_source_type.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_freshness_gate.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_update_request_gate.dart';
@@ -168,34 +169,50 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   Future<void> _initViewModel() async {
-    currentDateStart = toStartOfDay(toDayOfWeek(now, DateTime.monday));
-    currentDateEnd = toNextWeek(currentDateStart);
-    try {
-      if (_lastCachedSchedule != null) {
-        // Keep cached schedule for warm starts.
-        _setSchedule(_lastCachedSchedule!, currentDateStart, currentDateEnd);
-      }
-      var cachedSchedule = await scheduleProvider.getCachedSchedule(
-        currentDateStart,
-        currentDateEnd,
-      );
-      _setSchedule(cachedSchedule, currentDateStart, currentDateEnd);
-      _lastCachedSchedule = cachedSchedule;
-      _scheduleInitialRefresh();
-      ensureUpdateNowTimerRunning();
-      _ensureWindowRefreshTimer();
+    await PerformanceTelemetry.instance.measureTask(
+      'schedule.open',
+      args: {'sourceType': _coarseSourceType()},
+      action: (task) async {
+        currentDateStart = toStartOfDay(toDayOfWeek(now, DateTime.monday));
+        currentDateEnd = toNextWeek(currentDateStart);
+        try {
+          if (_lastCachedSchedule != null) {
+            // Keep cached schedule for warm starts.
+            _applyVisibleSchedule(
+              _lastCachedSchedule!,
+              currentDateStart,
+              currentDateEnd,
+            );
+          }
+          var cachedSchedule = await scheduleProvider.getCachedSchedule(
+            currentDateStart,
+            currentDateEnd,
+          );
+          _applyVisibleSchedule(
+            cachedSchedule,
+            currentDateStart,
+            currentDateEnd,
+          );
+          _lastCachedSchedule = cachedSchedule;
+          _scheduleInitialRefresh();
+          ensureUpdateNowTimerRunning();
+          _ensureWindowRefreshTimer();
 
-      scheduleSourceProvider.addDidChangeScheduleSourceCallback(
-        _onDidChangeScheduleSource,
-      );
-    } catch (error, trace) {
-      initializeFailed = true;
-      notifyIfMounted("initializeFailed");
-      _debugScheduleError("Weekly schedule init failed", error, trace);
-      await reportException(error, trace);
-      ensureUpdateNowTimerRunning();
-      _ensureWindowRefreshTimer();
-    }
+          scheduleSourceProvider.addDidChangeScheduleSourceCallback(
+            _onDidChangeScheduleSource,
+          );
+        } catch (error, trace) {
+          initializeFailed = true;
+          notifyIfMounted("initializeFailed");
+          _debugScheduleError("Weekly schedule init failed", error, trace);
+          await reportException(error, trace);
+          ensureUpdateNowTimerRunning();
+          _ensureWindowRefreshTimer();
+          task.setCoarseStatus('network_error');
+          await task.fail(error, includeErrorMessage: false);
+        }
+      },
+    );
   }
 
   void _scheduleInitialRefresh() {
@@ -317,6 +334,20 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
   }
 
+  void _applyVisibleSchedule(Schedule? schedule, DateTime start, DateTime end) {
+    PerformanceTelemetry.instance.measureSync(
+      'schedule.state.apply',
+      args: {
+        'entryCount': schedule?.entries.length ?? 0,
+        'weekOffset': _weekOffsetFromCurrent(start),
+        'sourceType': _coarseSourceType(),
+      },
+      action: (_) {
+        _setSchedule(schedule, start, end);
+      },
+    );
+  }
+
   Future nextWeek() async {
     final nextStart = toNextWeek(currentDateStart);
     final nextEnd = toNextWeek(currentDateEnd);
@@ -384,19 +415,42 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     DateTime end, {
     bool Function()? isCurrentRequest,
   }) async {
-    try {
-      final cacheKey = _windowKey(start, end);
-      final cachedSchedule =
-          getCachedWeek(start, end) ??
-          await scheduleProvider.getCachedSchedule(start, end);
-      if (_isDisposed) return;
-      if (isCurrentRequest != null && !isCurrentRequest()) return;
-      _memoryWeekCache[cacheKey] = cachedSchedule;
-      _setSchedule(cachedSchedule, start, end);
-    } catch (error, trace) {
-      _debugScheduleError("Failed to open cached week", error, trace);
-      await reportException(error, trace);
-    }
+    await PerformanceTelemetry.instance.measureTask(
+      'schedule.week.change',
+      args: {
+        'weekOffset': _weekOffsetFromCurrent(start),
+        'sourceType': _coarseSourceType(),
+      },
+      action: (_) async {
+        try {
+          final cacheKey = _windowKey(start, end);
+          final memorySchedule = getCachedWeek(start, end);
+          final cachedSchedule = await PerformanceTelemetry.instance
+              .measureTask(
+                'schedule.cache.read',
+                args: {
+                  'isCacheHit': memorySchedule != null,
+                  'weekOffset': _weekOffsetFromCurrent(start),
+                  'sourceType': _coarseSourceType(),
+                },
+                action: (task) async {
+                  final schedule =
+                      memorySchedule ??
+                      await scheduleProvider.getCachedSchedule(start, end);
+                  task.setData('cachedEntryCount', schedule.entries.length);
+                  return schedule;
+                },
+              );
+          if (_isDisposed) return;
+          if (isCurrentRequest != null && !isCurrentRequest()) return;
+          _memoryWeekCache[cacheKey] = cachedSchedule;
+          _applyVisibleSchedule(cachedSchedule, start, end);
+        } catch (error, trace) {
+          _debugScheduleError("Failed to open cached week", error, trace);
+          await reportException(error, trace);
+        }
+      },
+    );
   }
 
   Future updateSchedule(
@@ -487,10 +541,10 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     final task = PerformanceTelemetry.instance.startTask(
       'schedule.refresh',
       args: {
-        'start': start.toIso8601String(),
-        'end': end.toIso8601String(),
-        'origin': origin.name,
+        'weekOffset': _weekOffsetFromCurrent(start),
         'applyToVisibleState': applyToVisibleState,
+        'isForcedRefresh': forceRefresh,
+        'sourceType': _coarseSourceType(),
       },
     );
 
@@ -498,21 +552,28 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
     scheduleUrl = null;
 
-    final cacheTask = PerformanceTelemetry.instance.startTask(
-      'schedule.cache',
-      args: {'start': start.toIso8601String(), 'end': end.toIso8601String()},
-    );
     var cacheKey = _windowKey(start, end);
-    var cachedSchedule =
-        _memoryWeekCache[cacheKey] ??
-        await scheduleProvider.getCachedSchedule(start, end);
+    var cachedSchedule = await PerformanceTelemetry.instance.measureTask(
+      'schedule.cache.read',
+      args: {
+        'isCacheHit': _memoryWeekCache.containsKey(cacheKey),
+        'weekOffset': _weekOffsetFromCurrent(start),
+        'sourceType': _coarseSourceType(),
+      },
+      action: (cacheTask) async {
+        final schedule =
+            _memoryWeekCache[cacheKey] ??
+            await scheduleProvider.getCachedSchedule(start, end);
+        cacheTask.setData('cachedEntryCount', schedule.entries.length);
+        return schedule;
+      },
+    );
     _memoryWeekCache[cacheKey] = cachedSchedule;
-    unawaited(cacheTask.finish());
     cancellationToken.throwIfCancelled();
     if (_isDisposed) return false;
 
     if (applyToVisibleState) {
-      _setSchedule(cachedSchedule, start, end);
+      _applyVisibleSchedule(cachedSchedule, start, end);
     }
 
     final nowValue = now;
@@ -576,10 +637,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         if (kDebugMode) {
           debugPrint("Schedule update failed: $e");
         }
-        task.setTag('result', 'failed');
-        task.setData('error', '$e');
+        task.setCoarseStatus('network_error');
         await reportException(e, stack);
-        await task.fail(e);
+        await task.fail(e, includeErrorMessage: false);
       }
 
       try {
@@ -604,7 +664,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         var schedule = updatedSchedule.schedule;
         _memoryWeekCache[_windowKey(start, end)] = schedule;
 
-        _setSchedule(schedule, start, end);
+        _applyVisibleSchedule(schedule, start, end);
 
         _hasQueryErrors = updatedSchedule.hasError;
         notifyIfMounted("hasQueryErrors");
@@ -639,13 +699,12 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         tags: {'feature': 'schedule', 'origin': origin.name},
         contexts: {
           'schedule_refresh': {
-            'start': start.toIso8601String(),
-            'end': end.toIso8601String(),
+            'weekOffset': _weekOffsetFromCurrent(start),
             'applyToVisibleState': applyToVisibleState,
           },
         },
       );
-      await task.fail(error);
+      await task.fail(error, includeErrorMessage: false);
     } finally {
       if (applyToVisibleState) {
         _endVisibleUpdateIfCurrent(visibleUpdateRequestId);
@@ -983,6 +1042,29 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
     if (_widgetLockedStart == null || _widgetLockedEnd == null) return false;
     return _widgetLockedStart != start || _widgetLockedEnd != end;
+  }
+
+  int _weekOffsetFromCurrent(DateTime weekStart) {
+    final currentWeekStart = toStartOfDay(toDayOfWeek(now, DateTime.monday));
+    return toStartOfDay(weekStart).difference(currentWeekStart).inDays ~/ 7;
+  }
+
+  String _coarseSourceType() {
+    try {
+      switch (scheduleSourceProvider.currentScheduleSourceType) {
+        case ScheduleSourceType.Rapla:
+          return 'rapla';
+        case ScheduleSourceType.Ical:
+          return 'ical';
+        case ScheduleSourceType.Mannheim:
+          return 'mannheim';
+        case ScheduleSourceType.Dualis:
+        case ScheduleSourceType.None:
+          return 'unknown';
+      }
+    } catch (_) {
+      return 'unknown';
+    }
   }
 }
 

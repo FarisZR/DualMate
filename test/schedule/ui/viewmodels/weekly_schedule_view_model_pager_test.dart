@@ -115,6 +115,20 @@ void main() {
     },
   );
 
+  test('openWeekContaining completes when cached week read fails', () async {
+    final viewModel = WeeklyScheduleViewModel(
+      _FailingCachedScheduleProvider(),
+      _FakeScheduleSourceProvider(),
+      nowProvider: () => DateTime(2026, 2, 10, 10),
+    );
+    addTearDown(viewModel.dispose);
+
+    await expectLater(
+      viewModel.openWeekContaining(DateTime(2026, 2, 16)),
+      completes,
+    );
+  });
+
   test(
     'opening a never-fetched empty week schedules forced refresh before visible debounce',
     () {
@@ -393,6 +407,15 @@ class _FailingFirstUpdateScheduleProvider extends _FakeScheduleProvider {
     }
     markWindowQueried(start, end, DateTime.now());
     return ScheduleQueryResult(await getCachedSchedule(start, end), const []);
+  }
+}
+
+class _FailingCachedScheduleProvider extends _FakeScheduleProvider {
+  _FailingCachedScheduleProvider() : super(const <ScheduleEntry>[]);
+
+  @override
+  Future<Schedule> getCachedSchedule(DateTime start, DateTime end) async {
+    throw StateError('cached schedule unavailable');
   }
 }
 
