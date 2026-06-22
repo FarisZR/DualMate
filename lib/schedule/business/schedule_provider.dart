@@ -150,14 +150,12 @@ class ScheduleProvider {
       var updatedSchedule = await PerformanceTelemetry.instance.measureTask(
         'schedule.remote.fetch',
         args: {'sourceType': _coarseSourceType()},
+        successStatusForResult: (result) =>
+            result.schedule.entries.isEmpty ? 'empty' : 'success',
         action: (task) async {
           final result = await _scheduleSource.currentScheduleSource
               .querySchedule(start, end, cancellationToken);
           task.setData('loadedEntryCount', result.schedule.entries.length);
-          task.setData(
-            'status',
-            result.schedule.entries.isEmpty ? 'empty' : 'success',
-          );
           return result;
         },
       );
@@ -169,8 +167,10 @@ class ScheduleProvider {
         args: {
           'entryCount': schedule.entries.length,
           'sourceType': _coarseSourceType(),
-          'status': updatedSchedule.errors.isEmpty ? 'success' : 'parse_error',
         },
+        successStatus: updatedSchedule.errors.isEmpty
+            ? 'success'
+            : 'parse_error',
         action: (task) async {
           var parsedSchedule = schedule;
           if (await _preferencesProvider.getPrettifySchedule()) {

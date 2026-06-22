@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/canteen/business/canteen_provider.dart';
 import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
@@ -77,6 +79,23 @@ void main() {
       expect(provider.refreshWeekIfStaleRequests, <DateTime>[weekStart]);
     },
   );
+
+  test('loadWeek clears loading state when request becomes stale', () async {
+    final monday = DateTime(2026, 2, 9);
+    final weekStart = toStartOfDay(toMonday(monday));
+    final provider = _TrackingCanteenProvider(blockCachedWeek: true);
+    final model = CanteenViewModel(provider, TestCanteenLocationService());
+
+    final load = model.loadWeek(weekStart, allowNetworkRefresh: false);
+    await provider.cachedWeekRequestStarted.future;
+    expect(model.isLoadingWeek(weekStart), isTrue);
+
+    model.dispose();
+    provider.releaseCachedWeekRequest();
+    await load;
+
+    expect(model.isLoadingWeek(weekStart), isFalse);
+  });
 }
 
 class _TrackingCanteenProvider extends CanteenProvider {
@@ -85,8 +104,11 @@ class _TrackingCanteenProvider extends CanteenProvider {
   final List<DateTime> refreshWeekRequests = [];
   final List<DateTime> refreshWeekIfStaleRequests = [];
   final Set<DateTime> _cachedWeeks = <DateTime>{};
+  final bool blockCachedWeek;
+  final Completer<void> cachedWeekRequestStarted = Completer<void>();
+  final Completer<void> _releaseCachedWeekRequest = Completer<void>();
 
-  _TrackingCanteenProvider()
+  _TrackingCanteenProvider({this.blockCachedWeek = false})
     : super(
         CanteenMealRepository(_FakeDatabaseAccess()),
         TestCanteenLocationService(),
@@ -110,6 +132,12 @@ class _TrackingCanteenProvider extends CanteenProvider {
   Future<List<DailyMenu>> getCachedWeek(DateTime date) async {
     final weekStart = toStartOfDay(toMonday(date));
     cachedWeekRequests.add(weekStart);
+    if (blockCachedWeek) {
+      if (!cachedWeekRequestStarted.isCompleted) {
+        cachedWeekRequestStarted.complete();
+      }
+      await _releaseCachedWeekRequest.future;
+    }
 
     // Simulate cold startup: only the current week exists in local cache.
     if (_cachedWeeks.isEmpty) {
@@ -141,6 +169,13 @@ class _TrackingCanteenProvider extends CanteenProvider {
     cachedWeekRequests.clear();
     refreshWeekRequests.clear();
     refreshWeekIfStaleRequests.clear();
+  }
+
+  void releaseCachedWeekRequest() {
+    if (_releaseCachedWeekRequest.isCompleted) {
+      return;
+    }
+    _releaseCachedWeekRequest.complete();
   }
 
   @override

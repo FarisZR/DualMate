@@ -453,7 +453,7 @@ class StudyGradesViewModel extends BaseViewModel {
             credentials.password,
           );
           task.setData(
-            'status',
+            'result',
             loginResult == LoginResult.LoggedIn ? 'success' : 'network_error',
           );
           return loginResult;

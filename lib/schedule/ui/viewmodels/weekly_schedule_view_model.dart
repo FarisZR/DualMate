@@ -448,7 +448,6 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         } catch (error, trace) {
           _debugScheduleError("Failed to open cached week", error, trace);
           await reportException(error, trace);
-          rethrow;
         }
       },
     );

@@ -92,6 +92,7 @@ class PerformanceTelemetry {
     String name, {
     Map<String, Object?> args = const <String, Object?>{},
     String successStatus = 'success',
+    String Function(T result)? successStatusForResult,
     required FutureOr<T> Function(PerformanceTelemetryTask task) action,
   }) async {
     final startedAt = DateTime.now();
@@ -99,7 +100,9 @@ class PerformanceTelemetry {
     try {
       final result = await action(task);
       if (!task.isFinished) {
-        task.setCoarseStatus(successStatus);
+        task.setCoarseStatus(
+          successStatusForResult?.call(result) ?? successStatus,
+        );
         task.setDurationSince(startedAt);
         await task.finish();
       }

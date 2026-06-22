@@ -156,71 +156,76 @@ class CanteenViewModel extends BaseViewModel {
         _loadingWeeks[weekStart] = requestGeneration;
         notifyIfMounted("loadingWeeks");
 
-        final shouldReloadFromDatabase =
-            forceRefresh || !_weeklyMenus.containsKey(weekStart);
+        try {
+          final shouldReloadFromDatabase =
+              forceRefresh || !_weeklyMenus.containsKey(weekStart);
 
-        if (shouldReloadFromDatabase) {
-          final cachedMenusFuture = PerformanceTelemetry.instance.measureTask(
-            'canteen.cache.read',
-            args: {'sourceType': 'unknown'},
-            action: (task) async {
-              final menus = await _provider.getCachedWeek(weekStart);
-              task.setData('cachedEntryCount', menus.length);
-              return menus;
-            },
-          );
-          final lastUpdatedFuture = _provider.lastUpdatedForWeek(weekStart);
-
-          var cachedMenus = await cachedMenusFuture;
-          if (!_isCurrentLocationRequest(requestGeneration)) return;
-          _applyMenusForWeek(weekStart, cachedMenus);
-          var lastUpdated = await lastUpdatedFuture;
-          if (!_isCurrentLocationRequest(requestGeneration)) return;
-          if (lastUpdated != null) {
-            _weekLastUpdated[weekStart] = lastUpdated;
-          }
-          notifyIfMounted("weeklyMenus");
-        }
-
-        if (allowNetworkRefresh) {
-          _weekLastRefreshRequestAt[weekStart] = DateTime.now();
-          try {
-            final menus = await PerformanceTelemetry.instance.measureTask(
-              'canteen.remote.fetch',
-              args: {'isForcedRefresh': forceRefresh, 'sourceType': 'unknown'},
+          if (shouldReloadFromDatabase) {
+            final cachedMenusFuture = PerformanceTelemetry.instance.measureTask(
+              'canteen.cache.read',
+              args: {'sourceType': 'unknown'},
               action: (task) async {
-                final loadedMenus = forceRefresh
-                    ? await _provider.refreshWeek(weekStart)
-                    : await _provider.refreshWeekIfStale(
-                        weekStart,
-                        staleAfter: staleAfter,
-                        prefetchNextWeek: prefetchNextWeek,
-                      );
-                task.setData('loadedEntryCount', loadedMenus.length);
-                task.setData(
-                  'status',
-                  loadedMenus.isEmpty ? 'empty' : 'success',
-                );
-                return loadedMenus;
+                final menus = await _provider.getCachedWeek(weekStart);
+                task.setData('cachedEntryCount', menus.length);
+                return menus;
               },
             );
-            if (!_isCurrentLocationRequest(requestGeneration)) return;
-            _applyMenusForWeek(weekStart, menus);
-            _weekErrors[weekStart] = null;
-            _weekLastUpdated[weekStart] = DateTime.now();
-          } catch (exception) {
-            if (!_isCurrentLocationRequest(requestGeneration)) return;
-            // keep cached data visible
-            _weekErrors[weekStart] = exception.toString();
-          }
-        }
+            final lastUpdatedFuture = _provider.lastUpdatedForWeek(weekStart);
 
-        if (_loadingWeeks[weekStart] == requestGeneration) {
-          _loadingWeeks.remove(weekStart);
+            var cachedMenus = await cachedMenusFuture;
+            if (!_isCurrentLocationRequest(requestGeneration)) return;
+            _applyMenusForWeek(weekStart, cachedMenus);
+            var lastUpdated = await lastUpdatedFuture;
+            if (!_isCurrentLocationRequest(requestGeneration)) return;
+            if (lastUpdated != null) {
+              _weekLastUpdated[weekStart] = lastUpdated;
+            }
+            notifyIfMounted("weeklyMenus");
+          }
+
+          if (allowNetworkRefresh) {
+            _weekLastRefreshRequestAt[weekStart] = DateTime.now();
+            try {
+              final menus = await PerformanceTelemetry.instance.measureTask(
+                'canteen.remote.fetch',
+                args: {
+                  'isForcedRefresh': forceRefresh,
+                  'sourceType': 'unknown',
+                },
+                action: (task) async {
+                  final loadedMenus = forceRefresh
+                      ? await _provider.refreshWeek(weekStart)
+                      : await _provider.refreshWeekIfStale(
+                          weekStart,
+                          staleAfter: staleAfter,
+                          prefetchNextWeek: prefetchNextWeek,
+                        );
+                  task.setData('loadedEntryCount', loadedMenus.length);
+                  task.setData(
+                    'status',
+                    loadedMenus.isEmpty ? 'empty' : 'success',
+                  );
+                  return loadedMenus;
+                },
+              );
+              if (!_isCurrentLocationRequest(requestGeneration)) return;
+              _applyMenusForWeek(weekStart, menus);
+              _weekErrors[weekStart] = null;
+              _weekLastUpdated[weekStart] = DateTime.now();
+            } catch (exception) {
+              if (!_isCurrentLocationRequest(requestGeneration)) return;
+              // keep cached data visible
+              _weekErrors[weekStart] = exception.toString();
+            }
+          }
+        } finally {
+          if (_loadingWeeks[weekStart] == requestGeneration) {
+            _loadingWeeks.remove(weekStart);
+          }
+          notifyIfMounted("weeklyMenus");
+          notifyIfMounted("weekErrors");
+          notifyIfMounted("loadingWeeks");
         }
-        notifyIfMounted("weeklyMenus");
-        notifyIfMounted("weekErrors");
-        notifyIfMounted("loadingWeeks");
       },
     );
   }
