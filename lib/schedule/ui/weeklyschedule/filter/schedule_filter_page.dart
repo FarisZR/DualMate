@@ -3,6 +3,7 @@ import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 
@@ -137,7 +138,7 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
                                         itemCount:
                                             viewModel.filterStates.length,
                                         itemExtent: 56,
-                                        cacheExtent: 320,
+                                        scrollCacheExtent: const ScrollCacheExtent.pixels(320),
                                         itemBuilder: (context, index) =>
                                             FilterStateRow(
                                                 viewModel.filterStates[index]),
