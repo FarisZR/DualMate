@@ -12,6 +12,7 @@ import 'package:dualmate/date_management/ui/widgets/important_event_section_card
 import 'package:dualmate/schedule/ui/widgets/select_source_dialog.dart';
 import 'package:dualmate/ui/banner_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:intl/intl.dart';
 import 'package:kiwi/kiwi.dart';
@@ -306,7 +307,7 @@ class _DateManagementPageState extends State<DateManagementPage> {
         controller: _raplaScrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        cacheExtent: _importantEventsCacheExtent,
+        scrollCacheExtent: ScrollCacheExtent.pixels(_importantEventsCacheExtent),
         itemBuilder: (context, index) {
           if (index < sections.length) {
             final section = sections[index];
