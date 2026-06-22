@@ -87,30 +87,33 @@ class SelectMannheimCourseWidget extends StatelessWidget {
     );
   }
 
-  ListTile _buildCourseListTile(
+  Widget _buildCourseListTile(
     MannheimViewModel viewModel,
     int index,
     BuildContext context,
   ) {
     var isSelected = viewModel.selectedCourse == viewModel.courses[index];
 
-    return ListTile(
-      trailing: isSelected
-          ? Icon(
-              Icons.check,
-              color: Theme.of(context).colorScheme.secondary,
-            )
-          : null,
-      title: Text(
-        viewModel.courses[index].name,
-        style: isSelected
-            ? TextStyle(
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        trailing: isSelected
+            ? Icon(
+                Icons.check,
                 color: Theme.of(context).colorScheme.secondary,
               )
             : null,
+        title: Text(
+          viewModel.courses[index].name,
+          style: isSelected
+              ? TextStyle(
+                  color: Theme.of(context).colorScheme.secondary,
+                )
+              : null,
+        ),
+        subtitle: Text(viewModel.courses[index].title),
+        onTap: () => viewModel.setSelectedCourse(viewModel.courses[index]),
       ),
-      subtitle: Text(viewModel.courses[index].title),
-      onTap: () => viewModel.setSelectedCourse(viewModel.courses[index]),
     );
   }
 

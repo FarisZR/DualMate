@@ -90,11 +90,14 @@ class SelectSourcePage extends StatelessWidget {
     );
   }
 
-  RadioListTile<ScheduleSourceType> buildScheduleTypeRadio(
+  Widget buildScheduleTypeRadio(
       ScheduleSourceType type, String title) {
-    return RadioListTile(
-      value: type,
-      title: Text(title),
+    return Material(
+      color: Colors.transparent,
+      child: RadioListTile<ScheduleSourceType>(
+        value: type,
+        title: Text(title),
+      ),
     );
   }
 }
