@@ -54,6 +54,9 @@ android/key.properties
 ios/Flutter/.last_build_id
 ios/build
 
+# Local git worktrees (never commit these)
+.worktrees/
+
 # Local debugging artifacts
 debugging-files/
 
