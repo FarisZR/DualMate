@@ -84,6 +84,15 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Run Android unit tests
+        run: ./android/gradlew -p android :app:testDebugUnitTest --console=plain
+
       - name: Build arm64 APK
         run: |
           flutter build apk \
