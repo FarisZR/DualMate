@@ -61,7 +61,7 @@ void main() {
     );
     expect(sheet.expand, isFalse);
     // Built-in linear snap is intentionally disabled; snapping is driven
-    // manually with Material 3 emphasized easing (see _SnapSheetState).
+    // manually with a snappy Material 3 decelerate curve (see implementation).
     expect(sheet.snap, isFalse);
     expect(sheet.maxChildSize, greaterThan(sheet.initialChildSize));
     expect(sheet.minChildSize, lessThan(sheet.initialChildSize));
@@ -92,6 +92,31 @@ void main() {
     },
   );
 
+  testWidgets(
+    'manually dragging the sheet fully expanded fires a haptic without snap',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildApp(entry: _entry(details: 'Short details')),
+      );
+      await _showSheet(tester);
+      await tester.pumpAndSettle();
+
+      // Drag the sheet all the way to the top (clamps at max) so it reaches the
+      // expanded state by hand — no release-snap is needed.
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -360),
+      );
+      await tester.pumpAndSettle();
+
+      expect(_currentSheetSize(tester), closeTo(0.9, 0.03));
+      // A selection haptic must fire when the sheet arrives at expanded, even
+      // though the user (not the snap) drove it there.
+      expect(_haptics, contains('HapticFeedbackType.selectionClick'));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('partial downward drag from expanded snaps back to medium', (
     tester,
   ) async {
@@ -112,6 +137,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(_currentSheetSize(tester), closeTo(0.4, 0.03));
+    // Arriving back at the standard state also fires a haptic.
+    expect(_haptics, contains('HapticFeedbackType.selectionClick'));
     expect(tester.takeException(), isNull);
   });
 

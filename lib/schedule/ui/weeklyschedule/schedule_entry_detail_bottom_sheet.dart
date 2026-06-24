@@ -9,11 +9,14 @@ import 'package:intl/intl.dart';
 
 /// Expandable detail sheet for a schedule entry.
 ///
-/// The built-in [DraggableScrollableSheet] snap is disabled because it animates
-/// with a constant velocity (linear), which does not match Material 3 motion.
-/// Instead snapping is driven manually via [DraggableScrollableController.animateTo]
-/// using the Material 3 emphasized curve ([Curves.easeInOutCubicEmphasized]) and
-/// a selection haptic, per
+/// The sheet has exactly two settle states: standard and fully expanded. The
+/// built-in [DraggableScrollableSheet] snap is disabled because it animates
+/// with a constant velocity (linear) and emits no haptic. Instead snapping is
+/// driven manually via [DraggableScrollableController.animateTo] using a snappy
+/// Material 3 decelerate ([Curves.easeOutCubic]).
+///
+/// A selection haptic fires every time the sheet *arrives* at either state,
+/// whether the user snapped it there or dragged it there themselves, per
 /// https://m3.material.io/styles/motion/transitions/transition-patterns
 class ScheduleEntryDetailBottomSheet extends StatefulWidget {
   final ScheduleEntry scheduleEntry;
@@ -29,41 +32,70 @@ class ScheduleEntryDetailBottomSheet extends StatefulWidget {
 class _ScheduleEntryDetailBottomSheetState
     extends State<ScheduleEntryDetailBottomSheet> {
   static const double _minChildSize = 0.25;
-  static const double _initialChildSize = 0.4;
-  static const double _maxChildSize = 0.9;
+  static const double _initialChildSize = 0.4; // standard state
+  static const double _maxChildSize = 0.9; // fully expanded state
 
-  // Snap stops: dismiss (min), medium, large. A release between two stops snaps
-  // to the nearest stop, decided at the midpoint between adjacent stops.
-  static const double _lowerThreshold = (_minChildSize + _initialChildSize) / 2;
-  static const double _upperThreshold = (_initialChildSize + _maxChildSize) / 2;
+  // A release below this snaps back to standard; above it snaps to expanded.
+  static const double _expandThreshold =
+      (_initialChildSize + _maxChildSize) / 2;
 
-  // Material 3 emphasized motion (see m3.material.io/styles/motion).
-  static const Duration _snapDuration = Duration(milliseconds: 300);
-  static const Curve _snapCurve = Curves.easeInOutCubicEmphasized;
+  // Snappy Material 3 decelerate so the sheet locks into place quickly rather
+  // than slowly easing across (see m3.material.io/styles/motion).
+  static const Duration _snapDuration = Duration(milliseconds: 200);
+  static const Curve _snapCurve = Curves.easeOutCubic;
 
-  static const double _snapTolerance = 0.005;
+  static const double _stateTolerance = 0.01;
 
   final DraggableScrollableController _controller =
       DraggableScrollableController();
   bool _isSnapping = false;
 
+  // The state the sheet currently sits within tolerance of, so a haptic fires
+  // exactly once each time it *arrives* at a state — by snap or by manual drag.
+  // Initialized to the standard state since the sheet opens there.
+  double? _reachedState = _initialChildSize;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onSizeChanged);
+  }
+
   @override
   void dispose() {
+    _controller.removeListener(_onSizeChanged);
     _controller.dispose();
     super.dispose();
   }
 
-  /// Target snap stop for a released [size]: min (dismiss), medium or large.
+  /// Fires a selection haptic whenever the sheet arrives at a settle state.
+  void _onSizeChanged() {
+    if (!mounted || !_controller.isAttached) return;
+    final size = _controller.size;
+    if ((size - _maxChildSize).abs() <= _stateTolerance) {
+      if (_reachedState != _maxChildSize) {
+        _reachedState = _maxChildSize;
+        _triggerHaptic();
+      }
+    } else if ((size - _initialChildSize).abs() <= _stateTolerance) {
+      if (_reachedState != _initialChildSize) {
+        _reachedState = _initialChildSize;
+        _triggerHaptic();
+      }
+    } else {
+      _reachedState = null;
+    }
+  }
+
+  /// Target settle state for a released [size]: standard or fully expanded.
   double _targetForSize(double size) {
-    if (size < _lowerThreshold) return _minChildSize;
-    if (size < _upperThreshold) return _initialChildSize;
-    return _maxChildSize;
+    return size < _expandThreshold ? _initialChildSize : _maxChildSize;
   }
 
   bool _isAtSnap(double size) {
-    return (size - _minChildSize).abs() <= _snapTolerance ||
-        (size - _initialChildSize).abs() <= _snapTolerance ||
-        (size - _maxChildSize).abs() <= _snapTolerance;
+    return (size - _minChildSize).abs() <= _stateTolerance ||
+        (size - _initialChildSize).abs() <= _stateTolerance ||
+        (size - _maxChildSize).abs() <= _stateTolerance;
   }
 
   void _onScrollEnd() {
@@ -76,7 +108,6 @@ class _ScheduleEntryDetailBottomSheetState
   Future<void> _snapTo(double target) async {
     if (!mounted || !_controller.isAttached || _isSnapping) return;
     _isSnapping = true;
-    _triggerHaptic();
     try {
       await _controller.animateTo(
         target,
