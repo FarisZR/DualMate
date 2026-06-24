@@ -251,7 +251,11 @@ void main() {
     () async {
       final provider = _BlockingCountingScheduleProvider();
       final sourceProvider = _FakeScheduleSourceProvider();
-      final viewModel = WeeklyScheduleViewModel(provider, sourceProvider);
+      final viewModel = WeeklyScheduleViewModel(
+        provider,
+        sourceProvider,
+        nowProvider: () => DateTime(2026, 2, 10, 10),
+      );
       addTearDown(viewModel.dispose);
 
       final weekStart = DateTime(2026, 2, 9);
@@ -311,6 +315,53 @@ void main() {
       expect(provider.updatedScheduleRequests, 1);
     },
   );
+
+  test('source changes do not reuse stale same-window refreshes', () async {
+    final provider = _BlockingCountingScheduleProvider();
+    final sourceProvider = _FakeScheduleSourceProvider();
+    final viewModel = WeeklyScheduleViewModel(
+      provider,
+      sourceProvider,
+      nowProvider: () => DateTime(2026, 2, 10, 10),
+    );
+    addTearDown(viewModel.dispose);
+
+    final weekStart = DateTime(2026, 2, 9);
+    final weekEnd = DateTime(2026, 2, 16);
+
+    await viewModel.initialize();
+    unawaited(viewModel.updateSchedule(weekStart, weekEnd, force: true));
+    await provider.waitForRequestCount(1);
+
+    sourceProvider.emitSourceChanged();
+    await provider.waitForRequestCount(2);
+
+    provider.completeNext(
+      ScheduleQueryResult(
+        Schedule.fromList([_entry(weekStart, 'OLD_SOURCE')]),
+        const [],
+      ),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+
+    final titlesAfterOldSourceCompletes = viewModel.weekSchedule?.entries
+        .map((entry) => entry.title)
+        .toList();
+    expect(titlesAfterOldSourceCompletes, isNot(contains('Course_OLD_SOURCE')));
+
+    provider.completeNext(
+      ScheduleQueryResult(
+        Schedule.fromList([_entry(weekStart, 'NEW_SOURCE')]),
+        const [],
+      ),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+
+    expect(
+      viewModel.weekSchedule?.entries.map((entry) => entry.title),
+      contains('Course_NEW_SOURCE'),
+    );
+  });
 
   test(
     'different-window forced refreshes still launch independently',
@@ -510,6 +561,8 @@ class _RequestCountWaiter {
 
 class _FakeScheduleSourceProvider implements ScheduleSourceProvider {
   final ScheduleSource _source = _FakeScheduleSource();
+  final List<OnDidChangeScheduleSource> _callbacks =
+      <OnDidChangeScheduleSource>[];
 
   @override
   ScheduleSource get currentScheduleSource => _source;
@@ -518,12 +571,22 @@ class _FakeScheduleSourceProvider implements ScheduleSourceProvider {
   bool didSetupCorrectly() => true;
 
   @override
-  void addDidChangeScheduleSourceCallback(OnDidChangeScheduleSource callback) {}
+  void addDidChangeScheduleSourceCallback(OnDidChangeScheduleSource callback) {
+    _callbacks.add(callback);
+  }
 
   @override
   void removeDidChangeScheduleSourceCallback(
     OnDidChangeScheduleSource callback,
-  ) {}
+  ) {
+    _callbacks.remove(callback);
+  }
+
+  void emitSourceChanged() {
+    for (final callback in List<OnDidChangeScheduleSource>.from(_callbacks)) {
+      callback(_source, true);
+    }
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) {
