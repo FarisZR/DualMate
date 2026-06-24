@@ -8,35 +8,34 @@ class ScheduleQueryInformationRepository {
   ScheduleQueryInformationRepository(this._database);
 
   Future<DateTime> getOldestQueryTimeBetweenDates(
-      DateTime start, DateTime end) async {
+    DateTime start,
+    DateTime end,
+  ) async {
     var oldestQueryTimeDate = await _database.queryAggregator(
       "SELECT MIN(queryTime) FROM ScheduleQueryInformation WHERE start<=? AND end>=?",
-      [
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ],
+      [start.millisecondsSinceEpoch, end.millisecondsSinceEpoch],
     );
 
     return DateTime.fromMillisecondsSinceEpoch(oldestQueryTimeDate);
   }
 
   Future<List<ScheduleQueryInformation>> getQueryInformationBetweenDates(
-      DateTime start, DateTime end) async {
+    DateTime start,
+    DateTime end,
+  ) async {
     var rows = await _database.queryRows(
       ScheduleQueryInformationEntity.tableName(),
       where: "start<=? AND end>=?",
-      whereArgs: [
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ],
+      whereArgs: [start.millisecondsSinceEpoch, end.millisecondsSinceEpoch],
     );
 
     var scheduleQueryInformation = <ScheduleQueryInformation>[];
 
     for (var row in rows) {
       scheduleQueryInformation.add(
-        ScheduleQueryInformationEntity.fromMap(row)
-            .asScheduleQueryInformation(),
+        ScheduleQueryInformationEntity.fromMap(
+          row,
+        ).asScheduleQueryInformation(),
       );
     }
 
@@ -44,17 +43,9 @@ class ScheduleQueryInformationRepository {
   }
 
   Future<void> saveScheduleQueryInformation(
-      ScheduleQueryInformation queryInformation) async {
-    await _database.deleteWhere(
-      ScheduleQueryInformationEntity.tableName(),
-      where: "start=? AND end=?",
-      whereArgs: [
-        queryInformation.start.millisecondsSinceEpoch,
-        queryInformation.end.millisecondsSinceEpoch
-      ],
-    );
-
-    await _database.insert(
+    ScheduleQueryInformation queryInformation,
+  ) async {
+    await _database.insertOrReplace(
       ScheduleQueryInformationEntity.tableName(),
       ScheduleQueryInformationEntity.fromModel(queryInformation).toMap(),
     );

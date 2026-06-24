@@ -16,10 +16,12 @@ class DatabaseAccess {
   Future<Database> _initDatabase() async {
     final String path = await getDatabasePath(_databaseName);
 
-    return await openDatabase(path,
-        version: SqlScripts.databaseMigrationScripts.length,
-        onCreate: _onCreate,
-        onUpgrade: _onUpgrade);
+    return await openDatabase(
+      path,
+      version: SqlScripts.databaseMigrationScripts.length,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+    );
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -46,8 +48,19 @@ class DatabaseAccess {
     return await db.insert(table, row);
   }
 
+  Future<int> insertOrReplace(String table, Map<String, dynamic> row) async {
+    Database db = await _database;
+    return await db.insert(
+      table,
+      row,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
   Future<void> insertBatch(
-      String table, List<Map<String, dynamic>> rows) async {
+    String table,
+    List<Map<String, dynamic>> rows,
+  ) async {
     if (rows.isEmpty) return;
 
     Database db = await _database;
@@ -66,21 +79,25 @@ class DatabaseAccess {
   }
 
   Future<List<Map<String, dynamic>>> rawQuery(
-      String sql, List<dynamic> parameters) async {
+    String sql,
+    List<dynamic> parameters,
+  ) async {
     Database db = await _database;
     return await db.rawQuery(sql, parameters);
   }
 
-  Future<List<Map<String, dynamic>>> queryRows(String table,
-      {bool? distinct,
-      List<String>? columns,
-      String? where,
-      List<dynamic>? whereArgs,
-      String? groupBy,
-      String? having,
-      String? orderBy,
-      int? limit,
-      int? offset}) async {
+  Future<List<Map<String, dynamic>>> queryRows(
+    String table, {
+    bool? distinct,
+    List<String>? columns,
+    String? where,
+    List<dynamic>? whereArgs,
+    String? groupBy,
+    String? having,
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) async {
     Database db = await _database;
 
     if (whereArgs != null) {
@@ -106,7 +123,8 @@ class DatabaseAccess {
   Future<int> queryRowCount(String table) async {
     Database db = await _database;
     return Sqflite.firstIntValue(
-            await db.rawQuery('SELECT COUNT(*) FROM $table')) ??
+          await db.rawQuery('SELECT COUNT(*) FROM $table'),
+        ) ??
         0;
   }
 
@@ -118,8 +136,12 @@ class DatabaseAccess {
   Future<int> update(String table, Map<String, dynamic> row) async {
     Database db = await _database;
     int id = row[idColumnName];
-    return await db
-        .update(table, row, where: '$idColumnName = ?', whereArgs: [id]);
+    return await db.update(
+      table,
+      row,
+      where: '$idColumnName = ?',
+      whereArgs: [id],
+    );
   }
 
   Future<int> delete(String table, int id) async {
@@ -133,10 +155,6 @@ class DatabaseAccess {
     List<dynamic>? whereArgs,
   }) async {
     Database db = await _database;
-    return await db.delete(
-      table,
-      where: where,
-      whereArgs: whereArgs,
-    );
+    return await db.delete(table, where: where, whereArgs: whereArgs);
   }
 }
