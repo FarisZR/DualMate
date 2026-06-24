@@ -59,11 +59,14 @@ class SelectCanteenLocationPage extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: viewModel.locations
                             .map(
-                              (location) => RadioListTile<CanteenLocation>(
-                                value: location,
-                                title: Text(location.name),
-                                subtitle: CanteenLocationSubtitle(
-                                  location: location,
+                              (location) => Material(
+                                color: Colors.transparent,
+                                child: RadioListTile<CanteenLocation>(
+                                  value: location,
+                                  title: Text(location.name),
+                                  subtitle: CanteenLocationSubtitle(
+                                    location: location,
+                                  ),
                                 ),
                               ),
                             )
