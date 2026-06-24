@@ -4,46 +4,142 @@ import 'package:dualmate/common/ui/schedule_entry_type_mappings.dart';
 import 'package:dualmate/common/ui/text_styles.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
-class ScheduleEntryDetailBottomSheet extends StatelessWidget {
+/// Expandable detail sheet for a schedule entry.
+///
+/// The built-in [DraggableScrollableSheet] snap is disabled because it animates
+/// with a constant velocity (linear), which does not match Material 3 motion.
+/// Instead snapping is driven manually via [DraggableScrollableController.animateTo]
+/// using the Material 3 emphasized curve ([Curves.easeInOutCubicEmphasized]) and
+/// a selection haptic, per
+/// https://m3.material.io/styles/motion/transitions/transition-patterns
+class ScheduleEntryDetailBottomSheet extends StatefulWidget {
   final ScheduleEntry scheduleEntry;
 
   const ScheduleEntryDetailBottomSheet({Key? key, required this.scheduleEntry})
     : super(key: key);
 
   @override
+  State<ScheduleEntryDetailBottomSheet> createState() =>
+      _ScheduleEntryDetailBottomSheetState();
+}
+
+class _ScheduleEntryDetailBottomSheetState
+    extends State<ScheduleEntryDetailBottomSheet> {
+  static const double _minChildSize = 0.25;
+  static const double _initialChildSize = 0.4;
+  static const double _maxChildSize = 0.9;
+
+  // Snap stops: dismiss (min), medium, large. A release between two stops snaps
+  // to the nearest stop, decided at the midpoint between adjacent stops.
+  static const double _lowerThreshold = (_minChildSize + _initialChildSize) / 2;
+  static const double _upperThreshold = (_initialChildSize + _maxChildSize) / 2;
+
+  // Material 3 emphasized motion (see m3.material.io/styles/motion).
+  static const Duration _snapDuration = Duration(milliseconds: 300);
+  static const Curve _snapCurve = Curves.easeInOutCubicEmphasized;
+
+  static const double _snapTolerance = 0.005;
+
+  final DraggableScrollableController _controller =
+      DraggableScrollableController();
+  bool _isSnapping = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// Target snap stop for a released [size]: min (dismiss), medium or large.
+  double _targetForSize(double size) {
+    if (size < _lowerThreshold) return _minChildSize;
+    if (size < _upperThreshold) return _initialChildSize;
+    return _maxChildSize;
+  }
+
+  bool _isAtSnap(double size) {
+    return (size - _minChildSize).abs() <= _snapTolerance ||
+        (size - _initialChildSize).abs() <= _snapTolerance ||
+        (size - _maxChildSize).abs() <= _snapTolerance;
+  }
+
+  void _onScrollEnd() {
+    if (!mounted || !_controller.isAttached || _isSnapping) return;
+    final size = _controller.size;
+    if (_isAtSnap(size)) return;
+    _snapTo(_targetForSize(size));
+  }
+
+  Future<void> _snapTo(double target) async {
+    if (!mounted || !_controller.isAttached || _isSnapping) return;
+    _isSnapping = true;
+    _triggerHaptic();
+    try {
+      await _controller.animateTo(
+        target,
+        duration: _snapDuration,
+        curve: _snapCurve,
+      );
+    } finally {
+      _isSnapping = false;
+    }
+  }
+
+  // Fire-and-forget: haptics are a best-effort enhancement and must never
+  // block or break the snap animation (e.g. when the platform call fails or
+  // no handler is available, such as in tests without a mock channel).
+  void _triggerHaptic() {
+    HapticFeedback.selectionClick().catchError((Object _) {});
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.4,
-      minChildSize: 0.25,
-      maxChildSize: 0.9,
-      snap: true,
-      snapSizes: const [0.4, 0.9],
-      builder: (context, scrollController) {
-        return ColoredBox(
-          color: Theme.of(context).colorScheme.surface,
-          child: SingleChildScrollView(
-            controller: scrollController,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-              child: _buildContent(context),
-            ),
-          ),
-        );
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        // ScrollEndNotification fires when the user lifts their finger. Defer
+        // the snap to a post-frame callback so it runs after the scrollable's
+        // own ballistic activity has started; animateTo() then cancels it.
+        if (notification is ScrollEndNotification &&
+            notification.depth == 0 &&
+            !_isSnapping) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => _onScrollEnd());
+        }
+        return false;
       },
+      child: DraggableScrollableSheet(
+        expand: false,
+        controller: _controller,
+        initialChildSize: _initialChildSize,
+        minChildSize: _minChildSize,
+        maxChildSize: _maxChildSize,
+        snap: false,
+        builder: (context, scrollController) {
+          return ColoredBox(
+            color: Theme.of(context).colorScheme.surface,
+            child: SingleChildScrollView(
+              controller: scrollController,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                child: _buildContent(context),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
   Widget _buildContent(BuildContext context) {
     var formatter = DateFormat.Hm(L.of(context).locale.languageCode);
-    var timeStart = formatter.format(scheduleEntry.start);
-    var timeEnd = formatter.format(scheduleEntry.end);
+    var timeStart = formatter.format(widget.scheduleEntry.start);
+    var timeEnd = formatter.format(widget.scheduleEntry.end);
 
     var typeString = scheduleEntryTypeToReadableString(
       context,
-      scheduleEntry.type,
+      widget.scheduleEntry.type,
     );
 
     return Column(
@@ -110,7 +206,7 @@ class ScheduleEntryDetailBottomSheet extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 0, 0),
                   child: Text(
-                    scheduleEntry.title,
+                    widget.scheduleEntry.title,
                     softWrap: true,
                     style: textStyleScheduleEntryBottomPageTitle(context),
                   ),
@@ -124,7 +220,7 @@ class ScheduleEntryDetailBottomSheet extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              Expanded(child: Text(scheduleEntry.professor)),
+              Expanded(child: Text(widget.scheduleEntry.professor)),
               Text(
                 typeString,
                 style: textStyleScheduleEntryBottomPageType(context),
@@ -132,21 +228,21 @@ class ScheduleEntryDetailBottomSheet extends StatelessWidget {
             ],
           ),
         ),
-        scheduleEntry.room.isEmpty
+        widget.scheduleEntry.room.isEmpty
             ? Container()
             : Padding(
                 padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
-                child: Text(scheduleEntry.room.replaceAll(",", "\n")),
+                child: Text(widget.scheduleEntry.room.replaceAll(",", "\n")),
               ),
-        scheduleEntry.details.isEmpty
+        widget.scheduleEntry.details.isEmpty
             ? Container()
             : Padding(
                 padding: const EdgeInsets.fromLTRB(0, 16, 0, 16),
                 child: Container(color: colorSeparator(), height: 1),
               ),
-        scheduleEntry.details.isEmpty
+        widget.scheduleEntry.details.isEmpty
             ? Container()
-            : Text(scheduleEntry.details),
+            : Text(widget.scheduleEntry.details),
       ],
     );
   }

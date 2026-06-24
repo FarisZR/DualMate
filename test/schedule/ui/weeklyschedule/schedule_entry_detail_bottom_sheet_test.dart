@@ -2,10 +2,30 @@ import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/schedule_entry_detail_bottom_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+List<String> _haptics = const [];
+
 void main() {
+  setUp(() {
+    _haptics = <String>[];
+    TestWidgetsFlutterBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (MethodCall call) {
+          if (call.method == 'HapticFeedback.vibrate' &&
+              call.arguments is String) {
+            _haptics.add(call.arguments as String);
+          }
+          return null;
+        });
+  });
+
+  tearDown(() {
+    TestWidgetsFlutterBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, null);
+  });
+
   testWidgets('renders as a draggable scrollable sheet', (tester) async {
     await tester.pumpWidget(_buildApp(entry: _entry(details: 'Short details')));
     await _showSheet(tester);
@@ -29,11 +49,9 @@ void main() {
     expect(find.textContaining('A very long details line'), findsOneWidget);
   });
 
-  testWidgets('sheet is expandable: dragging up grows it past its initial size', (
+  testWidgets('starts at the medium size and is configured to expand', (
     tester,
   ) async {
-    // Short content so an upward gesture expands the sheet rather than
-    // scrolling within it.
     await tester.pumpWidget(_buildApp(entry: _entry(details: 'Short details')));
     await _showSheet(tester);
     await tester.pumpAndSettle();
@@ -41,25 +59,72 @@ void main() {
     final sheet = tester.widget<DraggableScrollableSheet>(
       find.byType(DraggableScrollableSheet),
     );
-    // The sheet is configured to expand well beyond its starting size.
     expect(sheet.expand, isFalse);
+    // Built-in linear snap is intentionally disabled; snapping is driven
+    // manually with Material 3 emphasized easing (see _SnapSheetState).
+    expect(sheet.snap, isFalse);
     expect(sheet.maxChildSize, greaterThan(sheet.initialChildSize));
     expect(sheet.minChildSize, lessThan(sheet.initialChildSize));
+    expect(_currentSheetSize(tester), closeTo(sheet.initialChildSize, 0.02));
+    expect(tester.takeException(), isNull);
+  });
 
-    final initial = _currentSheetSize(tester);
-    expect(initial, closeTo(sheet.initialChildSize, 0.02));
+  testWidgets(
+    'partial upward drag snaps to the large size with a selection haptic',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildApp(entry: _entry(details: 'Short details')),
+      );
+      await _showSheet(tester);
+      await tester.pumpAndSettle();
 
-    // Fling the sheet upwards to expand it. Upward gestures never dismiss.
-    await tester.fling(
-      find.byType(SingleChildScrollView),
-      const Offset(0, -900),
-      1500,
-    );
+      // Drag up past the snap midpoint (but not all the way to max) so the
+      // manual snap engages toward the large size.
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -220),
+      );
+      await tester.pumpAndSettle();
+
+      expect(_currentSheetSize(tester), closeTo(0.9, 0.03));
+      expect(_haptics, contains('HapticFeedbackType.selectionClick'));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('partial downward drag from expanded snaps back to medium', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_buildApp(entry: _entry(details: 'Short details')));
+    await _showSheet(tester);
     await tester.pumpAndSettle();
 
-    // The sheet must still be present (not dismissed) and have grown.
-    expect(find.byType(SingleChildScrollView), findsOneWidget);
-    expect(_currentSheetSize(tester), greaterThan(initial));
+    // Expand first.
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, -220),
+    );
+    await tester.pumpAndSettle();
+    expect(_currentSheetSize(tester), closeTo(0.9, 0.03));
+
+    // Drag back down past the midpoint, then release.
+    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, 220));
+    await tester.pumpAndSettle();
+
+    expect(_currentSheetSize(tester), closeTo(0.4, 0.03));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('dragging the sheet far down dismisses it', (tester) async {
+    await tester.pumpWidget(_buildApp(entry: _entry(details: 'Short details')));
+    await _showSheet(tester);
+    await tester.pumpAndSettle();
+    expect(find.byType(ScheduleEntryDetailBottomSheet), findsOneWidget);
+
+    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, 600));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ScheduleEntryDetailBottomSheet), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
