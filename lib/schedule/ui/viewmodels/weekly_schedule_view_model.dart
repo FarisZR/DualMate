@@ -77,6 +77,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   final Set<String> _knownFetchedWindows = <String>{};
   final Map<String, Schedule> _memoryWeekCache = {};
   final Map<String, Future<void>> _prefetchInFlight = {};
+  final Map<String, Future<ScheduleQueryResult?>> _refreshInFlightByWindow = {};
   Timer? _windowRefreshTimer;
 
   String? scheduleUrl;
@@ -478,6 +479,23 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     lastRequestedEnd = end;
     lastRequestedStart = start;
 
+    final cacheKey = _windowKey(start, end);
+    final inFlightRefresh = _refreshInFlightByWindow[cacheKey];
+    if (inFlightRefresh != null) {
+      final joinFuture = _joinInFlightScheduleRefresh(
+        start,
+        end,
+        inFlightRefresh,
+        applyToVisibleState: applyToVisibleState,
+      );
+      if (awaitRefresh) {
+        await joinFuture;
+      } else {
+        unawaited(joinFuture);
+      }
+      return;
+    }
+
     await _updateMutex.acquireAndCancelOther();
 
     if (_isDisposed) {
@@ -621,7 +639,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     ScheduleQueryResult? updatedSchedule;
     try {
       try {
-        updatedSchedule = await _readScheduleFromService(
+        updatedSchedule = await _readScheduleFromServiceDeduped(
           start,
           end,
           cancellationToken,
@@ -661,19 +679,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       }
 
       if (updatedSchedule != null) {
-        var schedule = updatedSchedule.schedule;
-        _memoryWeekCache[_windowKey(start, end)] = schedule;
-
-        _applyVisibleSchedule(schedule, start, end);
-
-        _hasQueryErrors = updatedSchedule.hasError;
-        notifyIfMounted("hasQueryErrors");
-
-        if (updatedSchedule.hasError) {
-          _queryFailedCallback?.call();
-        }
-
-        scheduleUrl = schedule.urls.isNotEmpty ? schedule.urls[0] : null;
+        _applyUpdatedScheduleResult(start, end, updatedSchedule);
       }
 
       if (updatedSchedule != null) {
@@ -724,6 +730,108 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
     isUpdating = false;
     notifyIfMounted("isUpdating");
+  }
+
+  Future<void> _joinInFlightScheduleRefresh(
+    DateTime start,
+    DateTime end,
+    Future<ScheduleQueryResult?> refreshFuture, {
+    bool applyToVisibleState = true,
+  }) async {
+    int? visibleUpdateRequestId;
+    if (applyToVisibleState) {
+      visibleUpdateRequestId = ++_visibleUpdateRequestId;
+      isUpdating = true;
+      notifyIfMounted("isUpdating");
+    }
+
+    try {
+      final updatedSchedule = await refreshFuture;
+      if (updatedSchedule != null) {
+        _freshnessGate.markFetched(start, end, now);
+        _markWindowFetched(start, end, now);
+      }
+
+      if (_isDisposed || !applyToVisibleState) {
+        return;
+      }
+
+      if (currentDateStart != start || currentDateEnd != end) {
+        return;
+      }
+
+      if (updatedSchedule != null) {
+        _applyUpdatedScheduleResult(start, end, updatedSchedule);
+        _entryRefreshGate.markFetched(start, end, now);
+      }
+
+      updateFailed = updatedSchedule == null;
+      notifyIfMounted("updateFailed");
+
+      if (updateFailed) {
+        _cancelErrorInFuture();
+      }
+    } on OperationCancelledException {
+      return;
+    } catch (error, trace) {
+      if (kDebugMode) {
+        debugPrint("Joined schedule update failed: $error");
+      }
+      await reportException(error, trace);
+
+      if (applyToVisibleState && !_isDisposed) {
+        updateFailed = true;
+        notifyIfMounted("updateFailed");
+        _cancelErrorInFuture();
+      }
+    } finally {
+      if (applyToVisibleState) {
+        _endVisibleUpdateIfCurrent(visibleUpdateRequestId);
+      }
+    }
+  }
+
+  void _applyUpdatedScheduleResult(
+    DateTime start,
+    DateTime end,
+    ScheduleQueryResult updatedSchedule,
+  ) {
+    var schedule = updatedSchedule.schedule;
+    _memoryWeekCache[_windowKey(start, end)] = schedule;
+
+    _applyVisibleSchedule(schedule, start, end);
+
+    _hasQueryErrors = updatedSchedule.hasError;
+    notifyIfMounted("hasQueryErrors");
+
+    if (updatedSchedule.hasError) {
+      _queryFailedCallback?.call();
+    }
+
+    scheduleUrl = schedule.urls.isNotEmpty ? schedule.urls[0] : null;
+  }
+
+  Future<ScheduleQueryResult?> _readScheduleFromServiceDeduped(
+    DateTime start,
+    DateTime end,
+    CancellationToken token, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
+  }) {
+    final cacheKey = _windowKey(start, end);
+    final existingRefresh = _refreshInFlightByWindow[cacheKey];
+    if (existingRefresh != null) {
+      return existingRefresh;
+    }
+
+    late final Future<ScheduleQueryResult?> refreshFuture;
+    refreshFuture = _readScheduleFromService(start, end, token, origin: origin)
+        .whenComplete(() {
+          if (identical(_refreshInFlightByWindow[cacheKey], refreshFuture)) {
+            _refreshInFlightByWindow.remove(cacheKey);
+          }
+        });
+    _refreshInFlightByWindow[cacheKey] = refreshFuture;
+    return refreshFuture;
   }
 
   Future<ScheduleQueryResult?> _readScheduleFromService(
@@ -1011,6 +1119,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
     _errorResetTimer?.cancel();
     _prefetchInFlight.clear();
+    _refreshInFlightByWindow.clear();
 
     super.dispose();
   }
