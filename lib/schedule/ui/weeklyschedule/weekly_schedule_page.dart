@@ -170,6 +170,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     showModalBottomSheet(
       useRootNavigator: true,
       context: context,
+      isScrollControlled: true,
       builder: (context) =>
           ScheduleEntryDetailBottomSheet(scheduleEntry: entry),
       shape: const RoundedRectangleBorder(
