@@ -79,10 +79,31 @@ and emits no haptic. The fix therefore disables `snap` and snaps manually:
   fire-and-forget (with `catchError`) so a failing/absent platform handler can
   never block the snap animation.
 
+### Snap guard must be cleared cancellation-safely
+
+`DraggableScrollableController.animateTo` awaits an `AnimationController`
+future. When the user drags the sheet mid-snap, the scrollable cancels that
+animation via `AnimationController.stop()` whose default is `canceled: true`,
+which leaves the underlying `TickerFuture`'s **primary** completer forever
+pending (only `orCancel` errors). Awaiting it therefore never returns, so a
+`try/finally` after the await would **never** run — the `_isSnapping` guard
+would stick `true` after a single interrupted snap and suppress all later snaps
+until the sheet was reopened.
+
+The guard is therefore cleared from cancellation-safe paths, not from the
+await:
+
+- `_snapTo` is fire-and-forget (it does not `await animateTo`), so a never-
+  completing future can neither hang nor leak the `State`.
+- `_onSizeChanged` clears `_isSnapping` when the sheet arrives at a settle state
+  (normal completion of the snap).
+- A `ScrollStartNotification` handler clears `_isSnapping` when the user takes
+  over (the interrupted-snap case).
+
 ## Tests
 
 `test/schedule/ui/weeklyschedule/schedule_entry_detail_bottom_sheet_test.dart`
-(now 8 tests):
+(now 9 tests):
 
 - Renders as a `DraggableScrollableSheet` with a scrollable body.
 - A very long `details` string no longer throws a layout overflow
@@ -95,8 +116,14 @@ and emits no haptic. The fix therefore disables `snap` and snaps manually:
   selection haptic** — proving the haptic is not tied to the snap path.
 - A partial downward drag from expanded snaps back to standard and fires a
   haptic on arrival.
+- **Snapping recovers after a snap is interrupted by a drag** (regression guard
+  for the cancellation-safe `_isSnapping` reset above).
 - Dragging the sheet far down dismisses the modal.
 - Core fields (title, professor, details) render for a short entry.
+
+Drag/snap assertions derive the expected sizes from the `DraggableScrollableSheet`
+config (`maxChildSize` / `initialChildSize`) rather than hardcoding literals, so
+they stay aligned with the widget contract.
 
 ## Notes
 

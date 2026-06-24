@@ -68,7 +68,8 @@ class _ScheduleEntryDetailBottomSheetState
     super.dispose();
   }
 
-  /// Fires a selection haptic whenever the sheet arrives at a settle state.
+  /// Fires a selection haptic whenever the sheet arrives at a settle state and
+  /// clears the snap guard on normal completion.
   void _onSizeChanged() {
     if (!mounted || !_controller.isAttached) return;
     final size = _controller.size;
@@ -77,11 +78,13 @@ class _ScheduleEntryDetailBottomSheetState
         _reachedState = _maxChildSize;
         _triggerHaptic();
       }
+      _isSnapping = false; // snap completed: arrived at expanded
     } else if ((size - _initialChildSize).abs() <= _stateTolerance) {
       if (_reachedState != _initialChildSize) {
         _reachedState = _initialChildSize;
         _triggerHaptic();
       }
+      _isSnapping = false; // snap completed: arrived at standard
     } else {
       _reachedState = null;
     }
@@ -105,18 +108,16 @@ class _ScheduleEntryDetailBottomSheetState
     _snapTo(_targetForSize(size));
   }
 
-  Future<void> _snapTo(double target) async {
+  void _snapTo(double target) {
     if (!mounted || !_controller.isAttached || _isSnapping) return;
     _isSnapping = true;
-    try {
-      await _controller.animateTo(
-        target,
-        duration: _snapDuration,
-        curve: _snapCurve,
-      );
-    } finally {
-      _isSnapping = false;
-    }
+    // Fire-and-forget: animateTo's returned future never completes when the
+    // user interrupts the snap (AnimationController.stop() cancels the ticker,
+    // leaving the primary TickerFuture pending), so we cannot rely on awaiting
+    // it to clear the guard. The guard is cleared from cancellation-safe
+    // paths instead: when the sheet arrives at a state (_onSizeChanged) or
+    // when a new drag starts (ScrollStartNotification in build).
+    _controller.animateTo(target, duration: _snapDuration, curve: _snapCurve);
   }
 
   // Fire-and-forget: haptics are a best-effort enhancement and must never
@@ -130,6 +131,13 @@ class _ScheduleEntryDetailBottomSheetState
   Widget build(BuildContext context) {
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
+        // When the user takes over mid-snap, Flutter cancels the running
+        // animateTo, so clear the guard here — otherwise the (never-completing)
+        // snap would leave it stuck and block all later snaps.
+        if (notification is ScrollStartNotification &&
+            notification.depth == 0) {
+          _isSnapping = false;
+        }
         // ScrollEndNotification fires when the user lifts their finger. Defer
         // the snap to a post-frame callback so it runs after the scrollable's
         // own ballistic activity has started; animateTo() then cancels it.

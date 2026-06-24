@@ -78,6 +78,10 @@ void main() {
       await _showSheet(tester);
       await tester.pumpAndSettle();
 
+      final sheet = tester.widget<DraggableScrollableSheet>(
+        find.byType(DraggableScrollableSheet),
+      );
+
       // Drag up past the snap midpoint (but not all the way to max) so the
       // manual snap engages toward the large size.
       await tester.drag(
@@ -86,7 +90,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(_currentSheetSize(tester), closeTo(0.9, 0.03));
+      expect(_currentSheetSize(tester), closeTo(sheet.maxChildSize, 0.03));
       expect(_haptics, contains('HapticFeedbackType.selectionClick'));
       expect(tester.takeException(), isNull);
     },
@@ -101,6 +105,10 @@ void main() {
       await _showSheet(tester);
       await tester.pumpAndSettle();
 
+      final sheet = tester.widget<DraggableScrollableSheet>(
+        find.byType(DraggableScrollableSheet),
+      );
+
       // Drag the sheet all the way to the top (clamps at max) so it reaches the
       // expanded state by hand — no release-snap is needed.
       await tester.drag(
@@ -109,7 +117,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(_currentSheetSize(tester), closeTo(0.9, 0.03));
+      expect(_currentSheetSize(tester), closeTo(sheet.maxChildSize, 0.03));
       // A selection haptic must fire when the sheet arrives at expanded, even
       // though the user (not the snap) drove it there.
       expect(_haptics, contains('HapticFeedbackType.selectionClick'));
@@ -124,23 +132,67 @@ void main() {
     await _showSheet(tester);
     await tester.pumpAndSettle();
 
+    final sheet = tester.widget<DraggableScrollableSheet>(
+      find.byType(DraggableScrollableSheet),
+    );
+
     // Expand first.
     await tester.drag(
       find.byType(SingleChildScrollView),
       const Offset(0, -220),
     );
     await tester.pumpAndSettle();
-    expect(_currentSheetSize(tester), closeTo(0.9, 0.03));
+    expect(_currentSheetSize(tester), closeTo(sheet.maxChildSize, 0.03));
 
     // Drag back down past the midpoint, then release.
     await tester.drag(find.byType(SingleChildScrollView), const Offset(0, 220));
     await tester.pumpAndSettle();
 
-    expect(_currentSheetSize(tester), closeTo(0.4, 0.03));
+    expect(_currentSheetSize(tester), closeTo(sheet.initialChildSize, 0.03));
     // Arriving back at the standard state also fires a haptic.
     expect(_haptics, contains('HapticFeedbackType.selectionClick'));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'snapping recovers after a snap is interrupted by a drag',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildApp(entry: _entry(details: 'Short details')),
+      );
+      await _showSheet(tester);
+      await tester.pumpAndSettle();
+
+      final scrollable = find.byType(SingleChildScrollView);
+      final sheet = tester.widget<DraggableScrollableSheet>(
+        find.byType(DraggableScrollableSheet),
+      );
+
+      // 1. Start a snap toward expanded, then interrupt it mid-flight.
+      await tester.drag(scrollable, const Offset(0, -220));
+      await tester.pump(const Duration(milliseconds: 50)); // snap mid-flight
+      await tester.drag(scrollable, const Offset(0, 60)); // interrupts the snap
+      await tester.pumpAndSettle();
+
+      // 2. Re-establish a known expanded state with a direct (non-snap) drag.
+      await tester.drag(scrollable, const Offset(0, -400)); // clamps at max
+      await tester.pump();
+
+      // 3. Slowly drag down to an intermediate size and release with almost no
+      //    velocity. A recovered snap settles at the standard size; a guard
+      //    stuck true (interrupted animateTo never completing) leaves it
+      //    mid-screen.
+      await tester.timedDrag(
+        scrollable,
+        const Offset(0, 210),
+        const Duration(seconds: 2),
+      );
+      await tester.pumpAndSettle();
+
+      expect(_currentSheetSize(tester), closeTo(sheet.initialChildSize, 0.06));
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('dragging the sheet far down dismisses it', (tester) async {
     await tester.pumpWidget(_buildApp(entry: _entry(details: 'Short details')));
