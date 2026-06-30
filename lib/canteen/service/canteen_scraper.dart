@@ -3,6 +3,7 @@ import 'dart:isolate';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/service/canteen_parser.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:http/http.dart';
 import 'package:http_client_helper/http_client_helper.dart' as http;
 
@@ -49,8 +50,9 @@ class CanteenScraper {
   int _isoWeekNumber(DateTime date) {
     var thursday = date.add(Duration(days: 4 - date.weekday));
     var firstThursday = DateTime(thursday.year, 1, 4);
-    var firstWeekStart =
-        firstThursday.subtract(Duration(days: firstThursday.weekday - 1));
+    var firstWeekStart = firstThursday.subtract(
+      Duration(days: firstThursday.weekday - 1),
+    );
 
     return 1 + (thursday.difference(firstWeekStart).inDays / 7).floor();
   }
@@ -67,11 +69,13 @@ class CanteenScraper {
         requestCancellationToken.cancel();
       });
 
-      var response = await http.HttpClientHelper.get(uri,
-          cancelToken: requestCancellationToken);
+      var response = await http.HttpClientHelper.get(
+        uri,
+        cancelToken: requestCancellationToken,
+      );
 
       if (response == null && !requestCancellationToken.isCanceled) {
-        throw Exception("Http request failed!");
+        throw ServiceRequestFailed("Http request failed!");
       }
 
       if (response == null) {

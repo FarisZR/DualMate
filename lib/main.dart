@@ -5,6 +5,7 @@ import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/logging/sentry_configuration.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -39,7 +40,9 @@ Future<void> main() async {
   );
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.dumpErrorToConsole(details);
-    reportException(details.exception, details.stack ?? StackTrace.current);
+    if (!isExpectedScheduleFetchFailure(details.exception)) {
+      reportException(details.exception, details.stack ?? StackTrace.current);
+    }
   };
 
   final rootApp = RootPage(startupStopwatch: _startupStopwatch);
@@ -76,4 +79,3 @@ Future<void> main() async {
     }
   }());
 }
-

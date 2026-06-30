@@ -1,33 +1,26 @@
 ---
-module: Schedule
+module: App
 date: 2026-06-30
 problem_type: integration_issue
 component: sentry_reporting
 symptoms:
   - "Sentry Issues flooded with ServiceRequestFailed: Http request failed!"
   - "Sentry Issues flooded with ScheduleQueryFailedException for expected network outages"
-  - "Expected external schedule fetch failures escalated to Sentry Issues"
+  - "Expected external schedule/canteen/dualis fetch failures escalated to Sentry Issues"
 root_cause: expected_network_failures_reported_as_issues
 resolution_type: code_fix
 severity: medium
-tags: [sentry, diagnostics, schedule, network, telemetry]
+tags: [sentry, diagnostics, schedule, canteen, dualis, network, telemetry]
 ---
 
-# Suppress expected schedule fetch failures from Sentry Issues
+# Suppress expected external fetch failures from Sentry Issues
 
 ## Problem
 
-Expected external network/request failures from schedule refresh flows
-(`ServiceRequestFailed`, `ScheduleQueryFailedException` wrapping
-`ServiceRequestFailed`) were creating noisy Sentry Issues. These are not app
-bugs—they represent transient connectivity loss or source unavailability—but
-they consumed Sentry quota and obscured real regressions.
-
-`ErrorReportScheduleSourceDecorator` already tried to suppress connectivity
-errors by rethrowing `ScheduleQueryFailedException(ServiceRequestFailed)`
-without reporting. However, downstream catch blocks (notably
-`WeeklyScheduleViewModel._refreshScheduleInBackground`) called
-`reportException(e, stack)` on the rethrown exception, undoing the suppression.
+Expected external network/request failures from schedule, canteen, and dualis
+fetch flows were creating noisy Sentry Issues. These are not app bugs—they
+represent transient connectivity loss or source unavailability—but they
+consumed Sentry quota and obscured real regressions.
 
 ## Solution
 
@@ -46,29 +39,44 @@ bool isExpectedScheduleFetchFailure(Object error) {
 }
 ```
 
-This classifies failures by typed exception hierarchy—not message strings—so
-it remains robust against redacted or localized messages.
+Classifies failures by typed exception hierarchy, not message strings.
 
-### Centralized suppression in refresh paths
+### Schedule refresh paths
 
 - `WeeklyScheduleViewModel._refreshScheduleInBackground` and
   `_joinInFlightScheduleRefresh`: skip `reportException` when
-  `isExpectedScheduleFetchFailure(e)` is true, but still set
-  `task.setCoarseStatus('network_error')`, call `task.fail(...)`, and set
-  `updateFailed = true`.
-- `_readScheduleFromService`: no longer swallows
-  `ScheduleQueryFailedException` into `null`. Exceptions propagate so the
-  catch-all can classify them, update telemetry, and decide reporting.
-- `BackgroundScheduleUpdate.updateSchedule`: wraps its
-  `reportCaughtException` call in the same `isExpectedScheduleFetchFailure`
-  guard.
+  `isExpectedScheduleFetchFailure(e)` is true, but still set telemetry status
+  and `updateFailed`.
+- `_readScheduleFromService`: propagates exceptions instead of swallowing all
+  `ScheduleQueryFailedException` into `null`.
+- `BackgroundScheduleUpdate.updateSchedule`: guards its
+  `reportCaughtException` call.
+- `ErrorReportScheduleSourceDecorator`: rethrows all
+  `ScheduleQueryFailedException` without reporting (callers own the decision).
 
-### Decorator simplification
+### Canteen paths
 
-`ErrorReportScheduleSourceDecorator` now rethrows all
-`ScheduleQueryFailedException` variants without reporting. The calling refresh
-path owns the Sentry Issue decision. This eliminates double-reporting for
-unexpected `ScheduleQueryFailedException` variants.
+- `CanteenScraper._makeRequest` and `DhbwAppCanteenSource`: now throw typed
+  `ServiceRequestFailed` instead of generic `Exception` for HTTP failures.
+- `BackgroundCanteenUpdate.updateCanteen`: guards its
+  `reportCaughtException` call with `isExpectedScheduleFetchFailure`.
+- `RootPage._runCanteenPrewarm`: guards its canteen prewarm report.
+
+### Dualis paths
+
+- `StudyGradesViewModel` (`loadStudyGrades`, `loadAllModules`,
+  `loadSemesterByName`, `loadSemesterNamesForCurrentSelection`): swallow
+  expected network failures via `isExpectedScheduleFetchFailure` so they
+  don't propagate as unhandled async exceptions. Unexpected errors still
+  rethrow.
+- `DualisLoginViewModel.testCredentials`: guards `reportException` call.
+- `MannheimViewModel.loadCourses`: guards `reportException` call.
+
+### Global error handler
+
+- `main.dart` `FlutterError.onError`: guards `reportException` with
+  `isExpectedScheduleFetchFailure` so unhandled expected network failures
+  don't create Sentry Issues.
 
 ## What still goes to Sentry
 
@@ -76,28 +84,27 @@ unexpected `ScheduleQueryFailedException` variants.
   regressions) via `ScheduleProvider.getUpdatedSchedule` error forwarding.
 - Non-network `ScheduleQueryFailedException` (e.g. wrapping `StateError`).
 - Database/cache/state errors, null errors, lifecycle errors.
-- Any unexpected exception during refresh.
+- Any unexpected exception in any feature path.
 
 ## What is suppressed (telemetry only)
 
-- `ServiceRequestFailed` (HTTP request failures).
+- `ServiceRequestFailed` (HTTP request failures) from any feature.
 - `ScheduleQueryFailedException` where `innerException is ServiceRequestFailed`.
 
-These still:
-- Set `updateFailed = true` in the view model.
-- Mark the performance task with `network_error` coarse status.
-- Fail/finish the telemetry task/span.
-- Allow retry on the next refresh cycle (freshness gates not marked fetched).
+These still update UI failure state, mark telemetry tasks, and allow retry.
 
 ## Privacy
 
-No changes to `sentry_scrubber.dart`. No raw URLs, schedule titles, rooms,
-credentials, or user-identifying values are added to Sentry. Existing
-scrubbing behavior is fully preserved.
+No changes to `sentry_scrubber.dart`. Existing scrubbing fully preserved.
 
 ## Verification
 
 - `test/schedule/ui/viewmodels/weekly_schedule_sentry_suppression_test.dart`
-  covers all five required scenarios.
-- Full schedule, background, date_management, and logging test suites pass
-  (322 tests total).
+  (12 tests)
+- `test/canteen/background/background_canteen_update_sentry_suppression_test.dart`
+  (2 tests)
+- `test/canteen/service/dhbw_app_canteen_source_test.dart` (added
+  ServiceRequestFailed type assertion)
+- `test/dualis/ui/viewmodels/study_grades_view_model_test.dart` (added 4
+  swallow/rethrow tests)
+- Full suite: 329 tests pass.

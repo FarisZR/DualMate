@@ -5,6 +5,7 @@ import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/model/meal_type.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http_client_helper/http_client_helper.dart' as http;
 
@@ -119,7 +120,7 @@ class DhbwAppCanteenSource {
         if (requestCancellationToken.isCanceled) {
           throw OperationCancelledException();
         }
-        throw Exception('DHBW.app canteen request failed');
+        throw ServiceRequestFailed('DHBW.app canteen request failed');
       }
 
       return compute(

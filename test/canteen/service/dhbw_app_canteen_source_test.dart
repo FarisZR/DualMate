@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -98,6 +99,20 @@ void main() {
     expect(requestWasCanceled, isTrue);
     expect(requestCount, 1);
   });
+
+  test(
+    'null response throws ServiceRequestFailed for Sentry suppression',
+    () async {
+      final source = DhbwAppCanteenSource(
+        loadSitePayloadResponse: (_, __) async => null,
+      );
+
+      await expectLater(
+        source.loadWeek('MA', 7, DateTime(2026, 6, 1)),
+        throwsA(isA<ServiceRequestFailed>()),
+      );
+    },
+  );
 
   test('evicts failed payload fetches so the next request can retry', () async {
     var requestCount = 0;

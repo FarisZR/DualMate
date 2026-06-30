@@ -11,6 +11,7 @@ import 'package:dualmate/dualis/model/semester.dart';
 import 'package:dualmate/dualis/model/study_grades.dart';
 import 'package:dualmate/dualis/service/dualis_service.dart';
 import 'package:dualmate/schedule/model/schedule_source_type.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:flutter/foundation.dart';
 
 enum LoginState {
@@ -191,6 +192,8 @@ class StudyGradesViewModel extends BaseViewModel {
         _studyGrades = loadedStudyGrades;
       });
     } on OperationCancelledException catch (_) {
+    } catch (e) {
+      if (!isExpectedScheduleFetchFailure(e)) rethrow;
     } finally {
       _studyGradesCancellationToken.release();
       if (epoch != _studyGradesLoadEpoch) {
@@ -230,6 +233,8 @@ class StudyGradesViewModel extends BaseViewModel {
         _allModules = loadedModules;
       });
     } on OperationCancelledException catch (_) {
+    } catch (e) {
+      if (!isExpectedScheduleFetchFailure(e)) rethrow;
     } finally {
       _allModulesCancellationToken.release();
       if (epoch != _allModulesLoadEpoch) {
@@ -290,6 +295,8 @@ class StudyGradesViewModel extends BaseViewModel {
         _currentSemester = loadedSemester;
       });
     } on OperationCancelledException catch (_) {
+    } catch (e) {
+      if (!isExpectedScheduleFetchFailure(e)) rethrow;
     } finally {
       _currentSemesterCancellationToken.release();
       if (epoch != _currentSemesterLoadEpoch) {
@@ -338,6 +345,8 @@ class StudyGradesViewModel extends BaseViewModel {
         _semesterNames = loadedSemesterNames;
       });
     } on OperationCancelledException catch (_) {
+    } catch (e) {
+      if (!isExpectedScheduleFetchFailure(e)) rethrow;
     } finally {
       _semesterNamesCancellationToken.release();
       if (epoch != _semesterNamesLoadEpoch) {

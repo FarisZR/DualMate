@@ -4,6 +4,7 @@ import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/dualis/model/credentials.dart';
 import 'package:dualmate/dualis/service/dualis_service.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
 
 class DualisLoginViewModel extends OnboardingStepViewModel {
@@ -40,7 +41,9 @@ class DualisLoginViewModel extends OnboardingStepViewModel {
     } catch (ex, trace) {
       setIsValid(false);
       _passwordOrUsernameWrong = true;
-      unawaited(reportException(ex, trace));
+      if (!isExpectedScheduleFetchFailure(ex)) {
+        unawaited(reportException(ex, trace));
+      }
     } finally {
       _isLoading = false;
     }
@@ -54,9 +57,6 @@ class DualisLoginViewModel extends OnboardingStepViewModel {
 
     // To improve the onboarding experience we do not await this call because
     // it may take a few seconds
-    preferencesProvider.storeDualisCredentials(Credentials(
-      username,
-      password,
-    ));
+    preferencesProvider.storeDualisCredentials(Credentials(username, password));
   }
 }

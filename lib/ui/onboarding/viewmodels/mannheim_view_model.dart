@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/service/mannheim/mannheim_course_scraper.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
 
 typedef MannheimCourseLoader = Future<List<Course>> Function();
@@ -42,7 +43,9 @@ class MannheimViewModel extends OnboardingStepViewModel {
     } catch (ex, trace) {
       _courses = [];
       _loadingState = LoadCoursesState.Failed;
-      unawaited(reportException(ex, trace));
+      if (!isExpectedScheduleFetchFailure(ex)) {
+        unawaited(reportException(ex, trace));
+      }
     }
 
     notifyListeners("loadingState");

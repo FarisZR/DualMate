@@ -14,6 +14,7 @@ import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/util/launch_intent.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:flutter/services.dart';
@@ -511,17 +512,19 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       await prewarmCanteenIfStale();
     } catch (error, trace) {
       _debugRootError("Root init: canteen prewarm failed", error, trace);
-      unawaited(
-        AppDiagnostics.instance.reportCaughtException(
-          error,
-          trace,
-          message: 'Root init: canteen prewarm failed',
-          tags: {'feature': 'canteen'},
-          contexts: {
-            'canteen': {'phase': 'startup_prewarm'},
-          },
-        ),
-      );
+      if (!isExpectedScheduleFetchFailure(error)) {
+        unawaited(
+          AppDiagnostics.instance.reportCaughtException(
+            error,
+            trace,
+            message: 'Root init: canteen prewarm failed',
+            tags: {'feature': 'canteen'},
+            contexts: {
+              'canteen': {'phase': 'startup_prewarm'},
+            },
+          ),
+        );
+      }
     }
   }
 
