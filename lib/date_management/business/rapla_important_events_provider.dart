@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/date_management/model/important_event.dart';
@@ -48,7 +51,10 @@ class RaplaImportantEventsProvider {
       return updatedSchedule;
     } on OperationCancelledException {
       return null;
-    } on ScheduleQueryFailedException {
+    } on ScheduleQueryFailedException catch (e, trace) {
+      if (!isExpectedScheduleFetchFailure(e)) {
+        unawaited(reportException(e, trace));
+      }
       return null;
     }
   }
@@ -94,7 +100,8 @@ class RaplaImportantEventsProvider {
   }
 
   static List<ImportantEvent> mergeImportantEntries(
-      List<ScheduleEntry> entries) {
+    List<ScheduleEntry> entries,
+  ) {
     if (entries.isEmpty) return [];
 
     var grouped = <String, List<ScheduleEntry>>{};
@@ -114,13 +121,15 @@ class RaplaImportantEventsProvider {
       });
       if (groupEntries.first.type == ScheduleEntryType.Exam) {
         for (var entry in groupEntries) {
-          mergedEntries.add(ImportantEvent(
-            title: entry.title,
-            start: entry.start,
-            end: entry.end,
-            professor: entry.professor,
-            type: entry.type,
-          ));
+          mergedEntries.add(
+            ImportantEvent(
+              title: entry.title,
+              start: entry.start,
+              end: entry.end,
+              professor: entry.professor,
+              type: entry.type,
+            ),
+          );
         }
         return;
       }
@@ -132,12 +141,14 @@ class RaplaImportantEventsProvider {
       var currentEventEnd = groupEntries.first.end;
 
       void flushCurrent() {
-        mergedEntries.add(ImportantEvent(
-          title: currentTitle,
-          start: currentEventStart,
-          end: currentEventEnd,
-          type: currentType,
-        ));
+        mergedEntries.add(
+          ImportantEvent(
+            title: currentTitle,
+            start: currentEventStart,
+            end: currentEventEnd,
+            type: currentType,
+          ),
+        );
       }
 
       for (var i = 1; i < groupEntries.length; i++) {

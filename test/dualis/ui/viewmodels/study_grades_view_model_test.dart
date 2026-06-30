@@ -148,6 +148,43 @@ void main() {
 
     await expectLater(viewModel.loadStudyGrades(), throwsA(isA<StateError>()));
   });
+
+  test(
+    'refreshData does not advance lastRefreshAt on expected network failure',
+    () async {
+      final preferences = _buildPreferences();
+      final service = _NetworkErrorDualisService(
+        studyGradesError: ServiceRequestFailed('Http request failed!'),
+      );
+      final viewModel = StudyGradesViewModel(preferences, service);
+      addTearDown(viewModel.dispose);
+
+      await viewModel.login(Credentials('u', 'p'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(
+        await preferences.getDualisLastRefreshAt(),
+        isNull,
+        reason:
+            'A network failure must not be recorded as a successful refresh',
+      );
+    },
+  );
+
+  test('refreshData advances lastRefreshAt when all loads succeed', () async {
+    final preferences = _buildPreferences();
+    final service = _NetworkErrorDualisService();
+    final viewModel = StudyGradesViewModel(preferences, service);
+    addTearDown(viewModel.dispose);
+
+    await viewModel.login(Credentials('u', 'p'));
+
+    while (await preferences.getDualisLastRefreshAt() == null) {
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+    }
+
+    expect(await preferences.getDualisLastRefreshAt(), isNotNull);
+  });
 }
 
 PreferencesProvider _buildPreferences() {

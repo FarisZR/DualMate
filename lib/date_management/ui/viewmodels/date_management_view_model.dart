@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/logging/app_diagnostics.dart';
+import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/util/cancelable_mutex.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
@@ -691,7 +692,10 @@ class DateManagementViewModel extends BaseViewModel {
       return importantEvents;
     } on OperationCancelledException {
       return null;
-    } on ScheduleQueryFailedException {
+    } on ScheduleQueryFailedException catch (e, trace) {
+      if (!isExpectedScheduleFetchFailure(e)) {
+        unawaited(reportException(e, trace));
+      }
       return null;
     }
   }

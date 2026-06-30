@@ -74,6 +74,7 @@ class StudyGradesViewModel extends BaseViewModel {
   bool _pageActivationInFlight = false;
   bool _refreshInFlight = false;
   bool _autoRestoreSuppressed = false;
+  bool _refreshHadNetworkError = false;
 
   StudyGradesViewModel(this._preferencesProvider, this._dualisService);
 
@@ -193,7 +194,11 @@ class StudyGradesViewModel extends BaseViewModel {
       });
     } on OperationCancelledException catch (_) {
     } catch (e) {
-      if (!isExpectedScheduleFetchFailure(e)) rethrow;
+      if (isExpectedScheduleFetchFailure(e)) {
+        _refreshHadNetworkError = true;
+      } else {
+        rethrow;
+      }
     } finally {
       _studyGradesCancellationToken.release();
       if (epoch != _studyGradesLoadEpoch) {
@@ -234,7 +239,11 @@ class StudyGradesViewModel extends BaseViewModel {
       });
     } on OperationCancelledException catch (_) {
     } catch (e) {
-      if (!isExpectedScheduleFetchFailure(e)) rethrow;
+      if (isExpectedScheduleFetchFailure(e)) {
+        _refreshHadNetworkError = true;
+      } else {
+        rethrow;
+      }
     } finally {
       _allModulesCancellationToken.release();
       if (epoch != _allModulesLoadEpoch) {
@@ -296,7 +305,11 @@ class StudyGradesViewModel extends BaseViewModel {
       });
     } on OperationCancelledException catch (_) {
     } catch (e) {
-      if (!isExpectedScheduleFetchFailure(e)) rethrow;
+      if (isExpectedScheduleFetchFailure(e)) {
+        _refreshHadNetworkError = true;
+      } else {
+        rethrow;
+      }
     } finally {
       _currentSemesterCancellationToken.release();
       if (epoch != _currentSemesterLoadEpoch) {
@@ -346,7 +359,11 @@ class StudyGradesViewModel extends BaseViewModel {
       });
     } on OperationCancelledException catch (_) {
     } catch (e) {
-      if (!isExpectedScheduleFetchFailure(e)) rethrow;
+      if (isExpectedScheduleFetchFailure(e)) {
+        _refreshHadNetworkError = true;
+      } else {
+        rethrow;
+      }
     } finally {
       _semesterNamesCancellationToken.release();
       if (epoch != _semesterNamesLoadEpoch) {
@@ -372,6 +389,7 @@ class StudyGradesViewModel extends BaseViewModel {
     }
 
     _refreshInFlight = true;
+    _refreshHadNetworkError = false;
     try {
       if (force) {
         _dualisService.clearCache();
@@ -387,7 +405,9 @@ class StudyGradesViewModel extends BaseViewModel {
         ),
       ]);
 
-      await _preferencesProvider.setDualisLastRefreshAt(DateTime.now());
+      if (!_refreshHadNetworkError) {
+        await _preferencesProvider.setDualisLastRefreshAt(DateTime.now());
+      }
     } finally {
       _refreshInFlight = false;
     }
