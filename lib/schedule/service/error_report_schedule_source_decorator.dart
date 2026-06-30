@@ -9,8 +9,11 @@ class ErrorReportScheduleSourceDecorator extends ScheduleSource {
   ErrorReportScheduleSourceDecorator(this._scheduleSource);
 
   @override
-  Future<ScheduleQueryResult> querySchedule(DateTime from, DateTime to,
-      [CancellationToken? cancellationToken]) async {
+  Future<ScheduleQueryResult> querySchedule(
+    DateTime from,
+    DateTime to, [
+    CancellationToken? cancellationToken,
+  ]) async {
     try {
       var schedule = await _scheduleSource.querySchedule(
         from,
@@ -21,15 +24,15 @@ class ErrorReportScheduleSourceDecorator extends ScheduleSource {
       return schedule;
     } catch (ex, trace) {
       if (ex is OperationCancelledException) rethrow;
-      if (ex is ScheduleQueryFailedException) {
-        // Do not log connectivity exceptions
-        if (ex.innerException is ServiceRequestFailed) rethrow;
 
-        await reportException(ex, ex.trace ?? StackTrace.current);
-      } else {
-        await reportException(ex, trace);
-      }
+      // ScheduleQueryFailedException (both expected network failures and
+      // unexpected ones) is handled by the calling refresh path, which uses
+      // [isExpectedScheduleFetchFailure] to decide whether to report. This
+      // avoids double-reporting and lets the UI/telemetry layers stay in
+      // control of the Sentry Issue decision.
+      if (ex is ScheduleQueryFailedException) rethrow;
 
+      await reportException(ex, trace);
       rethrow;
     }
   }

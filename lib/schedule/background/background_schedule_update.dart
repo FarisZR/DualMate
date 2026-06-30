@@ -45,21 +45,24 @@ class BackgroundScheduleUpdate extends TaskCallback {
       print("Background schedule update failed");
       print(e.innerException.toString());
       print(trace);
-      await AppDiagnostics.instance.reportCaughtException(
-        e,
-        trace,
-        message: 'Background schedule update failed',
-        tags: {'feature': 'schedule'},
-        contexts: {
-          'schedule_update': {
-            'origin': ScheduleRefreshOrigin.backgroundPeriodic.name,
-            'kind': 'query_failed',
+      if (!isExpectedScheduleFetchFailure(e)) {
+        await AppDiagnostics.instance.reportCaughtException(
+          e,
+          trace,
+          message: 'Background schedule update failed',
+          tags: {'feature': 'schedule'},
+          contexts: {
+            'schedule_update': {
+              'origin': ScheduleRefreshOrigin.backgroundPeriodic.name,
+              'kind': 'query_failed',
+            },
           },
-        },
-      );
+        );
+      }
       print("Background schedule update status: failure");
       print(
-          "Background schedule update next: retry in ${_updateInterval.inHours}h");
+        "Background schedule update next: retry in ${_updateInterval.inHours}h",
+      );
       return;
     } catch (e, trace) {
       print("Background schedule update unexpected failure");
@@ -79,7 +82,8 @@ class BackgroundScheduleUpdate extends TaskCallback {
       );
       print("Background schedule update status: failure");
       print(
-          "Background schedule update next: retry in ${_updateInterval.inHours}h");
+        "Background schedule update next: retry in ${_updateInterval.inHours}h",
+      );
       return;
     }
 
@@ -129,11 +133,7 @@ class BackgroundScheduleUpdate extends TaskCallback {
 
   @override
   Future<void> schedule() async {
-    await scheduler.schedulePeriodic(
-      _updateInterval,
-      getName(),
-      true,
-    );
+    await scheduler.schedulePeriodic(_updateInterval, getName(), true);
   }
 
   @override

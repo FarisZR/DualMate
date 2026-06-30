@@ -669,7 +669,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
           debugPrint("Schedule update failed: $e");
         }
         task.setCoarseStatus('network_error');
-        await reportException(e, stack);
+        if (!isExpectedScheduleFetchFailure(e)) {
+          await reportException(e, stack);
+        }
         await task.fail(e, includeErrorMessage: false);
       }
 
@@ -794,7 +796,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       if (kDebugMode) {
         debugPrint("Joined schedule update failed: $error");
       }
-      await reportException(error, trace);
+      if (!isExpectedScheduleFetchFailure(error)) {
+        await reportException(error, trace);
+      }
 
       if (applyToVisibleState && !_isDisposed) {
         updateFailed = true;
@@ -861,17 +865,17 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     DateTime end,
     CancellationToken token, {
     ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
-  }) async {
-    try {
-      return await scheduleProvider.getUpdatedSchedule(
-        start,
-        end,
-        token,
-        origin: origin,
-      );
-    } on ScheduleQueryFailedException {
-      return null;
-    }
+  }) {
+    // Exceptions (including ScheduleQueryFailedException) are intentionally
+    // allowed to propagate so that the refresh catch-all can classify them
+    // via [isExpectedScheduleFetchFailure], update UI/telemetry state, and
+    // decide whether to create a Sentry Issue.
+    return scheduleProvider.getUpdatedSchedule(
+      start,
+      end,
+      token,
+      origin: origin,
+    );
   }
 
   void _cancelErrorInFuture() {

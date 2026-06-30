@@ -9,8 +9,11 @@ abstract class ScheduleSource {
   /// Returns a future which gives the updated schedule or throws an exception
   /// if an error happened or the operation was cancelled
   ///
-  Future<ScheduleQueryResult> querySchedule(DateTime from, DateTime to,
-      [CancellationToken? cancellationToken]);
+  Future<ScheduleQueryResult> querySchedule(
+    DateTime from,
+    DateTime to, [
+    CancellationToken? cancellationToken,
+  ]);
 
   bool canQuery();
 }
@@ -23,7 +26,9 @@ class ScheduleQueryFailedException implements Exception {
 
   @override
   String toString() {
-    return (innerException?.toString() ?? "") + "\n" + (trace?.toString() ?? "");
+    return (innerException?.toString() ?? "") +
+        "\n" +
+        (trace?.toString() ?? "");
   }
 }
 
@@ -39,3 +44,17 @@ class ServiceRequestFailed implements Exception {
 }
 
 class EndpointUrlInvalid implements Exception {}
+
+/// Whether [error] represents an expected external network/request failure
+/// that should be tracked as telemetry but not escalated into a Sentry Issue.
+///
+/// This intentionally only matches the typed network/request subtype so that
+/// parse regressions, database/cache errors, and other unexpected exceptions
+/// keep flowing to Sentry.
+bool isExpectedScheduleFetchFailure(Object error) {
+  if (error is ServiceRequestFailed) return true;
+  if (error is ScheduleQueryFailedException) {
+    return error.innerException is ServiceRequestFailed;
+  }
+  return false;
+}
