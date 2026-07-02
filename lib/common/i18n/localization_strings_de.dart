@@ -163,6 +163,10 @@ final de = {
       "Die Kurse konnten nicht geladen werden",
   "onboardingMannheimDescription":
       "Wähle den passenden Kurs der DHBW Mannheim aus:",
+  "onboardingMannheimSearchHint": "Kurse suchen",
+  "onboardingMannheimNoCourses": "Aktuell sind keine Kurse verfügbar",
+  "onboardingMannheimNoSearchResults": "Keine Kurse passen zur Suche",
+  "onboardingMannheimRetry": "Erneut versuchen",
   "onboardingMannheimTitle": "DHBW Mannheim",
   "settingsPrettifySchedule": "Texte im Vorlesungsplan verschönern",
   "widgetHelpDialogMessage":

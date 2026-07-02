@@ -1,4 +1,5 @@
 import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/schedule/service/mannheim/mannheim_course_service.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/mannheim_view_model.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
 import 'package:flutter/material.dart';
@@ -50,71 +51,108 @@ class SelectMannheimCourseWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PropertyChangeConsumer<OnboardingStepViewModel, String>(
-      builder: (
-        BuildContext context,
-        OnboardingStepViewModel? model,
-        Set<String>? _,
-      ) {
-        if (model == null) return Container();
-        var viewModel = model as MannheimViewModel;
+      builder:
+          (
+            BuildContext context,
+            OnboardingStepViewModel? model,
+            Set<String>? _,
+          ) {
+            if (model == null) return Container();
+            var viewModel = model as MannheimViewModel;
 
-        switch (viewModel.loadingState) {
-          case LoadCoursesState.Loading:
-            return _buildLoadingIndicator();
-          case LoadCoursesState.Loaded:
-            return _buildCourseList(context, viewModel);
-          case LoadCoursesState.Failed:
-            return _buildLoadingError(context, viewModel);
-        }
-
-      },
+            switch (viewModel.loadingState) {
+              case LoadCoursesState.Loading:
+                return _buildLoadingIndicator();
+              case LoadCoursesState.Loaded:
+                return _buildLoadedCourses(context, viewModel);
+              case LoadCoursesState.Failed:
+                return _buildLoadingError(context, viewModel);
+            }
+          },
     );
   }
 
   Widget _buildLoadingIndicator() {
-    return Center(child: CircularProgressIndicator());
+    return const Center(child: CircularProgressIndicator());
   }
 
-  Widget _buildCourseList(BuildContext context, MannheimViewModel viewModel) {
+  Widget _buildLoadedCourses(
+    BuildContext context,
+    MannheimViewModel viewModel,
+  ) {
+    final courses = viewModel.filteredCourses;
+
     return Material(
       color: Colors.transparent,
-      child: ListView.builder(
-        padding: EdgeInsets.all(0),
-        itemCount: viewModel.courses.length,
-        itemBuilder: (BuildContext context, int index) =>
-            _buildCourseListTile(viewModel, index, context),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+            child: TextField(
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: L.of(context).onboardingMannheimSearchHint,
+                border: const OutlineInputBorder(),
+              ),
+              textInputAction: TextInputAction.search,
+              onChanged: viewModel.setSearchQuery,
+            ),
+          ),
+          Expanded(
+            child: courses.isEmpty
+                ? _buildEmptyState(context, viewModel)
+                : _buildCourseList(context, viewModel, courses),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildCourseList(
+    BuildContext context,
+    MannheimViewModel viewModel,
+    List<MannheimCourse> courses,
+  ) {
+    return ListView.builder(
+      padding: EdgeInsets.zero,
+      itemCount: courses.length,
+      itemBuilder: (BuildContext context, int index) =>
+          _buildCourseListTile(viewModel, courses[index], context),
     );
   }
 
   Widget _buildCourseListTile(
     MannheimViewModel viewModel,
-    int index,
+    MannheimCourse course,
     BuildContext context,
   ) {
-    var isSelected = viewModel.selectedCourse == viewModel.courses[index];
+    var isSelected = viewModel.selectedCourse == course;
 
     return Material(
       color: Colors.transparent,
       child: ListTile(
+        key: ValueKey("mannheim-course-${course.scheduleId}"),
         trailing: isSelected
-            ? Icon(
-                Icons.check,
-                color: Theme.of(context).colorScheme.secondary,
-              )
+            ? Icon(Icons.check, color: Theme.of(context).colorScheme.secondary)
             : null,
         title: Text(
-          viewModel.courses[index].name,
+          course.name,
           style: isSelected
-              ? TextStyle(
-                  color: Theme.of(context).colorScheme.secondary,
-                )
+              ? TextStyle(color: Theme.of(context).colorScheme.secondary)
               : null,
         ),
-        subtitle: Text(viewModel.courses[index].title),
-        onTap: () => viewModel.setSelectedCourse(viewModel.courses[index]),
+        subtitle: course.title.isEmpty ? null : Text(course.title),
+        onTap: () => viewModel.setSelectedCourse(course),
       ),
     );
+  }
+
+  Widget _buildEmptyState(BuildContext context, MannheimViewModel viewModel) {
+    final message = viewModel.courses.isEmpty
+        ? L.of(context).onboardingMannheimNoCourses
+        : L.of(context).onboardingMannheimNoSearchResults;
+
+    return Center(child: Text(message, textAlign: TextAlign.center));
   }
 
   Widget _buildLoadingError(BuildContext context, MannheimViewModel viewModel) {
@@ -125,9 +163,10 @@ class SelectMannheimCourseWidget extends StatelessWidget {
           Text(L.of(context).onboardingMannheimLoadCoursesFailed),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: MaterialButton(
+            child: IconButton(
               onPressed: viewModel.loadCourses,
-              child: Icon(Icons.refresh),
+              tooltip: L.of(context).onboardingMannheimRetry,
+              icon: const Icon(Icons.refresh),
             ),
           ),
         ],

@@ -364,6 +364,17 @@ class L {
   String get onboardingMannheimDescription =>
       _getValue("onboardingMannheimDescription");
 
+  String get onboardingMannheimSearchHint =>
+      _getValue("onboardingMannheimSearchHint");
+
+  String get onboardingMannheimNoCourses =>
+      _getValue("onboardingMannheimNoCourses");
+
+  String get onboardingMannheimNoSearchResults =>
+      _getValue("onboardingMannheimNoSearchResults");
+
+  String get onboardingMannheimRetry => _getValue("onboardingMannheimRetry");
+
   String get onboardingMannheimTitle => _getValue("onboardingMannheimTitle");
 
   String get settingsPrettifySchedule => _getValue("settingsPrettifySchedule");
