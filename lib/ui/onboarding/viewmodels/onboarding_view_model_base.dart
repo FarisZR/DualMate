@@ -8,7 +8,7 @@ abstract class OnboardingStepViewModel extends BaseViewModel {
 
   void setIsValid(bool isValid) {
     _isValid = isValid;
-    notifyListeners("isValid");
+    notifyIfMounted("isValid");
   }
 
   Future<void> save();

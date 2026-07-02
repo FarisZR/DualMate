@@ -24,7 +24,7 @@ void main() {
   testWidgets('search field filters Mannheim courses locally', (tester) async {
     final viewModel = MannheimViewModel(
       _FakeScheduleSourceProvider(),
-      loadCoursesFromSource: () async => [
+      loadCoursesFromSource: (_) async => [
         MannheimCourse.fromProfileName('WWI23A'),
         MannheimCourse.fromProfileName('TINF23AI2'),
         MannheimCourse.fromProfileName('WRSW23ST1'),
@@ -48,7 +48,7 @@ void main() {
   testWidgets('selecting a Mannheim course marks it selected', (tester) async {
     final viewModel = MannheimViewModel(
       _FakeScheduleSourceProvider(),
-      loadCoursesFromSource: () async => [
+      loadCoursesFromSource: (_) async => [
         MannheimCourse.fromProfileName('WWI23A'),
       ],
     );
@@ -66,13 +66,14 @@ void main() {
   testWidgets('empty Mannheim course list shows empty state', (tester) async {
     final viewModel = MannheimViewModel(
       _FakeScheduleSourceProvider(),
-      loadCoursesFromSource: () async => [],
+      loadCoursesFromSource: (_) async => [],
     );
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
     await tester.pump();
 
-    expect(find.text('No courses are currently available'), findsOneWidget);
+    final context = tester.element(find.byType(MannheimPage));
+    expect(find.text(L.of(context).onboardingMannheimNoCourses), findsOneWidget);
   });
 
   testWidgets('empty Mannheim search result shows search empty state', (
@@ -80,7 +81,7 @@ void main() {
   ) async {
     final viewModel = MannheimViewModel(
       _FakeScheduleSourceProvider(),
-      loadCoursesFromSource: () async => [
+      loadCoursesFromSource: (_) async => [
         MannheimCourse.fromProfileName('WWI23A'),
       ],
     );
@@ -91,14 +92,18 @@ void main() {
     await tester.enterText(find.byType(TextField), 'missing');
     await tester.pump();
 
-    expect(find.text('No courses match your search'), findsOneWidget);
+    final context = tester.element(find.byType(MannheimPage));
+    expect(
+      find.text(L.of(context).onboardingMannheimNoSearchResults),
+      findsOneWidget,
+    );
   });
 
   testWidgets('failed Mannheim course load can be retried', (tester) async {
     var calls = 0;
     final viewModel = MannheimViewModel(
       _FakeScheduleSourceProvider(),
-      loadCoursesFromSource: () async {
+      loadCoursesFromSource: (_) async {
         calls += 1;
         if (calls == 1) {
           throw StateError('offline');
@@ -110,7 +115,11 @@ void main() {
     await tester.pumpWidget(_wrapWithApp(viewModel));
     await tester.pump();
 
-    expect(find.text('Could not load the courses'), findsOneWidget);
+    final context = tester.element(find.byType(MannheimPage));
+    expect(
+      find.text(L.of(context).onboardingMannheimLoadCoursesFailed),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byIcon(Icons.refresh));
     await tester.pump();
