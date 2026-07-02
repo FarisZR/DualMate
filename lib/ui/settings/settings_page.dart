@@ -4,6 +4,7 @@ import 'package:dualmate/common/application_constants.dart';
 import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
 import 'package:dualmate/common/data/preferences/app_theme_enum.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/common/ui/viewmodels/root_view_model.dart';
@@ -361,6 +362,19 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: Text(L.of(context).settingsPerformanceOverlay),
                     onChanged: model.setShowPerformanceOverlay,
                     value: model.showPerformanceOverlay,
+                  ),
+                  ListTile(
+                    title: Text(L.of(context).settingsDeveloperReplayOnboarding),
+                    onTap: () async {
+                      final preferencesProvider =
+                          KiwiContainer().resolve<PreferencesProvider>();
+                      await preferencesProvider.setIsFirstStart(true);
+                      if (!mounted) return;
+                      Navigator.of(context).pushNamedAndRemoveUntil(
+                        "onboarding",
+                        (route) => false,
+                      );
+                    },
                   ),
                 ],
               );

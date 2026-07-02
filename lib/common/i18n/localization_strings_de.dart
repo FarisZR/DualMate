@@ -187,6 +187,7 @@ final de = {
   "settingsDeveloperTitle": "Entwickleroptionen",
   "settingsDeveloperSubtitle": "Tippen, um Debug-Tools zu aktivieren",
   "settingsPerformanceOverlay": "Performance-Overlay anzeigen",
+  "settingsDeveloperReplayOnboarding": "Onboarding wiederholen",
   "selectThemeDialogTitle": "Design auswählen",
   "selectThemeLight": "Hell",
   "selectThemeDark": "Dunkel",

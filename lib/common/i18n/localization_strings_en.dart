@@ -178,6 +178,7 @@ final en = {
   "settingsDeveloperTitle": "Developer options",
   "settingsDeveloperSubtitle": "Tap to unlock debugging tools",
   "settingsPerformanceOverlay": "Show performance overlay",
+  "settingsDeveloperReplayOnboarding": "Replay onboarding",
   "selectThemeDialogTitle": "Select theme",
   "selectThemeLight": "Light",
   "selectThemeDark": "Dark",

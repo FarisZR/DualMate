@@ -415,6 +415,9 @@ class L {
   String get settingsPerformanceOverlay =>
       _getValue("settingsPerformanceOverlay");
 
+  String get settingsDeveloperReplayOnboarding =>
+      _getValue("settingsDeveloperReplayOnboarding");
+
   String get selectThemeDialogTitle => _getValue("selectThemeDialogTitle");
   String get selectThemeLight => _getValue("selectThemeLight");
   String get selectThemeDark => _getValue("selectThemeDark");
