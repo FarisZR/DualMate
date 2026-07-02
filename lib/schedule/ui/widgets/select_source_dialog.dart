@@ -17,14 +17,20 @@ class SelectSourceDialog {
 
   SelectSourceDialog(this._preferencesProvider, this._scheduleSourceProvider);
 
-  Future show(BuildContext context) async {
+  Future<void> show(BuildContext context) async {
     var type = await _preferencesProvider.getScheduleSourceType();
     _currentScheduleSource = ScheduleSourceType.values[type];
 
-    await showDialog(
+    final selectedType = await showDialog<ScheduleSourceType>(
       context: context,
       builder: (context) => _buildDialog(context),
     );
+
+    if (selectedType == null || !context.mounted) {
+      return;
+    }
+
+    await _configureSelectedSource(selectedType, context);
   }
 
   SimpleDialog _buildDialog(BuildContext context) {
@@ -32,7 +38,7 @@ class SelectSourceDialog {
       groupValue: _currentScheduleSource,
       onChanged: (value) {
         if (value != null) {
-          sourceSelected(value, context);
+          Navigator.of(context).pop(value);
         }
       },
       child: Column(
@@ -78,16 +84,13 @@ class SelectSourceDialog {
     );
   }
 
-  Future<void> sourceSelected(
+  Future<void> _configureSelectedSource(
     ScheduleSourceType type,
     BuildContext context,
   ) async {
-    _preferencesProvider.setScheduleSourceType(type.index);
-
-    Navigator.of(context).pop();
-
     switch (type) {
       case ScheduleSourceType.None:
+        await _preferencesProvider.setScheduleSourceType(type.index);
         await _scheduleSourceProvider.setupScheduleSource();
         break;
       case ScheduleSourceType.Rapla:
