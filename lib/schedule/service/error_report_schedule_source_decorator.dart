@@ -1,3 +1,4 @@
+import 'package:dualmate/common/logging/diagnostic_exception_filter.dart';
 import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
@@ -9,8 +10,11 @@ class ErrorReportScheduleSourceDecorator extends ScheduleSource {
   ErrorReportScheduleSourceDecorator(this._scheduleSource);
 
   @override
-  Future<ScheduleQueryResult> querySchedule(DateTime from, DateTime to,
-      [CancellationToken? cancellationToken]) async {
+  Future<ScheduleQueryResult> querySchedule(
+    DateTime from,
+    DateTime to, [
+    CancellationToken? cancellationToken,
+  ]) async {
     try {
       var schedule = await _scheduleSource.querySchedule(
         from,
@@ -21,10 +25,8 @@ class ErrorReportScheduleSourceDecorator extends ScheduleSource {
       return schedule;
     } catch (ex, trace) {
       if (ex is OperationCancelledException) rethrow;
+      if (shouldSuppressDiagnosticsException(ex)) rethrow;
       if (ex is ScheduleQueryFailedException) {
-        // Do not log connectivity exceptions
-        if (ex.innerException is ServiceRequestFailed) rethrow;
-
         await reportException(ex, ex.trace ?? StackTrace.current);
       } else {
         await reportException(ex, trace);

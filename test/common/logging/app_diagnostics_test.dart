@@ -1,4 +1,7 @@
+import 'package:dualmate/canteen/service/canteen_request_failed.dart';
 import 'package:dualmate/common/logging/app_diagnostics.dart';
+import 'package:dualmate/common/logging/diagnostic_exception_filter.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:sentry/sentry.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -48,6 +51,58 @@ void main() {
       diagnosticsContext! as Map<Object?, Object?>,
     );
     expect(diagnosticsMap['operation'], 'root.initialize');
+  });
+
+  test('reportCaughtException suppresses expected external failures', () async {
+    final recorder = _RecordingDiagnosticsRecorder();
+    final diagnostics = AppDiagnostics(recorder: recorder);
+
+    await diagnostics.reportCaughtException(
+      CanteenRequestFailed('Http request failed!'),
+      StackTrace.current,
+    );
+
+    expect(recorder.capturedExceptions, isEmpty);
+  });
+
+  test('reportCaughtException suppresses expected nested causes', () async {
+    final recorder = _RecordingDiagnosticsRecorder();
+    final diagnostics = AppDiagnostics(recorder: recorder);
+
+    await diagnostics.reportCaughtException(
+      ScheduleQueryFailedException(
+        ServiceRequestFailed('Http request failed!'),
+      ),
+      StackTrace.current,
+    );
+    await diagnostics.reportCaughtException(
+      _WrappedDiagnosticsException(CanteenRequestFailed('request failed')),
+      StackTrace.current,
+    );
+
+    expect(recorder.capturedExceptions, isEmpty);
+  });
+
+  test('reportCaughtException still records actionable failures', () async {
+    final recorder = _RecordingDiagnosticsRecorder();
+    final diagnostics = AppDiagnostics(recorder: recorder);
+    final trace = StackTrace.current;
+    final requestFailure = CanteenRequestFailed(
+      'Http request failed!',
+      StateError('socket closed'),
+      trace,
+    );
+
+    await diagnostics.reportCaughtException(StateError('cache failed'), trace);
+    await diagnostics.reportCaughtException(FormatException('bad json'), trace);
+    await diagnostics.reportCaughtException(Exception('parser failed'), trace);
+    await diagnostics.reportCaughtException(requestFailure, trace);
+
+    expect(recorder.capturedExceptions, hasLength(4));
+    expect(recorder.capturedExceptions[0].exception, isA<StateError>());
+    expect(recorder.capturedExceptions[1].exception, isA<FormatException>());
+    expect(recorder.capturedExceptions[2].exception, isA<Exception>());
+    expect(recorder.capturedExceptions[3].exception, same(requestFailure));
   });
 
   test('diagnostics recording is best effort when recorder fails', () async {
@@ -220,6 +275,16 @@ void main() {
       await expectLater(span.finish(status: const SpanStatus.ok()), completes);
     },
   );
+}
+
+class _WrappedDiagnosticsException
+    implements Exception, DiagnosticExceptionWithCause {
+  final Object cause;
+
+  _WrappedDiagnosticsException(this.cause);
+
+  @override
+  Object? get diagnosticCause => cause;
 }
 
 class _RecordingDiagnosticsRecorder implements DiagnosticsRecorder {

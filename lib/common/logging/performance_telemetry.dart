@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'dart:ui';
 
 import 'package:dualmate/common/logging/app_diagnostics.dart';
+import 'package:dualmate/common/logging/diagnostic_exception_filter.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
@@ -266,6 +267,11 @@ class PerformanceTelemetryTask {
   }) async {
     if (_finished) return;
     _finished = true;
+    if (shouldSuppressDiagnosticsException(error)) {
+      _timelineTask.finish();
+      await _diagnosticsSpan.finish(status: const SpanStatus.cancelled());
+      return;
+    }
     _diagnosticsSpan.attachError(
       error,
       includeErrorMessage: includeErrorMessage,

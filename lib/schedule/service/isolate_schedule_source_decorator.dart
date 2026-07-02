@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:isolate';
 import 'dart:io';
 
+import 'package:dualmate/common/logging/diagnostic_exception_filter.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/rapla_tls_override.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
@@ -21,8 +22,11 @@ class IsolateScheduleSourceDecorator extends ScheduleSource {
   IsolateScheduleSourceDecorator(this._scheduleSource);
 
   @override
-  Future<ScheduleQueryResult> querySchedule(DateTime from, DateTime to,
-      [CancellationToken? cancellationToken]) async {
+  Future<ScheduleQueryResult> querySchedule(
+    DateTime from,
+    DateTime to, [
+    CancellationToken? cancellationToken,
+  ]) async {
     await _initializeIsolate();
     var token = cancellationToken ?? CancellationToken();
     var requestId = _nextRequestId();
@@ -31,10 +35,7 @@ class IsolateScheduleSourceDecorator extends ScheduleSource {
     // Use the cancellation token to send a cancel message.
     // The isolate then uses a new instance to cancel the request
     token.setCancellationCallback(() {
-      _sendPort.send({
-        "type": "cancel",
-        "requestId": requestId,
-      });
+      _sendPort.send({"type": "cancel", "requestId": requestId});
     });
 
     _sendPort.send({
@@ -54,6 +55,8 @@ class IsolateScheduleSourceDecorator extends ScheduleSource {
         throw OperationCancelledException();
       } else if (result is ScheduleQueryResult) {
         return result;
+      } else if (_isExpectedExternalFailureResult(result)) {
+        throw _scheduleQueryFailedFromExpectedExternalFailureResult(result);
       } else {
         throw ScheduleQueryFailedException(result);
       }
@@ -68,7 +71,9 @@ class IsolateScheduleSourceDecorator extends ScheduleSource {
     var isolateToMain = ReceivePort();
     _isolateToMain = isolateToMain;
     await Isolate.spawn(
-        scheduleSourceIsolateEntryPoint, isolateToMain.sendPort);
+      scheduleSourceIsolateEntryPoint,
+      isolateToMain.sendPort,
+    );
     _sendPort = await _isolateToMain.first;
     _isInitialized = true;
   }
@@ -132,6 +137,32 @@ Future<void> executeQueryScheduleMessage(
     replyPort.send(null);
   } catch (ex, trace) {
     SendPort replyPort = map["replyPort"];
+    if (shouldSuppressDiagnosticsException(ex)) {
+      replyPort.send({
+        "type": "expectedExternalFailure",
+        "message": ex.toString(),
+        "trace": trace.toString(),
+      });
+      return;
+    }
     replyPort.send("$ex \n$trace");
   }
+}
+
+bool _isExpectedExternalFailureResult(Object? result) {
+  if (result is! Map) {
+    return false;
+  }
+  return result["type"] == "expectedExternalFailure";
+}
+
+ScheduleQueryFailedException
+_scheduleQueryFailedFromExpectedExternalFailureResult(Object result) {
+  final map = result as Map;
+  final message = map["message"]?.toString() ?? "Schedule request failed";
+  final traceValue = map["trace"]?.toString();
+  return ScheduleQueryFailedException(
+    ServiceRequestFailed(message),
+    traceValue == null ? null : StackTrace.fromString(traceValue),
+  );
 }

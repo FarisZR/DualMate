@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 
 import 'package:sentry/sentry.dart';
 
+import 'diagnostic_exception_filter.dart';
 import 'sentry_scrubber.dart';
 
 void _logDiagnosticsFailure(
@@ -129,6 +130,10 @@ class AppDiagnostics {
     Map<String, String> tags = const <String, String>{},
     Map<String, Object?> contexts = const <String, Object?>{},
   }) {
+    if (shouldSuppressDiagnosticsException(exception)) {
+      return Future<void>.value();
+    }
+
     return _bestEffort(
       () => _recorder.captureException(
         exception,

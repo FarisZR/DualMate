@@ -1,15 +1,24 @@
 import 'dart:isolate';
 
 import 'package:dualmate/canteen/model/daily_menu.dart';
+import 'package:dualmate/canteen/service/canteen_request_failed.dart';
 import 'package:dualmate/canteen/service/canteen_parser.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:http/http.dart';
 import 'package:http_client_helper/http_client_helper.dart' as http;
 
+typedef CanteenResponseLoader =
+    Future<Response?> Function(
+      Uri uri,
+      http.CancellationToken cancellationToken,
+    );
+
 class CanteenScraper {
   final Map<int, String> _weekCache = {};
+  final CanteenResponseLoader _loadResponse;
 
-  CanteenScraper();
+  CanteenScraper({CanteenResponseLoader? loadResponse})
+    : _loadResponse = loadResponse ?? _defaultLoadResponse;
 
   Future<List<DailyMenu>> loadWeek(
     DateTime date, [
@@ -49,8 +58,9 @@ class CanteenScraper {
   int _isoWeekNumber(DateTime date) {
     var thursday = date.add(Duration(days: 4 - date.weekday));
     var firstThursday = DateTime(thursday.year, 1, 4);
-    var firstWeekStart =
-        firstThursday.subtract(Duration(days: firstThursday.weekday - 1));
+    var firstWeekStart = firstThursday.subtract(
+      Duration(days: firstThursday.weekday - 1),
+    );
 
     return 1 + (thursday.difference(firstWeekStart).inDays / 7).floor();
   }
@@ -67,11 +77,10 @@ class CanteenScraper {
         requestCancellationToken.cancel();
       });
 
-      var response = await http.HttpClientHelper.get(uri,
-          cancelToken: requestCancellationToken);
+      var response = await _loadResponse(uri, requestCancellationToken);
 
       if (response == null && !requestCancellationToken.isCanceled) {
-        throw Exception("Http request failed!");
+        throw CanteenRequestFailed("Http request failed!");
       }
 
       if (response == null) {
@@ -81,13 +90,22 @@ class CanteenScraper {
       return response;
     } on http.OperationCanceledError catch (_) {
       throw OperationCancelledException();
-    } catch (ex) {
+    } on CanteenRequestFailed {
+      rethrow;
+    } catch (ex, trace) {
       if (requestCancellationToken.isCanceled) {
         throw OperationCancelledException();
       }
-      rethrow;
+      throw CanteenRequestFailed("Http request failed!", ex, trace);
     } finally {
       token.setCancellationCallback(null);
     }
+  }
+
+  static Future<Response?> _defaultLoadResponse(
+    Uri uri,
+    http.CancellationToken cancellationToken,
+  ) {
+    return http.HttpClientHelper.get(uri, cancelToken: cancellationToken);
   }
 }

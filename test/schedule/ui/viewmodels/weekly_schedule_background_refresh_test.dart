@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:dualmate/common/logging/crash_reporting.dart'
+    as crash_reporting;
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
@@ -244,6 +246,62 @@ void main() {
       2,
       reason: 'pull-to-refresh must bypass staleness gate',
     );
+  });
+
+  test(
+    'refreshVisibleWeek suppresses expected connectivity query failures',
+    () async {
+      final originalReporter = crash_reporting.reportExceptionImpl;
+      final reportedErrors = <Object>[];
+      crash_reporting.reportExceptionImpl = (error, trace) async {
+        reportedErrors.add(error);
+      };
+      addTearDown(() {
+        crash_reporting.reportExceptionImpl = originalReporter;
+      });
+
+      final provider = _ThrowingUpdateScheduleProvider(
+        ScheduleQueryFailedException(
+          ServiceRequestFailed('Http request failed!'),
+        ),
+      );
+      final sourceProvider = _FakeScheduleSourceProvider();
+      final viewModel = WeeklyScheduleViewModel(provider, sourceProvider);
+      addTearDown(viewModel.dispose);
+
+      viewModel.currentDateStart = DateTime(2026, 2, 9);
+      viewModel.currentDateEnd = DateTime(2026, 2, 16);
+
+      await viewModel.refreshVisibleWeek();
+
+      expect(viewModel.updateFailed, isTrue);
+      expect(reportedErrors, isEmpty);
+    },
+  );
+
+  test('refreshVisibleWeek reports unexpected update failures', () async {
+    final originalReporter = crash_reporting.reportExceptionImpl;
+    final reportedErrors = <Object>[];
+    crash_reporting.reportExceptionImpl = (error, trace) async {
+      reportedErrors.add(error);
+    };
+    addTearDown(() {
+      crash_reporting.reportExceptionImpl = originalReporter;
+    });
+
+    final failure = StateError('cache write failed');
+    final provider = _ThrowingUpdateScheduleProvider(failure);
+    final sourceProvider = _FakeScheduleSourceProvider();
+    final viewModel = WeeklyScheduleViewModel(provider, sourceProvider);
+    addTearDown(viewModel.dispose);
+
+    viewModel.currentDateStart = DateTime(2026, 2, 9);
+    viewModel.currentDateEnd = DateTime(2026, 2, 16);
+
+    await viewModel.refreshVisibleWeek();
+
+    expect(viewModel.updateFailed, isTrue);
+    expect(reportedErrors, <Object>[failure]);
   });
 
   test(
@@ -549,6 +607,23 @@ class _BlockingCountingScheduleProvider extends _FakeScheduleProvider {
         _requestCountWaiters.remove(waiter);
       }
     }
+  }
+}
+
+class _ThrowingUpdateScheduleProvider extends _FakeScheduleProvider {
+  final Object error;
+
+  _ThrowingUpdateScheduleProvider(this.error) : super(const <ScheduleEntry>[]);
+
+  @override
+  Future<ScheduleQueryResult> getUpdatedSchedule(
+    DateTime start,
+    DateTime end,
+    CancellationToken cancellationToken, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
+  }) async {
+    origins.add(origin);
+    throw error;
   }
 }
 
