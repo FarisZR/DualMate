@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/logging/crash_reporting.dart';
+import 'package:dualmate/common/logging/diagnostic_exception_filter.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/util/cancelable_mutex.dart';
@@ -669,8 +670,12 @@ class WeeklyScheduleViewModel extends BaseViewModel {
           debugPrint("Schedule update failed: $e");
         }
         task.setCoarseStatus('network_error');
-        await reportException(e, stack);
-        await task.fail(e, includeErrorMessage: false);
+        if (shouldSuppressDiagnosticsException(e)) {
+          await task.finish();
+        } else {
+          await reportException(e, stack);
+          await task.fail(e, includeErrorMessage: false);
+        }
       }
 
       try {
@@ -794,7 +799,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       if (kDebugMode) {
         debugPrint("Joined schedule update failed: $error");
       }
-      await reportException(error, trace);
+      if (!shouldSuppressDiagnosticsException(error)) {
+        await reportException(error, trace);
+      }
 
       if (applyToVisibleState && !_isDisposed) {
         updateFailed = true;

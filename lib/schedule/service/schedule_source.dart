@@ -1,3 +1,4 @@
+import 'package:dualmate/common/logging/diagnostic_exception_filter.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
 
@@ -9,25 +10,35 @@ abstract class ScheduleSource {
   /// Returns a future which gives the updated schedule or throws an exception
   /// if an error happened or the operation was cancelled
   ///
-  Future<ScheduleQueryResult> querySchedule(DateTime from, DateTime to,
-      [CancellationToken? cancellationToken]);
+  Future<ScheduleQueryResult> querySchedule(
+    DateTime from,
+    DateTime to, [
+    CancellationToken? cancellationToken,
+  ]);
 
   bool canQuery();
 }
 
-class ScheduleQueryFailedException implements Exception {
+class ScheduleQueryFailedException
+    implements Exception, DiagnosticExceptionWithCause {
   final dynamic innerException;
   final StackTrace? trace;
 
   ScheduleQueryFailedException(this.innerException, [this.trace]);
 
   @override
+  Object? get diagnosticCause =>
+      innerException is Object ? innerException as Object : null;
+
+  @override
   String toString() {
-    return (innerException?.toString() ?? "") + "\n" + (trace?.toString() ?? "");
+    return (innerException?.toString() ?? "") +
+        "\n" +
+        (trace?.toString() ?? "");
   }
 }
 
-class ServiceRequestFailed implements Exception {
+class ServiceRequestFailed implements Exception, ExpectedExternalFailure {
   final String message;
 
   ServiceRequestFailed(this.message);

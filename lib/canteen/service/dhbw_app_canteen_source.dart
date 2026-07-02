@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/model/meal_type.dart';
+import 'package:dualmate/canteen/service/canteen_request_failed.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:flutter/foundation.dart';
@@ -106,32 +107,38 @@ class DhbwAppCanteenSource {
     CancellationToken token,
   ) async {
     final requestCancellationToken = http.CancellationToken();
+    String? body;
 
     try {
       token.setCancellationCallback(requestCancellationToken.cancel);
 
-      final body = await _loadSitePayloadResponse(
+      body = await _loadSitePayloadResponse(
         Uri.https('api.dhbw.app', '/mensa/$site'),
         requestCancellationToken,
       );
-
-      if (body == null) {
-        if (requestCancellationToken.isCanceled) {
-          throw OperationCancelledException();
-        }
-        throw Exception('DHBW.app canteen request failed');
-      }
-
-      return compute(
-        _decodeDhbwAppSitePayload,
-        body,
-        debugLabel: 'dhbwAppCanteenDecodePayload',
-      );
     } on http.OperationCanceledError catch (_) {
       throw OperationCancelledException();
+    } catch (ex, trace) {
+      if (requestCancellationToken.isCanceled) {
+        throw OperationCancelledException();
+      }
+      throw CanteenRequestFailed('DHBW.app canteen request failed', ex, trace);
     } finally {
       token.setCancellationCallback(null);
     }
+
+    if (body == null) {
+      if (requestCancellationToken.isCanceled) {
+        throw OperationCancelledException();
+      }
+      throw CanteenRequestFailed('DHBW.app canteen request failed');
+    }
+
+    return compute(
+      _decodeDhbwAppSitePayload,
+      body,
+      debugLabel: 'dhbwAppCanteenDecodePayload',
+    );
   }
 
   static Future<String?> _defaultLoadSitePayloadResponse(

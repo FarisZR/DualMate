@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:dualmate/canteen/service/canteen_request_failed.dart';
 import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -121,6 +122,37 @@ void main() {
 
     expect(requestCount, 2);
     expect(menus.first.meals.single.name, 'RecoveredMeal');
+  });
+
+  test('converts null payload responses into CanteenRequestFailed', () async {
+    final source = DhbwAppCanteenSource(
+      loadSitePayloadResponse: (_, __) async => null,
+    );
+
+    await expectLater(
+      source.loadWeek('MA', 7, DateTime(2026, 6, 1)),
+      throwsA(isA<CanteenRequestFailed>()),
+    );
+  });
+
+  test('wraps payload request failures as CanteenRequestFailed', () async {
+    final cause = StateError('socket closed');
+    final source = DhbwAppCanteenSource(
+      loadSitePayloadResponse: (_, __) async {
+        throw cause;
+      },
+    );
+
+    await expectLater(
+      source.loadWeek('MA', 7, DateTime(2026, 6, 1)),
+      throwsA(
+        isA<CanteenRequestFailed>().having(
+          (error) => error.cause,
+          'cause',
+          same(cause),
+        ),
+      ),
+    );
   });
 
   test(
