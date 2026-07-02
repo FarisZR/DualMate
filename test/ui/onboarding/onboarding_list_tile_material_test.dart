@@ -4,7 +4,7 @@ import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/data/preferences/secure_storage_access.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
-import 'package:dualmate/schedule/service/mannheim/mannheim_course_scraper.dart';
+import 'package:dualmate/schedule/service/mannheim/mannheim_course_service.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/mannheim_view_model.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/select_canteen_location_view_model.dart';
@@ -70,11 +70,11 @@ void main() {
       final viewModel = MannheimViewModel(
         _FakeScheduleSourceProvider(),
         loadCoursesFromSource: () async => [
-          Course(
-            'WWI23A',
-            'https://example.com/mannheim.ics',
-            'Wirtschaftsinformatik',
-            'wwi23a',
+          const MannheimCourse(
+            name: 'WWI23A',
+            icalUrl: 'https://vorlesungsplan.stuvma.de/profiles/WWI23A',
+            title: '',
+            scheduleId: 'WWI23A',
           ),
         ],
       );
@@ -82,7 +82,7 @@ void main() {
       await tester.pumpWidget(
         _OnboardingTileHarness(viewModel: viewModel, child: MannheimPage()),
       );
-      await tester.pump(const Duration(seconds: 1));
+      await tester.pump();
 
       expect(find.text('WWI23A'), findsOneWidget);
       expect(tester.takeException(), isNull);

@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:dualmate/common/logging/crash_reporting.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
-import 'package:dualmate/schedule/service/mannheim/mannheim_course_scraper.dart';
+import 'package:dualmate/schedule/service/mannheim/mannheim_course_service.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
 
-typedef MannheimCourseLoader = Future<List<Course>> Function();
+typedef MannheimCourseLoader = Future<List<MannheimCourse>> Function();
 
 enum LoadCoursesState { Loading, Loaded, Failed }
 
@@ -16,17 +16,29 @@ class MannheimViewModel extends OnboardingStepViewModel {
   LoadCoursesState _loadingState = LoadCoursesState.Loading;
   LoadCoursesState get loadingState => _loadingState;
 
-  Course? _selectedCourse;
-  Course? get selectedCourse => _selectedCourse;
+  MannheimCourse? _selectedCourse;
+  MannheimCourse? get selectedCourse => _selectedCourse;
 
-  List<Course> _courses = [];
-  List<Course> get courses => _courses;
+  List<MannheimCourse> _courses = [];
+  List<MannheimCourse> get courses => _courses;
+
+  String _searchQuery = "";
+  String get searchQuery => _searchQuery;
+
+  List<MannheimCourse> get filteredCourses {
+    final query = _searchQuery.trim().toLowerCase();
+    if (query.isEmpty) return _courses;
+
+    return _courses
+        .where((course) => course.name.toLowerCase().contains(query))
+        .toList();
+  }
 
   MannheimViewModel(
     this._scheduleSourceProvider, {
     MannheimCourseLoader? loadCoursesFromSource,
   }) : _loadCoursesFromSource =
-           loadCoursesFromSource ?? MannheimCourseScraper().loadCourses {
+           loadCoursesFromSource ?? MannheimCourseService().loadCourses {
     setIsValid(false);
     loadCourses();
   }
@@ -36,7 +48,6 @@ class MannheimViewModel extends OnboardingStepViewModel {
     notifyListeners("loadingState");
 
     try {
-      await Future.delayed(Duration(seconds: 1));
       _courses = await _loadCoursesFromSource();
       _loadingState = LoadCoursesState.Loaded;
     } catch (ex, trace) {
@@ -49,7 +60,13 @@ class MannheimViewModel extends OnboardingStepViewModel {
     notifyListeners("courses");
   }
 
-  void setSelectedCourse(Course course) {
+  void setSearchQuery(String query) {
+    _searchQuery = query;
+    notifyListeners("searchQuery");
+    notifyListeners("filteredCourses");
+  }
+
+  void setSelectedCourse(MannheimCourse course) {
     if (_selectedCourse == course) {
       _selectedCourse = null;
     } else {

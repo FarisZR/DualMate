@@ -153,7 +153,11 @@ final en = {
   "scheduleSourceTypeIcal": "iCal Calendar",
   "scheduleSourceTypeMannheim": "DHBW Mannheim",
   "onboardingMannheimLoadCoursesFailed": "Could not load the courses",
-  "onboardingMannheimDescription": "Choose your course from the lost:",
+  "onboardingMannheimDescription": "Choose your course from the list:",
+  "onboardingMannheimSearchHint": "Search courses",
+  "onboardingMannheimNoCourses": "No courses are currently available",
+  "onboardingMannheimNoSearchResults": "No courses match your search",
+  "onboardingMannheimRetry": "Retry",
   "onboardingMannheimTitle": "DHBW Mannheim",
   "settingsPrettifySchedule": "Improve schedule entries",
   "widgetHelpDialogMessage":
