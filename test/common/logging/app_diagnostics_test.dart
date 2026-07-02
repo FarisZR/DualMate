@@ -87,15 +87,22 @@ void main() {
     final recorder = _RecordingDiagnosticsRecorder();
     final diagnostics = AppDiagnostics(recorder: recorder);
     final trace = StackTrace.current;
+    final requestFailure = CanteenRequestFailed(
+      'Http request failed!',
+      StateError('socket closed'),
+      trace,
+    );
 
     await diagnostics.reportCaughtException(StateError('cache failed'), trace);
     await diagnostics.reportCaughtException(FormatException('bad json'), trace);
     await diagnostics.reportCaughtException(Exception('parser failed'), trace);
+    await diagnostics.reportCaughtException(requestFailure, trace);
 
-    expect(recorder.capturedExceptions, hasLength(3));
+    expect(recorder.capturedExceptions, hasLength(4));
     expect(recorder.capturedExceptions[0].exception, isA<StateError>());
     expect(recorder.capturedExceptions[1].exception, isA<FormatException>());
     expect(recorder.capturedExceptions[2].exception, isA<Exception>());
+    expect(recorder.capturedExceptions[3].exception, same(requestFailure));
   });
 
   test('diagnostics recording is best effort when recorder fails', () async {

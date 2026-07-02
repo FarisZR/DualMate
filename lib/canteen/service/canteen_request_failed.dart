@@ -15,5 +15,11 @@ class CanteenRequestFailed
   Object? get diagnosticCause => cause;
 
   @override
-  String toString() => message;
+  String toString() {
+    final cause = this.cause;
+    if (cause == null) {
+      return message;
+    }
+    return "$message: $cause\n${trace?.toString() ?? ""}";
+  }
 }

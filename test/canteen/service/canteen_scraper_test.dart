@@ -8,7 +8,15 @@ void main() {
 
     await expectLater(
       scraper.loadWeek(DateTime(2026, 2, 9)),
-      throwsA(isA<CanteenRequestFailed>()),
+      throwsA(
+        isA<CanteenRequestFailed>()
+            .having((error) => error.cause, 'cause', isNull)
+            .having(
+              (error) => error.toString(),
+              'message',
+              'Http request failed!',
+            ),
+      ),
     );
   });
 
@@ -23,11 +31,13 @@ void main() {
     await expectLater(
       scraper.loadWeek(DateTime(2026, 2, 9)),
       throwsA(
-        isA<CanteenRequestFailed>().having(
-          (error) => error.cause,
-          'cause',
-          same(cause),
-        ),
+        isA<CanteenRequestFailed>()
+            .having((error) => error.cause, 'cause', same(cause))
+            .having(
+              (error) => error.toString(),
+              'message',
+              contains('Http request failed!: Bad state: socket closed'),
+            ),
       ),
     );
   });

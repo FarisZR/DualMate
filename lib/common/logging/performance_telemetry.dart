@@ -269,7 +269,7 @@ class PerformanceTelemetryTask {
     _finished = true;
     if (shouldSuppressDiagnosticsException(error)) {
       _timelineTask.finish();
-      await _diagnosticsSpan.finish(status: const SpanStatus.ok());
+      await _diagnosticsSpan.finish(status: const SpanStatus.cancelled());
       return;
     }
     _diagnosticsSpan.attachError(

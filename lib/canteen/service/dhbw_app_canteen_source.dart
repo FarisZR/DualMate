@@ -118,6 +118,8 @@ class DhbwAppCanteenSource {
       );
     } on http.OperationCanceledError catch (_) {
       throw OperationCancelledException();
+    } on CanteenRequestFailed {
+      rethrow;
     } catch (ex, trace) {
       if (requestCancellationToken.isCanceled) {
         throw OperationCancelledException();

@@ -155,6 +155,20 @@ void main() {
     );
   });
 
+  test('does not rewrap existing payload request failures', () async {
+    final failure = CanteenRequestFailed('DHBW.app canteen request failed');
+    final source = DhbwAppCanteenSource(
+      loadSitePayloadResponse: (_, __) async {
+        throw failure;
+      },
+    );
+
+    await expectLater(
+      source.loadWeek('MA', 7, DateTime(2026, 6, 1)),
+      throwsA(same(failure)),
+    );
+  });
+
   test(
     'shares one uncancelled in-flight site request across callers',
     () async {

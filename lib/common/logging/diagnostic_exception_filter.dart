@@ -21,16 +21,15 @@ bool _shouldSuppressDiagnosticsException(Object error, Set<Object> seen) {
     return true;
   }
 
-  if (error is ExpectedExternalFailure) {
-    return true;
-  }
-
   if (error is DiagnosticExceptionWithCause) {
     final cause = error.diagnosticCause;
-    if (cause == null) {
-      return false;
+    if (cause != null) {
+      return _shouldSuppressDiagnosticsException(cause, seen);
     }
-    return _shouldSuppressDiagnosticsException(cause, seen);
+  }
+
+  if (error is ExpectedExternalFailure) {
+    return true;
   }
 
   return false;
