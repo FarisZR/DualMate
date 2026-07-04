@@ -8,7 +8,6 @@ import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:intl/intl.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:provider/provider.dart';
@@ -51,7 +50,6 @@ class CanteenPage extends StatefulWidget {
 }
 
 class _CanteenPageState extends State<CanteenPage> {
-  static const Duration _initialLoadDelay = Duration(seconds: 2);
   static final Map<String, DateFormat> _headerDateFormats =
       <String, DateFormat>{};
 
@@ -83,19 +81,9 @@ class _CanteenPageState extends State<CanteenPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       PerformanceTelemetry.instance.markNavEvent(name: "canteen.entry");
-      Future.delayed(_initialLoadDelay, () {
-        if (!mounted) return;
-        SchedulerBinding.instance.scheduleTask<void>(
-          () {
-            if (!mounted) return;
-            viewModel.primeVisibleWeek(baseDate);
-            viewModel.prefetchAdjacentWeeks(baseDate);
-            _applyWidgetPayload();
-          },
-          Priority.idle,
-          debugLabel: 'canteen.initialLoad',
-        );
-      });
+      viewModel.primeVisibleWeek(baseDate);
+      viewModel.prefetchAdjacentWeeksDebounced(baseDate);
+      _applyWidgetPayload();
     });
   }
 
@@ -561,9 +549,28 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
               );
             }
 
-            return KeyedSubtree(
-              key: ValueKey<String>('canteen_state_$stateKey'),
-              child: stateChild,
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 320),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                final offsetAnimation = Tween<Offset>(
+                  begin: const Offset(0, 0.06),
+                  end: Offset.zero,
+                ).animate(animation);
+
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: offsetAnimation,
+                    child: child,
+                  ),
+                );
+              },
+              child: KeyedSubtree(
+                key: ValueKey<String>('canteen_state_$stateKey'),
+                child: stateChild,
+              ),
             );
           },
     );
@@ -637,19 +644,27 @@ class _MealLoadingList extends StatelessWidget {
         ? const Color(0xFF3A3A3A)
         : const Color(0xFFF2F2F2);
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      itemCount: 6,
-      addAutomaticKeepAlives: false,
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _MealSkeletonCard(
-            baseColor: baseColor,
-            shimmerColor: highlightColor,
-          ),
-        );
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.75, end: 1.0),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      builder: (context, opacity, child) {
+        return Opacity(opacity: opacity, child: child);
       },
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        itemCount: 6,
+        addAutomaticKeepAlives: false,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _MealSkeletonCard(
+              baseColor: baseColor,
+              shimmerColor: highlightColor,
+            ),
+          );
+        },
+      ),
     );
   }
 }

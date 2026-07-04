@@ -41,9 +41,7 @@ void main() {
     viewModel.dispose();
   });
 
-  testWidgets('applies hour viewport transitions without extra animation', (
-    tester,
-  ) async {
+  testWidgets('animates hour viewport transitions', (tester) async {
     final viewModel = _buildViewModel(
       now: DateTime(2026, 2, 10, 10),
       entries: <ScheduleEntry>[_entry(DateTime(2026, 2, 9), 'CURRENT_WEEK')],
@@ -64,9 +62,17 @@ void main() {
     viewModel.notifyListeners('weekSchedule');
 
     await tester.pump();
+    final animationStart = tester.getTopLeft(hourLabel).dy;
+
+    await tester.pump(const Duration(milliseconds: 110));
+    final during = tester.getTopLeft(hourLabel).dy;
+
+    await tester.pump(const Duration(milliseconds: 140));
     final after = tester.getTopLeft(hourLabel).dy;
 
-    expect(after, lessThan(before - 0.5));
+    expect(animationStart, before);
+    expect(during, lessThan(before - 0.5));
+    expect(after, lessThan(during - 0.5));
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

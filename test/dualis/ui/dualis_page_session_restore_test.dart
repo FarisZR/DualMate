@@ -56,7 +56,10 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.pump(const Duration(milliseconds: 2600));
+    await tester.pump(const Duration(milliseconds: 16));
+    await dualisService.loginStarted.future.timeout(
+      const Duration(milliseconds: 250),
+    );
     dualisService.completeLogin();
     await tester.pumpAndSettle();
 
@@ -90,6 +93,7 @@ Widget _wrapWithApp(StudyGradesViewModel viewModel) {
 
 class _DelayedLoginDualisService extends DualisService {
   final Completer<void> _loginCompleter = Completer<void>();
+  final Completer<void> loginStarted = Completer<void>();
 
   @override
   Future<LoginResult> login(
@@ -97,6 +101,9 @@ class _DelayedLoginDualisService extends DualisService {
     String password, [
     CancellationToken? cancellationToken,
   ]) async {
+    if (!loginStarted.isCompleted) {
+      loginStarted.complete();
+    }
     await _loginCompleter.future;
     return LoginResult.LoggedIn;
   }

@@ -58,17 +58,11 @@ class MyNavigationDrawer extends StatelessWidget {
     );
 
     if (isInDrawer) {
-      return Semantics(
-        scopesRoute: true,
-        namesRoute: true,
-        explicitChildNodes: true,
-        child: SizedBox(
-          width: 304,
-          child: Material(
-            color: Theme.of(context).colorScheme.surface,
-            child: widget,
-          ),
-        ),
+      return Drawer(
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        child: widget,
       );
     }
 
@@ -119,7 +113,7 @@ class MyNavigationDrawer extends StatelessWidget {
               if (closeDrawer != null) {
                 closeDrawer();
               } else {
-                Navigator.of(context).maybePop();
+                Navigator.of(context).pop();
               }
             }
           },
@@ -157,7 +151,7 @@ class MyNavigationDrawer extends StatelessWidget {
                     if (closeDrawer != null) {
                       closeDrawer();
                     } else {
-                      Navigator.of(context).maybePop();
+                      Navigator.of(context).pop();
                     }
                   }
 

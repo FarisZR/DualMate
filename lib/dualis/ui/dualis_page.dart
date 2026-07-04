@@ -20,10 +20,8 @@ class DualisPage extends StatefulWidget {
 }
 
 class _DualisPageState extends State<DualisPage> with WidgetsBindingObserver {
-  static const Duration _visibleRestoreDelay = Duration(milliseconds: 2500);
-
   ValueNotifier<int>? _currentEntryIndex;
-  Timer? _visibleRestoreTimer;
+  bool _restoreRequestedWhileVisible = false;
 
   @override
   void initState() {
@@ -53,7 +51,6 @@ class _DualisPageState extends State<DualisPage> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _currentEntryIndex?.removeListener(_handleSectionChanged);
-    _visibleRestoreTimer?.cancel();
     super.dispose();
   }
 
@@ -68,26 +65,17 @@ class _DualisPageState extends State<DualisPage> with WidgetsBindingObserver {
 
   void _handleSectionChanged() {
     if (!mounted || _currentEntryIndex?.value != widget.sectionIndex) {
-      _visibleRestoreTimer?.cancel();
-      _visibleRestoreTimer = null;
+      _restoreRequestedWhileVisible = false;
       return;
     }
 
-    if (_visibleRestoreTimer != null) {
+    if (_restoreRequestedWhileVisible) {
       return;
     }
 
-    _visibleRestoreTimer = Timer(_visibleRestoreDelay, () {
-      _visibleRestoreTimer = null;
-      if (!mounted || _currentEntryIndex?.value != widget.sectionIndex) {
-        return;
-      }
-      final viewModel = Provider.of<StudyGradesViewModel>(
-        context,
-        listen: false,
-      );
-      viewModel.onPageVisible();
-    });
+    _restoreRequestedWhileVisible = true;
+    final viewModel = Provider.of<StudyGradesViewModel>(context, listen: false);
+    unawaited(viewModel.onPageVisible());
   }
 
   @override
@@ -146,6 +134,8 @@ class _DualisSessionLoadingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: CircularProgressIndicator());
+    return const RepaintBoundary(
+      child: Center(child: CircularProgressIndicator()),
+    );
   }
 }

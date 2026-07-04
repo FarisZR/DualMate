@@ -34,7 +34,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   static const Duration _visibleInitialRefreshDelay = Duration(
     milliseconds: 80,
   );
-  static const Duration _visibleRefreshDebounceDelay = Duration(seconds: 12);
+  static const Duration _visibleRefreshDebounceDelay = Duration(
+    milliseconds: 420,
+  );
   static const Duration _deferredVisibleApplyDelay = Duration(
     milliseconds: 900,
   );

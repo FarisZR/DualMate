@@ -415,6 +415,69 @@ void main() {
     },
   );
 
+  test(
+    'opening an unknown empty week triggers a first fetch promptly',
+    () async {
+      final provider = _BlockingCountingScheduleProvider();
+      final sourceProvider = _FakeScheduleSourceProvider();
+      final viewModel = WeeklyScheduleViewModel(
+        provider,
+        sourceProvider,
+        nowProvider: () => DateTime(2026, 2, 10, 10),
+      );
+      addTearDown(viewModel.dispose);
+
+      final weekStart = DateTime(2026, 2, 23);
+
+      await viewModel.openWeekContaining(weekStart);
+      await provider.waitForRequestCount(1);
+
+      expect(provider.updatedScheduleRequests, 1);
+      expect(viewModel.visibleWeekNeedsInitialFetch, isTrue);
+
+      provider.completeNext(
+        ScheduleQueryResult(
+          Schedule.fromList([_entry(weekStart, 'FETCHED_EMPTY_WEEK')]),
+          const [],
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+
+      expect(
+        viewModel.weekSchedule?.entries.map((entry) => entry.title),
+        contains('Course_FETCHED_EMPTY_WEEK'),
+      );
+    },
+  );
+
+  test(
+    'known empty visible week still refreshes after the short debounce',
+    () async {
+      final nowValue = DateTime(2026, 2, 10, 10);
+      final provider = _FreshQueryCountingScheduleProvider(
+        const <ScheduleEntry>[],
+        queryTime: nowValue.subtract(const Duration(hours: 1)),
+      );
+      final sourceProvider = _FakeScheduleSourceProvider();
+      final viewModel = WeeklyScheduleViewModel(
+        provider,
+        sourceProvider,
+        nowProvider: () => nowValue,
+      );
+      addTearDown(viewModel.dispose);
+
+      final weekStart = DateTime(2026, 2, 23);
+
+      await viewModel.openWeekContaining(weekStart);
+      expect(provider.updatedScheduleRequests, 0);
+      expect(viewModel.visibleWeekNeedsInitialFetch, isFalse);
+
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+
+      expect(provider.updatedScheduleRequests, 1);
+    },
+  );
+
   test('source changes do not reuse stale same-window refreshes', () async {
     final provider = _BlockingCountingScheduleProvider();
     final sourceProvider = _FakeScheduleSourceProvider();

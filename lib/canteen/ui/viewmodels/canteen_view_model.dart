@@ -13,7 +13,6 @@ import 'package:flutter/widgets.dart';
 
 class CanteenViewModel extends BaseViewModel {
   static const Duration defaultStaleAfter = Duration(hours: 2);
-  static const Duration _initialPrimeDelay = Duration(seconds: 2);
   static const Duration _adjacentPrefetchDebounceDelay = Duration(
     milliseconds: 250,
   );
@@ -30,7 +29,6 @@ class CanteenViewModel extends BaseViewModel {
   final Map<DateTime, DateTime> _weekLastUpdated = {};
   final Map<DateTime, DateTime> _weekLastRefreshRequestAt = {};
   bool _initialized = false;
-  Timer? _initialPrimeTimer;
   Timer? _adjacentPrefetchDebounceTimer;
   DateTime? _lastAdjacentPrefetchCenterWeekStart;
   List<DateTime> _visibleContentDaysCache = const <DateTime>[];
@@ -56,11 +54,8 @@ class CanteenViewModel extends BaseViewModel {
         });
     unawaited(_loadSelectedLocation());
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initialPrimeTimer?.cancel();
-      _initialPrimeTimer = Timer(_initialPrimeDelay, () {
-        if (isDisposed || _weeklyMenus.containsKey(todayWeekStart)) return;
-        primeVisibleWeek(todayWeekStart);
-      });
+      if (isDisposed || _weeklyMenus.containsKey(todayWeekStart)) return;
+      primeVisibleWeek(todayWeekStart);
     });
   }
 
@@ -417,7 +412,6 @@ class CanteenViewModel extends BaseViewModel {
 
   @override
   void dispose() {
-    _initialPrimeTimer?.cancel();
     _adjacentPrefetchDebounceTimer?.cancel();
     unawaited(_locationChangeSubscription?.cancel());
     final menuUpdatedCallback = _menuUpdatedCallback;
