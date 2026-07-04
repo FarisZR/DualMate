@@ -52,15 +52,19 @@ Added a "Replay onboarding" tile under **Settings → Developer options** (debug
 
 The cache clear is necessary because the onboarding save path is deferred for fresh installs (`clearCachedEntries: false, setupSource: false`), which would otherwise leave stale entries from the prior configuration.
 
+`OnboardingViewModel.finishOnboarding()` now calls `ScheduleSourceProvider.setupScheduleSource()` after all step saves complete, so the in-memory source is rebuilt from the just-saved preferences immediately — both for first-run and replay. Without this, a replay on an already-initialized app would leave the source stale because the root deferred init (`_onOnboardingStateChanged`) bails once `_backgroundInitStarted` is true.
+
 ## Why This Works
 - `--dart-define` values are compile-time constants (`String.fromEnvironment`/`bool.fromEnvironment`), so they are free at runtime when unset and never ship to release.
 - The override runs after service injection (so `PreferencesProvider` exists) but before preferences are read by the view model.
 - The replay button reuses the existing onboarding route/finish handler, so no duplicated navigation logic.
 - The replay clears the schedule cache so the deferred onboarding save path does not leave stale data behind.
+- `finishOnboarding()` explicitly re-syncs the schedule source after saves, so the source is always current regardless of whether the root deferred init already ran.
 
 ## Tests
 - `test/common/appstart/debug_startup_overrides_test.dart`
 - `test/schedule/business/schedule_source_provider_test.dart`
+- `test/ui/onboarding/onboarding_finish_source_resync_test.dart`
 - `test/ui/settings/settings_developer_replay_onboarding_test.dart`
 
 ## Related Docs
