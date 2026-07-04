@@ -369,7 +369,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       final preferencesProvider =
                           KiwiContainer().resolve<PreferencesProvider>();
                       await preferencesProvider.setIsFirstStart(true);
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       Navigator.of(context).pushNamedAndRemoveUntil(
                         "onboarding",
                         (route) => false,
