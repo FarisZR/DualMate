@@ -14,6 +14,7 @@ class MyNavigationDrawer extends StatelessWidget {
   final NavigationItemOnTap onTap;
   final List<DrawerNavigationEntry> entries;
   final bool isInDrawer;
+  final VoidCallback? closeDrawer;
 
   const MyNavigationDrawer({
     Key? key,
@@ -21,6 +22,7 @@ class MyNavigationDrawer extends StatelessWidget {
     required this.onTap,
     required this.entries,
     this.isInDrawer = true,
+    this.closeDrawer,
   }) : super(key: key);
 
   @override
@@ -56,11 +58,17 @@ class MyNavigationDrawer extends StatelessWidget {
     );
 
     if (isInDrawer) {
-      return Drawer(
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        child: widget,
+      return Semantics(
+        scopesRoute: true,
+        namesRoute: true,
+        explicitChildNodes: true,
+        child: SizedBox(
+          width: 304,
+          child: Material(
+            color: Theme.of(context).colorScheme.surface,
+            child: widget,
+          ),
+        ),
       );
     }
 
@@ -107,7 +115,12 @@ class MyNavigationDrawer extends StatelessWidget {
             onTap(index, isInDrawer);
 
             if (isInDrawer) {
-              Navigator.of(context).pop();
+              final closeDrawer = this.closeDrawer;
+              if (closeDrawer != null) {
+                closeDrawer();
+              } else {
+                Navigator.of(context).maybePop();
+              }
             }
           },
           child: SizedBox(
@@ -135,13 +148,17 @@ class MyNavigationDrawer extends StatelessWidget {
             child: Material(
               color: Colors.transparent,
               borderRadius: BorderRadius.circular(8),
-              clipBehavior: Clip.antiAlias,
               child: InkWell(
                 key: const ValueKey<String>("drawer_settings"),
                 borderRadius: BorderRadius.circular(8),
                 onTap: () {
                   if (isInDrawer) {
-                    Navigator.of(context).pop();
+                    final closeDrawer = this.closeDrawer;
+                    if (closeDrawer != null) {
+                      closeDrawer();
+                    } else {
+                      Navigator.of(context).maybePop();
+                    }
                   }
 
                   Navigator.pushNamed(context, "settings");

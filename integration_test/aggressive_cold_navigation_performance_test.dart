@@ -1,15 +1,28 @@
+import 'dart:developer' as developer;
+
 import 'package:dualmate/canteen/ui/canteen_page.dart';
+import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/date_management/ui/date_management_page.dart';
 import 'package:dualmate/dualis/ui/dualis_page.dart';
 import 'package:dualmate/main.dart' as app;
+import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
+import 'package:dualmate/schedule/data/schedule_query_information_repository.dart';
+import 'package:dualmate/schedule/model/schedule_query_information.dart';
 import 'package:dualmate/schedule/model/schedule_source_type.dart';
+import 'package:dualmate/schedule/service/rapla/rapla_schedule_source.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/weekly_schedule_page.dart';
+import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_entry_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+const String _realisticRaplaScheduleUrl =
+    'https://rapla.dhbw-karlsruhe.de/rapla?page=calendar&user=strand&file=TINF25B5';
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -20,12 +33,13 @@ void main() {
     SharedPreferences.setMockInitialValues({
       PreferencesProvider.IsFirstStartKey: false,
       PreferencesProvider.ScheduleSourceType: ScheduleSourceType.Rapla.index,
-      PreferencesProvider.RaplaUrlKey:
-          'https://rapla.dhbw-stuttgart.de/rapla?key=abc',
+      PreferencesProvider.RaplaUrlKey: _realisticRaplaScheduleUrl,
       PreferencesProvider.UseDhMineForDates: false,
       PreferencesProvider.DontShowRateNowDialog: true,
       PreferencesProvider.DidShowWidgetHelpDialog: true,
     });
+
+    await _seedRealisticCachedSchedule();
 
     final frameTimings = <FrameTiming>[];
     final segments = <String, Map<String, dynamic>>{};
@@ -33,81 +47,95 @@ void main() {
     binding.addTimingsCallback(callback);
 
     try {
-      await _measureSegment(tester, frameTimings, segments, 'launch', () async {
-        app.main();
+      await binding.traceAction(
+        () async {
+          await _measureSegment(
+            tester,
+            frameTimings,
+            segments,
+            'launch',
+            () async {
+              app.main();
 
-        await _pumpUntilFound(
-          tester,
-          find.byKey(const ValueKey<String>('main_page_initial_placeholder')),
-          timeout: const Duration(milliseconds: 900),
-        );
-        await _pumpUntilFound(
-          tester,
-          find.byTooltip('Open navigation menu'),
-          timeout: const Duration(seconds: 2),
-        );
-      });
+              await _pumpUntilFound(
+                tester,
+                find.byKey(
+                  const ValueKey<String>('main_page_initial_placeholder'),
+                ),
+                timeout: const Duration(milliseconds: 900),
+              );
+              await _pumpUntilFound(
+                tester,
+                find.byTooltip('Open navigation menu'),
+                timeout: const Duration(seconds: 2),
+              );
+            },
+          );
 
-      await _measureSegment(
-        tester,
-        frameTimings,
-        segments,
-        'schedule_swipes',
-        () => _exerciseSchedule(tester),
-      );
-      await _measureSegment(
-        tester,
-        frameTimings,
-        segments,
-        'open_canteen',
-        () => _openSection(
-          tester,
-          keyName: 'drawer_item_canteen',
-          expected: find.byType(CanteenPage),
-        ),
-      );
-      await _measureSegment(
-        tester,
-        frameTimings,
-        segments,
-        'canteen_swipes',
-        () => _exerciseFirstPageView(tester),
-      );
-      await _measureSegment(
-        tester,
-        frameTimings,
-        segments,
-        'open_dates',
-        () => _openSection(
-          tester,
-          keyName: 'drawer_item_date_management',
-          expected: find.byType(DateManagementPage),
-        ),
-      );
-      await _measureSegment(
-        tester,
-        frameTimings,
-        segments,
-        'dates_scroll',
-        () => _exerciseFirstScrollable(tester),
-      );
-      await _measureSegment(
-        tester,
-        frameTimings,
-        segments,
-        'open_dualis',
-        () => _openSection(
-          tester,
-          keyName: 'drawer_item_dualis',
-          expected: find.byType(DualisPage),
-        ),
-      );
-      await _measureSegment(
-        tester,
-        frameTimings,
-        segments,
-        'dualis_visible_wait',
-        () => tester.pump(const Duration(seconds: 2)),
+          await _measureSegment(
+            tester,
+            frameTimings,
+            segments,
+            'schedule_swipes',
+            () => _exerciseSchedule(tester),
+          );
+          await _measureSegment(
+            tester,
+            frameTimings,
+            segments,
+            'open_canteen',
+            () => _openSection(
+              tester,
+              keyName: 'drawer_item_canteen',
+              expected: find.byType(CanteenPage),
+            ),
+          );
+          await _measureSegment(
+            tester,
+            frameTimings,
+            segments,
+            'canteen_swipes',
+            () => _exerciseCanteenPager(tester),
+          );
+          await _measureSegment(
+            tester,
+            frameTimings,
+            segments,
+            'open_dates',
+            () => _openSection(
+              tester,
+              keyName: 'drawer_item_date_management',
+              expected: find.byType(DateManagementPage),
+            ),
+          );
+          await _measureSegment(
+            tester,
+            frameTimings,
+            segments,
+            'dates_scroll',
+            () => _exerciseFirstScrollable(tester),
+          );
+          await _measureSegment(
+            tester,
+            frameTimings,
+            segments,
+            'open_dualis',
+            () => _openSection(
+              tester,
+              keyName: 'drawer_item_dualis',
+              expected: find.byType(DualisPage),
+            ),
+          );
+          await _measureSegment(
+            tester,
+            frameTimings,
+            segments,
+            'dualis_visible_wait',
+            () => tester.pump(const Duration(seconds: 2)),
+          );
+        },
+        streams: const <String>['all'],
+        reportKey: 'aggressive_cold_navigation_timeline',
       );
     } finally {
       binding.removeTimingsCallback(callback);
@@ -127,8 +155,14 @@ Future<void> _measureSegment(
   Future<void> Function() action,
 ) async {
   final startIndex = frameTimings.length;
-  await action();
-  await tester.pump(const Duration(milliseconds: 160));
+  final timelineTask = developer.TimelineTask();
+  timelineTask.start('segment:$label');
+  try {
+    await action();
+    await tester.pump(const Duration(milliseconds: 160));
+  } finally {
+    timelineTask.finish();
+  }
   segments[label] = _summarizeFrameTimings(
     frameTimings.skip(startIndex).toList(growable: false),
   );
@@ -140,10 +174,15 @@ Future<void> _exerciseSchedule(WidgetTester tester) async {
     find.byType(WeeklySchedulePage),
     timeout: const Duration(seconds: 2),
   );
+  await _pumpUntilFound(
+    tester,
+    find.byType(ScheduleEntryWidget),
+    timeout: const Duration(seconds: 2),
+  );
 
   final pageView = find.descendant(
     of: find.byType(WeeklySchedulePage),
-    matching: find.byType(PageView),
+    matching: find.byKey(const ValueKey<String>('weekly_schedule_page_view')),
   );
   if (pageView.evaluate().isEmpty) return;
 
@@ -154,6 +193,54 @@ Future<void> _exerciseSchedule(WidgetTester tester) async {
   ]) {
     await tester.fling(pageView.first, offset, 2200);
     await tester.pump(const Duration(milliseconds: 120));
+  }
+}
+
+Future<void> _seedRealisticCachedSchedule() async {
+  final database = DatabaseAccess();
+  final entryRepository = ScheduleEntryRepository(database);
+  final queryRepository = ScheduleQueryInformationRepository(database);
+  final scheduleSource = RaplaScheduleSource(
+    raplaUrl: _realisticRaplaScheduleUrl,
+  );
+
+  final weekStart = toStartOfDay(toDayOfWeek(DateTime.now(), DateTime.monday));
+  final weeksToSeed = <DateTime>[
+    toPreviousWeek(weekStart),
+    weekStart,
+    toNextWeek(weekStart),
+    toNextWeek(toNextWeek(weekStart)),
+  ];
+
+  await entryRepository.deleteAllScheduleEntries();
+  await queryRepository.deleteAllQueryInformation();
+
+  var seededEntryCount = 0;
+  var currentWeekEntryCount = 0;
+  final queryTime = DateTime.now();
+  for (final start in weeksToSeed) {
+    final end = toNextWeek(start);
+    final result = await scheduleSource.querySchedule(
+      start,
+      end,
+      CancellationToken(),
+    );
+    final entryCount = result.schedule.entries.length;
+    seededEntryCount += entryCount;
+    if (start == weekStart) currentWeekEntryCount = entryCount;
+
+    await entryRepository.saveSchedule(result.schedule);
+    await queryRepository.saveScheduleQueryInformation(
+      ScheduleQueryInformation(start, end, queryTime),
+    );
+  }
+
+  if (currentWeekEntryCount == 0 || seededEntryCount == 0) {
+    throw StateError(
+      'Realistic Rapla cache seed returned no current-week entries for '
+      '$weekStart - ${toNextWeek(weekStart)}; total seeded entries: '
+      '$seededEntryCount',
+    );
   }
 }
 
@@ -187,16 +274,19 @@ Future<void> _openDrawer(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 32));
 }
 
-Future<void> _exerciseFirstPageView(WidgetTester tester) async {
-  final pageViews = find.byType(PageView);
-  if (pageViews.evaluate().isEmpty) return;
+Future<void> _exerciseCanteenPager(WidgetTester tester) async {
+  final pageView = find.descendant(
+    of: find.byType(CanteenPage),
+    matching: find.byKey(canteenPageViewKey),
+  );
+  if (pageView.evaluate().isEmpty) return;
 
   for (final offset in const <Offset>[
     Offset(-360, 0),
     Offset(360, 0),
     Offset(-360, 0),
   ]) {
-    await tester.fling(pageViews.first, offset, 1800);
+    await tester.fling(pageView.first, offset, 1800, warnIfMissed: false);
     await tester.pump(const Duration(milliseconds: 120));
   }
 }
@@ -208,9 +298,19 @@ Future<void> _exerciseFirstScrollable(WidgetTester tester) async {
   );
   if (scrollables.evaluate().isEmpty) return;
 
-  await tester.fling(scrollables.first, const Offset(0, -520), 1800);
+  await tester.fling(
+    scrollables.first,
+    const Offset(0, -520),
+    1800,
+    warnIfMissed: false,
+  );
   await tester.pump(const Duration(milliseconds: 120));
-  await tester.fling(scrollables.first, const Offset(0, 520), 1800);
+  await tester.fling(
+    scrollables.first,
+    const Offset(0, 520),
+    1800,
+    warnIfMissed: false,
+  );
   await tester.pump(const Duration(milliseconds: 120));
 }
 

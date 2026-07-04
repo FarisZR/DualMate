@@ -34,8 +34,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   static const Duration _visibleInitialRefreshDelay = Duration(
     milliseconds: 80,
   );
-  static const Duration _visibleRefreshDebounceDelay = Duration(
-    milliseconds: 2500,
+  static const Duration _visibleRefreshDebounceDelay = Duration(seconds: 12);
+  static const Duration _deferredVisibleApplyDelay = Duration(
+    milliseconds: 900,
   );
   static const int _maxRetainedWeeks = 12;
 
@@ -102,8 +103,11 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   Timer? _visibleRefreshDebounce;
   Timer? _visibleInitialRefreshTimer;
   Timer? _initialRefreshTimer;
+  Timer? _deferredVisibleApplyTimer;
 
   bool _isDisposed = false;
+  bool _visibleInteractionActive = false;
+  _PendingVisibleScheduleResult? _pendingVisibleScheduleResult;
 
   final CancelableMutex _updateMutex = CancelableMutex();
 
@@ -277,7 +281,16 @@ class WeeklyScheduleViewModel extends BaseViewModel {
           await _openWeekFromCache(currentDateStart, currentDateEnd);
         }
         if (_isDisposed) return;
-        await updateSchedule(currentDateStart, currentDateEnd, force: true);
+        final hasCachedVisibleWindow = await _visibleWindowHasQueryInformation(
+          currentDateStart,
+          currentDateEnd,
+        );
+        if (_isDisposed) return;
+        if (hasCachedVisibleWindow) {
+          _debounceVisibleRefresh(currentDateStart, currentDateEnd);
+        } else {
+          await updateSchedule(currentDateStart, currentDateEnd, force: true);
+        }
       } catch (error, trace) {
         _debugScheduleError(
           "Weekly schedule source refresh failed",
@@ -823,6 +836,70 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     var schedule = updatedSchedule.schedule;
     _memoryWeekCache[_windowKey(start, end)] = schedule;
 
+    if (_shouldDeferVisibleScheduleApply(start, end)) {
+      _queuePendingVisibleScheduleResult(start, end, updatedSchedule);
+      return;
+    }
+
+    _applyUpdatedScheduleResultNow(start, end, updatedSchedule);
+  }
+
+  bool _shouldDeferVisibleScheduleApply(DateTime start, DateTime end) {
+    return _visibleInteractionActive &&
+        currentDateStart == start &&
+        currentDateEnd == end;
+  }
+
+  void _queuePendingVisibleScheduleResult(
+    DateTime start,
+    DateTime end,
+    ScheduleQueryResult updatedSchedule,
+  ) {
+    _pendingVisibleScheduleResult = _PendingVisibleScheduleResult(
+      start: start,
+      end: end,
+      result: updatedSchedule,
+    );
+    _scheduleDeferredVisibleApply();
+  }
+
+  void _scheduleDeferredVisibleApply() {
+    _deferredVisibleApplyTimer?.cancel();
+    if (_pendingVisibleScheduleResult == null) {
+      return;
+    }
+    if (_visibleInteractionActive) {
+      return;
+    }
+    _deferredVisibleApplyTimer = Timer(_deferredVisibleApplyDelay, () {
+      _deferredVisibleApplyTimer = null;
+      _flushPendingVisibleScheduleResult();
+    });
+  }
+
+  void _flushPendingVisibleScheduleResult() {
+    if (_isDisposed || _visibleInteractionActive) {
+      return;
+    }
+    final pending = _pendingVisibleScheduleResult;
+    if (pending == null) {
+      return;
+    }
+    if (currentDateStart != pending.start || currentDateEnd != pending.end) {
+      _pendingVisibleScheduleResult = null;
+      return;
+    }
+    _pendingVisibleScheduleResult = null;
+    _applyUpdatedScheduleResultNow(pending.start, pending.end, pending.result);
+  }
+
+  void _applyUpdatedScheduleResultNow(
+    DateTime start,
+    DateTime end,
+    ScheduleQueryResult updatedSchedule,
+  ) {
+    var schedule = updatedSchedule.schedule;
+
     _applyVisibleSchedule(schedule, start, end);
 
     _hasQueryErrors = updatedSchedule.hasError;
@@ -833,6 +910,19 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
 
     scheduleUrl = schedule.urls.isNotEmpty ? schedule.urls[0] : null;
+  }
+
+  void setVisibleInteractionActive(bool isActive) {
+    if (_visibleInteractionActive == isActive) {
+      return;
+    }
+    _visibleInteractionActive = isActive;
+    if (isActive) {
+      _deferredVisibleApplyTimer?.cancel();
+      _deferredVisibleApplyTimer = null;
+      return;
+    }
+    _scheduleDeferredVisibleApply();
   }
 
   Future<ScheduleQueryResult?> _readScheduleFromServiceDeduped(
@@ -929,6 +1019,22 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       return true;
     }
 
+    final queryTime = await scheduleProvider.getLastQueryTimeForWindow(
+      start,
+      end,
+    );
+    if (queryTime == null) {
+      return false;
+    }
+
+    _markWindowFetched(start, end, queryTime);
+    return true;
+  }
+
+  Future<bool> _visibleWindowHasQueryInformation(
+    DateTime start,
+    DateTime end,
+  ) async {
     final queryTime = await scheduleProvider.getLastQueryTimeForWindow(
       start,
       end,
@@ -1149,10 +1255,12 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     _visibleRefreshDebounce?.cancel();
     _visibleInitialRefreshTimer?.cancel();
     _initialRefreshTimer?.cancel();
+    _deferredVisibleApplyTimer?.cancel();
 
     _errorResetTimer?.cancel();
     _prefetchInFlight.clear();
     _refreshInFlightByWindow.clear();
+    _pendingVisibleScheduleResult = null;
 
     super.dispose();
   }
@@ -1208,6 +1316,18 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       return 'unknown';
     }
   }
+}
+
+class _PendingVisibleScheduleResult {
+  final DateTime start;
+  final DateTime end;
+  final ScheduleQueryResult result;
+
+  _PendingVisibleScheduleResult({
+    required this.start,
+    required this.end,
+    required this.result,
+  });
 }
 
 class WeeklyDisplayRange {

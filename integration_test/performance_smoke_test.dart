@@ -9,63 +9,66 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+const String _realisticRaplaScheduleUrl =
+    'https://rapla.dhbw-karlsruhe.de/rapla?page=calendar&user=strand&file=TINF25B5';
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('startup, schedule swipe and canteen navigation stay responsive',
-      (tester) async {
-    SharedPreferences.setMockInitialValues(
-      {
+  testWidgets(
+    'startup, schedule swipe and canteen navigation stay responsive',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({
         PreferencesProvider.IsFirstStartKey: false,
         PreferencesProvider.ScheduleSourceType: ScheduleSourceType.Rapla.index,
-        PreferencesProvider.RaplaUrlKey: '',
+        PreferencesProvider.RaplaUrlKey: _realisticRaplaScheduleUrl,
         PreferencesProvider.DontShowRateNowDialog: true,
         PreferencesProvider.DidShowWidgetHelpDialog: true,
-      },
-    );
+      });
 
-    app.main();
-    await tester.pumpAndSettle(const Duration(seconds: 2));
-
-    await _finishOnboardingIfVisible(tester);
-    await tester.pumpAndSettle(const Duration(seconds: 2));
-    await _dismissBlockingDialogs(tester);
-
-    if (find.byType(WeeklySchedulePage).evaluate().isNotEmpty) {
+      app.main();
       await tester.pumpAndSettle(const Duration(seconds: 2));
-      final chevronFinder = find.byIcon(Icons.chevron_right);
-      if (chevronFinder.evaluate().isNotEmpty) {
-        await tester.tap(chevronFinder.first, warnIfMissed: false);
-        await tester.pumpAndSettle(const Duration(milliseconds: 500));
+
+      await _finishOnboardingIfVisible(tester);
+      await tester.pumpAndSettle(const Duration(seconds: 2));
+      await _dismissBlockingDialogs(tester);
+
+      if (find.byType(WeeklySchedulePage).evaluate().isNotEmpty) {
+        await tester.pumpAndSettle(const Duration(seconds: 2));
+        final chevronFinder = find.byIcon(Icons.chevron_right);
+        if (chevronFinder.evaluate().isNotEmpty) {
+          await tester.tap(chevronFinder.first, warnIfMissed: false);
+          await tester.pumpAndSettle(const Duration(milliseconds: 500));
+        }
+
+        final weeklyPageFinder = find.byType(WeeklySchedulePage);
+        if (weeklyPageFinder.evaluate().isNotEmpty) {
+          await tester.fling(weeklyPageFinder, const Offset(-360, 0), 1400);
+          await tester.pumpAndSettle(const Duration(milliseconds: 800));
+          await tester.fling(weeklyPageFinder, const Offset(360, 0), 1400);
+          await tester.pumpAndSettle(const Duration(milliseconds: 800));
+        }
       }
 
-      final weeklyPageFinder = find.byType(WeeklySchedulePage);
-      if (weeklyPageFinder.evaluate().isNotEmpty) {
-        await tester.fling(weeklyPageFinder, const Offset(-360, 0), 1400);
-        await tester.pumpAndSettle(const Duration(milliseconds: 800));
-        await tester.fling(weeklyPageFinder, const Offset(360, 0), 1400);
+      await _openDrawer(tester);
+      final canteenDrawerItem = find.byKey(
+        const ValueKey<String>('drawer_item_canteen'),
+      );
+      expect(canteenDrawerItem, findsOneWidget);
+      await tester.tap(canteenDrawerItem, warnIfMissed: false);
+      await tester.pumpAndSettle(const Duration(seconds: 2));
+      await _dismissBlockingDialogs(tester);
+
+      final canteenFinder = find.byType(CanteenPage);
+      expect(canteenFinder, findsOneWidget);
+
+      final pageViewFinder = find.byKey(canteenPageViewKey);
+      if (pageViewFinder.evaluate().isNotEmpty) {
+        await tester.fling(pageViewFinder.first, const Offset(-320, 0), 1200);
         await tester.pumpAndSettle(const Duration(milliseconds: 800));
       }
-    }
-
-    await _openDrawer(tester);
-    final canteenDrawerItem = find.byKey(
-      const ValueKey<String>('drawer_item_canteen'),
-    );
-    expect(canteenDrawerItem, findsOneWidget);
-    await tester.tap(canteenDrawerItem, warnIfMissed: false);
-    await tester.pumpAndSettle(const Duration(seconds: 2));
-    await _dismissBlockingDialogs(tester);
-
-    final canteenFinder = find.byType(CanteenPage);
-    expect(canteenFinder, findsOneWidget);
-
-    final pageViewFinder = find.byType(PageView);
-    if (pageViewFinder.evaluate().isNotEmpty) {
-      await tester.fling(pageViewFinder.first, const Offset(-320, 0), 1200);
-      await tester.pumpAndSettle(const Duration(milliseconds: 800));
-    }
-  });
+    },
+  );
 }
 
 Future<void> _finishOnboardingIfVisible(WidgetTester tester) async {

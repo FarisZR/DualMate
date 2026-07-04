@@ -340,6 +340,47 @@ void main() {
   );
 
   test(
+    'visible refresh waits for active pager interaction before applying result',
+    () async {
+      final provider = _BlockingCountingScheduleProvider();
+      final sourceProvider = _FakeScheduleSourceProvider();
+      final viewModel = WeeklyScheduleViewModel(provider, sourceProvider);
+      addTearDown(viewModel.dispose);
+
+      final weekStart = DateTime(2026, 2, 9);
+      final weekEnd = DateTime(2026, 2, 16);
+      final refreshedSchedule = Schedule.fromList([
+        _entry(weekStart, 'REFRESHED'),
+      ]);
+
+      viewModel.setVisibleInteractionActive(true);
+
+      final refresh = viewModel.updateSchedule(weekStart, weekEnd, force: true);
+      await provider.waitForRequestCount(1);
+      provider.completeNext(ScheduleQueryResult(refreshedSchedule, const []));
+      await refresh;
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+
+      expect(viewModel.weekSchedule?.entries, isEmpty);
+      expect(
+        viewModel
+            .getCachedWeek(weekStart, weekEnd)
+            ?.entries
+            .map((entry) => entry.title),
+        contains('Course_REFRESHED'),
+      );
+
+      viewModel.setVisibleInteractionActive(false);
+      await Future<void>.delayed(const Duration(milliseconds: 960));
+
+      expect(
+        viewModel.weekSchedule?.entries.map((entry) => entry.title),
+        contains('Course_REFRESHED'),
+      );
+    },
+  );
+
+  test(
     'startup-style visible initial refresh deduplicates same-window refresh',
     () async {
       final provider = _BlockingCountingScheduleProvider();
@@ -420,6 +461,40 @@ void main() {
       contains('Course_NEW_SOURCE'),
     );
   });
+
+  test(
+    'source setup keeps cached visible week quiet during cold startup',
+    () async {
+      final nowValue = DateTime(2026, 2, 10, 10);
+      final weekStart = DateTime(2026, 2, 9);
+      final provider = _FreshQueryCountingScheduleProvider(<ScheduleEntry>[
+        _entry(weekStart, 'CACHED'),
+      ], queryTime: nowValue);
+      final sourceProvider = _FakeScheduleSourceProvider();
+      final viewModel = WeeklyScheduleViewModel(
+        provider,
+        sourceProvider,
+        nowProvider: () => nowValue,
+      );
+      addTearDown(viewModel.dispose);
+
+      await viewModel.initialize();
+      expect(
+        viewModel.weekSchedule?.entries.map((entry) => entry.title),
+        contains('Course_CACHED'),
+      );
+
+      sourceProvider.emitSourceChanged();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(provider.updatedScheduleRequests, 0);
+      expect(viewModel.isUpdating, isFalse);
+      expect(
+        viewModel.weekSchedule?.entries.map((entry) => entry.title),
+        contains('Course_CACHED'),
+      );
+    },
+  );
 
   test(
     'different-window forced refreshes still launch independently',
@@ -521,6 +596,20 @@ class _CountingScheduleProvider extends _FakeScheduleProvider {
       cancellationToken,
       origin: origin,
     );
+  }
+}
+
+class _FreshQueryCountingScheduleProvider extends _CountingScheduleProvider {
+  final DateTime queryTime;
+
+  _FreshQueryCountingScheduleProvider(super.entries, {required this.queryTime});
+
+  @override
+  Future<DateTime?> getLastQueryTimeForWindow(
+    DateTime start,
+    DateTime end,
+  ) async {
+    return queryTime;
   }
 }
 

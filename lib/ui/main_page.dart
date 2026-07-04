@@ -31,20 +31,21 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  static const Duration _drawerCloseNavigationDelay = Duration(
-    milliseconds: 260,
-  );
   static const Duration _initialSectionLoadDelay = Duration(milliseconds: 220);
+  static const Duration _drawerPanelAnimationDuration = Duration(
+    milliseconds: 120,
+  );
+  static const Curve _drawerPanelAnimationCurve = Curves.easeOutCubic;
 
   bool _appLaunchDialogsShown = false;
-  int? _pendingDrawerNavigationIndex;
   Timer? _initialSectionLoadTimer;
-  Timer? _pendingNavigationTimer;
-  int _pendingNavigationGeneration = 0;
   final ValueNotifier<int> _currentEntryIndex = ValueNotifier<int>(0);
   final ValueNotifier<bool> _isDrawerOpen = ValueNotifier<bool>(false);
+  late final PageController _sectionPageController;
   final Map<int, Widget> _sectionCache = {};
   final Set<int> _loadedSections = <int>{};
+  bool _drawerPanelMounted = false;
+  bool _drawerPanelOpen = false;
 
   NavigationEntry get currentEntry =>
       navigationEntries[_currentEntryIndex.value];
@@ -56,6 +57,9 @@ class _MainPageState extends State<MainPage> {
     if (initialIndex != null) {
       _currentEntryIndex.value = initialIndex;
     }
+    _sectionPageController = PageController(
+      initialPage: _currentEntryIndex.value,
+    );
     MainSectionController.instance.routeSignal.addListener(
       _handleExternalRouteRequest,
     );
@@ -76,9 +80,9 @@ class _MainPageState extends State<MainPage> {
       _handleExternalRouteRequest,
     );
     _initialSectionLoadTimer?.cancel();
-    _cancelPendingNavigation(clearPendingIndex: true);
     _isDrawerOpen.dispose();
     _currentEntryIndex.dispose();
+    _sectionPageController.dispose();
     super.dispose();
   }
 
@@ -123,12 +127,12 @@ class _MainPageState extends State<MainPage> {
       );
     }
 
-    return IndexedStack(
-      index: _currentEntryIndex.value,
-      children: List.generate(
-        navigationEntries.length,
-        (index) => _buildSection(context, index),
-      ),
+    return PageView.builder(
+      controller: _sectionPageController,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: navigationEntries.length,
+      itemBuilder: (context, index) =>
+          _KeepAliveSection(child: _buildSection(context, index)),
     );
   }
 
@@ -151,49 +155,54 @@ class _MainPageState extends State<MainPage> {
     List<DrawerNavigationEntry> drawerEntries,
   ) {
     return PopScope(
-      canPop: true,
-      child: Scaffold(
-        drawerScrimColor: Colors.transparent,
-        onDrawerChanged: (isOpen) {
-          if (_isDrawerOpen.value == isOpen) {
-            return;
-          }
-          _isDrawerOpen.value = isOpen;
-          if (!isOpen) {
-            _applyPendingDrawerNavigation();
-          }
-        },
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          actionsIconTheme: Theme.of(context).iconTheme,
-          elevation: 0,
-          iconTheme: Theme.of(context).iconTheme,
-          title: Text(currentEntry.title(context)),
-          actions: _loadedSections.contains(_currentEntryIndex.value)
-              ? currentEntry.appBarActions(context)
-              : const <Widget>[],
-          toolbarTextStyle: Theme.of(context).textTheme.bodyMedium,
-          titleTextStyle: Theme.of(context).textTheme.titleLarge,
-        ),
-        body: ValueListenableBuilder<bool>(
-          valueListenable: _isDrawerOpen,
-          child: body,
-          builder: (context, isDrawerOpen, child) {
-            return RepaintBoundary(
-              child: TickerMode(
-                enabled: !isDrawerOpen,
-                child: child ?? const SizedBox.shrink(),
+      canPop: !_drawerPanelOpen,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _drawerPanelOpen) {
+          _closeDrawerPanel();
+        }
+      },
+      child: Stack(
+        children: <Widget>[
+          Scaffold(
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              actionsIconTheme: Theme.of(context).iconTheme,
+              elevation: 0,
+              iconTheme: Theme.of(context).iconTheme,
+              leading: IconButton(
+                tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+                icon: const Icon(Icons.menu),
+                onPressed: _openDrawerPanel,
               ),
-            );
-          },
-        ),
-        drawer: RepaintBoundary(
-          child: MyNavigationDrawer(
-            selectedIndex: _currentEntryIndex.value,
-            onTap: _onNavigationTapped,
-            entries: drawerEntries,
+              title: Text(currentEntry.title(context)),
+              actions: _loadedSections.contains(_currentEntryIndex.value)
+                  ? currentEntry.appBarActions(context)
+                  : const <Widget>[],
+              toolbarTextStyle: Theme.of(context).textTheme.bodyMedium,
+              titleTextStyle: Theme.of(context).textTheme.titleLarge,
+            ),
+            body: ValueListenableBuilder<bool>(
+              valueListenable: _isDrawerOpen,
+              child: body,
+              builder: (context, isDrawerOpen, child) {
+                return RepaintBoundary(
+                  child: TickerMode(
+                    enabled: !isDrawerOpen,
+                    child: child ?? const SizedBox.shrink(),
+                  ),
+                );
+              },
+            ),
           ),
-        ),
+          if (_drawerPanelMounted)
+            _PhoneDrawerOverlay(
+              selectedIndex: _currentEntryIndex.value,
+              entries: drawerEntries,
+              isOpen: _drawerPanelOpen,
+              onClose: _closeDrawerPanel,
+              onTap: _onNavigationTapped,
+            ),
+        ],
       ),
     );
   }
@@ -257,36 +266,12 @@ class _MainPageState extends State<MainPage> {
     );
 
     if (fromDrawer) {
-      _cancelPendingNavigation();
-      _pendingDrawerNavigationIndex = index;
+      _setCurrentEntryIndex(index);
+      _closeDrawerPanel();
       return;
     }
 
     _setCurrentEntryIndex(index);
-  }
-
-  void _applyPendingDrawerNavigation() {
-    final pendingIndex = _pendingDrawerNavigationIndex;
-    _pendingDrawerNavigationIndex = null;
-    if (pendingIndex == null || pendingIndex == _currentEntryIndex.value) {
-      return;
-    }
-
-    _cancelPendingNavigation();
-    final generation = _pendingNavigationGeneration;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || generation != _pendingNavigationGeneration) {
-        return;
-      }
-
-      _pendingNavigationTimer = Timer(_drawerCloseNavigationDelay, () {
-        if (!mounted || generation != _pendingNavigationGeneration) {
-          return;
-        }
-        _setCurrentEntryIndex(pendingIndex);
-      });
-    });
   }
 
   void _setCurrentEntryFromRoute(String? route) {
@@ -309,21 +294,50 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _setCurrentEntryIndex(int index) {
-    _cancelPendingNavigation(clearPendingIndex: true);
     if (index < 0 || index >= navigationEntries.length) return;
     if (_loadedSections.add(index) && mounted) {
       setState(() {});
     }
     _currentEntryIndex.value = index;
+    _jumpToSection(index);
   }
 
-  void _cancelPendingNavigation({bool clearPendingIndex = false}) {
-    _pendingNavigationGeneration += 1;
-    _pendingNavigationTimer?.cancel();
-    _pendingNavigationTimer = null;
-    if (clearPendingIndex) {
-      _pendingDrawerNavigationIndex = null;
+  void _jumpToSection(int index) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_sectionPageController.hasClients) return;
+      if ((_sectionPageController.page ?? index.toDouble()).round() == index) {
+        return;
+      }
+      _sectionPageController.jumpToPage(index);
+    });
+  }
+
+  void _openDrawerPanel() {
+    if (_drawerPanelOpen) return;
+    setState(() {
+      _drawerPanelMounted = true;
+      _drawerPanelOpen = true;
+    });
+    if (!_isDrawerOpen.value) {
+      _isDrawerOpen.value = true;
     }
+  }
+
+  void _closeDrawerPanel() {
+    if (!_drawerPanelMounted || !_drawerPanelOpen) return;
+    setState(() {
+      _drawerPanelOpen = false;
+    });
+    if (_isDrawerOpen.value) {
+      _isDrawerOpen.value = false;
+    }
+  }
+
+  void _unmountClosedDrawerPanel() {
+    if (_drawerPanelOpen || !_drawerPanelMounted || !mounted) return;
+    setState(() {
+      _drawerPanelMounted = false;
+    });
   }
 
   void _ensureCurrentSectionLoaded() {
@@ -359,5 +373,89 @@ class _MainPageState extends State<MainPage> {
 
       _appLaunchDialogsShown = true;
     }
+  }
+}
+
+class _PhoneDrawerOverlay extends StatelessWidget {
+  final int selectedIndex;
+  final List<DrawerNavigationEntry> entries;
+  final bool isOpen;
+  final VoidCallback onClose;
+  final NavigationItemOnTap onTap;
+
+  const _PhoneDrawerOverlay({
+    required this.selectedIndex,
+    required this.entries,
+    required this.isOpen,
+    required this.onClose,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        ignoring: !isOpen,
+        child: AnimatedOpacity(
+          opacity: isOpen ? 1 : 0,
+          duration: _MainPageState._drawerPanelAnimationDuration,
+          curve: _MainPageState._drawerPanelAnimationCurve,
+          onEnd: () {
+            if (!isOpen) {
+              final state = context.findAncestorStateOfType<_MainPageState>();
+              state?._unmountClosedDrawerPanel();
+            }
+          },
+          child: Stack(
+            children: <Widget>[
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onClose,
+                  child: const ColoredBox(color: Colors.transparent),
+                ),
+              ),
+              AnimatedSlide(
+                offset: isOpen ? Offset.zero : const Offset(-1, 0),
+                duration: _MainPageState._drawerPanelAnimationDuration,
+                curve: _MainPageState._drawerPanelAnimationCurve,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: RepaintBoundary(
+                    child: MyNavigationDrawer(
+                      selectedIndex: selectedIndex,
+                      onTap: onTap,
+                      entries: entries,
+                      closeDrawer: onClose,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _KeepAliveSection extends StatefulWidget {
+  final Widget child;
+
+  const _KeepAliveSection({required this.child});
+
+  @override
+  State<_KeepAliveSection> createState() => _KeepAliveSectionState();
+}
+
+class _KeepAliveSectionState extends State<_KeepAliveSection>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }

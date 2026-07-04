@@ -375,8 +375,8 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
                   navigatorKey: NavigatorKey.rootKey,
                   navigatorObservers: [
                     SentryNavigatorObserver(
-                      setRouteNameAsTransaction: true,
-                      enableAutoTransactions: true,
+                      setRouteNameAsTransaction: kDebugMode,
+                      enableAutoTransactions: kDebugMode,
                       autoFinishAfter: const Duration(seconds: 5),
                       ignoreRoutes: const ['main'],
                       routeNameExtractor: sanitizeSentryRouteSettings,

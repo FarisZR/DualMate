@@ -27,6 +27,10 @@ String canteenPageContentModeKey(List<DateTime> visibleDays) {
       : 'canteen_page_content_paged';
 }
 
+const ValueKey<String> canteenPageViewKey = ValueKey<String>(
+  'canteen_page_view',
+);
+
 int? findCanteenDayIndexByKey(Key key, List<DateTime> visibleDays) {
   if (key is! ValueKey<String>) {
     return null;
@@ -307,6 +311,7 @@ class _CanteenPageState extends State<CanteenPage> {
     return StretchingOverscrollIndicator(
       axisDirection: AxisDirection.right,
       child: PageView.builder(
+        key: canteenPageViewKey,
         controller: pageController,
         allowImplicitScrolling: true,
         findChildIndexCallback: (key) {
@@ -556,28 +561,9 @@ class _CanteenDayViewState extends State<_CanteenDayView> {
               );
             }
 
-            return AnimatedSwitcher(
-              duration: const Duration(milliseconds: 320),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
-              transitionBuilder: (child, animation) {
-                final offsetAnimation = Tween<Offset>(
-                  begin: const Offset(0, 0.06),
-                  end: Offset.zero,
-                ).animate(animation);
-
-                return FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: offsetAnimation,
-                    child: child,
-                  ),
-                );
-              },
-              child: KeyedSubtree(
-                key: ValueKey<String>('canteen_state_$stateKey'),
-                child: stateChild,
-              ),
+            return KeyedSubtree(
+              key: ValueKey<String>('canteen_state_$stateKey'),
+              child: stateChild,
             );
           },
     );
@@ -651,27 +637,19 @@ class _MealLoadingList extends StatelessWidget {
         ? const Color(0xFF3A3A3A)
         : const Color(0xFFF2F2F2);
 
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0.75, end: 1.0),
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOut,
-      builder: (context, opacity, child) {
-        return Opacity(opacity: opacity, child: child);
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      itemCount: 6,
+      addAutomaticKeepAlives: false,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _MealSkeletonCard(
+            baseColor: baseColor,
+            shimmerColor: highlightColor,
+          ),
+        );
       },
-      child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        itemCount: 6,
-        addAutomaticKeepAlives: false,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _MealSkeletonCard(
-              baseColor: baseColor,
-              shimmerColor: highlightColor,
-            ),
-          );
-        },
-      ),
     );
   }
 }

@@ -11,11 +11,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      _buildEntryHost(
-        width: 62,
-        height: 120,
-        title: longTitle,
-      ),
+      _buildEntryHost(width: 62, height: 120, title: longTitle),
     );
 
     final textWidget = tester.widget<Text>(find.text(longTitle));
@@ -25,7 +21,7 @@ void main() {
 
     final padding = tester.widget<Padding>(
       find.descendant(
-        of: find.byType(InkWell),
+        of: find.byType(GestureDetector),
         matching: find.byType(Padding),
       ),
     );
@@ -36,11 +32,7 @@ void main() {
 
   testWidgets('wider cards keep standard overflow strategy', (tester) async {
     await tester.pumpWidget(
-      _buildEntryHost(
-        width: 140,
-        height: 160,
-        title: longTitle,
-      ),
+      _buildEntryHost(width: 140, height: 160, title: longTitle),
     );
 
     final textWidget = tester.widget<Text>(find.text(longTitle));

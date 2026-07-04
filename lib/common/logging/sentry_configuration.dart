@@ -14,11 +14,11 @@ bool isSentryConfigured({String? dsn}) {
   return (dsn ?? _sentryDsn).trim().isNotEmpty;
 }
 
-double sentryTraceSampleRate({bool releaseMode = kReleaseMode}) {
+double? sentryTraceSampleRate({bool releaseMode = kReleaseMode}) {
   if (releaseMode) {
-    return 0.1;
+    return null;
   }
-  return kDebugMode ? 1.0 : 0.1;
+  return kDebugMode ? 1.0 : null;
 }
 
 Future<void> configureSentryOptions(SentryFlutterOptions options) async {
@@ -35,8 +35,12 @@ Future<void> configureSentryOptions(SentryFlutterOptions options) async {
   }
   options.sendDefaultPii = false;
   options.enableLogs = false;
-  options.enableAutoPerformanceTracing = true;
-  options.enableFramesTracking = true;
+  options.enableAutoPerformanceTracing = kDebugMode;
+  options.enableFramesTracking = kDebugMode;
+  options.enableNativeTraceSync = kDebugMode;
+  options.enableAutoNativeBreadcrumbs = kDebugMode;
+  options.enableAppHangTracking = kDebugMode;
+  options.anrEnabled = kDebugMode;
   options.enableAutoSessionTracking = true;
   options.enableNativeCrashHandling = true;
   options.enableUserInteractionBreadcrumbs = false;

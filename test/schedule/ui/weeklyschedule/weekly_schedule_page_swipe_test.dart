@@ -41,7 +41,7 @@ void main() {
     viewModel.dispose();
   });
 
-  testWidgets('animates hour viewport transitions instead of hard jumps', (
+  testWidgets('applies hour viewport transitions without extra animation', (
     tester,
   ) async {
     final viewModel = _buildViewModel(
@@ -64,15 +64,9 @@ void main() {
     viewModel.notifyListeners('weekSchedule');
 
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 120));
-    final during = tester.getTopLeft(hourLabel).dy;
-
-    await tester.pumpAndSettle();
     final after = tester.getTopLeft(hourLabel).dy;
 
     expect(after, lessThan(before - 0.5));
-    expect(during, lessThan(before - 0.5));
-    expect(during, greaterThan(after + 0.5));
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

@@ -85,53 +85,35 @@ class ScheduleEntryWidget extends StatelessWidget {
       height: 1.08,
     );
 
-    final shadowOpacity = isDense ? 0.0 : 0.14;
     final borderWidth = isDense ? 0.5 : 0.6;
     final overflow = isDense ? TextOverflow.clip : TextOverflow.ellipsis;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: borderRadius,
-        boxShadow: shadowOpacity == 0
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: shadowOpacity),
-                  blurRadius: 3,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-      ),
-      child: Material(
-        type: MaterialType.transparency,
-        child: Ink(
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: borderRadius,
-            border: Border.all(
-              color: Colors.black.withValues(alpha: 0.08),
-              width: borderWidth,
-            ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        onScheduleEntryTap(scheduleEntry);
+      },
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: borderRadius,
+          border: Border.all(
+            color: Colors.black.withValues(alpha: 0.08),
+            width: borderWidth,
           ),
-          child: InkWell(
-            borderRadius: borderRadius,
-            onTap: () {
-              onScheduleEntryTap(scheduleEntry);
-            },
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: horizontalPadding,
-                vertical: verticalPadding,
-              ),
-              child: Text(
-                scheduleEntry.title,
-                maxLines: maxLines,
-                softWrap: true,
-                overflow: overflow,
-                textAlign: TextAlign.left,
-                style: textStyle,
-              ),
-            ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: verticalPadding,
+          ),
+          child: Text(
+            scheduleEntry.title,
+            maxLines: maxLines,
+            softWrap: true,
+            overflow: overflow,
+            textAlign: TextAlign.left,
+            style: textStyle,
           ),
         ),
       ),

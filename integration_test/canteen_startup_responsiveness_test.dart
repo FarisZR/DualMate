@@ -7,20 +7,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+const String _realisticRaplaScheduleUrl =
+    'https://rapla.dhbw-karlsruhe.de/rapla?page=calendar&user=strand&file=TINF25B5';
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('cold startup allows immediate canteen interactions',
-      (tester) async {
-    SharedPreferences.setMockInitialValues(
-      {
-        PreferencesProvider.IsFirstStartKey: false,
-        PreferencesProvider.ScheduleSourceType: ScheduleSourceType.Rapla.index,
-        PreferencesProvider.RaplaUrlKey: '',
-        PreferencesProvider.DontShowRateNowDialog: true,
-        PreferencesProvider.DidShowWidgetHelpDialog: true,
-      },
-    );
+  testWidgets('cold startup allows immediate canteen interactions', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      PreferencesProvider.IsFirstStartKey: false,
+      PreferencesProvider.ScheduleSourceType: ScheduleSourceType.Rapla.index,
+      PreferencesProvider.RaplaUrlKey: _realisticRaplaScheduleUrl,
+      PreferencesProvider.DontShowRateNowDialog: true,
+      PreferencesProvider.DidShowWidgetHelpDialog: true,
+    });
 
     app.main();
     await tester.pumpAndSettle(const Duration(seconds: 2));
@@ -37,7 +39,7 @@ void main() {
 
     expect(find.byType(CanteenPage), findsOneWidget);
 
-    final pageViewFinder = find.byType(PageView);
+    final pageViewFinder = find.byKey(canteenPageViewKey);
     if (pageViewFinder.evaluate().isNotEmpty) {
       await tester.fling(pageViewFinder.first, const Offset(-320, 0), 1400);
       await tester.pumpAndSettle(const Duration(milliseconds: 600));

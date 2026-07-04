@@ -19,6 +19,14 @@ Future<void> main() {
       outputFile.writeAsStringSync(
         const JsonEncoder.withIndent('  ').convert(summary),
       );
+      final timeline = data?['aggressive_cold_navigation_timeline'];
+      if (timeline is Map<String, dynamic>) {
+        File(
+          'build/aggressive_cold_navigation_timeline.json',
+        ).writeAsStringSync(
+          const JsonEncoder.withIndent('  ').convert(timeline),
+        );
+      }
 
       final buildTimes = (summary['frame_build_times_us'] as List<dynamic>)
           .cast<int>();

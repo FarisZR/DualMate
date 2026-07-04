@@ -7,6 +7,7 @@ import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/logging/sentry_configuration.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import 'common/util/platform_util.dart';
@@ -24,6 +25,46 @@ void _registerAdditionalLicenses() {
 }
 
 final Stopwatch _startupStopwatch = Stopwatch()..start();
+const Duration _sentryColdStartDeferral = Duration(seconds: 60);
+
+void _scheduleDeferredSentryInitialization() {
+  if (!isSentryConfigured()) {
+    return;
+  }
+
+  if (kDebugMode) {
+    unawaited(_initializeSentryAfterStartup());
+    return;
+  }
+
+  Timer(_sentryColdStartDeferral, () {
+    SchedulerBinding.instance.scheduleTask<void>(
+      _initializeSentryAfterStartup,
+      Priority.idle,
+      debugLabel: 'deferredSentryInitialization',
+    );
+  });
+}
+
+Future<void> _initializeSentryAfterStartup() async {
+  if (Sentry.isEnabled) {
+    return;
+  }
+
+  try {
+    await SentryFlutter.init(configureSentryOptions);
+    await AppDiagnostics.instance.recordInfo(
+      'startup',
+      'sentry.initialized',
+      data: {'elapsedMs': _startupStopwatch.elapsedMilliseconds},
+    );
+  } catch (error, trace) {
+    if (kDebugMode) {
+      debugPrint('Deferred Sentry initialization failed: $error');
+      debugPrint('$trace');
+    }
+  }
+}
 
 ///
 /// Main entry point for the app
@@ -43,30 +84,8 @@ Future<void> main() async {
   };
 
   final rootApp = RootPage(startupStopwatch: _startupStopwatch);
-  var appStartedViaSentryRunner = false;
-  if (isSentryConfigured()) {
-    try {
-      await SentryFlutter.init(
-        configureSentryOptions,
-        appRunner: () {
-          appStartedViaSentryRunner = true;
-          runApp(SentryWidget(child: rootApp));
-        },
-      );
-      await AppDiagnostics.instance.recordInfo(
-        'startup',
-        'sentry.initialized',
-        data: {'elapsedMs': _startupStopwatch.elapsedMilliseconds},
-      );
-    } catch (error, trace) {
-      if (!appStartedViaSentryRunner) {
-        runApp(rootApp);
-      }
-      await reportException(error, trace);
-    }
-  } else {
-    runApp(rootApp);
-  }
+  runApp(rootApp);
+  _scheduleDeferredSentryInitialization();
   // Keep startup non-blocking so Android splash is never held by async setup.
   unawaited(() async {
     try {
@@ -76,4 +95,3 @@ Future<void> main() async {
     }
   }());
 }
-
