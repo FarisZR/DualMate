@@ -18,8 +18,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
 
       - name: Extract version info from tag
         id: version
@@ -101,8 +99,7 @@ jobs:
             --target-platform android-arm64 \
             --split-per-abi \
             --build-name="${{ steps.version.outputs.version_name }}" \
-            --build-number="${{ steps.version.outputs.version_code }}" \
-            --dart-define=APP_VERSION="${{ steps.version.outputs.version_name }}"
+            --build-number="${{ steps.version.outputs.version_code }}"
 
       - name: Upload APK to release
         uses: softprops/action-gh-release@v2
@@ -118,7 +115,6 @@ jobs:
             --release \
             --build-name="${{ steps.version.outputs.version_name }}" \
             --build-number="${{ steps.version.outputs.version_code }}" \
-            --dart-define=APP_VERSION="${{ steps.version.outputs.version_name }}" \
             --dart-define=SENTRY_ENVIRONMENT=production \
             --dart-define=SENTRY_RELEASE="dualmate@${{ steps.version.outputs.version_name }}"
 
@@ -128,77 +124,3 @@ jobs:
           name: dualmate-playstore-aab
           path: build/app/outputs/bundle/release/app-release.aab
           retention-days: 7
-
-      - name: Validate Play publishing secret
-        env:
-          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-        run: |
-          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
-            echo "::error::Missing required secret: PLAY_SERVICE_ACCOUNT_JSON"
-            exit 1
-          fi
-
-      - name: Extract Play Store release notes
-        env:
-          TAG: ${{ github.event.release.tag_name || inputs.tag }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-
-          RELEASE_BODY="$(gh release view "$TAG" --json body --jq .body)"
-
-          mkdir -p distribution/whatsnew
-          printf '%s\n' "$RELEASE_BODY" > release-body.md
-
-          python3 <<'PY'
-          import re
-          from pathlib import Path
-
-          body = Path("release-body.md").read_text(encoding="utf-8")
-
-          heading = re.compile(
-              r"^\s{0,3}#{1,6}\s+Play Store release notes\s*$",
-              re.IGNORECASE | re.MULTILINE,
-          )
-          next_heading = re.compile(
-              r"^\s{0,3}#{1,6}\s+\S.*$",
-              re.MULTILINE,
-          )
-
-          match = heading.search(body)
-          if not match:
-              raise SystemExit("Missing required section: ## Play Store release notes")
-
-          start = match.end()
-          next_match = next_heading.search(body, start)
-          notes = body[start:next_match.start() if next_match else len(body)].strip()
-
-          if not notes:
-              raise SystemExit("The Play Store release notes section is empty.")
-
-          notes = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", notes).strip()
-
-          if len(notes) > 500:
-              raise SystemExit(
-                  f"Play Store release notes are too long: {len(notes)} chars. "
-                  "Keep the Play-specific section under 500 characters."
-              )
-
-          out = Path("distribution/whatsnew")
-          for locale in ["en-US", "de-DE"]:
-              (out / f"whatsnew-{locale}").write_text(notes + "\n", encoding="utf-8")
-
-          print(notes)
-          PY
-
-      - name: Publish draft AAB to Google Play
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: com.fariszr.dualmate
-          releaseFiles: build/app/outputs/bundle/release/app-release.aab
-          track: production
-          status: draft
-          releaseName: ${{ steps.version.outputs.version_name }}
-          whatsNewDirectory: distribution/whatsnew
-          changesNotSentForReview: true
