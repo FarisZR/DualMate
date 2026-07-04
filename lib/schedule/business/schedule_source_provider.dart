@@ -219,6 +219,13 @@ class ScheduleSourceProvider {
     await Future.wait([scheduleEntries, queryInformation]);
   }
 
+  /// Clears all cached schedule entries and query information. Used when
+  /// replaying onboarding so stale data from a prior configuration does not
+  /// linger through the deferred onboarding save path.
+  Future<void> clearScheduleCache() async {
+    await _clearEntryCache();
+  }
+
   void fireScheduleSourceChanged() {
     _onDidChangeScheduleSourceCallbacks.forEach((element) {
       element(currentScheduleSource, true);

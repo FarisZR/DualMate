@@ -8,6 +8,7 @@ import 'package:dualmate/common/data/preferences/secure_storage_access.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/common/ui/viewmodels/root_view_model.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/ui/notification/next_day_information_notification.dart';
 import 'package:dualmate/ui/settings/settings_page.dart';
 import 'package:flutter/material.dart';
@@ -21,12 +22,14 @@ const String _onboardingMarker = '__onboarding_marker__';
 
 void main() {
   late PreferencesProvider preferencesProvider;
+  late _RecordingScheduleSourceProvider scheduleSourceProvider;
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     KiwiContainer().clear();
     preferencesProvider =
         PreferencesProvider(PreferencesAccess(), SecureStorageAccess());
+    scheduleSourceProvider = _RecordingScheduleSourceProvider();
     KiwiContainer().registerInstance<PreferencesProvider>(preferencesProvider);
     KiwiContainer().registerInstance<CanteenLocationService>(
       CanteenLocationService(preferencesProvider),
@@ -39,6 +42,9 @@ void main() {
       name: NextDayInformationNotification.name,
     );
     KiwiContainer().registerInstance<NotificationApi>(VoidNotificationApi());
+    KiwiContainer().registerInstance<ScheduleSourceProvider>(
+      scheduleSourceProvider,
+    );
   });
 
   tearDown(() {
@@ -58,7 +64,7 @@ void main() {
   });
 
   testWidgets(
-    'replay onboarding sets first start and navigates to onboarding',
+    'replay onboarding clears schedule cache, sets first start and navigates',
     (tester) async {
       await preferencesProvider.setIsFirstStart(false);
 
@@ -77,6 +83,7 @@ void main() {
 
       expect(find.text(_onboardingMarker), findsOneWidget);
       expect(await preferencesProvider.isFirstStart(), isTrue);
+      expect(scheduleSourceProvider.clearScheduleCacheCalls, 1);
     },
   );
 }
@@ -129,4 +136,17 @@ class _FakeTaskCallback implements TaskCallback {
 
   @override
   Future<void> schedule() async {}
+}
+
+class _RecordingScheduleSourceProvider implements ScheduleSourceProvider {
+  int clearScheduleCacheCalls = 0;
+
+  @override
+  Future<void> clearScheduleCache() async {
+    clearScheduleCacheCalls += 1;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      super.noSuchMethod(invocation);
 }

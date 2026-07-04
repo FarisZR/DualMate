@@ -48,15 +48,19 @@ The whole path is guarded by `kDebugMode` so it is a no-op in release builds.
 
 ### Feature 2: Replay onboarding from Developer Options
 
-Added a "Replay onboarding" tile under **Settings → Developer options** (debug builds only). Tapping it persists `IsFirstStart = true` and navigates to the onboarding route via `pushNamedAndRemoveUntil`, so finishing the flow lands cleanly back on `main`.
+Added a "Replay onboarding" tile under **Settings → Developer options** (debug builds only). Tapping it clears cached schedule entries and query information (via `ScheduleSourceProvider.clearScheduleCache()`), persists `IsFirstStart = true`, and navigates to the onboarding route via `pushNamedAndRemoveUntil`, so finishing the flow lands cleanly back on `main`.
+
+The cache clear is necessary because the onboarding save path is deferred for fresh installs (`clearCachedEntries: false, setupSource: false`), which would otherwise leave stale entries from the prior configuration.
 
 ## Why This Works
 - `--dart-define` values are compile-time constants (`String.fromEnvironment`/`bool.fromEnvironment`), so they are free at runtime when unset and never ship to release.
 - The override runs after service injection (so `PreferencesProvider` exists) but before preferences are read by the view model.
 - The replay button reuses the existing onboarding route/finish handler, so no duplicated navigation logic.
+- The replay clears the schedule cache so the deferred onboarding save path does not leave stale data behind.
 
 ## Tests
 - `test/common/appstart/debug_startup_overrides_test.dart`
+- `test/schedule/business/schedule_source_provider_test.dart`
 - `test/ui/settings/settings_developer_replay_onboarding_test.dart`
 
 ## Related Docs

@@ -9,6 +9,7 @@ import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/common/ui/viewmodels/root_view_model.dart';
 import 'package:dualmate/common/ui/widgets/title_list_tile.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/ui/notification/next_day_information_notification.dart';
 import 'package:dualmate/schedule/ui/widgets/select_source_dialog.dart';
 import 'package:dualmate/ui/settings/select_theme_dialog.dart';
@@ -366,10 +367,15 @@ class _SettingsPageState extends State<SettingsPage> {
                   ListTile(
                     title: Text(L.of(context).settingsDeveloperReplayOnboarding),
                     onTap: () async {
+                      final scheduleSourceProvider =
+                          _resolveOptional<ScheduleSourceProvider>();
+                      if (scheduleSourceProvider != null) {
+                        await scheduleSourceProvider.clearScheduleCache();
+                      }
                       final preferencesProvider =
                           KiwiContainer().resolve<PreferencesProvider>();
                       await preferencesProvider.setIsFirstStart(true);
-                      if (!context.mounted) return;
+                      if (!mounted) return;
                       Navigator.of(context).pushNamedAndRemoveUntil(
                         "onboarding",
                         (route) => false,
