@@ -12,8 +12,13 @@ import 'package:flutter/foundation.dart';
 /// * `SCHEDULE_SOURCE`           - one of `rapla`, `dualis`, `ical`,
 ///                                  `mannheim`, `none`.
 /// * `RAPLA_URL`                 - Rapla schedule endpoint.
-/// * `ICAL_URL`                  - iCal schedule endpoint.
-/// * `MANNHEIM_ID`               - DHBW Mannheim schedule id.
+/// * `ICAL_URL`                  - iCal schedule endpoint. Also required when
+///                                  using `MANNHEIM_ID`, since the Mannheim
+///                                  source is built on the iCal source.
+/// * `MANNHEIM_ID`               - DHBW Mannheim schedule id. Alone this only
+///                                  stores the id; pair it with `ICAL_URL`
+///                                  (and optionally `SCHEDULE_SOURCE=mannheim`)
+///                                  to select the Mannheim source.
 /// * `CANTEEN_LOCATION_ID`       - one of [CanteenLocations.supported] ids.
 ///
 /// Example:
@@ -78,11 +83,19 @@ class DebugStartupOverrides {
 
   /// Resolves the effective schedule source type, preferring an explicit
   /// `SCHEDULE_SOURCE` define and otherwise inferring it from a URL define.
+  ///
+  /// Mannheim is built on the iCal source (`ScheduleSourceProvider` initializes
+  /// it through `_icalScheduleSource()`, which reads `getIcalUrl()`), so a bare
+  /// `MANNHEIM_ID` without an `ICAL_URL` cannot produce a valid source and is
+  /// therefore not inferred. When both `ICAL_URL` and `MANNHEIM_ID` are
+  /// provided, Mannheim is preferred over Ical.
   ScheduleSourceType? get effectiveScheduleSource {
     if (scheduleSource != null) return scheduleSource;
     if (raplaUrl != null) return ScheduleSourceType.Rapla;
-    if (icalUrl != null) return ScheduleSourceType.Ical;
-    if (mannheimId != null) return ScheduleSourceType.Mannheim;
+    if (icalUrl != null) {
+      if (mannheimId != null) return ScheduleSourceType.Mannheim;
+      return ScheduleSourceType.Ical;
+    }
     return null;
   }
 

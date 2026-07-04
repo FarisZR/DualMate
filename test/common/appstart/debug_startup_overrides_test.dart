@@ -52,9 +52,22 @@ void main() {
       expect(overrides.effectiveScheduleSource, ScheduleSourceType.Ical);
     });
 
-    test('mannheim id infers mannheim source', () {
+    test('mannheim id alone does not infer a source', () {
       const overrides = DebugStartupOverrides(mannheimId: 'abc123');
+      expect(overrides.effectiveScheduleSource, isNull);
+    });
+
+    test('mannheim id with ical url infers mannheim source', () {
+      const overrides = DebugStartupOverrides(
+        mannheimId: 'abc123',
+        icalUrl: 'https://ical.example',
+      );
       expect(overrides.effectiveScheduleSource, ScheduleSourceType.Mannheim);
+    });
+
+    test('ical url without mannheim id infers ical source', () {
+      const overrides = DebugStartupOverrides(icalUrl: 'https://ical.example');
+      expect(overrides.effectiveScheduleSource, ScheduleSourceType.Ical);
     });
 
     test('no source clues returns null', () {
@@ -104,15 +117,33 @@ void main() {
       );
     });
 
-    test('persists mannheim id and infers mannheim source type', () async {
+    test('persists mannheim id with ical url and infers mannheim source type', () async {
+      const overrides = DebugStartupOverrides(
+        mannheimId: 'course-42',
+        icalUrl: 'https://ical.example',
+      );
+
+      await overrides.apply(preferencesProvider);
+
+      expect(await preferencesProvider.getMannheimScheduleId(), 'course-42');
+      expect(await preferencesProvider.getIcalUrl(), 'https://ical.example');
+      expect(
+        await preferencesProvider.getScheduleSourceType(),
+        ScheduleSourceType.Mannheim.index,
+      );
+    });
+
+    test('mannheim id without ical url does not select a source type', () async {
       const overrides = DebugStartupOverrides(mannheimId: 'course-42');
 
       await overrides.apply(preferencesProvider);
 
       expect(await preferencesProvider.getMannheimScheduleId(), 'course-42');
+      // Source type stays at default (None): Mannheim is built on the iCal
+      // source, so a bare course id cannot produce a valid source.
       expect(
         await preferencesProvider.getScheduleSourceType(),
-        ScheduleSourceType.Mannheim.index,
+        ScheduleSourceType.None.index,
       );
     });
 
