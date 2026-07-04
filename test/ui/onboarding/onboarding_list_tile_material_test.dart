@@ -69,7 +69,7 @@ void main() {
     (tester) async {
       final viewModel = MannheimViewModel(
         _FakeScheduleSourceProvider(),
-        loadCoursesFromSource: () async => [
+        loadCoursesFromSource: (_) async => [
           const MannheimCourse(
             name: 'WWI23A',
             icalUrl: 'https://vorlesungsplan.stuvma.de/profiles/WWI23A',

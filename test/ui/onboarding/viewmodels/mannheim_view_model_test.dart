@@ -18,7 +18,10 @@ void main() {
   test('loads Mannheim courses from the configured loader', () async {
     final viewModel = MannheimViewModel(
       _FakeScheduleSourceProvider(),
-      loadCoursesFromSource: () async => [_course('WWI23B'), _course('WWI23A')],
+      loadCoursesFromSource: (_) async => [
+        _course('WWI23B'),
+        _course('WWI23A'),
+      ],
     );
 
     await pumpEventQueue();
@@ -34,7 +37,7 @@ void main() {
   test('filters Mannheim courses case-insensitively', () async {
     final viewModel = MannheimViewModel(
       _FakeScheduleSourceProvider(),
-      loadCoursesFromSource: () async => [
+      loadCoursesFromSource: (_) async => [
         _course('WWI23A'),
         _course('TINF23AI2'),
         _course('wrsw23ST1'),
@@ -57,7 +60,7 @@ void main() {
     final course = _course('WWI23A');
     final viewModel = MannheimViewModel(
       _FakeScheduleSourceProvider(),
-      loadCoursesFromSource: () async => [course],
+      loadCoursesFromSource: (_) async => [course],
     );
 
     await pumpEventQueue();
@@ -80,7 +83,7 @@ void main() {
     final sourceProvider = _FakeScheduleSourceProvider();
     final viewModel = MannheimViewModel(
       sourceProvider,
-      loadCoursesFromSource: () async => [course],
+      loadCoursesFromSource: (_) async => [course],
     );
 
     await pumpEventQueue();
@@ -94,7 +97,7 @@ void main() {
     final sourceProvider = _FakeScheduleSourceProvider();
     final viewModel = MannheimViewModel(
       sourceProvider,
-      loadCoursesFromSource: () async => [_course('WWI23A')],
+      loadCoursesFromSource: (_) async => [_course('WWI23A')],
     );
 
     await pumpEventQueue();
@@ -108,7 +111,7 @@ void main() {
     () async {
       final viewModel = MannheimViewModel(
         _FakeScheduleSourceProvider(),
-        loadCoursesFromSource: () async => throw StateError('offline'),
+        loadCoursesFromSource: (_) async => throw StateError('offline'),
       );
 
       await pumpEventQueue();
