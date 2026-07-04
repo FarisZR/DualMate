@@ -31,9 +31,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   static const int _initialPageIndex = 10000;
   static const int _daysPerWeek = 7;
   static const double _defaultWideAxisWidth = 54.0;
-  static const Duration _currentWeekButtonFadeDuration = Duration(
-    milliseconds: 180,
-  );
+  static const Duration _weekOpenDebounceDelay = Duration(milliseconds: 350);
   static final Map<String, _WeeklyHeaderDateFormatters>
   _headerFormattersByLocale = <String, _WeeklyHeaderDateFormatters>{};
 
@@ -47,6 +45,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   late DateTime _anchorWeekStart;
   int _currentPageIndex = _initialPageIndex;
   int _weekOpenRequestId = 0;
+  Timer? _weekOpenDebounceTimer;
   _HourViewport? _lockedViewport;
 
   @override
@@ -65,6 +64,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     WidgetNavigationPayloadStore.instance.removeListener(_handleWidgetPayload);
+    _weekOpenDebounceTimer?.cancel();
     _weekPageController.dispose();
     super.dispose();
   }
@@ -366,7 +366,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
         }
         if (notification is ScrollEndNotification) {
           _setPagerScrolling(false);
-          unawaited(_commitVisibleWeekFromPager());
+          _commitVisibleWeekFromPager();
         }
         return false;
       },
@@ -412,7 +412,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     );
   }
 
-  Future<void> _commitVisibleWeekFromPager() async {
+  void _commitVisibleWeekFromPager() {
     if (_isApplyingWidgetPayload) return;
     final page = _weekPageController.hasClients
         ? (_weekPageController.page ?? _currentPageIndex.toDouble()).round()
@@ -427,7 +427,11 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
       return;
     }
 
-    await _openVisibleWeek(targetWeekStart);
+    _weekOpenDebounceTimer?.cancel();
+    _weekOpenDebounceTimer = Timer(_weekOpenDebounceDelay, () {
+      if (!mounted) return;
+      unawaited(_openVisibleWeek(targetWeekStart));
+    });
   }
 
   void _setPagerScrolling(bool value) {
@@ -713,33 +717,19 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
         ? Icons.arrow_forward_rounded
         : Icons.arrow_back_rounded;
 
-    return AnimatedSwitcher(
-      duration: _currentWeekButtonFadeDuration,
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (child, animation) {
-        final slideAnimation = Tween<Offset>(
-          begin: const Offset(0, 1),
-          end: Offset.zero,
-        ).animate(animation);
+    if (!_shouldShowCurrentWeekButton(model)) {
+      return const SizedBox.shrink();
+    }
 
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(position: slideAnimation, child: child),
-        );
-      },
-      child: !_shouldShowCurrentWeekButton(model)
-          ? const SizedBox.shrink()
-          : Tooltip(
-              message: label,
-              child: FloatingActionButton.small(
-                key: const ValueKey<String>('weekly_current_week_button'),
-                heroTag: null,
-                tooltip: label,
-                onPressed: _goToToday,
-                child: Icon(icon),
-              ),
-            ),
+    return Tooltip(
+      message: label,
+      child: FloatingActionButton.small(
+        key: const ValueKey<String>('weekly_current_week_button'),
+        heroTag: null,
+        tooltip: label,
+        onPressed: _goToToday,
+        child: Icon(icon),
+      ),
     );
   }
 

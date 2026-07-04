@@ -32,7 +32,7 @@ class SchedulePage extends StatefulWidget {
 class _SchedulePageState extends State<SchedulePage> {
   static const int _scheduleNavigationIndex = 0;
   static const Duration _weeklyInitDelay = Duration(milliseconds: 520);
-  static const Duration _filterWarmDelay = Duration(milliseconds: 1200);
+  static const Duration _filterWarmDelay = Duration(seconds: 15);
 
   WeeklyScheduleViewModel get weeklyScheduleViewModel {
     SchedulePage._sharedWeeklyScheduleViewModel ??= WeeklyScheduleViewModel(

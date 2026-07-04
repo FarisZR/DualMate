@@ -38,7 +38,10 @@ void main() {
       _FakeSecureStorageAccess(),
     );
     KiwiContainer().registerInstance<PreferencesProvider>(preferences);
-    await preferences.storeDualisCredentials(Credentials('saved-user', 'saved-pass'));
+    await preferences.storeDualisCredentials(
+      Credentials('saved-user', 'saved-pass'),
+    );
+    await preferences.setStoreDualisCredentials(true);
 
     final dualisService = _DelayedLoginDualisService();
     final viewModel = StudyGradesViewModel(preferences, dualisService);
@@ -53,6 +56,7 @@ void main() {
       findsOneWidget,
     );
 
+    await tester.pump(const Duration(milliseconds: 2600));
     dualisService.completeLogin();
     await tester.pumpAndSettle();
 
@@ -127,9 +131,7 @@ class _DelayedLoginDualisService extends DualisService {
   }
 
   @override
-  Future<void> logout([
-    CancellationToken? cancellationToken,
-  ]) async {}
+  Future<void> logout([CancellationToken? cancellationToken]) async {}
 
   @override
   void clearCache() {}

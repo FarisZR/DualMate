@@ -56,13 +56,9 @@ class RootPage extends StatefulWidget {
 }
 
 class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
-  static const Duration _deferredBackgroundInitDelay = Duration(
-    milliseconds: 1800,
-  );
-  static const Duration _foregroundHeavyInitDelay = Duration(
-    milliseconds: 2800,
-  );
-  static const Duration _foregroundCanteenPrewarmDelay = Duration(seconds: 15);
+  static const Duration _deferredBackgroundInitDelay = Duration(seconds: 45);
+  static const Duration _foregroundHeavyInitDelay = Duration(seconds: 60);
+  static const Duration _foregroundCanteenPrewarmDelay = Duration(seconds: 75);
 
   RootViewModel? _rootViewModel;
   bool _backgroundInitStarted = false;

@@ -33,7 +33,7 @@ void main() {
     await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
-    await _pumpFor(tester, const Duration(milliseconds: 700));
+    await _pumpFor(tester, const Duration(milliseconds: 2300));
 
     final pageView = tester.widget<PageView>(find.byType(PageView));
     final delegate = pageView.childrenDelegate as SliverChildBuilderDelegate;
@@ -54,7 +54,7 @@ void main() {
     await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
-    await _pumpFor(tester, const Duration(milliseconds: 700));
+    await _pumpFor(tester, const Duration(milliseconds: 2300));
 
     expect(
       find.byWidgetPredicate(
@@ -80,7 +80,7 @@ void main() {
     await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
-    await _pumpFor(tester, const Duration(milliseconds: 700));
+    await _pumpFor(tester, const Duration(milliseconds: 2300));
 
     final pageView = tester.widget<PageView>(find.byType(PageView));
     expect(pageView.allowImplicitScrolling, isTrue);
@@ -100,7 +100,7 @@ void main() {
     await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
-    await _pumpFor(tester, const Duration(milliseconds: 700));
+    await _pumpFor(tester, const Duration(milliseconds: 2300));
 
     expect(find.text(_mealNameFor(today)), findsOneWidget);
 
@@ -135,7 +135,7 @@ void main() {
     await viewModel.loadWeek(weekStart);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
-    await _pumpFor(tester, const Duration(milliseconds: 900));
+    await _pumpFor(tester, const Duration(milliseconds: 2300));
 
     final pageView = tester.widget<PageView>(find.byType(PageView));
     final delegate = pageView.childrenDelegate as SliverChildBuilderDelegate;

@@ -93,18 +93,11 @@ class _DateManagementPageState extends State<DateManagementPage> {
                       Stack(
                         children: <Widget>[
                           const Divider(),
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
-                            child:
-                                (headerModel.isLoading ||
-                                    (!headerModel.useDhMineForDates &&
-                                        headerModel.isLoadingNextRaplaPage &&
-                                        headerModel
-                                            .importantEventSections
-                                            .isEmpty))
-                                ? const LinearProgressIndicator()
-                                : Container(),
-                          ),
+                          if (headerModel.isLoading ||
+                              (!headerModel.useDhMineForDates &&
+                                  headerModel.isLoadingNextRaplaPage &&
+                                  headerModel.importantEventSections.isEmpty))
+                            const LinearProgressIndicator(),
                         ],
                       ),
                     ],
@@ -307,7 +300,9 @@ class _DateManagementPageState extends State<DateManagementPage> {
         controller: _raplaScrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        scrollCacheExtent: ScrollCacheExtent.pixels(_importantEventsCacheExtent),
+        scrollCacheExtent: ScrollCacheExtent.pixels(
+          _importantEventsCacheExtent,
+        ),
         itemBuilder: (context, index) {
           if (index < sections.length) {
             final section = sections[index];

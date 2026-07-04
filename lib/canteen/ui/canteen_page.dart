@@ -47,7 +47,7 @@ class CanteenPage extends StatefulWidget {
 }
 
 class _CanteenPageState extends State<CanteenPage> {
-  static const Duration _initialLoadDelay = Duration(milliseconds: 220);
+  static const Duration _initialLoadDelay = Duration(seconds: 2);
   static final Map<String, DateFormat> _headerDateFormats =
       <String, DateFormat>{};
 
@@ -155,27 +155,10 @@ class _CanteenPageState extends State<CanteenPage> {
                               visibleDays,
                               model,
                             );
-                            return AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 200),
-                              transitionBuilder: (child, animation) {
-                                var offsetAnimation = Tween<Offset>(
-                                  begin: const Offset(0, 0.15),
-                                  end: Offset.zero,
-                                ).animate(animation);
-
-                                return FadeTransition(
-                                  opacity: animation,
-                                  child: SlideTransition(
-                                    position: offsetAnimation,
-                                    child: child,
-                                  ),
-                                );
-                              },
-                              child: Text(
-                                dateFormat.format(date),
-                                key: ValueKey(date.toIso8601String()),
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
+                            return Text(
+                              dateFormat.format(date),
+                              key: ValueKey(date.toIso8601String()),
+                              style: Theme.of(context).textTheme.titleMedium,
                             );
                           },
                         ),
@@ -229,30 +212,11 @@ class _CanteenPageState extends State<CanteenPage> {
                   Expanded(
                     child: Stack(
                       children: [
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 320),
-                          switchInCurve: Curves.easeOutCubic,
-                          switchOutCurve: Curves.easeInCubic,
-                          transitionBuilder: (child, animation) {
-                            final offsetAnimation = Tween<Offset>(
-                              begin: const Offset(0, 0.04),
-                              end: Offset.zero,
-                            ).animate(animation);
-
-                            return FadeTransition(
-                              opacity: animation,
-                              child: SlideTransition(
-                                position: offsetAnimation,
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: KeyedSubtree(
-                            key: ValueKey<String>(
-                              canteenPageContentModeKey(visibleDays),
-                            ),
-                            child: _buildPageContent(model, visibleDays),
+                        KeyedSubtree(
+                          key: ValueKey<String>(
+                            canteenPageContentModeKey(visibleDays),
                           ),
+                          child: _buildPageContent(model, visibleDays),
                         ),
                         ValueListenableBuilder<int>(
                           valueListenable: pageNotifier,
@@ -267,30 +231,25 @@ class _CanteenPageState extends State<CanteenPage> {
                             return Positioned(
                               right: 16,
                               bottom: 16,
-                              child: AnimatedOpacity(
-                                duration: const Duration(milliseconds: 200),
-                                opacity: showButton ? 1 : 0,
-                                child: IgnorePointer(
-                                  ignoring: !showButton,
-                                  child: FloatingActionButton.extended(
-                                    heroTag: "canteenBackToToday",
-                                    onPressed: () {
-                                      final targetDay = model
-                                          .nearestVisibleContentDay(baseDate);
-                                      if (targetDay == null) return;
-                                      _goToVisibleDay(
-                                        targetDay,
-                                        visibleDays,
-                                        animate: true,
-                                      );
-                                    },
-                                    icon: const Icon(Icons.today),
-                                    label: Text(
-                                      L.of(context).canteenBackToToday,
-                                    ),
-                                  ),
-                                ),
-                              ),
+                              child: showButton
+                                  ? FloatingActionButton.extended(
+                                      heroTag: "canteenBackToToday",
+                                      onPressed: () {
+                                        final targetDay = model
+                                            .nearestVisibleContentDay(baseDate);
+                                        if (targetDay == null) return;
+                                        _goToVisibleDay(
+                                          targetDay,
+                                          visibleDays,
+                                          animate: true,
+                                        );
+                                      },
+                                      icon: const Icon(Icons.today),
+                                      label: Text(
+                                        L.of(context).canteenBackToToday,
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
                             );
                           },
                         ),

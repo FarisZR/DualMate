@@ -163,14 +163,14 @@ void main() {
 
     await tester.fling(pagerFinder, const Offset(-420, 0), 1400);
     await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 80));
+    await tester.pump(const Duration(milliseconds: 430));
 
     expect(viewModel.currentDateStart, DateTime(2026, 2, 16));
     expect(find.text('NEXT_WEEK'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.chevron_left));
     await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 80));
+    await tester.pump(const Duration(milliseconds: 430));
 
     expect(viewModel.currentDateStart, DateTime(2026, 2, 9));
     expect(find.text('CURRENT_WEEK'), findsOneWidget);
@@ -209,7 +209,7 @@ void main() {
       );
       await tester.fling(pagerFinder, const Offset(-420, 0), 1400);
       await tester.pumpAndSettle();
-      await tester.pump(const Duration(milliseconds: 80));
+      await tester.pump(const Duration(milliseconds: 430));
 
       expect(viewModel.currentDateStart, DateTime(2026, 2, 16));
       expect(currentWeekButton, findsOneWidget);
@@ -306,7 +306,7 @@ void main() {
       1800,
     );
     await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 80));
+    await tester.pump(const Duration(milliseconds: 430));
 
     expect(viewModel.currentDateStart, DateTime(2026, 2, 23));
     expect(find.text('FAR_WEEK'), findsOneWidget);
@@ -318,7 +318,7 @@ void main() {
     await tester.tap(currentWeekButton);
     await tester.pump();
     await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 80));
+    await tester.pump(const Duration(milliseconds: 430));
 
     expect(viewModel.currentDateStart, DateTime(2026, 2, 9));
     expect(find.text('CURRENT_WEEK'), findsOneWidget);

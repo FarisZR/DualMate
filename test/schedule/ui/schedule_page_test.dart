@@ -48,7 +48,7 @@ void main() {
     await tester.pumpWidget(_wrapSchedulePage(scheduleViewModel));
 
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pump(const Duration(milliseconds: 650));
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.byType(WeeklySchedulePage), findsOneWidget);
@@ -99,7 +99,7 @@ void main() {
     await tester.pumpWidget(_wrapSchedulePage(scheduleViewModel));
 
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pump(const Duration(milliseconds: 650));
     await tester.pump();
 
     expect(find.byType(WeeklySchedulePage), findsOneWidget);
@@ -142,7 +142,7 @@ void main() {
 
     currentEntryIndex.value = 0;
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pump(const Duration(milliseconds: 650));
     await tester.idle();
 
     expect(scheduleProvider.cachedRequests, greaterThan(0));
@@ -171,7 +171,7 @@ void main() {
     await tester.pumpWidget(_wrapSchedulePage(scheduleViewModel));
 
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 1300));
+    await tester.pump(const Duration(milliseconds: 15100));
     await tester.idle();
 
     expect(entryRepository.queryAllNamesCallCount, 1);

@@ -15,18 +15,21 @@ bool isSentryConfigured({String? dsn}) {
 }
 
 double sentryTraceSampleRate({bool releaseMode = kReleaseMode}) {
-  return releaseMode ? 0.1 : 1.0;
+  if (releaseMode) {
+    return 0.1;
+  }
+  return kDebugMode ? 1.0 : 0.1;
 }
 
 Future<void> configureSentryOptions(SentryFlutterOptions options) async {
   options.dsn = sentryDsn;
-  options.debug = !kReleaseMode;
-  options.diagnosticLevel = kReleaseMode ? SentryLevel.info : SentryLevel.debug;
+  options.debug = kDebugMode;
+  options.diagnosticLevel = kDebugMode ? SentryLevel.debug : SentryLevel.info;
   final trimmedEnvironment = _sentryEnvironment.trim();
   final trimmedRelease = _sentryRelease.trim();
   options.environment = trimmedEnvironment.isNotEmpty
       ? trimmedEnvironment
-      : (kReleaseMode ? 'production' : 'debug');
+      : (kReleaseMode ? 'production' : (kProfileMode ? 'profile' : 'debug'));
   if (trimmedRelease.isNotEmpty) {
     options.release = trimmedRelease;
   }

@@ -33,12 +33,16 @@ class MyNavigationDrawer extends StatelessWidget {
 
     int i = 0;
     for (var entry in entries) {
-      widgets.add(_createDrawerItem(context,
+      widgets.add(
+        _createDrawerItem(
+          context,
           icon: entry.icon,
           text: entry.title,
           drawerKeyName: entry.keyName,
           index: i,
-          isSelected: i == selectedIndex));
+          isSelected: i == selectedIndex,
+        ),
+      );
 
       i++;
     }
@@ -53,6 +57,9 @@ class MyNavigationDrawer extends StatelessWidget {
 
     if (isInDrawer) {
       return Drawer(
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         child: widget,
       );
     }
@@ -109,11 +116,7 @@ class MyNavigationDrawer extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-                  icon,
-                  const SizedBox(width: 16),
-                  Text(text),
-                ],
+                children: <Widget>[icon, const SizedBox(width: 16), Text(text)],
               ),
             ),
           ),

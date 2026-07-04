@@ -31,8 +31,9 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  static const Duration _drawerCloseNavigationDelay =
-      Duration(milliseconds: 260);
+  static const Duration _drawerCloseNavigationDelay = Duration(
+    milliseconds: 260,
+  );
   static const Duration _initialSectionLoadDelay = Duration(milliseconds: 220);
 
   bool _appLaunchDialogsShown = false;
@@ -55,8 +56,9 @@ class _MainPageState extends State<MainPage> {
     if (initialIndex != null) {
       _currentEntryIndex.value = initialIndex;
     }
-    MainSectionController.instance.routeSignal
-        .addListener(_handleExternalRouteRequest);
+    MainSectionController.instance.routeSignal.addListener(
+      _handleExternalRouteRequest,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _initialSectionLoadTimer?.cancel();
@@ -70,8 +72,9 @@ class _MainPageState extends State<MainPage> {
 
   @override
   void dispose() {
-    MainSectionController.instance.routeSignal
-        .removeListener(_handleExternalRouteRequest);
+    MainSectionController.instance.routeSignal.removeListener(
+      _handleExternalRouteRequest,
+    );
     _initialSectionLoadTimer?.cancel();
     _cancelPendingNavigation(clearPendingIndex: true);
     _isDrawerOpen.dispose();
@@ -106,8 +109,16 @@ class _MainPageState extends State<MainPage> {
   Widget _buildSectionStack(BuildContext context) {
     if (!_loadedSections.contains(_currentEntryIndex.value)) {
       return const Center(
-        child: CircularProgressIndicator(
+        child: SizedBox(
           key: ValueKey<String>('main_page_initial_placeholder'),
+          width: 24,
+          height: 24,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0x33000000),
+            ),
+          ),
         ),
       );
     }
@@ -142,6 +153,7 @@ class _MainPageState extends State<MainPage> {
     return PopScope(
       canPop: true,
       child: Scaffold(
+        drawerScrimColor: Colors.transparent,
         onDrawerChanged: (isOpen) {
           if (_isDrawerOpen.value == isOpen) {
             return;
@@ -216,14 +228,8 @@ class _MainPageState extends State<MainPage> {
               isInDrawer: false,
             ),
           ),
-          Container(
-            color: Theme.of(context).dividerColor,
-            width: 1,
-          ),
-          Expanded(
-            child: RepaintBoundary(child: body),
-            flex: 3,
-          ),
+          Container(color: Theme.of(context).dividerColor, width: 1),
+          Expanded(child: RepaintBoundary(child: body), flex: 3),
         ],
       ),
     );
@@ -233,19 +239,22 @@ class _MainPageState extends State<MainPage> {
     var drawerEntries = <DrawerNavigationEntry>[];
 
     for (var entry in navigationEntries) {
-      drawerEntries.add(DrawerNavigationEntry(
-        entry.icon(context),
-        entry.title(context),
-        entry.route,
-      ));
+      drawerEntries.add(
+        DrawerNavigationEntry(
+          entry.icon(context),
+          entry.title(context),
+          entry.route,
+        ),
+      );
     }
 
     return drawerEntries;
   }
 
   void _onNavigationTapped(int index, bool fromDrawer) {
-    PerformanceTelemetry.instance
-        .markNavEvent(name: "drawer.tab.${navigationEntries[index].route}");
+    PerformanceTelemetry.instance.markNavEvent(
+      name: "drawer.tab.${navigationEntries[index].route}",
+    );
 
     if (fromDrawer) {
       _cancelPendingNavigation();
@@ -289,8 +298,9 @@ class _MainPageState extends State<MainPage> {
   int? _targetIndexForRoute(String? route) {
     if (route == null) return null;
 
-    final targetIndex =
-        navigationEntries.indexWhere((entry) => entry.route == route);
+    final targetIndex = navigationEntries.indexWhere(
+      (entry) => entry.route == route,
+    );
     if (targetIndex < 0) {
       return null;
     }
@@ -341,8 +351,9 @@ class _MainPageState extends State<MainPage> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future.delayed(const Duration(milliseconds: 1200), () {
           if (!mounted) return;
-          AppLaunchDialog(KiwiContainer().resolve())
-              .showAppLaunchDialogs(context);
+          AppLaunchDialog(
+            KiwiContainer().resolve(),
+          ).showAppLaunchDialogs(context);
         });
       });
 

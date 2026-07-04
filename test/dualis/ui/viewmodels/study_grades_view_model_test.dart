@@ -15,91 +15,122 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('login falls back to LoginFailed on unexpected service errors',
-      () async {
-    final service = _StudyGradesTestService(
-      loginThrows: true,
-      blockFirstModulesRequest: false,
-    );
-    final viewModel = StudyGradesViewModel(_buildPreferences(), service);
-    addTearDown(viewModel.dispose);
+  test(
+    'login falls back to LoginFailed on unexpected service errors',
+    () async {
+      final service = _StudyGradesTestService(
+        loginThrows: true,
+        blockFirstModulesRequest: false,
+      );
+      final viewModel = StudyGradesViewModel(_buildPreferences(), service);
+      addTearDown(viewModel.dispose);
 
-    final success = await viewModel.login(Credentials('u', 'p'));
+      final success = await viewModel.login(Credentials('u', 'p'));
 
-    expect(success, isFalse);
-    expect(viewModel.loginState, LoginState.LoginFailed);
-  });
+      expect(success, isFalse);
+      expect(viewModel.loginState, LoginState.LoginFailed);
+    },
+  );
 
-  test('loadAllModules keeps loading=true for the newest in-flight request',
-      () async {
-    final service = _StudyGradesTestService();
-    final viewModel = StudyGradesViewModel(_buildPreferences(), service);
-    addTearDown(viewModel.dispose);
+  test(
+    'loadAllModules keeps loading=true for the newest in-flight request',
+    () async {
+      final service = _StudyGradesTestService();
+      final viewModel = StudyGradesViewModel(_buildPreferences(), service);
+      addTearDown(viewModel.dispose);
 
-    unawaited(viewModel.loadAllModules());
-    await Future<void>.delayed(const Duration(milliseconds: 10));
-    expect(viewModel.isLoadingAllModules, isTrue);
+      unawaited(viewModel.loadAllModules());
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(viewModel.isLoadingAllModules, isTrue);
 
-    unawaited(viewModel.loadAllModules());
-    await service.secondModulesRequestStarted.future;
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+      unawaited(viewModel.loadAllModules());
+      await service.secondModulesRequestStarted.future;
+      await Future<void>.delayed(const Duration(milliseconds: 10));
 
-    expect(viewModel.isLoadingAllModules, isTrue);
+      expect(viewModel.isLoadingAllModules, isTrue);
 
-    service.releaseSecondModulesRequest();
-    await Future<void>.delayed(const Duration(milliseconds: 20));
+      service.releaseSecondModulesRequest();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
 
-    expect(viewModel.isLoadingAllModules, isFalse);
-  });
+      expect(viewModel.isLoadingAllModules, isFalse);
+    },
+  );
 
-  test('restores the Dualis session from saved credentials on page open',
-      () async {
-    final preferences = _buildPreferences();
-    await preferences.storeDualisCredentials(Credentials('saved-user', 'saved-pass'));
-    final service = _StudyGradesTestService(blockFirstModulesRequest: false);
-    final viewModel = StudyGradesViewModel(preferences, service);
-    addTearDown(viewModel.dispose);
+  test(
+    'restores the Dualis session from saved credentials on page open',
+    () async {
+      final preferences = _buildPreferences();
+      await preferences.storeDualisCredentials(
+        Credentials('saved-user', 'saved-pass'),
+      );
+      await preferences.setStoreDualisCredentials(true);
+      final service = _StudyGradesTestService(blockFirstModulesRequest: false);
+      final viewModel = StudyGradesViewModel(preferences, service);
+      addTearDown(viewModel.dispose);
 
-    final success = await viewModel.restoreSessionIfPossible();
-    await Future<void>.delayed(const Duration(milliseconds: 20));
+      final success = await viewModel.restoreSessionIfPossible();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
 
-    expect(success, isTrue);
-    expect(service.loginCalls, 1);
-    expect(service.lastLoginUsername, 'saved-user');
-    expect(service.lastLoginPassword, 'saved-pass');
-    expect(viewModel.loginState, LoginState.LoggedIn);
-    expect(service.clearCacheCalls, 1);
-  });
+      expect(success, isTrue);
+      expect(service.loginCalls, 1);
+      expect(service.lastLoginUsername, 'saved-user');
+      expect(service.lastLoginPassword, 'saved-pass');
+      expect(viewModel.loginState, LoginState.LoggedIn);
+      expect(service.clearCacheCalls, 1);
+    },
+  );
 
-  test('refreshData(force: true) clears cached Dualis data before reloading',
-      () async {
-    final preferences = _buildPreferences();
-    final service = _StudyGradesTestService(blockFirstModulesRequest: false);
-    final viewModel = StudyGradesViewModel(preferences, service);
-    addTearDown(viewModel.dispose);
+  test(
+    'restore skips secure storage when credential persistence is disabled',
+    () async {
+      final secureStorage = _FakeSecureStorageAccess();
+      final preferences = _buildPreferences(secureStorage: secureStorage);
+      final service = _StudyGradesTestService(blockFirstModulesRequest: false);
+      final viewModel = StudyGradesViewModel(preferences, service);
+      addTearDown(viewModel.dispose);
 
-    final success = await viewModel.login(Credentials('u', 'p'));
-    expect(success, isTrue);
+      final success = await viewModel.restoreSessionIfPossible();
 
-    while (await preferences.getDualisLastRefreshAt() == null) {
-      await Future<void>.delayed(const Duration(milliseconds: 1));
-    }
+      expect(success, isFalse);
+      expect(secureStorage.readCalls, 0);
+      expect(service.loginCalls, 0);
+      expect(viewModel.loginState, LoginState.LoggedOut);
+    },
+  );
 
-    service.resetCallCounters();
+  test(
+    'refreshData(force: true) clears cached Dualis data before reloading',
+    () async {
+      final preferences = _buildPreferences();
+      final service = _StudyGradesTestService(blockFirstModulesRequest: false);
+      final viewModel = StudyGradesViewModel(preferences, service);
+      addTearDown(viewModel.dispose);
 
-    await viewModel.refreshData(force: true);
+      final success = await viewModel.login(Credentials('u', 'p'));
+      expect(success, isTrue);
 
-    expect(service.clearCacheCalls, 1);
-    expect(service.queryStudyGradesCalls, 1);
-    expect(service.queryAllModulesCalls, 1);
-    expect(service.querySemesterNamesCalls, 1);
-  });
+      while (await preferences.getDualisLastRefreshAt() == null) {
+        await Future<void>.delayed(const Duration(milliseconds: 1));
+      }
+
+      service.resetCallCounters();
+
+      await viewModel.refreshData(force: true);
+
+      expect(service.clearCacheCalls, 1);
+      expect(service.queryStudyGradesCalls, 1);
+      expect(service.queryAllModulesCalls, 1);
+      expect(service.querySemesterNamesCalls, 1);
+    },
+  );
 }
 
-PreferencesProvider _buildPreferences() {
+PreferencesProvider _buildPreferences({
+  _FakeSecureStorageAccess? secureStorage,
+}) {
   return PreferencesProvider(
     _FakePreferencesAccess(),
-    _FakeSecureStorageAccess(),
+    secureStorage ?? _FakeSecureStorageAccess(),
   );
 }
 
@@ -196,9 +227,7 @@ class _StudyGradesTestService extends DualisService {
   }
 
   @override
-  Future<void> logout([
-    CancellationToken? cancellationToken,
-  ]) async {}
+  Future<void> logout([CancellationToken? cancellationToken]) async {}
 
   @override
   void clearCache() {
@@ -230,6 +259,7 @@ class _FakePreferencesAccess extends PreferencesAccess {
 
 class _FakeSecureStorageAccess extends SecureStorageAccess {
   final Map<String, String?> _store = <String, String?>{};
+  int readCalls = 0;
 
   @override
   Future<void> set(String key, String value) async {
@@ -238,6 +268,7 @@ class _FakeSecureStorageAccess extends SecureStorageAccess {
 
   @override
   Future<String?> get(String key) async {
+    readCalls += 1;
     return _store[key];
   }
 }

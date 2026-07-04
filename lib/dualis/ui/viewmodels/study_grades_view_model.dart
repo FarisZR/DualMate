@@ -124,6 +124,12 @@ class StudyGradesViewModel extends BaseViewModel {
       return false;
     }
 
+    if (!await _preferencesProvider.getStoreDualisCredentials()) {
+      _loginState = LoginState.LoggedOut;
+      notifyListeners("loginState");
+      return false;
+    }
+
     final credentials = await _preferencesProvider.loadDualisCredentials();
     if (credentials.username.isEmpty || credentials.password.isEmpty) {
       _loginState = LoginState.LoggedOut;

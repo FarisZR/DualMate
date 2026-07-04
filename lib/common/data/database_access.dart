@@ -1,5 +1,6 @@
 import 'package:dualmate/common/data/database_path_provider.dart';
 import 'package:dualmate/common/data/sql_scripts.dart';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseAccess {
@@ -25,19 +26,27 @@ class DatabaseAccess {
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    print("Initializing Database with version: $version");
+    if (kDebugMode) {
+      print("Initializing Database with version: $version");
+    }
 
     await _onUpgrade(db, 1, version);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    print("Migrating database version: $oldVersion -> $newVersion");
+    if (kDebugMode) {
+      print("Migrating database version: $oldVersion -> $newVersion");
+    }
 
     for (var i = oldVersion; i <= newVersion; i++) {
-      print("   -> Execute migration to $i");
+      if (kDebugMode) {
+        print("   -> Execute migration to $i");
+      }
 
       for (var s in SqlScripts.databaseMigrationScripts[i - 1]) {
-        print("   -> $s");
+        if (kDebugMode) {
+          print("   -> $s");
+        }
         await db.execute(s);
       }
     }
