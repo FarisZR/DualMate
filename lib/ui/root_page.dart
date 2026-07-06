@@ -9,6 +9,7 @@ import 'package:dualmate/common/logging/sentry_scrubber.dart';
 import 'package:dualmate/common/ui/colors.dart';
 import 'package:dualmate/common/ui/viewmodels/root_view_model.dart';
 import 'package:dualmate/common/appstart/app_initializer.dart';
+import 'package:dualmate/common/appstart/debug_startup_overrides.dart';
 import 'package:dualmate/common/appstart/locale_preference_sync.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/util/launch_intent.dart';
@@ -211,6 +212,8 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         args: {'elapsedMs': widget.startupStopwatch.elapsedMilliseconds},
       );
 
+      await _applyDebugStartupOverrides();
+
       if (!mounted) return;
 
       _localePreferenceSync = LocalePreferenceSync(
@@ -277,6 +280,31 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         attended,
       );
     } catch (_) {}
+  }
+
+  Future<void> _applyDebugStartupOverrides() async {
+    if (!kDebugMode) return;
+
+    final overrides = DebugStartupOverrides.fromEnvironment();
+    if (!overrides.isActive) return;
+
+    try {
+      await overrides.apply(KiwiContainer().resolve<PreferencesProvider>());
+      _debugRootLog("Root init: applied debug startup overrides");
+    } catch (error, trace) {
+      _debugRootError("Root init: debug startup overrides failed", error, trace);
+      unawaited(
+        AppDiagnostics.instance.reportCaughtException(
+          error,
+          trace,
+          message: 'Root init: debug startup overrides failed',
+          tags: {'feature': 'startup'},
+          contexts: {
+            'startup': {'phase': 'debug_overrides'},
+          },
+        ),
+      );
+    }
   }
 
   Future<void> _loadRootPreferences(Stopwatch stopwatch) async {

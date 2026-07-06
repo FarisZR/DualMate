@@ -1,12 +1,14 @@
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/logging/analytics.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/ui/onboarding/onboardin_step.dart';
 
 typedef OnboardingFinished = void Function();
 
 class OnboardingViewModel extends BaseViewModel {
   final PreferencesProvider preferencesProvider;
+  final ScheduleSourceProvider scheduleSourceProvider;
   final OnboardingFinished _onboardingFinished;
 
   final List<String> steps = [
@@ -45,6 +47,7 @@ class OnboardingViewModel extends BaseViewModel {
 
   OnboardingViewModel(
     this.preferencesProvider,
+    this.scheduleSourceProvider,
     this._onboardingFinished,
   ) {
     for (var page in pages.values) {
@@ -104,6 +107,13 @@ class OnboardingViewModel extends BaseViewModel {
         await page.viewModel().save();
       }
     }
+
+    // Rebuild the schedule source from the just-saved preferences. The Rapla
+    // onboarding save path defers source setup (setupSource: false), so
+    // without this explicit call the in-memory source stays stale —
+    // particularly noticeable when replaying onboarding on an
+    // already-initialized app where the deferred startup init won't re-run.
+    await scheduleSourceProvider.setupScheduleSource();
 
     _onboardingFinished.call();
 

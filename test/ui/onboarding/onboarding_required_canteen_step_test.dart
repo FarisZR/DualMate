@@ -32,6 +32,7 @@ void main() {
 
     final viewModel = OnboardingViewModel(
       preferencesProvider,
+      container.resolve<ScheduleSourceProvider>(),
       () {},
     );
 

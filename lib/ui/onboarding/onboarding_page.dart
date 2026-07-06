@@ -28,6 +28,7 @@ class _OnboardingPageState extends State<OnboardingPage>
 
     viewModel = OnboardingViewModel(
       KiwiContainer().resolve(),
+      KiwiContainer().resolve(),
       _onboardingFinished,
     );
 
