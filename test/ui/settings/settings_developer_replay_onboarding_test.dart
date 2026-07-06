@@ -8,6 +8,7 @@ import 'package:dualmate/common/data/preferences/secure_storage_access.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/common/ui/viewmodels/root_view_model.dart';
+import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/ui/notification/next_day_information_notification.dart';
 import 'package:dualmate/ui/settings/settings_page.dart';
@@ -23,6 +24,7 @@ const String _onboardingMarker = '__onboarding_marker__';
 void main() {
   late PreferencesProvider preferencesProvider;
   late _RecordingScheduleSourceProvider scheduleSourceProvider;
+  late _RecordingScheduleProvider scheduleProvider;
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -30,6 +32,7 @@ void main() {
     preferencesProvider =
         PreferencesProvider(PreferencesAccess(), SecureStorageAccess());
     scheduleSourceProvider = _RecordingScheduleSourceProvider();
+    scheduleProvider = _RecordingScheduleProvider();
     KiwiContainer().registerInstance<PreferencesProvider>(preferencesProvider);
     KiwiContainer().registerInstance<CanteenLocationService>(
       CanteenLocationService(preferencesProvider),
@@ -45,6 +48,7 @@ void main() {
     KiwiContainer().registerInstance<ScheduleSourceProvider>(
       scheduleSourceProvider,
     );
+    KiwiContainer().registerInstance<ScheduleProvider>(scheduleProvider);
   });
 
   tearDown(() {
@@ -84,6 +88,7 @@ void main() {
       expect(find.text(_onboardingMarker), findsOneWidget);
       expect(await preferencesProvider.isFirstStart(), isTrue);
       expect(scheduleSourceProvider.clearScheduleCacheCalls, 1);
+      expect(scheduleProvider.invalidateScheduleCacheCalls, 1);
     },
   );
 }
@@ -144,6 +149,19 @@ class _RecordingScheduleSourceProvider implements ScheduleSourceProvider {
   @override
   Future<void> clearScheduleCache() async {
     clearScheduleCacheCalls += 1;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      super.noSuchMethod(invocation);
+}
+
+class _RecordingScheduleProvider implements ScheduleProvider {
+  int invalidateScheduleCacheCalls = 0;
+
+  @override
+  void invalidateScheduleCache() {
+    invalidateScheduleCacheCalls += 1;
   }
 
   @override

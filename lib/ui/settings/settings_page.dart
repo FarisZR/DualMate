@@ -9,8 +9,10 @@ import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/common/ui/viewmodels/root_view_model.dart';
 import 'package:dualmate/common/ui/widgets/title_list_tile.dart';
+import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/ui/notification/next_day_information_notification.dart';
+import 'package:dualmate/schedule/ui/schedule_page.dart';
 import 'package:dualmate/schedule/ui/widgets/select_source_dialog.dart';
 import 'package:dualmate/ui/settings/select_theme_dialog.dart';
 import 'package:dualmate/ui/settings/viewmodels/settings_view_model.dart';
@@ -372,6 +374,12 @@ class _SettingsPageState extends State<SettingsPage> {
                       if (scheduleSourceProvider != null) {
                         await scheduleSourceProvider.clearScheduleCache();
                       }
+                      // Invalidate in-memory schedule caches so stale entries
+                      // from the previous configuration don't survive the
+                      // route reset.
+                      _resolveOptional<ScheduleProvider>()
+                          ?.invalidateScheduleCache();
+                      SchedulePage.resetSharedState();
                       final preferencesProvider =
                           KiwiContainer().resolve<PreferencesProvider>();
                       await preferencesProvider.setIsFirstStart(true);
