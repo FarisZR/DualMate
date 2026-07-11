@@ -43,12 +43,13 @@ Future<void> main() {
         final timeline = timelineKey is String && data != null
             ? data[timelineKey]
             : null;
-        if (timeline is Map<String, dynamic>) {
+        final timelineMap = _asStringMap(timeline);
+        if (timelineMap != null) {
           final timelineFile = File(
             '${timelineDirectory.path}${Platform.pathSeparator}${entry.key}.json',
           );
           await timelineFile.writeAsString(
-            const JsonEncoder.withIndent('  ').convert(timeline),
+            const JsonEncoder.withIndent('  ').convert(timelineMap),
           );
           scenario['timeline_file'] = timelineFile.path;
         }
@@ -70,7 +71,7 @@ Future<void> main() {
         // Issue 1: A measured transition with zero frames must invalidate
         // the run, not be silently reported as smooth.
         final frameCount = scenario['frame_count'];
-        if (frameCount is int && frameCount == 0) {
+        if (frameCount is! num || frameCount <= 0) {
           failures.add(
             '${entry.key}: zero frames were assigned to this scenario '
             '(frame attribution failure)',

@@ -256,23 +256,22 @@ def animation_drop_label(validity: dict[str, Any]) -> str:
     return f"{drops}/{checked}{suffix}"
 
 def write_markdown(summary: dict[str, Any], output_path: Path) -> None:
-    lines = [
-        "# Cold Navigation Profile Summary",
-        "",
-        "## Individual Scenarios",
-        "",
-        "| Rank | Scenario | Animation drop | % >8.33ms | p99 | worst | consec |",
-        "| ---: | --- | ---: | ---: | ---: | ---: | ---: |",
-    ]
+    lines = ["# Cold Navigation Profile Summary"]
     scenarios = summary["scenarios"]
 
     def _ranking_rows(ranking_key: str, header: str) -> None:
         ranking = summary.get(ranking_key, [])
         if not ranking:
             return
-        lines.extend(["", f"## {header}", "",
-                      "| Rank | Scenario | Animation drop | % >8.33ms | p99 | worst | consec |",
-                      "| ---: | --- | ---: | ---: | ---: | ---: | ---: |"])
+        lines.extend(
+            [
+                "",
+                f"## {header}",
+                "",
+                "| Rank | Scenario | Animation drop | % >8.33ms | p99 | worst | consec |",
+                "| ---: | --- | ---: | ---: | ---: | ---: | ---: |",
+            ]
+        )
         for item in ranking:
             scenario = scenarios[item["scenario_id"]]
             combined = scenario["median"].get("combined", {})
@@ -288,21 +287,7 @@ def write_markdown(summary: dict[str, Any], output_path: Path) -> None:
                 )
             )
 
-    for item in summary.get("ranking_individual_worst_to_best", []):
-        scenario = scenarios[item["scenario_id"]]
-        combined = scenario["median"].get("combined", {})
-        lines.append(
-            "| {rank} | {id} | {animation} | {pct}% | {p99} us | {worst} us | {consec} |".format(
-                rank=item["rank"],
-                id=item["scenario_id"],
-                animation=animation_drop_label(scenario["validity"]),
-                pct=format_percentage(combined.get("over_8_33ms_pct", 0)),
-                p99=combined.get("p99_us", 0),
-                worst=combined.get("worst_us", 0),
-                consec=combined.get("consecutive_missed_frames", 0),
-            )
-        )
-
+    _ranking_rows("ranking_individual_worst_to_best", "Individual Scenarios")
     _ranking_rows("ranking_compound_worst_to_best", "Compound Journeys")
 
     output_path.write_text("\n".join(lines) + "\n")
