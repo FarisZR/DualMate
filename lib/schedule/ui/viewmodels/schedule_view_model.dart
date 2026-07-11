@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/common/appstart/performance_fixture_mode.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 
 class ScheduleViewModel extends BaseViewModel {
@@ -35,6 +36,11 @@ class ScheduleViewModel extends BaseViewModel {
   }
 
   void _scheduleInitialSetup() {
+    if (isPerformanceFixtureMode) {
+      // The profile harness validates the configured source during startup and
+      // then installs its deterministic local source for refresh scenarios.
+      return;
+    }
     _initialSetupTimer?.cancel();
     _initialSetupTimer = Timer(const Duration(seconds: 1), () {
       if (_isDisposed) return;

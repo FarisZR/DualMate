@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/appstart/performance_fixture_mode.dart';
 import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/util/cancelable_mutex.dart';
@@ -234,7 +235,11 @@ class DateManagementViewModel extends BaseViewModel {
     _updateMutex.token.throwIfCancelled();
     _setAllDates(cachedDateEntries);
 
-    var loadedDateEntries = await _readUpdatedDateEntries();
+    // The profile fixture deliberately measures rendering of a realistic local
+    // cache.  It must not turn a device/network hiccup into a UI benchmark.
+    var loadedDateEntries = isPerformanceFixtureMode
+        ? null
+        : await _readUpdatedDateEntries();
     if (_isDisposed) return;
     _updateMutex.token.throwIfCancelled();
 
@@ -272,7 +277,7 @@ class DateManagementViewModel extends BaseViewModel {
 
     _notifySafely("updateFailed");
 
-    if (raplaEvents != null) {
+    if (raplaEvents != null && !isPerformanceFixtureMode) {
       _refreshRaplaEventsInBackground();
     }
   }
@@ -298,7 +303,9 @@ class DateManagementViewModel extends BaseViewModel {
       refresh: false,
     );
     if (_isDisposed) return null;
-    _refreshRaplaWindowInBackground(window);
+    if (!isPerformanceFixtureMode) {
+      _refreshRaplaWindowInBackground(window);
+    }
     return loaded;
   }
 
@@ -631,7 +638,7 @@ class DateManagementViewModel extends BaseViewModel {
         windowToLoad,
         CancellationToken(),
         advanceWindow: true,
-        refresh: true,
+        refresh: !isPerformanceFixtureMode,
       );
       if (_isDisposed) return;
       if (loaded == null) {

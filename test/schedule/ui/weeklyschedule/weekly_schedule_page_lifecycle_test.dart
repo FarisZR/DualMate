@@ -56,9 +56,11 @@ void main() {
         nowProvider: () => DateTime(2026, 2, 10, 10, 0),
       );
 
+      expect(viewModel.isInitializationComplete, isFalse);
       await viewModel.initialize();
       await tester.pump();
 
+      expect(viewModel.isInitializationComplete, isTrue);
       expect(provider.cachedRequests, isNotEmpty);
       expect(viewModel.weekSchedule?.entries.single.title, 'CACHED_ENTRY');
       expect(provider.updatedOrigins, isEmpty);

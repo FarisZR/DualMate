@@ -116,6 +116,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   DateTime? lastRequestedEnd;
 
   bool _initialized = false;
+  bool _initializationComplete = false;
   DateTime? _lastWarmedWeekStart;
 
   WeeklyScheduleViewModel(
@@ -143,8 +144,12 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       notifyIfMounted("initializeFailed");
       _debugScheduleError("Weekly schedule init failed", error, trace);
       await reportException(error, trace);
+    } finally {
+      _initializationComplete = true;
     }
   }
+
+  bool get isInitializationComplete => _initializationComplete;
 
   static WeeklyDisplayRange resolveWeeklyDisplayRange(
     DateTime referenceStart,

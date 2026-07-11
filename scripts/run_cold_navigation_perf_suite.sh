@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Fresh-process, profile-mode measurements. Android animation scales are
+# validated, never changed: a non-normal scale invalidates the comparison.
+runs="${PERF_RUNS:-3}"
+attempts="${PERF_RUN_ATTEMPTS:-3}"
+output_root="${PERF_OUTPUT_ROOT:-build/aggressive_cold_navigation}"
+serial="${ANDROID_SERIAL:-}"
+
+if ! [[ "$runs" =~ ^[1-9][0-9]*$ ]]; then
+  echo 'PERF_RUNS must be a positive integer.' >&2
+  exit 2
+fi
+if ! [[ "$attempts" =~ ^[1-9][0-9]*$ ]]; then
+  echo 'PERF_RUN_ATTEMPTS must be a positive integer.' >&2
+  exit 2
+fi
+if [[ -z "$serial" ]]; then
+  serial="$(adb devices | awk 'NR > 1 && $2 == "device" { print $1; exit }')"
+fi
+if [[ -z "$serial" ]]; then
+  echo 'No connected Android device. Set ANDROID_SERIAL or connect one with adb.' >&2
+  exit 2
+fi
+
+for setting in window_animation_scale transition_animation_scale animator_duration_scale; do
+  value="$(adb -s "$serial" shell settings get global "$setting" | tr -d '\r')"
+  if [[ "$value" != '1' && "$value" != '1.0' ]]; then
+    echo "$setting=$value; set it to normal (1.0), then retry." >&2
+    exit 2
+  fi
+done
+
+mkdir -p "$output_root/runs"
+for mode in diagnostic combined; do
+  for run in $(seq 1 "$runs"); do
+    run_id="${mode}-$(printf '%02d' "$run")"
+    run_directory="$output_root/runs/$run_id"
+    mkdir -p "$run_directory"
+    succeeded=false
+    for attempt in $(seq 1 "$attempts"); do
+      adb -s "$serial" shell am force-stop com.fariszr.dualmate
+      rm -f "$run_directory/report.json"
+      if PERF_OUTPUT_DIR="$run_directory" PERF_RUN_ID="$run_id" \
+        flutter drive --profile --no-dds --no-pub \
+          --device-id "$serial" \
+          --driver test_driver/aggressive_perf_driver.dart \
+          --target integration_test/aggressive_cold_navigation_performance_test.dart \
+          --dart-define=PERF_TEST_OFFLINE_FIXTURES=true \
+          --dart-define=PERF_PROFILE_MODE="$mode" \
+          --dart-define=PERF_TIMELINE_READY_CHECK=true; then
+        succeeded=true
+        break
+      fi
+      echo "${run_id} attempt ${attempt}/${attempts} failed; retrying fresh." >&2
+    done
+    if [[ "$succeeded" != true ]]; then
+      echo "${run_id} failed after ${attempts} fresh attempts." >&2
+      exit 1
+    fi
+  done
+done
+
+python3 scripts/aggregate_cold_navigation_profile.py \
+  --input "$output_root/runs" \
+  --output "$output_root/summary.json"

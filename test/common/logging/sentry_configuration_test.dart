@@ -8,6 +8,11 @@ void main() {
     expect(sentryTraceSampleRate(releaseMode: false), 1.0);
   });
 
+  test('performance fixture runs keep Sentry disabled', () {
+    expect(isSentryRuntimeEnabled(performanceFixtureMode: true), isFalse);
+    expect(isSentryRuntimeEnabled(performanceFixtureMode: false), isTrue);
+  });
+
   test('privacy-sensitive Sentry features stay disabled', () async {
     final options = SentryFlutterOptions();
 

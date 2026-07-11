@@ -213,6 +213,15 @@ class ScheduleSourceProvider {
     return !(_currentScheduleSource is InvalidScheduleSource);
   }
 
+  /// Replaces a validated configured source only for the opt-in performance
+  /// fixture. Production setup continues to use [setupScheduleSource].
+  void usePerformanceFixtureSource(ScheduleSource source) {
+    _currentScheduleSource = source;
+    _onDidChangeScheduleSourceCallbacks.forEach((element) {
+      element(source, true);
+    });
+  }
+
   void addDidChangeScheduleSourceCallback(OnDidChangeScheduleSource callback) {
     _onDidChangeScheduleSourceCallbacks.add(callback);
   }

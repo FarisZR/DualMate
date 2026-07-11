@@ -154,7 +154,7 @@ class BackgroundWorkScheduler extends WorkSchedulerService {
   }
 
   static Future<void> _ensureSentryInitialized() async {
-    if (!isSentryConfigured() || Sentry.isEnabled) {
+    if (!isSentryRuntimeEnabled() || Sentry.isEnabled) {
       return;
     }
 
