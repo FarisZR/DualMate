@@ -11,6 +11,8 @@ import 'package:dualmate/schedule/model/schedule.dart';
 /// DualisScraper implementation which returns fake data
 ///
 class FakeDataDualisScraper implements DualisScraper {
+  static const int demoModuleCount = 10;
+
   bool _isLoggedIn = false;
 
   @override
@@ -24,33 +26,91 @@ class FakeDataDualisScraper implements DualisScraper {
   ]) async {
     await Future.delayed(Duration(milliseconds: 200));
 
-    return Future.value([
-      DualisModule(
-        "T3INF1001",
-        "Software Engineering",
-        "1.7",
-        "5",
-        ExamState.Passed,
-        "demo://software-engineering",
-      ),
-      DualisModule(
-        "T3INF1002",
-        "Datenbanken",
-        "2.0",
-        "5",
-        ExamState.Passed,
-        "demo://databases",
-      ),
-      DualisModule(
-        "T3INF1003",
-        "Mathematik",
-        "",
-        "5",
-        ExamState.Pending,
-        "demo://mathematics",
-      ),
-    ]);
+    return List<DualisModule>.unmodifiable(_demoModules);
   }
+
+  static final List<DualisModule> _demoModules = <DualisModule>[
+    DualisModule(
+      "T3INF1001",
+      "Software Engineering",
+      "1.7",
+      "5",
+      ExamState.Passed,
+      "demo://software-engineering",
+    ),
+    DualisModule(
+      "T3INF1002",
+      "Datenbanken",
+      "2.0",
+      "5",
+      ExamState.Passed,
+      "demo://databases",
+    ),
+    DualisModule(
+      "T3INF1003",
+      "Mathematik",
+      "",
+      "5",
+      ExamState.Pending,
+      "demo://mathematics",
+    ),
+    DualisModule(
+      "T3INF1004",
+      "Computer Networks",
+      "1.3",
+      "5",
+      ExamState.Passed,
+      "demo://computer-networks",
+    ),
+    DualisModule(
+      "T3INF1005",
+      "Operating Systems",
+      "2.3",
+      "5",
+      ExamState.Passed,
+      "demo://operating-systems",
+    ),
+    DualisModule(
+      "T3INF1006",
+      "Web Engineering",
+      "1.7",
+      "5",
+      ExamState.Passed,
+      "demo://web-engineering",
+    ),
+    DualisModule(
+      "T3INF1007",
+      "IT Security",
+      "2.0",
+      "5",
+      ExamState.Passed,
+      "demo://it-security",
+    ),
+    DualisModule(
+      "T3INF1008",
+      "Distributed Systems",
+      "",
+      "5",
+      ExamState.Pending,
+      "demo://distributed-systems",
+    ),
+    DualisModule(
+      "T3INF1009",
+      "Software Architecture",
+      "1.3",
+      "5",
+      ExamState.Passed,
+      "demo://software-architecture",
+    ),
+    DualisModule(
+      "T3INF1010",
+      "Data Science",
+      "1.7",
+      "5",
+      ExamState.Passed,
+      "demo://data-science",
+    ),
+  ];
 
   @override
   Future<List<DualisExam>> loadModuleExams(
@@ -91,24 +151,7 @@ class FakeDataDualisScraper implements DualisScraper {
     CancellationToken? cancellationToken,
   ]) async {
     await Future.delayed(Duration(milliseconds: 200));
-    return Future.value([
-      DualisModule(
-        "T3INF1001",
-        "Software Engineering",
-        "1.7",
-        "5",
-        ExamState.Passed,
-        "demo://software-engineering",
-      ),
-      DualisModule(
-        "T3INF1002",
-        "Datenbanken",
-        "2.0",
-        "5",
-        ExamState.Passed,
-        "demo://databases",
-      ),
-    ]);
+    return List<DualisModule>.unmodifiable(_demoModules.take(6).toList());
   }
 
   @override

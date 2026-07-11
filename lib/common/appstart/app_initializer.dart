@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:dualmate/canteen/business/canteen_provider.dart';
 import 'package:dualmate/common/appstart/background_initialize.dart';
+import 'package:dualmate/common/appstart/performance_fixture_mode.dart';
+import 'package:dualmate/common/appstart/performance_fixture_schedule_source.dart';
 import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/appstart/localization_initialize.dart';
 import 'package:dualmate/common/appstart/notification_schedule_changed_initialize.dart';
@@ -63,6 +65,24 @@ Future<void> initializeAppBase(bool isBackground) async {
 
   injectServices(isBackground);
   print("Base init: services ${stopwatch.elapsedMilliseconds}ms");
+
+  if (isPerformanceFixtureMode) {
+    final scheduleSourceProvider = KiwiContainer()
+        .resolve<ScheduleSourceProvider>();
+    final didConfigureScheduleSource = await scheduleSourceProvider
+        .setupScheduleSource();
+    if (!didConfigureScheduleSource) {
+      throw StateError(
+        'Performance fixture mode requires a configured Schedule source.',
+      );
+    }
+    scheduleSourceProvider.usePerformanceFixtureSource(
+      PerformanceFixtureScheduleSource(),
+    );
+    print(
+      "Base init: fixture schedule source ${stopwatch.elapsedMilliseconds}ms",
+    );
+  }
 
   print("Base init: time zones deferred ${stopwatch.elapsedMilliseconds}ms");
 
@@ -210,6 +230,9 @@ Future<void> prewarmCanteenIfStale({
   Duration staleAfter = const Duration(hours: 2),
   Future<void> Function()? runCanteenPrewarm,
 }) async {
+  if (isPerformanceFixtureMode) {
+    return;
+  }
   if (isForegroundCanteenPrewarmInitialized) {
     return;
   }

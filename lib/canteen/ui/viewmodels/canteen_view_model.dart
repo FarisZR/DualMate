@@ -5,6 +5,7 @@ import 'package:dualmate/canteen/model/canteen_location.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
+import 'package:dualmate/common/appstart/performance_fixture_mode.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'dart:async';
@@ -50,13 +51,47 @@ class CanteenViewModel extends BaseViewModel {
     _registerMenuUpdatedCallback();
     _locationChangeSubscription = _locationService.selectedLocationChanges
         .listen((_) {
-          unawaited(reloadSelectedLocation());
+          unawaited(
+            reloadSelectedLocation(
+              allowNetworkRefresh: !isPerformanceFixtureMode,
+            ),
+          );
         });
+    if (isPerformanceFixtureMode) {
+      unawaited(_loadPerformanceFixtureData());
+      return;
+    }
+
     unawaited(_loadSelectedLocation());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_weeklyMenus.containsKey(todayWeekStart)) return;
       primeVisibleWeek(todayWeekStart);
     });
+  }
+
+  Future<void> _loadPerformanceFixtureData() async {
+    await _loadSelectedLocation();
+    await _loadFixtureWeeks();
+  }
+
+  Future<void> _loadFixtureWeeks() async {
+    await Future.wait(<Future<void>>[
+      loadWeek(
+        todayWeekStart.subtract(const Duration(days: 7)),
+        allowNetworkRefresh: false,
+        prefetchNextWeek: false,
+      ),
+      loadWeek(
+        todayWeekStart,
+        allowNetworkRefresh: false,
+        prefetchNextWeek: false,
+      ),
+      loadWeek(
+        todayWeekStart.add(const Duration(days: 7)),
+        allowNetworkRefresh: false,
+        prefetchNextWeek: false,
+      ),
+    ]);
   }
 
   List<DailyMenu> weeklyMenusFor(DateTime weekStart) {
@@ -257,7 +292,7 @@ class CanteenViewModel extends BaseViewModel {
     }
     ensureWeekLoaded(
       weekStart,
-      allowNetworkRefresh: true,
+      allowNetworkRefresh: !isPerformanceFixtureMode,
       prefetchNextWeek: false,
     );
   }
@@ -276,7 +311,7 @@ class CanteenViewModel extends BaseViewModel {
     unawaited(
       loadWeek(
         weekStart,
-        allowNetworkRefresh: true,
+        allowNetworkRefresh: !isPerformanceFixtureMode,
         prefetchNextWeek: false,
         staleAfter: staleAfter,
       ),
@@ -320,7 +355,7 @@ class CanteenViewModel extends BaseViewModel {
     unawaited(
       loadWeek(
         nextWeekStart,
-        allowNetworkRefresh: true,
+        allowNetworkRefresh: !isPerformanceFixtureMode,
         prefetchNextWeek: false,
       ),
     );
@@ -332,8 +367,13 @@ class CanteenViewModel extends BaseViewModel {
     notifyIfMounted("filter");
   }
 
-  Future<void> reloadSelectedLocation() async {
-    await _loadSelectedLocation(reloadWeek: true);
+  Future<void> reloadSelectedLocation({
+    bool allowNetworkRefresh = true,
+  }) async {
+    await _loadSelectedLocation(
+      reloadWeek: true,
+      allowNetworkRefresh: allowNetworkRefresh,
+    );
   }
 
   Future<void> _onMenusUpdated(
@@ -385,7 +425,10 @@ class CanteenViewModel extends BaseViewModel {
     return requestGeneration == _locationGeneration && !isDisposed;
   }
 
-  Future<void> _loadSelectedLocation({bool reloadWeek = false}) async {
+  Future<void> _loadSelectedLocation({
+    bool reloadWeek = false,
+    bool allowNetworkRefresh = true,
+  }) async {
     final nextLocation = await _locationService.getSelectedLocation();
     final didChange = _selectedLocation.id != nextLocation.id;
     _selectedLocation = nextLocation;
@@ -406,7 +449,12 @@ class CanteenViewModel extends BaseViewModel {
     notifyIfMounted('weeklyMenus');
     notifyIfMounted('loadingWeeks');
     unawaited(
-      loadWeek(todayWeekStart, forceRefresh: true, prefetchNextWeek: false),
+      loadWeek(
+        todayWeekStart,
+        forceRefresh: true,
+        allowNetworkRefresh: allowNetworkRefresh,
+        prefetchNextWeek: false,
+      ),
     );
   }
 

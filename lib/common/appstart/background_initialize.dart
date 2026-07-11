@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dualmate/canteen/background/background_canteen_update.dart';
+import 'package:dualmate/common/appstart/performance_fixture_mode.dart';
 import 'package:dualmate/common/background/background_work_scheduler.dart';
 import 'package:dualmate/common/background/void_background_work_scheduler.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
@@ -22,7 +23,7 @@ class BackgroundInitialize {
     WorkSchedulerService scheduler;
     if (_schedulerFactory != null) {
       scheduler = _schedulerFactory();
-    } else if (Platform.isAndroid) {
+    } else if (Platform.isAndroid && !isPerformanceFixtureMode) {
       scheduler = BackgroundWorkScheduler();
     } else {
       scheduler = VoidBackgroundWorkScheduler();

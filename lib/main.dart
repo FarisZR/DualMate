@@ -44,7 +44,7 @@ Future<void> main() async {
 
   final rootApp = RootPage(startupStopwatch: _startupStopwatch);
   var appStartedViaSentryRunner = false;
-  if (isSentryConfigured()) {
+  if (isSentryRuntimeEnabled()) {
     try {
       await SentryFlutter.init(
         configureSentryOptions,
@@ -76,4 +76,3 @@ Future<void> main() async {
     }
   }());
 }
-

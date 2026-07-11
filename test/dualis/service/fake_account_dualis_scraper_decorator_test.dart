@@ -4,6 +4,7 @@ import 'package:dualmate/dualis/service/dualis_scraper.dart';
 import 'package:dualmate/dualis/service/dualis_service.dart';
 import 'package:dualmate/dualis/service/dualis_website_model.dart';
 import 'package:dualmate/dualis/service/fake_account_dualis_scraper_decorator.dart';
+import 'package:dualmate/dualis/service/fake_data_dualis_scraper.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -40,6 +41,11 @@ void main() {
     expect(
       modules.map((module) => module.name),
       contains('Software Engineering'),
+    );
+    expect(
+      modules.length,
+      FakeDataDualisScraper.demoModuleCount,
+      reason: 'the review fixture must exercise the populated overview list',
     );
     expect(
       semesterModules.map((module) => module.name),

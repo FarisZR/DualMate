@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
+import '../appstart/performance_fixture_mode.dart';
 import 'sentry_scrubber.dart';
 
 const String _sentryDsn =
@@ -12,6 +13,14 @@ String get sentryDsn => _sentryDsn.trim();
 
 bool isSentryConfigured({String? dsn}) {
   return (dsn ?? _sentryDsn).trim().isNotEmpty;
+}
+
+/// Profiling fixtures deliberately exercise failure paths while recording them
+/// locally. They must not create remote error reports or tracing overhead.
+bool isSentryRuntimeEnabled({
+  bool performanceFixtureMode = isPerformanceFixtureMode,
+}) {
+  return !performanceFixtureMode && isSentryConfigured();
 }
 
 double sentryTraceSampleRate({bool releaseMode = kReleaseMode}) {
