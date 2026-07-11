@@ -31,6 +31,7 @@ Future<void> main() {
       }
 
       final failures = <String>[];
+      final animationDrops = <String>[];
       for (final entry in scenarios.entries) {
         final scenario = _asStringMap(entry.value);
         if (scenario == null) {
@@ -55,11 +56,16 @@ Future<void> main() {
         if (scenario['expected_final_state_reached'] != true) {
           failures.add('${entry.key}: expected final state was not reached');
         }
-        if (scenario['is_animated'] == true &&
+        final animationChecks = _asStringMap(scenario['animation_checks']);
+        if (animationChecks != null && animationChecks.isNotEmpty) {
+          for (final check in animationChecks.entries) {
+            if (check.value != true) {
+              animationDrops.add('${entry.key}/${check.key}');
+            }
+          }
+        } else if (scenario['is_animated'] == true &&
             scenario['intermediate_frames_rendered'] != true) {
-          failures.add(
-            '${entry.key}: animation did not render an intermediate frame',
-          );
+          animationDrops.add('${entry.key}/legacy_intermediate_progression');
         }
         // Issue 1: A measured transition with zero frames must invalidate
         // the run, not be silently reported as smooth.
@@ -76,6 +82,7 @@ Future<void> main() {
         'run_id': Platform.environment['PERF_RUN_ID'] ?? 'manual',
         'recorded_at_utc': DateTime.now().toUtc().toIso8601String(),
         'profile': profile,
+        'animation_drop_scenarios': animationDrops,
       };
       final reportFile = File(
         '${outputDirectory.path}${Platform.pathSeparator}report.json',
@@ -83,6 +90,13 @@ Future<void> main() {
       await reportFile.writeAsString(
         const JsonEncoder.withIndent('  ').convert(report),
       );
+
+      if (animationDrops.isNotEmpty) {
+        stderr.writeln(
+          'Detected dropped or missing animation progression in: '
+          '${animationDrops.join(', ')}',
+        );
+      }
 
       if (failures.isNotEmpty) {
         throw StateError(

@@ -78,6 +78,20 @@ def nested_assign(payload: dict[str, Any], path: tuple[str, ...], value: int | f
     current[path[-1]] = value
 
 
+
+def failed_animation_checks(scenario: dict[str, Any]) -> list[str]:
+    checks = scenario.get("animation_checks")
+    if isinstance(checks, dict) and checks:
+        return sorted(
+            str(name) for name, passed in checks.items() if passed is not True
+        )
+    if (
+        scenario.get("is_animated") is True
+        and scenario.get("intermediate_frames_rendered") is not True
+    ):
+        return ["legacy_intermediate_progression"]
+    return []
+
 def is_compound(scenario_id: str) -> bool:
     return any(scenario_id.startswith(p) for p in COMPOUND_PREFIXES)
 
@@ -145,20 +159,42 @@ def aggregate(reports: list[tuple[Path, dict[str, Any]]]) -> dict[str, Any]:
             if values:
                 nested_assign(median, path, statistics.median(values))
 
+        final_state_runs = sum(
+            scenario.get("expected_final_state_reached") is True
+            for _, scenario in runs
+        )
+        intermediate_runs = sum(
+            scenario.get("intermediate_frames_rendered") is True
+            for _, scenario in runs
+        )
+        animated_runs = sum(
+            scenario.get("is_animated") is True for _, scenario in runs
+        )
+        failed_checks_by_run = [
+            failed_animation_checks(scenario) for _, scenario in runs
+        ]
+        animation_checked_runs = sum(
+            bool(scenario.get("animation_checks"))
+            or scenario.get("is_animated") is True
+            for _, scenario in runs
+        )
+        animation_drop_runs = sum(bool(checks) for checks in failed_checks_by_run)
+        failed_check_names = sorted(
+            {name for checks in failed_checks_by_run for name in checks}
+        )
         validity = {
-            "final_state_reached_runs": sum(
-                scenario.get("expected_final_state_reached") is True
-                for _, scenario in runs
-            ),
-            "intermediate_frames_rendered_runs": sum(
-                scenario.get("intermediate_frames_rendered") is True
-                for _, scenario in runs
-            ),
-            "animated_runs": sum(
-                scenario.get("is_animated") is True for _, scenario in runs
-            ),
+            "final_state_reached_runs": final_state_runs,
+            "intermediate_frames_rendered_runs": intermediate_runs,
+            "animated_runs": animated_runs,
+            "animation_checked_runs": animation_checked_runs,
+            "animation_drop_runs": animation_drop_runs,
+            "failed_animation_checks": failed_check_names,
         }
         score = scenario_score(median)
+        if animation_checked_runs:
+            score += (
+                animation_drop_runs / animation_checked_runs
+            ) * 50_000_000
         run_details = [
             {
                 "report_file": str(path),
@@ -169,6 +205,8 @@ def aggregate(reports: list[tuple[Path, dict[str, Any]]]) -> dict[str, Any]:
                 "intermediate_frames_rendered": scenario.get(
                     "intermediate_frames_rendered"
                 ),
+                "animation_checks": scenario.get("animation_checks", {}),
+                "failed_animation_checks": failed_animation_checks(scenario),
             }
             for path, scenario in runs
         ]
@@ -203,14 +241,28 @@ def aggregate(reports: list[tuple[Path, dict[str, Any]]]) -> dict[str, Any]:
     }
 
 
+
+def format_percentage(value: Any) -> str:
+    if not isinstance(value, (int, float)):
+        return "0"
+    return f"{float(value):.2f}".rstrip("0").rstrip(".")
+
+
+def animation_drop_label(validity: dict[str, Any]) -> str:
+    drops = validity.get("animation_drop_runs", 0)
+    checked = validity.get("animation_checked_runs", validity.get("animated_runs", 0))
+    names = validity.get("failed_animation_checks", [])
+    suffix = f" ({', '.join(names)})" if isinstance(names, list) and names else ""
+    return f"{drops}/{checked}{suffix}"
+
 def write_markdown(summary: dict[str, Any], output_path: Path) -> None:
     lines = [
         "# Cold Navigation Profile Summary",
         "",
         "## Individual Scenarios",
         "",
-        "| Rank | Scenario | % >8.33ms | p99 | worst | consec |",
-        "| ---: | --- | ---: | ---: | ---: | ---: |",
+        "| Rank | Scenario | Animation drop | % >8.33ms | p99 | worst | consec |",
+        "| ---: | --- | ---: | ---: | ---: | ---: | ---: |",
     ]
     scenarios = summary["scenarios"]
 
@@ -219,16 +271,17 @@ def write_markdown(summary: dict[str, Any], output_path: Path) -> None:
         if not ranking:
             return
         lines.extend(["", f"## {header}", "",
-                      "| Rank | Scenario | % >8.33ms | p99 | worst | consec |",
-                      "| ---: | --- | ---: | ---: | ---: | ---: |"])
+                      "| Rank | Scenario | Animation drop | % >8.33ms | p99 | worst | consec |",
+                      "| ---: | --- | ---: | ---: | ---: | ---: | ---: |"])
         for item in ranking:
             scenario = scenarios[item["scenario_id"]]
             combined = scenario["median"].get("combined", {})
             lines.append(
-                "| {rank} | {id} | {pct}% | {p99} us | {worst} us | {consec} |".format(
+                "| {rank} | {id} | {animation} | {pct}% | {p99} us | {worst} us | {consec} |".format(
                     rank=item["rank"],
                     id=item["scenario_id"],
-                    pct=combined.get("over_8_33ms_pct", 0),
+                    animation=animation_drop_label(scenario["validity"]),
+                    pct=format_percentage(combined.get("over_8_33ms_pct", 0)),
                     p99=combined.get("p99_us", 0),
                     worst=combined.get("worst_us", 0),
                     consec=combined.get("consecutive_missed_frames", 0),
@@ -239,10 +292,11 @@ def write_markdown(summary: dict[str, Any], output_path: Path) -> None:
         scenario = scenarios[item["scenario_id"]]
         combined = scenario["median"].get("combined", {})
         lines.append(
-            "| {rank} | {id} | {pct}% | {p99} us | {worst} us | {consec} |".format(
+            "| {rank} | {id} | {animation} | {pct}% | {p99} us | {worst} us | {consec} |".format(
                 rank=item["rank"],
                 id=item["scenario_id"],
-                pct=combined.get("over_8_33ms_pct", 0),
+                animation=animation_drop_label(scenario["validity"]),
+                pct=format_percentage(combined.get("over_8_33ms_pct", 0)),
                 p99=combined.get("p99_us", 0),
                 worst=combined.get("worst_us", 0),
                 consec=combined.get("consecutive_missed_frames", 0),

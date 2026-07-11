@@ -1,3 +1,5 @@
+import 'dart:ui' show FrameTiming;
+
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../integration_test/support/cold_navigation_profile_metrics.dart';
@@ -60,56 +62,29 @@ void main() {
     expect(combined['over_8_33ms_pct'], 0);
   });
 
-  test('assignFramesToScenario selects only frames within the boundary', () {
-    final timings = [
-      const RecordedFrameTiming(
-        timestampMicroseconds: 1000,
-        buildDurationUs: 5000,
-        rasterDurationUs: 4000,
-      ),
-      const RecordedFrameTiming(
-        timestampMicroseconds: 2000,
-        buildDurationUs: 9000,
-        rasterDurationUs: 8000,
-      ),
-      const RecordedFrameTiming(
-        timestampMicroseconds: 3000,
-        buildDurationUs: 7000,
-        rasterDurationUs: 6000,
-      ),
-      const RecordedFrameTiming(
-        timestampMicroseconds: 5000,
-        buildDurationUs: 3000,
-        rasterDurationUs: 2000,
-      ),
-    ];
-
-    final boundary = const ScenarioTimingBoundary(
-      startMicroseconds: 1500,
-      endMicroseconds: 4500,
+  test('converts the real typed FrameTiming API', () {
+    final timing = FrameTiming(
+      vsyncStart: 1000,
+      buildStart: 2000,
+      buildFinish: 7000,
+      rasterStart: 7500,
+      rasterFinish: 11500,
+      rasterFinishWallTime: 1700000000000000,
+      frameNumber: 42,
     );
 
-    final selected = assignFramesToScenario(
-      allTimings: timings,
-      boundary: boundary,
-    );
+    final recorded = recordFrameTimings(<FrameTiming>[timing]).single;
 
-    expect(selected.length, 2);
-    expect(selected[0].timestampMicroseconds, 2000);
-    expect(selected[1].timestampMicroseconds, 3000);
+    expect(recorded.frameNumber, 42);
+    expect(recorded.buildDurationUs, 5000);
+    expect(recorded.rasterDurationUs, 4000);
   });
 
-  test(
-    'longestConsecutiveMissedFrames finds the longest run above budget',
-    () {
-      final durations = [5000, 9000, 10000, 5000, 12000, 11000, 9000, 5000];
-      expect(
-        longestConsecutiveMissedFrames(durations, frameBudget120HzUs),
-        3,
-      );
+  test('longestConsecutiveMissedFrames finds the longest run above budget', () {
+    final durations = [5000, 9000, 10000, 5000, 12000, 11000, 9000, 5000];
+    expect(longestConsecutiveMissedFrames(durations, frameBudget120HzUs), 3);
 
-      expect(longestConsecutiveMissedFrames([5000, 5000], frameBudget120HzUs), 0);
-      expect(longestConsecutiveMissedFrames([], frameBudget120HzUs), 0);
-    },
-  );
+    expect(longestConsecutiveMissedFrames([5000, 5000], frameBudget120HzUs), 0);
+    expect(longestConsecutiveMissedFrames([], frameBudget120HzUs), 0);
+  });
 }

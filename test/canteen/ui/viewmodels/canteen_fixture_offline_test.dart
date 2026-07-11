@@ -1,10 +1,12 @@
 import 'package:dualmate/canteen/business/canteen_provider.dart';
 import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
+import 'package:dualmate/canteen/model/canteen_location.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
 import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
 import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
 import 'package:dualmate/canteen/ui/viewmodels/canteen_view_model.dart';
+import 'package:dualmate/common/appstart/performance_fixture_mode.dart';
 import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
@@ -16,20 +18,52 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test(
-    'reloadSelectedLocation with allowNetworkRefresh=false does not trigger '
-    'a network refresh',
+    'offline reload reads the changed location cache without network access',
     () async {
       final provider = _NetworkTrackingCanteenProvider();
-      final model = CanteenViewModel(provider, TestCanteenLocationService());
+      final locationService = TestCanteenLocationService(
+        initialLocation: CanteenLocations.defaultLocation,
+      );
+      final model = CanteenViewModel(provider, locationService);
       addTearDown(model.dispose);
 
-      model.primeVisibleWeek(DateTime(2026, 2, 9));
-      await Future<void>.delayed(const Duration(milliseconds: 30));
-      provider.clearRequests();
-
+      await locationService.setSelectedLocation(CanteenLocations.supported[1]);
       await model.reloadSelectedLocation(allowNetworkRefresh: false);
       await Future<void>.delayed(const Duration(milliseconds: 30));
 
+      expect(model.selectedLocation.id, CanteenLocations.supported[1].id);
+      expect(provider.cachedWeekRequests, isNotEmpty);
+      expect(provider.refreshWeekRequests, isEmpty);
+      expect(provider.refreshWeekIfStaleRequests, isEmpty);
+    },
+  );
+
+  test(
+    'fixture-mode location event stays offline while reloading cached content',
+    () async {
+      if (!isPerformanceFixtureMode) return;
+
+      final provider = _NetworkTrackingCanteenProvider();
+      final locationService = TestCanteenLocationService(
+        initialLocation: CanteenLocations.defaultLocation,
+      );
+      final model = CanteenViewModel(provider, locationService);
+      addTearDown(model.dispose);
+
+      model.initialize();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      provider.clearRequests();
+
+      await locationService.setSelectedLocation(CanteenLocations.supported[1]);
+      final deadline = DateTime.now().add(const Duration(seconds: 1));
+      while (model.selectedLocation.id != CanteenLocations.supported[1].id &&
+          DateTime.now().isBefore(deadline)) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+
+      expect(model.selectedLocation.id, CanteenLocations.supported[1].id);
+      expect(provider.cachedWeekRequests, isNotEmpty);
       expect(provider.refreshWeekRequests, isEmpty);
       expect(provider.refreshWeekIfStaleRequests, isEmpty);
     },
@@ -37,6 +71,7 @@ void main() {
 }
 
 class _NetworkTrackingCanteenProvider extends CanteenProvider {
+  final List<DateTime> cachedWeekRequests = [];
   final List<DateTime> refreshWeekRequests = [];
   final List<DateTime> refreshWeekIfStaleRequests = [];
   final Set<DateTime> _cachedWeeks = {};
@@ -52,6 +87,7 @@ class _NetworkTrackingCanteenProvider extends CanteenProvider {
   @override
   Future<List<DailyMenu>> getCachedWeek(DateTime date) async {
     final weekStart = toStartOfDay(toMonday(date));
+    cachedWeekRequests.add(weekStart);
     if (_cachedWeeks.isEmpty) {
       _cachedWeeks.add(weekStart);
     }
@@ -85,6 +121,7 @@ class _NetworkTrackingCanteenProvider extends CanteenProvider {
   Future<DateTime?> lastUpdatedForWeek(DateTime date) async => null;
 
   void clearRequests() {
+    cachedWeekRequests.clear();
     refreshWeekRequests.clear();
     refreshWeekIfStaleRequests.clear();
   }
@@ -140,7 +177,10 @@ class _EmptyDatabaseAccess extends DatabaseAccess {
   ) async => <Map<String, dynamic>>[];
 
   @override
-  Future<void> insertBatch(String table, List<Map<String, dynamic>> rows) async {}
+  Future<void> insertBatch(
+    String table,
+    List<Map<String, dynamic>> rows,
+  ) async {}
 
   @override
   Future<int> deleteWhere(

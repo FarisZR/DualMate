@@ -5,8 +5,9 @@ set -euo pipefail
 # validated, never changed: a non-normal scale invalidates the comparison.
 #
 # Issue 5: Each major screen gets its own fresh-process cold-start target.
-# Issue 6: The perf APK is installed under com.fariszr.dualmate.perf so it
-#          cannot overwrite the production app.
+# The fixture APK is installed under com.fariszr.dualmate.perf. Flutter drive
+# is kept from performing its source-manifest-based cleanup, which otherwise
+# targets the production package despite the Gradle applicationId suffix.
 runs="${PERF_RUNS:-3}"
 attempts="${PERF_RUN_ATTEMPTS:-3}"
 output_root="${PERF_OUTPUT_ROOT:-build/aggressive_cold_navigation}"
@@ -29,6 +30,11 @@ if [[ -z "$serial" ]]; then
   exit 2
 fi
 
+cleanup() {
+  adb -s "$serial" shell am force-stop "$perf_app_id" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
 for setting in window_animation_scale transition_animation_scale animator_duration_scale; do
   value="$(adb -s "$serial" shell settings get global "$setting" | tr -d '\r')"
   if [[ "$value" != '1' && "$value" != '1.0' ]]; then
@@ -42,6 +48,7 @@ done
 # stress test.
 targets="${PERF_TARGETS:-schedule canteen dates dualis diagnostic combined}"
 
+rm -rf "$output_root/runs"
 mkdir -p "$output_root/runs"
 for target in $targets; do
   for run in $(seq 1 "$runs"); do
@@ -53,7 +60,7 @@ for target in $targets; do
       adb -s "$serial" shell am force-stop "$perf_app_id"
       rm -f "$run_directory/report.json"
       if PERF_OUTPUT_DIR="$run_directory" PERF_RUN_ID="$run_id" \
-        flutter drive --profile --no-dds --no-pub \
+        flutter drive --profile --no-dds --no-pub --keep-app-running \
           --device-id "$serial" \
           --driver test_driver/aggressive_perf_driver.dart \
           --target integration_test/aggressive_cold_navigation_performance_test.dart \
