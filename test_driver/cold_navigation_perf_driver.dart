@@ -61,6 +61,15 @@ Future<void> main() {
             '${entry.key}: animation did not render an intermediate frame',
           );
         }
+        // Issue 1: A measured transition with zero frames must invalidate
+        // the run, not be silently reported as smooth.
+        final frameCount = scenario['frame_count'];
+        if (frameCount is int && frameCount == 0) {
+          failures.add(
+            '${entry.key}: zero frames were assigned to this scenario '
+            '(frame attribution failure)',
+          );
+        }
       }
 
       final report = <String, dynamic>{

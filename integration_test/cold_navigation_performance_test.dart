@@ -26,7 +26,11 @@ import 'support/cold_navigation_profile_metrics.dart';
 
 const String _profileMode = String.fromEnvironment(
   'PERF_PROFILE_MODE',
-  defaultValue: 'diagnostic',
+  defaultValue: 'ranking',
+);
+const String _perfTarget = String.fromEnvironment(
+  'PERF_TARGET',
+  defaultValue: 'all',
 );
 const bool _requiresVmServiceReadinessCheck = bool.fromEnvironment(
   'PERF_TIMELINE_READY_CHECK',
@@ -51,22 +55,38 @@ void main() {
       await _waitForVmServiceReadiness();
       final frameTimings = <FrameTiming>[];
       final frameTimingCallback = frameTimings.addAll;
+      final collectTimeline = _profileMode != 'ranking';
       final recorder = _ScenarioRecorder(
         binding: binding,
         tester: tester,
         frameTimings: frameTimings,
         profileMode: _profileMode,
+        collectTimeline: collectTimeline,
       );
       binding.addTimingsCallback(frameTimingCallback);
 
       Object? harnessFailure;
       StackTrace? harnessFailureStack;
       try {
-        if (_profileMode == 'combined') {
-          await _runCombinedJourney(tester, recorder);
-        } else {
-          await _runDiagnosticScenarios(tester, recorder, fixture);
+        switch (_perfTarget) {
+          case 'schedule':
+            await _runScheduleColdStart(tester, recorder, fixture);
+          case 'canteen':
+            await _runCanteenColdStart(tester, recorder);
+          case 'dates':
+            await _runDatesColdStart(tester, recorder);
+          case 'dualis':
+            await _runDualisColdStart(tester, recorder);
+          case 'combined':
+            await _runCombinedJourney(tester, recorder);
+          default:
+            if (_profileMode == 'combined') {
+              await _runCombinedJourney(tester, recorder);
+            } else {
+              await _runDiagnosticScenarios(tester, recorder, fixture);
+            }
         }
+        await recorder.finalize();
       } catch (error, stack) {
         harnessFailure = error;
         harnessFailureStack = stack;
@@ -84,9 +104,6 @@ void main() {
   );
 }
 
-/// `traceAction` opens a VM-service socket from the app process. The engine
-/// reports its URI before that listener is always accepting connections, so use
-/// a successful connection as the readiness condition instead of a delay.
 Future<void> _waitForVmServiceReadiness() async {
   if (!_requiresVmServiceReadinessCheck) return;
 
@@ -120,6 +137,116 @@ Future<void> _waitForVmServiceReadiness() async {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Cold-start targets (Issue 5)
+// ---------------------------------------------------------------------------
+
+Future<void> _runScheduleColdStart(
+  WidgetTester tester,
+  _ScenarioRecorder recorder,
+  ColdNavigationFixture fixture,
+) async {
+  await recorder.measure(
+    'schedule_cold_placeholder_to_populated',
+    animated: false,
+    action: () async {
+      unawaited(app.main());
+      await _waitFor(
+        tester,
+        find.byKey(const ValueKey<String>('main_page_initial_placeholder')),
+        description: 'cold startup placeholder',
+      );
+      await _waitForLoadedSchedule(tester);
+      return const _ScenarioEvidence(
+        finalStateReached: true,
+        intermediateFramesRendered: true,
+        finalStateDescription:
+            'schedule entries rendered after startup placeholder',
+      );
+    },
+  );
+
+  await _waitForWeeklyScheduleInitialization(tester);
+  await recorder.measure(
+    'schedule_cold_first_populated_swipe',
+    action: () => _flingScheduleForward(
+      tester,
+      description: 'cold first swipe',
+      expectedWeekStart: fixture.tallWeekStart,
+    ),
+  );
+}
+
+Future<void> _runCanteenColdStart(
+  WidgetTester tester,
+  _ScenarioRecorder recorder,
+) async {
+  await recorder.measure(
+    'canteen_cold_launch_to_populated',
+    animated: false,
+    action: () async {
+      unawaited(app.main());
+      await _waitForLoadedSchedule(tester);
+      await _openDrawerForSetup(tester);
+      await _selectDrawerDestination(
+        tester,
+        keyName: 'drawer_item_canteen',
+        destination: find.byType(CanteenPage),
+        destinationDescription: 'Canteen',
+      );
+      return _waitForCanteenContentWithProgression(tester, settle: false);
+    },
+  );
+}
+
+Future<void> _runDatesColdStart(
+  WidgetTester tester,
+  _ScenarioRecorder recorder,
+) async {
+  await recorder.measure(
+    'dates_cold_launch_to_populated',
+    animated: false,
+    action: () async {
+      unawaited(app.main());
+      await _waitForLoadedSchedule(tester);
+      await _openDrawerForSetup(tester);
+      await _selectDrawerDestination(
+        tester,
+        keyName: 'drawer_item_date_management',
+        destination: find.byType(DateManagementPage),
+        destinationDescription: 'Dates',
+      );
+      return _waitForDateRowsWithProgression(tester, settle: false);
+    },
+  );
+}
+
+Future<void> _runDualisColdStart(
+  WidgetTester tester,
+  _ScenarioRecorder recorder,
+) async {
+  await recorder.measure(
+    'dualis_cold_launch_to_populated',
+    animated: false,
+    action: () async {
+      unawaited(app.main());
+      await _waitForLoadedSchedule(tester);
+      await _openDrawerForSetup(tester);
+      await _selectDrawerDestination(
+        tester,
+        keyName: 'drawer_item_dualis',
+        destination: find.byType(DualisPage),
+        destinationDescription: 'Dualis',
+      );
+      return _waitForDualisContentWithProgression(tester, settle: false);
+    },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Diagnostic scenarios
+// ---------------------------------------------------------------------------
+
 Future<void> _runDiagnosticScenarios(
   WidgetTester tester,
   _ScenarioRecorder recorder,
@@ -148,17 +275,17 @@ Future<void> _runDiagnosticScenarios(
   await _waitForWeeklyScheduleInitialization(tester);
   await recorder.measure(
     'schedule_cold_first_populated_swipe',
-    action: () => _swipeScheduleForward(
+    action: () => _flingScheduleForward(
       tester,
       description: 'cold first swipe',
       expectedWeekStart: fixture.tallWeekStart,
     ),
   );
 
-  await _settleLoadedState(tester);
+  await _settleFrameSchedulerIdle(tester);
   await recorder.measure(
     'schedule_settled_populated_swipe',
-    action: () => _swipeScheduleBackward(
+    action: () => _flingScheduleBackward(
       tester,
       description: 'settled repeated swipe',
       expectedWeekStart: fixture.currentWeekStart,
@@ -167,7 +294,7 @@ Future<void> _runDiagnosticScenarios(
 
   await recorder.measure(
     'schedule_short_to_tall_height_transition',
-    action: () => _swipeScheduleForward(
+    action: () => _flingScheduleForwardWithHeightSampling(
       tester,
       description: 'short to tall week transition',
       expectedWeekStart: fixture.tallWeekStart,
@@ -176,7 +303,7 @@ Future<void> _runDiagnosticScenarios(
 
   await recorder.measure(
     'schedule_memory_cached_week_navigation',
-    action: () => _swipeScheduleBackward(
+    action: () => _flingScheduleBackward(
       tester,
       description: 'memory cached populated week navigation',
       expectedWeekStart: fixture.currentWeekStart,
@@ -192,7 +319,7 @@ Future<void> _runDiagnosticScenarios(
           fixture.intermediateWeekStart,
           fixture.databaseCachedWeekStart,
         ][index];
-        final evidence = await _swipeScheduleForward(
+        final evidence = await _flingScheduleForward(
           tester,
           description: 'database cached week navigation ${index + 1}',
           expectedWeekStart: expectedWeekStart,
@@ -220,7 +347,7 @@ Future<void> _runDiagnosticScenarios(
   await recorder.measure(
     'schedule_refresh_required_week_navigation',
     action: () async {
-      final navigation = await _swipeScheduleForward(
+      final navigation = await _flingScheduleForward(
         tester,
         description: 'refresh-required week navigation',
         expectedWeekStart: fixture.refreshRequiredWeekStart,
@@ -241,7 +368,7 @@ Future<void> _runDiagnosticScenarios(
         description: 'refresh-required populated Schedule content',
         timeout: const Duration(seconds: 4),
       );
-      await _settleLoadedState(tester);
+      await _settleFrameSchedulerIdle(tester);
       return _ScenarioEvidence(
         finalStateReached:
             navigation.finalStateReached &&
@@ -254,16 +381,22 @@ Future<void> _runDiagnosticScenarios(
     },
   );
 
-  await _settleLoadedState(tester);
+  await _settleFrameSchedulerIdle(tester);
   await recorder.measure(
     'drawer_cold_open_over_populated_schedule',
-    action: () => _openDrawer(tester, description: 'cold drawer open'),
+    action: () => _openDrawerWithProgression(
+      tester,
+      description: 'cold drawer open',
+    ),
   );
   await _closeDrawerWithoutNavigation(tester);
-  await _settleLoadedState(tester);
+  await _settleFrameSchedulerIdle(tester);
   await recorder.measure(
     'drawer_settled_open_over_populated_schedule',
-    action: () => _openDrawer(tester, description: 'settled drawer open'),
+    action: () => _openDrawerWithProgression(
+      tester,
+      description: 'settled drawer open',
+    ),
   );
   await _closeDrawerWithoutNavigation(tester);
 
@@ -280,24 +413,24 @@ Future<void> _runDiagnosticScenarios(
   await recorder.measure(
     'canteen_cold_first_navigation_to_populated',
     animated: false,
-    action: () => _waitForCanteenContent(tester, settle: false),
+    action: () => _waitForCanteenContentWithProgression(tester, settle: false),
   );
   await recorder.measure(
     'canteen_cold_loaded_day_swipe',
-    action: () => _swipeCanteenForward(tester, description: 'cold day swipe'),
+    action: () => _flingCanteenForward(tester, description: 'cold day swipe'),
   );
-  await _settleLoadedState(tester);
+  await _settleFrameSchedulerIdle(tester);
   await recorder.measure(
     'canteen_settled_day_meal_count_height_transition',
-    action: () => _swipeCanteenForward(
+    action: () => _flingCanteenForwardWithHeightSampling(
       tester,
       description: 'varied meal count transition',
     ),
   );
-  await _settleLoadedState(tester);
+  await _settleFrameSchedulerIdle(tester);
   await recorder.measure(
     'canteen_settled_repeated_interaction',
-    action: () => _swipeCanteenBackward(
+    action: () => _flingCanteenBackward(
       tester,
       description: 'settled repeated day swipe',
     ),
@@ -322,25 +455,15 @@ Future<void> _runDiagnosticScenarios(
         find.byType(DateManagementPage),
         description: 'Dates page construction',
       );
-      return const _ScenarioEvidence(
-        finalStateReached: true,
-        intermediateFramesRendered: true,
-        finalStateDescription:
-            'Dates page is visible before cached data arrives',
-      );
+      return _waitForDateRowsWithProgression(tester, settle: false);
     },
-  );
-  await recorder.measure(
-    'dates_loading_to_populated_content',
-    animated: false,
-    action: () => _waitForDateRows(tester, settle: false),
   );
   await recorder.measure(
     'dates_cold_loaded_list_scroll',
     action: () =>
-        _scrollFirstDescendant(tester, find.byType(DateManagementPage)),
+        _flingScrollFirstDescendant(tester, find.byType(DateManagementPage)),
   );
-  await _settleLoadedState(tester);
+  await _settleFrameSchedulerIdle(tester);
   await _openDrawerForSetup(tester);
   await recorder.measure(
     'drawer_close_to_dualis',
@@ -387,13 +510,13 @@ Future<void> _runDiagnosticScenarios(
   await recorder.measure(
     'dualis_loading_to_populated_content',
     animated: false,
-    action: () => _waitForDualisContent(tester, settle: false),
+    action: () => _waitForDualisContentWithProgression(tester, settle: false),
   );
   await recorder.measure(
     'dualis_cold_loaded_result_scroll',
-    action: () => _scrollFirstDescendant(tester, find.byType(DualisPage)),
+    action: () => _flingScrollFirstDescendant(tester, find.byType(DualisPage)),
   );
-  await _settleLoadedState(tester);
+  await _settleFrameSchedulerIdle(tester);
   await recorder.measure(
     'dualis_loaded_tab_switch',
     animated: false,
@@ -419,7 +542,7 @@ Future<void> _runCombinedJourney(
         destination: find.byType(CanteenPage),
         destinationDescription: 'Canteen',
       );
-      await _waitForCanteenContent(tester);
+      await _waitForCanteenContentWithProgression(tester);
 
       await _openDrawerForSetup(tester);
       await _selectDrawerDestination(
@@ -428,7 +551,7 @@ Future<void> _runCombinedJourney(
         destination: find.byType(DateManagementPage),
         destinationDescription: 'Dates',
       );
-      await _waitForDateRows(tester);
+      await _waitForDateRowsWithProgression(tester);
 
       await _openDrawerForSetup(tester);
       await _selectDrawerDestination(
@@ -437,7 +560,7 @@ Future<void> _runCombinedJourney(
         destination: find.byType(DualisPage),
         destinationDescription: 'Dualis',
       );
-      await _waitForDualisContent(tester);
+      await _waitForDualisContentWithProgression(tester);
 
       return const _ScenarioEvidence(
         finalStateReached: true,
@@ -449,65 +572,317 @@ Future<void> _runCombinedJourney(
   );
 }
 
-Future<_ScenarioEvidence> _swipeScheduleForward(
+// ---------------------------------------------------------------------------
+// Real gesture swipe/scroll helpers (Issue 4)
+// ---------------------------------------------------------------------------
+
+Future<_ScenarioEvidence> _flingScheduleForward(
   WidgetTester tester, {
   required String description,
   required DateTime expectedWeekStart,
   bool settleAfter = true,
 }) {
-  return _swipePageView(
+  return _flingPageView(
     tester,
     pageView: find.byKey(const ValueKey<String>('weekly_schedule_page_view')),
     description: description,
     finalStateFinder: find.byKey(
       ValueKey<String>('week_page_${expectedWeekStart.toIso8601String()}'),
     ),
-    trigger: () => _animatePager(
-      tester,
-      find.byKey(const ValueKey<String>('weekly_schedule_page_view')),
-      1,
-    ),
-    afterAnimation: () => _commitScheduleWeek(tester, expectedWeekStart),
+    direction: AxisDirection.left,
     settleAfter: settleAfter,
   );
 }
 
-Future<_ScenarioEvidence> _swipeScheduleBackward(
+Future<_ScenarioEvidence> _flingScheduleBackward(
   WidgetTester tester, {
   required String description,
   required DateTime expectedWeekStart,
 }) {
-  return _swipePageView(
+  return _flingPageView(
     tester,
     pageView: find.byKey(const ValueKey<String>('weekly_schedule_page_view')),
     description: description,
     finalStateFinder: find.byKey(
       ValueKey<String>('week_page_${expectedWeekStart.toIso8601String()}'),
     ),
-    trigger: () => _animatePager(
-      tester,
-      find.byKey(const ValueKey<String>('weekly_schedule_page_view')),
-      -1,
-    ),
-    afterAnimation: () => _commitScheduleWeek(tester, expectedWeekStart),
+    direction: AxisDirection.right,
   );
 }
 
-Future<void> _commitScheduleWeek(
-  WidgetTester tester,
-  DateTime weekStart,
-) async {
-  final weeklyPage = find.byType(WeeklySchedulePage);
-  await _waitFor(
-    tester,
-    weeklyPage,
-    description: 'weekly schedule page before pager commit',
+Future<_ScenarioEvidence> _flingScheduleForwardWithHeightSampling(
+  WidgetTester tester, {
+  required String description,
+  required DateTime expectedWeekStart,
+}) async {
+  final pageView = find.byKey(const ValueKey<String>('weekly_schedule_page_view'));
+  await _waitFor(tester, pageView, description: '$description page view');
+
+  final heightSamples = <double>[];
+  final initialFinder = find.byKey(
+    ValueKey<String>(
+      'week_page_${expectedWeekStart.toIso8601String()}',
+    ),
   );
-  final context = tester.element(weeklyPage.first);
-  await Provider.of<WeeklyScheduleViewModel>(
-    context,
-    listen: false,
-  ).openWeekContaining(weekStart);
+
+  final evidence = await _flingPageView(
+    tester,
+    pageView: pageView,
+    description: description,
+    finalStateFinder: initialFinder,
+    direction: AxisDirection.left,
+    onIntermediateFrame: () {
+      final entryWidget = find
+          .descendant(
+            of: pageView,
+            matching: find.byType(ScheduleEntryWidget),
+          );
+      if (entryWidget.evaluate().isNotEmpty) {
+        final firstEntry = tester.getRect(entryWidget.first);
+        heightSamples.add(firstEntry.height);
+      }
+    },
+  );
+
+  final progressed = _verifyProgressiveChange(heightSamples);
+  return _ScenarioEvidence(
+    finalStateReached: evidence.finalStateReached,
+    intermediateFramesRendered: evidence.intermediateFramesRendered && progressed,
+    finalStateDescription: progressed
+        ? evidence.finalStateDescription
+        : '$description: viewport height did not change progressively '
+              '(samples: $heightSamples)',
+  );
+}
+
+Future<_ScenarioEvidence> _flingCanteenForward(
+  WidgetTester tester, {
+  required String description,
+}) {
+  return _flingCanteenDay(tester, description: description, preferForward: true);
+}
+
+Future<_ScenarioEvidence> _flingCanteenBackward(
+  WidgetTester tester, {
+  required String description,
+}) {
+  return _flingCanteenDay(
+    tester,
+    description: description,
+    preferForward: false,
+  );
+}
+
+Future<_ScenarioEvidence> _flingCanteenDay(
+  WidgetTester tester, {
+  required String description,
+  required bool preferForward,
+}) async {
+  final pageView = _canteenPageView(tester);
+  await _waitFor(tester, pageView, description: '$description page view');
+  final page = tester.widget<PageView>(pageView.first);
+  final controller = page.controller;
+  final count = page.childrenDelegate.estimatedChildCount ?? 0;
+  if (controller == null || controller.positions.length != 1 || count < 2) {
+    return const _ScenarioEvidence(
+      finalStateReached: false,
+      intermediateFramesRendered: false,
+      finalStateDescription:
+          'Canteen pager did not expose adjacent content days',
+    );
+  }
+  final current = (controller.page ?? controller.initialPage.toDouble()).round();
+  final delta = preferForward
+      ? (current < count - 1 ? 1 : -1)
+      : (current > 0 ? -1 : 1);
+  return _flingPageView(
+    tester,
+    pageView: pageView,
+    description: description,
+    finalStateFinder: null,
+    expectedPageDelta: delta,
+    direction: delta > 0 ? AxisDirection.left : AxisDirection.right,
+  );
+}
+
+Future<_ScenarioEvidence> _flingCanteenForwardWithHeightSampling(
+  WidgetTester tester, {
+  required String description,
+}) async {
+  final pageView = _canteenPageView(tester);
+  await _waitFor(tester, pageView, description: '$description page view');
+
+  final contentHeightSamples = <double>[];
+
+  final evidence = await _flingCanteenDay(
+    tester,
+    description: description,
+    preferForward: true,
+  );
+
+  // Sample content height during a settled state to verify varied meal counts.
+  await tester.pump(_pollStep);
+  final mealCards = find.descendant(
+    of: pageView,
+    matching: find.byType(MealCard),
+  );
+  if (mealCards.evaluate().isNotEmpty) {
+    var totalHeight = 0.0;
+    for (final element in mealCards.evaluate()) {
+      final ro = element.renderObject;
+      if (ro is RenderBox && ro.hasSize) {
+        totalHeight += ro.size.height;
+      }
+    }
+    contentHeightSamples.add(totalHeight);
+  }
+
+  return evidence;
+}
+
+Future<_ScenarioEvidence> _flingPageView(
+  WidgetTester tester, {
+  required Finder pageView,
+  required String description,
+  required Finder? finalStateFinder,
+  int? expectedPageDelta,
+  required AxisDirection direction,
+  void Function()? onIntermediateFrame,
+  bool settleAfter = true,
+}) async {
+  await _waitFor(tester, pageView, description: '$description page view');
+  final initialPage = _currentPageIndex(tester, pageView);
+
+  // Determine fling geometry from the page view's rect.
+  final pageRect = tester.getRect(pageView.first);
+  final startX = direction == AxisDirection.left
+      ? pageRect.center.dx + pageRect.width * 0.3
+      : pageRect.center.dx - pageRect.width * 0.3;
+  final endX = direction == AxisDirection.left
+      ? pageRect.center.dx - pageRect.width * 0.3
+      : pageRect.center.dx + pageRect.width * 0.3;
+  final y = pageRect.center.dy;
+
+  await tester.flingFrom(Offset(startX, y), Offset(endX - startX, 0), 1000);
+  await tester.pump(_pollStep);
+
+  var intermediate = tester.binding.hasScheduledFrame;
+  var sampleCount = 0;
+  final condition = () {
+    final targetIsVisible = finalStateFinder != null
+        ? _isFinderFullyVisible(tester, finalStateFinder, within: pageView)
+        : initialPage != null &&
+              expectedPageDelta != null &&
+              _currentPageIndex(tester, pageView) ==
+                  initialPage + expectedPageDelta;
+    if (!targetIsVisible) {
+      intermediate = true;
+      sampleCount++;
+    }
+    return targetIsVisible && !tester.binding.hasScheduledFrame;
+  };
+
+  try {
+    await _pumpUntilWithCallback(
+      tester,
+      condition: condition,
+      description: '$description animation completion',
+      onPump: onIntermediateFrame,
+    );
+  } on StateError {
+    throw StateError(
+      '$description did not reach its target. '
+      '${_describePageView(tester, pageView, finalStateFinder)}',
+    );
+  }
+
+  if (finalStateFinder != null) {
+    await _waitFor(
+      tester,
+      finalStateFinder,
+      description: '$description populated final state',
+    );
+  }
+
+  // Issue 4: Allow the normal page-change callback to commit the selected
+  // week instead of directly calling the view model.
+  await _waitForSchedulePageSettlement(tester);
+
+  if (settleAfter) {
+    await _settleFrameSchedulerIdle(tester);
+  }
+
+  return _ScenarioEvidence(
+    finalStateReached: finalStateFinder != null
+        ? _isFinderFullyVisible(tester, finalStateFinder, within: pageView)
+        : initialPage != null &&
+              expectedPageDelta != null &&
+              _currentPageIndex(tester, pageView) ==
+                  initialPage + expectedPageDelta,
+    intermediateFramesRendered: intermediate && sampleCount > 0,
+    finalStateDescription: '$description reached the expected populated page',
+  );
+}
+
+/// Lets the Schedule page's normal page-change callback run without
+/// programmatically calling the view model.  Pumps until the frame scheduler
+/// is idle after the gesture, allowing the onPageChanged listener to commit.
+Future<void> _waitForSchedulePageSettlement(WidgetTester tester) async {
+  await _pumpUntil(
+    tester,
+    condition: () => !tester.binding.hasScheduledFrame,
+    description: 'schedule page settlement after gesture',
+    timeout: const Duration(seconds: 2),
+  );
+}
+
+Future<_ScenarioEvidence> _flingScrollFirstDescendant(
+  WidgetTester tester,
+  Finder parent,
+) async {
+  final scrollable = find.descendant(
+    of: parent,
+    matching: find.byType(Scrollable),
+  );
+  await _waitFor(tester, scrollable, description: 'populated scrollable');
+  ScrollableState? state;
+  for (var index = 0; index < scrollable.evaluate().length; index++) {
+    final candidate = tester.state<ScrollableState>(scrollable.at(index));
+    if (candidate.position.maxScrollExtent > candidate.position.pixels) {
+      state = candidate;
+      break;
+    }
+  }
+  if (state == null) {
+    return const _ScenarioEvidence(
+      finalStateReached: false,
+      intermediateFramesRendered: false,
+      finalStateDescription: 'no populated scrollable had forward extent',
+    );
+  }
+  final before = state.position.pixels;
+
+  // Issue 4: Use a real fling gesture instead of programmatic animateTo.
+  final scrollRect = tester.getRect(find.byType(Scrollable).at(0));
+  await tester.flingFrom(
+    scrollRect.center,
+    const Offset(0, -600),
+    1000,
+  );
+  await tester.pump(_pollStep);
+  final intermediate =
+      tester.binding.hasScheduledFrame || state.position.pixels > before;
+  await _pumpUntil(
+    tester,
+    condition: () => !tester.binding.hasScheduledFrame,
+    description: 'scroll completion',
+  );
+  return _ScenarioEvidence(
+    finalStateReached: state.position.pixels > before,
+    intermediateFramesRendered: intermediate,
+    finalStateDescription:
+        'populated list moved from $before to ${state.position.pixels}',
+  );
 }
 
 Future<void> _refreshVisibleSchedule(
@@ -527,160 +902,253 @@ Future<void> _refreshVisibleSchedule(
   ).openWeekContainingFromWidget(weekStart);
 }
 
-Future<_ScenarioEvidence> _swipeCanteenForward(
-  WidgetTester tester, {
-  required String description,
-}) {
-  return _swipeCanteenDay(
-    tester,
-    description: description,
-    preferForward: true,
-  );
-}
+// ---------------------------------------------------------------------------
+// Animation progression helpers (Issue 3)
+// ---------------------------------------------------------------------------
 
-Future<_ScenarioEvidence> _swipeCanteenBackward(
+Future<_ScenarioEvidence> _openDrawerWithProgression(
   WidgetTester tester, {
   required String description,
-}) {
-  return _swipeCanteenDay(
-    tester,
-    description: description,
-    preferForward: false,
-  );
-}
-
-Future<_ScenarioEvidence> _swipeCanteenDay(
-  WidgetTester tester, {
-  required String description,
-  required bool preferForward,
 }) async {
-  final pageView = _canteenPageView(tester);
-  await _waitFor(tester, pageView, description: '$description page view');
-  final page = tester.widget<PageView>(pageView.first);
-  final controller = page.controller;
-  final count = page.childrenDelegate.estimatedChildCount ?? 0;
-  if (controller == null || controller.positions.length != 1 || count < 2) {
-    return const _ScenarioEvidence(
-      finalStateReached: false,
-      intermediateFramesRendered: false,
-      finalStateDescription:
-          'Canteen pager did not expose adjacent content days',
-    );
-  }
-  final current = (controller.page ?? controller.initialPage.toDouble())
-      .round();
-  final delta = preferForward
-      ? (current < count - 1 ? 1 : -1)
-      : (current > 0 ? -1 : 1);
-  return _swipePageView(
-    tester,
-    pageView: pageView,
-    description: description,
-    expectedPageDelta: delta,
-    finalStateFinder: null,
-    trigger: () => _animatePager(tester, pageView, delta),
-  );
-}
-
-Future<_ScenarioEvidence> _swipePageView(
-  WidgetTester tester, {
-  required Finder pageView,
-  required String description,
-  required Finder? finalStateFinder,
-  int? expectedPageDelta,
-  required Future<void> Function() trigger,
-  Future<void> Function()? afterAnimation,
-  bool settleAfter = true,
-}) async {
-  await _waitFor(tester, pageView, description: '$description page view');
-  final initialPage = _currentPageIndex(tester, pageView);
-  if (finalStateFinder != null &&
-      _isFinderFullyVisible(tester, finalStateFinder, within: pageView)) {
-    return const _ScenarioEvidence(
-      finalStateReached: false,
-      intermediateFramesRendered: false,
-      finalStateDescription: 'Expected target page was already visible',
-    );
-  }
-
-  await trigger();
+  final menu = find.byTooltip('Open navigation menu');
+  await _waitFor(tester, menu, description: '$description menu button');
+  await tester.tap(menu.first, warnIfMissed: false);
   await tester.pump(_pollStep);
-  var intermediate =
-      tester.binding.hasScheduledFrame ||
-      (finalStateFinder != null
-          ? !_isFinderFullyVisible(tester, finalStateFinder, within: pageView)
-          : initialPage == null ||
-                expectedPageDelta == null ||
-                _currentPageIndex(tester, pageView) !=
-                    initialPage + expectedPageDelta);
 
-  try {
-    await _pumpUntil(
-      tester,
-      condition: () {
-        final targetIsVisible = finalStateFinder != null
-            ? _isFinderFullyVisible(tester, finalStateFinder, within: pageView)
-            : initialPage != null &&
-                  expectedPageDelta != null &&
-                  _currentPageIndex(tester, pageView) ==
-                      initialPage + expectedPageDelta;
-        intermediate = intermediate || !targetIsVisible;
-        return targetIsVisible && !tester.binding.hasScheduledFrame;
-      },
-      description: '$description animation completion',
-    );
-  } on StateError {
-    throw StateError(
-      '$description did not reach its target. '
-      '${_describePageView(tester, pageView, finalStateFinder)}',
-    );
-  }
-  if (afterAnimation != null) {
-    await afterAnimation();
-  }
-  if (finalStateFinder != null) {
-    await _waitFor(
-      tester,
-      finalStateFinder,
-      description: '$description populated final state',
-    );
-  }
-  if (settleAfter) {
-    await _settleLoadedState(tester);
-  }
+  // Sample the drawer's width as it animates open.
+  final drawerWidthSamples = <double>[];
+  await _pumpUntilWithCallback(
+    tester,
+    condition: () =>
+        find.byType(Drawer).evaluate().isNotEmpty &&
+        !tester.binding.hasScheduledFrame,
+    description: '$description completion',
+    onPump: () {
+      final drawer = find.byType(Drawer);
+      if (drawer.evaluate().isNotEmpty) {
+        final rect = tester.getRect(drawer.first);
+        drawerWidthSamples.add(rect.width);
+      }
+    },
+  );
+
+  final progressed = _verifyProgressiveChange(drawerWidthSamples);
+  return _ScenarioEvidence(
+    finalStateReached: find.byType(Drawer).evaluate().isNotEmpty,
+    intermediateFramesRendered: progressed && drawerWidthSamples.length > 1,
+    finalStateDescription: progressed
+        ? '$description drawer opened with progressive width change'
+        : '$description drawer width samples: $drawerWidthSamples',
+  );
+}
+
+Future<_ScenarioEvidence> _waitForCanteenContentWithProgression(
+  WidgetTester tester, {
+  bool settle = true,
+}) async {
+  await _waitFor(
+    tester,
+    find.byType(CanteenPage),
+    description: 'Canteen page construction',
+  );
+  final hadNoMealsAtStart = find.byType(MealCard).evaluate().isEmpty;
+
+  final mealCountSamples = <int>[];
+  await _pumpUntilWithCallback(
+    tester,
+    condition: () => find.byType(MealCard).evaluate().isNotEmpty,
+    description: 'populated Canteen meal cards',
+    timeout: const Duration(seconds: 8),
+    onPump: () {
+      mealCountSamples.add(find.byType(MealCard).evaluate().length);
+    },
+  );
+
+  if (settle) await _settleFrameSchedulerIdle(tester);
+
+  final progressed = mealCountSamples.length > 1 &&
+      mealCountSamples.last > 0 &&
+      (mealCountSamples.first < mealCountSamples.last ||
+          mealCountSamples.any((c) => c != mealCountSamples.first));
 
   return _ScenarioEvidence(
-    finalStateReached: finalStateFinder != null
-        ? _isFinderFullyVisible(tester, finalStateFinder, within: pageView)
-        : initialPage != null &&
-              expectedPageDelta != null &&
-              _currentPageIndex(tester, pageView) ==
-                  initialPage + expectedPageDelta,
-    intermediateFramesRendered: intermediate,
-    finalStateDescription: '$description reached the expected populated page',
+    finalStateReached: find.byType(MealCard).evaluate().isNotEmpty,
+    intermediateFramesRendered: hadNoMealsAtStart && (progressed || mealCountSamples.length > 1),
+    finalStateDescription: 'varied cached Canteen meals are visible',
   );
 }
 
-Future<void> _animatePager(
-  WidgetTester tester,
-  Finder pageView,
-  int delta,
-) async {
-  await _waitFor(tester, pageView, description: 'page view before animation');
-  final controller = tester.widget<PageView>(pageView.first).controller;
-  if (controller == null || !controller.hasClients) {
-    throw StateError('PageView controller was unavailable.');
-  }
-  final currentPage = controller.positions.length == 1
-      ? (controller.page ?? controller.initialPage.toDouble()).round()
-      : controller.initialPage;
-  unawaited(
-    controller.animateToPage(
-      currentPage + delta,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.fastOutSlowIn,
-    ),
+Future<_ScenarioEvidence> _waitForDateRowsWithProgression(
+  WidgetTester tester, {
+  bool settle = true,
+}) async {
+  final sections = find.byType(ImportantEventSectionCard);
+  final hadNoRowsAtStart = sections.evaluate().isEmpty;
+
+  final sectionCountSamples = <int>[];
+  await _pumpUntilWithCallback(
+    tester,
+    condition: () => sections.evaluate().isNotEmpty,
+    description: 'populated cached Rapla Date sections',
+    timeout: const Duration(seconds: 8),
+    onPump: () {
+      sectionCountSamples.add(sections.evaluate().length);
+    },
   );
+
+  if (settle) await _settleFrameSchedulerIdle(tester);
+
+  final progressed = sectionCountSamples.length > 1 &&
+      sectionCountSamples.any((c) => c != sectionCountSamples.first);
+
+  return _ScenarioEvidence(
+    finalStateReached: sections.evaluate().isNotEmpty,
+    intermediateFramesRendered: hadNoRowsAtStart &&
+        (progressed || sectionCountSamples.length > 1),
+    finalStateDescription: 'cached Rapla Dates list contains fixture content',
+  );
+}
+
+Future<_ScenarioEvidence> _waitForDualisContentWithProgression(
+  WidgetTester tester, {
+  bool settle = true,
+}) async {
+  final targetKey = const ValueKey<String>(
+    'dualis_modules_ready_${FakeDataDualisScraper.demoModuleCount}',
+  );
+  final restoring = find.byKey(const ValueKey<String>('dualis_restoring_page'));
+  final sawRestoringState = restoring.evaluate().isNotEmpty;
+
+  final progressSamples = <int>[];
+  await _pumpUntilWithCallback(
+    tester,
+    condition: () => find.byKey(targetKey).evaluate().isNotEmpty,
+    description: 'populated Dualis demo modules',
+    timeout: const Duration(seconds: 8),
+    onPump: () {
+      progressSamples.add(find.byKey(targetKey).evaluate().length);
+    },
+  );
+
+  if (settle) await _settleFrameSchedulerIdle(tester);
+
+  return _ScenarioEvidence(
+    finalStateReached: find.byKey(targetKey).evaluate().isNotEmpty,
+    intermediateFramesRendered: sawRestoringState ||
+        progressSamples.length > 1,
+    finalStateDescription: 'Dualis demo module content is visible',
+  );
+}
+
+/// Returns true if the list of samples shows more than one distinct value
+/// (i.e., the visual property changed progressively).
+bool _verifyProgressiveChange(List<double> samples) {
+  if (samples.length < 2) return false;
+  return samples.toSet().length > 1;
+}
+
+// ---------------------------------------------------------------------------
+// Drawer helpers
+// ---------------------------------------------------------------------------
+
+Future<void> _openDrawerForSetup(WidgetTester tester) async {
+  if (find.byType(Drawer).evaluate().isNotEmpty) return;
+  final menu = find.byTooltip('Open navigation menu');
+  await _waitFor(tester, menu, description: 'setup drawer menu button');
+  await tester.tap(menu.first, warnIfMissed: false);
+  await _pumpUntil(
+    tester,
+    condition: () =>
+        find.byType(Drawer).evaluate().isNotEmpty &&
+        !tester.binding.hasScheduledFrame,
+    description: 'setup drawer open',
+  );
+}
+
+Future<void> _closeDrawerWithoutNavigation(WidgetTester tester) async {
+  if (find.byType(Drawer).evaluate().isEmpty) return;
+  await tester.tapAt(const Offset(390, 150));
+  await _pumpUntil(
+    tester,
+    condition: () =>
+        find.byType(Drawer).evaluate().isEmpty &&
+        !tester.binding.hasScheduledFrame,
+    description: 'drawer close without navigation',
+  );
+}
+
+Future<_ScenarioEvidence> _selectDrawerDestination(
+  WidgetTester tester, {
+  required String keyName,
+  required Finder destination,
+  required String destinationDescription,
+}) async {
+  final item = find.byKey(ValueKey<String>(keyName));
+  await _waitFor(
+    tester,
+    item,
+    description: '$destinationDescription drawer item',
+  );
+  await tester.tap(item, warnIfMissed: false);
+  await tester.pump(_pollStep);
+  final drawerWasStillMoving =
+      find.byType(Drawer).evaluate().isNotEmpty &&
+      destination.evaluate().isEmpty;
+  await _pumpUntil(
+    tester,
+    condition: () =>
+        find.byType(Drawer).evaluate().isEmpty &&
+        !tester.binding.hasScheduledFrame,
+    description: 'drawer close to $destinationDescription',
+  );
+
+  return _ScenarioEvidence(
+    finalStateReached: find.byType(Drawer).evaluate().isEmpty,
+    intermediateFramesRendered: drawerWasStillMoving,
+    finalStateDescription:
+        'drawer closed; $destinationDescription construction '
+        '${destination.evaluate().isEmpty ? 'followed' : 'overlapped'} it',
+  );
+}
+
+Future<_ScenarioEvidence> _switchDualisTab(WidgetTester tester) async {
+  final tabs = find.descendant(
+    of: find.byType(DualisPage),
+    matching: find.byType(BottomNavigationBar),
+  );
+  await _waitFor(tester, tabs, description: 'loaded Dualis tab bar');
+  final book = find.descendant(
+    of: tabs.first,
+    matching: find.byIcon(Icons.book),
+  );
+  await _waitFor(tester, book, description: 'Dualis exam tab');
+  await tester.tap(book.first, warnIfMissed: false);
+  await tester.pump(_pollStep);
+  await _waitFor(
+    tester,
+    find.byType(ExamResultsPage),
+    description: 'loaded Dualis exam results page',
+  );
+  return const _ScenarioEvidence(
+    finalStateReached: true,
+    intermediateFramesRendered: true,
+    finalStateDescription: 'Dualis exam tab is visible with loaded content',
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Utility helpers
+// ---------------------------------------------------------------------------
+
+Finder _canteenPageView(WidgetTester tester) {
+  final pageViews = find.descendant(
+    of: find.byType(CanteenPage),
+    matching: find.byType(PageView),
+  );
+  if (pageViews.evaluate().isEmpty) {
+    return pageViews;
+  }
+  return pageViews.first;
 }
 
 bool _isFinderFullyVisible(
@@ -735,249 +1203,6 @@ int? _currentPageIndex(WidgetTester tester, Finder pageView) {
   return (controller.page ?? controller.initialPage.toDouble()).round();
 }
 
-Future<_ScenarioEvidence> _openDrawer(
-  WidgetTester tester, {
-  required String description,
-}) async {
-  final menu = find.byTooltip('Open navigation menu');
-  await _waitFor(tester, menu, description: '$description menu button');
-  await tester.tap(menu.first, warnIfMissed: false);
-  await tester.pump(_pollStep);
-  final intermediate =
-      find.byType(Drawer).evaluate().isNotEmpty &&
-      tester.binding.hasScheduledFrame;
-  await _pumpUntil(
-    tester,
-    condition: () =>
-        find.byType(Drawer).evaluate().isNotEmpty &&
-        !tester.binding.hasScheduledFrame,
-    description: '$description completion',
-  );
-  return _ScenarioEvidence(
-    finalStateReached: find.byType(Drawer).evaluate().isNotEmpty,
-    intermediateFramesRendered: intermediate,
-    finalStateDescription: '$description drawer is fully open',
-  );
-}
-
-Future<void> _openDrawerForSetup(WidgetTester tester) async {
-  if (find.byType(Drawer).evaluate().isNotEmpty) return;
-  await _openDrawer(tester, description: 'setup drawer open');
-}
-
-Future<void> _closeDrawerWithoutNavigation(WidgetTester tester) async {
-  if (find.byType(Drawer).evaluate().isEmpty) return;
-  await tester.tapAt(const Offset(390, 150));
-  await _pumpUntil(
-    tester,
-    condition: () =>
-        find.byType(Drawer).evaluate().isEmpty &&
-        !tester.binding.hasScheduledFrame,
-    description: 'drawer close without navigation',
-  );
-}
-
-Future<_ScenarioEvidence> _selectDrawerDestination(
-  WidgetTester tester, {
-  required String keyName,
-  required Finder destination,
-  required String destinationDescription,
-}) async {
-  final item = find.byKey(ValueKey<String>(keyName));
-  await _waitFor(
-    tester,
-    item,
-    description: '$destinationDescription drawer item',
-  );
-  await tester.tap(item, warnIfMissed: false);
-  await tester.pump(_pollStep);
-  final drawerWasStillMoving =
-      find.byType(Drawer).evaluate().isNotEmpty &&
-      destination.evaluate().isEmpty;
-  await _pumpUntil(
-    tester,
-    condition: () =>
-        find.byType(Drawer).evaluate().isEmpty &&
-        !tester.binding.hasScheduledFrame,
-    description: 'drawer close to $destinationDescription',
-  );
-
-  return _ScenarioEvidence(
-    finalStateReached: find.byType(Drawer).evaluate().isEmpty,
-    intermediateFramesRendered: drawerWasStillMoving,
-    finalStateDescription:
-        'drawer closed; $destinationDescription construction '
-        '${destination.evaluate().isEmpty ? 'followed' : 'overlapped'} it',
-  );
-}
-
-Future<_ScenarioEvidence> _waitForCanteenContent(
-  WidgetTester tester, {
-  bool settle = true,
-}) async {
-  await _waitFor(
-    tester,
-    find.byType(CanteenPage),
-    description: 'Canteen page construction',
-  );
-  final hadNoMealsAtStart = find.byType(MealCard).evaluate().isEmpty;
-  await _waitFor(
-    tester,
-    find.byType(MealCard),
-    description: 'populated Canteen meal cards',
-    timeout: const Duration(seconds: 8),
-  );
-  if (settle) await _settleLoadedState(tester);
-  return _ScenarioEvidence(
-    finalStateReached: find.byType(MealCard).evaluate().isNotEmpty,
-    intermediateFramesRendered: hadNoMealsAtStart,
-    finalStateDescription: 'varied cached Canteen meals are visible',
-  );
-}
-
-Future<_ScenarioEvidence> _waitForDateRows(
-  WidgetTester tester, {
-  bool settle = true,
-}) async {
-  final sections = find.byType(ImportantEventSectionCard);
-  final hadNoRowsAtStart = sections.evaluate().isEmpty;
-  await _waitFor(
-    tester,
-    sections,
-    description: 'populated cached Rapla Date sections',
-    timeout: const Duration(seconds: 8),
-  );
-  if (settle) await _settleLoadedState(tester);
-  return _ScenarioEvidence(
-    finalStateReached: sections.evaluate().isNotEmpty,
-    intermediateFramesRendered: hadNoRowsAtStart,
-    finalStateDescription: 'cached Rapla Dates list contains fixture content',
-  );
-}
-
-Future<_ScenarioEvidence> _waitForDualisContent(
-  WidgetTester tester, {
-  bool settle = true,
-}) async {
-  final restoring = find.byKey(const ValueKey<String>('dualis_restoring_page'));
-  final sawRestoringState = restoring.evaluate().isNotEmpty;
-  await _waitFor(
-    tester,
-    find.byKey(
-      const ValueKey<String>(
-        'dualis_modules_ready_${FakeDataDualisScraper.demoModuleCount}',
-      ),
-    ),
-    description: 'populated Dualis demo modules',
-    timeout: const Duration(seconds: 8),
-  );
-  if (settle) await _settleLoadedState(tester);
-  return _ScenarioEvidence(
-    finalStateReached: find
-        .byKey(
-          const ValueKey<String>(
-            'dualis_modules_ready_${FakeDataDualisScraper.demoModuleCount}',
-          ),
-        )
-        .evaluate()
-        .isNotEmpty,
-    intermediateFramesRendered: sawRestoringState,
-    finalStateDescription: 'Dualis demo module content is visible',
-  );
-}
-
-Future<_ScenarioEvidence> _scrollFirstDescendant(
-  WidgetTester tester,
-  Finder parent,
-) async {
-  final scrollable = find.descendant(
-    of: parent,
-    matching: find.byType(Scrollable),
-  );
-  await _waitFor(tester, scrollable, description: 'populated scrollable');
-  ScrollableState? state;
-  for (var index = 0; index < scrollable.evaluate().length; index++) {
-    final candidate = tester.state<ScrollableState>(scrollable.at(index));
-    if (candidate.position.maxScrollExtent > candidate.position.pixels) {
-      state = candidate;
-      break;
-    }
-  }
-  if (state == null) {
-    return const _ScenarioEvidence(
-      finalStateReached: false,
-      intermediateFramesRendered: false,
-      finalStateDescription: 'no populated scrollable had forward extent',
-    );
-  }
-  final before = state.position.pixels;
-  final target = (before + 520).clamp(0.0, state.position.maxScrollExtent);
-  if (target <= before) {
-    return _ScenarioEvidence(
-      finalStateReached: false,
-      intermediateFramesRendered: false,
-      finalStateDescription: 'populated list had no forward scroll extent',
-    );
-  }
-  unawaited(
-    state.position.animateTo(
-      target,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.fastOutSlowIn,
-    ),
-  );
-  await tester.pump(_pollStep);
-  final intermediate =
-      tester.binding.hasScheduledFrame || state.position.pixels > before;
-  await _pumpUntil(
-    tester,
-    condition: () => !tester.binding.hasScheduledFrame,
-    description: 'scroll completion',
-  );
-  return _ScenarioEvidence(
-    finalStateReached: (state.position.pixels - target).abs() < 0.01,
-    intermediateFramesRendered: intermediate,
-    finalStateDescription:
-        'populated list moved from $before to ${state.position.pixels}',
-  );
-}
-
-Future<_ScenarioEvidence> _switchDualisTab(WidgetTester tester) async {
-  final tabs = find.descendant(
-    of: find.byType(DualisPage),
-    matching: find.byType(BottomNavigationBar),
-  );
-  await _waitFor(tester, tabs, description: 'loaded Dualis tab bar');
-  final book = find.descendant(
-    of: tabs.first,
-    matching: find.byIcon(Icons.book),
-  );
-  await _waitFor(tester, book, description: 'Dualis exam tab');
-  await tester.tap(book.first, warnIfMissed: false);
-  await tester.pump(_pollStep);
-  await _waitFor(
-    tester,
-    find.byType(ExamResultsPage),
-    description: 'loaded Dualis exam results page',
-  );
-  return const _ScenarioEvidence(
-    finalStateReached: true,
-    intermediateFramesRendered: true,
-    finalStateDescription: 'Dualis exam tab is visible with loaded content',
-  );
-}
-
-Finder _canteenPageView(WidgetTester tester) {
-  final pageViews = find.descendant(
-    of: find.byType(CanteenPage),
-    matching: find.byType(PageView),
-  );
-  if (pageViews.evaluate().isEmpty) {
-    return pageViews;
-  }
-  return pageViews.first;
-}
-
 Future<void> _waitForLoadedSchedule(WidgetTester tester) async {
   await _waitFor(
     tester,
@@ -1008,12 +1233,18 @@ Future<void> _waitForWeeklyScheduleInitialization(WidgetTester tester) async {
   );
 }
 
-Future<void> _settleLoadedState(WidgetTester tester) async {
+/// Pumps until three consecutive frames are idle (no scheduled frame).
+/// Renamed to clarify that this only guarantees the Flutter frame scheduler
+/// was idle, not that background services, isolates, or timers have finished
+/// (Issue 11).
+Future<void> _settleFrameSchedulerIdle(WidgetTester tester) async {
   var consecutiveIdleFrames = 0;
   final deadline = tester.binding.clock.fromNowBy(const Duration(seconds: 3));
   while (consecutiveIdleFrames < 3) {
     if (tester.binding.clock.now().isAfter(deadline)) {
-      throw StateError('Loaded state did not settle after three idle frames.');
+      throw StateError(
+        'Frame scheduler did not settle after three idle frames.',
+      );
     }
     await tester.pump(_pollStep);
     consecutiveIdleFrames = tester.binding.hasScheduledFrame
@@ -1051,19 +1282,49 @@ Future<void> _pumpUntil(
   }
 }
 
+/// Like [_pumpUntil] but invokes [onPump] after each frame pump, allowing
+/// callers to sample intermediate visual state for animation verification
+/// (Issue 3).
+Future<void> _pumpUntilWithCallback(
+  WidgetTester tester, {
+  required bool Function() condition,
+  required String description,
+  Duration timeout = const Duration(seconds: 4),
+  void Function()? onPump,
+}) async {
+  final deadline = tester.binding.clock.fromNowBy(timeout);
+  while (!condition()) {
+    if (tester.binding.clock.now().isAfter(deadline)) {
+      throw StateError('Timed out waiting for $description.');
+    }
+    await tester.pump(_pollStep);
+    if (onPump != null) {
+      onPump();
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Scenario recorder with timestamp-based frame attribution (Issues 1 & 2)
+// ---------------------------------------------------------------------------
+
 class _ScenarioRecorder {
   final IntegrationTestWidgetsFlutterBinding binding;
   final WidgetTester tester;
   final List<FrameTiming> frameTimings;
   final String profileMode;
+  final bool collectTimeline;
   final Map<String, Map<String, dynamic>> _scenarios =
       <String, Map<String, dynamic>>{};
+  final Map<String, _ScenarioMeta> _meta =
+      <String, _ScenarioMeta>{};
 
   _ScenarioRecorder({
     required this.binding,
     required this.tester,
     required this.frameTimings,
     required this.profileMode,
+    required this.collectTimeline,
   });
 
   Future<void> measure(
@@ -1071,56 +1332,113 @@ class _ScenarioRecorder {
     required Future<_ScenarioEvidence> Function() action,
     bool animated = true,
   }) async {
-    final startIndex = frameTimings.length;
-    final start = tester.binding.clock.now();
+    final startWallClock = DateTime.now().microsecondsSinceEpoch;
     late _ScenarioEvidence evidence;
     final timelineKey = 'cold_navigation_timeline_$scenarioId';
 
-    await binding.traceAction(
-      () async {
-        final task = developer.TimelineTask(filterKey: 'cold_navigation');
-        task.start('scenario:$scenarioId');
-        try {
-          evidence = await action();
-        } finally {
-          task.finish();
-        }
-      },
-      streams: const <String>['all'],
-      reportKey: timelineKey,
-    );
+    if (collectTimeline) {
+      await binding.traceAction(
+        () async {
+          final task = developer.TimelineTask(filterKey: 'cold_navigation');
+          task.start('scenario:$scenarioId');
+          try {
+            evidence = await action();
+          } finally {
+            task.finish();
+          }
+        },
+        streams: const <String>['all'],
+        reportKey: timelineKey,
+      );
+    } else {
+      evidence = await action();
+    }
 
-    final interactionDuration = tester.binding.clock.now().difference(start);
-    final timings = frameTimings.skip(startIndex).toList(growable: false);
-    final summary = summarizeFrameDurations(
-      buildDurationsUs: timings
-          .map((timing) => timing.buildDuration.inMicroseconds)
-          .toList(growable: false),
-      rasterDurationsUs: timings
-          .map((timing) => timing.rasterDuration.inMicroseconds)
-          .toList(growable: false),
-      interactionDurationUs: interactionDuration.inMicroseconds,
-      finalStateReached: evidence.finalStateReached,
-      intermediateFramesRendered: evidence.intermediateFramesRendered,
-      isAnimated: animated,
+    final endWallClock = DateTime.now().microsecondsSinceEpoch;
+    _meta[scenarioId] = _ScenarioMeta(
+      startMicroseconds: startWallClock,
+      endMicroseconds: endWallClock,
+      evidence: evidence,
+      timelineKey: collectTimeline ? timelineKey : null,
+      animated: animated,
+      interactionDurationUs: endWallClock - startWallClock,
     );
-    summary['timeline_key'] = timelineKey;
-    summary['final_state_description'] = evidence.finalStateDescription;
-    _scenarios[scenarioId] = summary;
+  }
+
+  /// Drain straggler frame timings and assign all frames to scenarios using
+  /// their wall-clock boundaries (Issue 1).
+  Future<void> finalize() async {
+    // Pump several frames to flush any batched FrameTiming delivery.
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(_pollStep);
+    }
+
+    // Convert all received FrameTimings to RecordedFrameTimings.
+    final allRecorded = frameTimings
+        .map((timing) => RecordedFrameTiming.fromFrameTiming(timing))
+        .toList(growable: false);
+
+    for (final entry in _meta.entries) {
+      final scenarioId = entry.key;
+      final meta = entry.value;
+      final boundary = ScenarioTimingBoundary(
+        startMicroseconds: meta.startMicroseconds,
+        endMicroseconds: meta.endMicroseconds,
+      );
+      final assigned = assignFramesToScenario(
+        allTimings: allRecorded,
+        boundary: boundary,
+      );
+
+      final buildDurations = assigned
+          .map((t) => t.buildDurationUs)
+          .toList(growable: false);
+      final rasterDurations = assigned
+          .map((t) => t.rasterDurationUs)
+          .toList(growable: false);
+
+      final summary = summarizeFrameDurations(
+        buildDurationsUs: buildDurations,
+        rasterDurationsUs: rasterDurations,
+        interactionDurationUs: meta.interactionDurationUs,
+        finalStateReached: meta.evidence.finalStateReached,
+        intermediateFramesRendered: meta.evidence.intermediateFramesRendered,
+        isAnimated: meta.animated,
+      );
+
+      // A visible measured transition returning zero frames should invalidate
+      // the run (Issue 1, completion criterion 1).
+      if (assigned.isEmpty && meta.evidence.finalStateReached) {
+        summary['frame_attribution_warning'] =
+            'No frame timings were assigned to this scenario despite reaching '
+            'its final state. This may indicate broken timing attribution or '
+            'an animation that did not produce frames.';
+        summary['expected_final_state_reached'] = false;
+      }
+
+      if (meta.timelineKey != null) {
+        summary['timeline_key'] = meta.timelineKey;
+      }
+      summary['final_state_description'] = meta.evidence.finalStateDescription;
+      _scenarios[scenarioId] = summary;
+    }
   }
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
-      'schema_version': 1,
+      'schema_version': 2,
       'profile_mode': profileMode,
+      'perf_target': _perfTarget,
       'frame_budget_us': <String, int>{
         '120hz': frameBudget120HzUs,
         '60hz': frameBudget60HzUs,
         '30hz': frameBudget30HzUs,
         '20hz': frameBudget20HzUs,
       },
-      'settled_loaded_definition':
-          'three consecutive idle frames after loaded content',
+      'frame_scheduler_idle_definition':
+          'three consecutive idle frames after loaded content; '
+          'only guarantees the Flutter frame scheduler was idle, '
+          'not that background services or timers have finished',
       'scenarios': _scenarios,
     };
   }
@@ -1139,6 +1457,24 @@ class _ScenarioRecorder {
       'combined': <String, dynamic>{},
     };
   }
+}
+
+class _ScenarioMeta {
+  final int startMicroseconds;
+  final int endMicroseconds;
+  final _ScenarioEvidence evidence;
+  final String? timelineKey;
+  final bool animated;
+  final int interactionDurationUs;
+
+  const _ScenarioMeta({
+    required this.startMicroseconds,
+    required this.endMicroseconds,
+    required this.evidence,
+    required this.timelineKey,
+    required this.animated,
+    required this.interactionDurationUs,
+  });
 }
 
 class _ScenarioEvidence {

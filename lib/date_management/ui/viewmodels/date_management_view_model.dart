@@ -247,7 +247,10 @@ class DateManagementViewModel extends BaseViewModel {
       _setAllDates(loadedDateEntries);
     }
 
-    _updateFailed = loadedDateEntries == null;
+    // In fixture mode the remote fetch is deliberately skipped, so a null
+    // result does not indicate a failure.  The cached data rendered above is
+    // the successful state the harness intends to measure.
+    _updateFailed = loadedDateEntries == null && !isPerformanceFixtureMode;
     if (updateFailed) {
       _cancelErrorInFuture();
     }

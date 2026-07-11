@@ -138,6 +138,13 @@ android {
         versionName flutterVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled true
+
+        // Issue 6: Isolate the performance benchmark from the production
+        // installation so profile runs cannot uninstall or overwrite a
+        // developer's actual DualMate app and data.
+        if (getDartDefine('PERF_TEST_OFFLINE_FIXTURES', 'false').toBoolean()) {
+            applicationIdSuffix ".perf"
+        }
     }
 
     compileOptions {

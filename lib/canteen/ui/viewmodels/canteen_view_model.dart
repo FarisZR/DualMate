@@ -51,7 +51,11 @@ class CanteenViewModel extends BaseViewModel {
     _registerMenuUpdatedCallback();
     _locationChangeSubscription = _locationService.selectedLocationChanges
         .listen((_) {
-          unawaited(reloadSelectedLocation());
+          unawaited(
+            reloadSelectedLocation(
+              allowNetworkRefresh: !isPerformanceFixtureMode,
+            ),
+          );
         });
     if (isPerformanceFixtureMode) {
       unawaited(_loadPerformanceFixtureData());
@@ -363,8 +367,13 @@ class CanteenViewModel extends BaseViewModel {
     notifyIfMounted("filter");
   }
 
-  Future<void> reloadSelectedLocation() async {
-    await _loadSelectedLocation(reloadWeek: true);
+  Future<void> reloadSelectedLocation({
+    bool allowNetworkRefresh = true,
+  }) async {
+    await _loadSelectedLocation(
+      reloadWeek: true,
+      allowNetworkRefresh: allowNetworkRefresh,
+    );
   }
 
   Future<void> _onMenusUpdated(
@@ -416,7 +425,10 @@ class CanteenViewModel extends BaseViewModel {
     return requestGeneration == _locationGeneration && !isDisposed;
   }
 
-  Future<void> _loadSelectedLocation({bool reloadWeek = false}) async {
+  Future<void> _loadSelectedLocation({
+    bool reloadWeek = false,
+    bool allowNetworkRefresh = true,
+  }) async {
     final nextLocation = await _locationService.getSelectedLocation();
     final didChange = _selectedLocation.id != nextLocation.id;
     _selectedLocation = nextLocation;
@@ -437,7 +449,12 @@ class CanteenViewModel extends BaseViewModel {
     notifyIfMounted('weeklyMenus');
     notifyIfMounted('loadingWeeks');
     unawaited(
-      loadWeek(todayWeekStart, forceRefresh: true, prefetchNextWeek: false),
+      loadWeek(
+        todayWeekStart,
+        forceRefresh: true,
+        allowNetworkRefresh: allowNetworkRefresh,
+        prefetchNextWeek: false,
+      ),
     );
   }
 

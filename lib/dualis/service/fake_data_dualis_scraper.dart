@@ -26,7 +26,7 @@ class FakeDataDualisScraper implements DualisScraper {
   ]) async {
     await Future.delayed(Duration(milliseconds: 200));
 
-    return Future.value(_demoModules);
+    return List<DualisModule>.unmodifiable(_demoModules);
   }
 
   static final List<DualisModule> _demoModules = <DualisModule>[
@@ -151,7 +151,7 @@ class FakeDataDualisScraper implements DualisScraper {
     CancellationToken? cancellationToken,
   ]) async {
     await Future.delayed(Duration(milliseconds: 200));
-    return Future.value(_demoModules.take(6).toList());
+    return List<DualisModule>.unmodifiable(_demoModules.take(6).toList());
   }
 
   @override
