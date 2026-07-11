@@ -85,10 +85,6 @@ void main() {
     tester,
   ) async {
     var preparationCount = 0;
-    ScheduleRenderData.debugOnPrepare = () {
-      preparationCount += 1;
-    };
-
     final viewModel = _buildViewModel(
       now: DateTime(2026, 2, 10, 10),
       entries: <ScheduleEntry>[
@@ -98,6 +94,9 @@ void main() {
     );
 
     try {
+      ScheduleRenderData.debugOnPrepare = () {
+        preparationCount += 1;
+      };
       await viewModel.updateSchedule(
         DateTime(2026, 2, 9),
         DateTime(2026, 2, 16),
@@ -143,6 +142,46 @@ void main() {
 
       await tester.pumpAndSettle();
       expect(preparationCount, preparationsAtAnimationStart);
+    } finally {
+      ScheduleRenderData.debugOnPrepare = null;
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      viewModel.dispose();
+    }
+  });
+
+  testWidgets('in-place schedule mutations invalidate prepared render data', (
+    tester,
+  ) async {
+    var preparationCount = 0;
+    final viewModel = _buildViewModel(
+      now: DateTime(2026, 2, 10, 10),
+      entries: <ScheduleEntry>[_entry(DateTime(2026, 2, 9), 'CURRENT_WEEK')],
+    );
+
+    try {
+      ScheduleRenderData.debugOnPrepare = () {
+        preparationCount += 1;
+      };
+      await viewModel.updateSchedule(
+        DateTime(2026, 2, 9),
+        DateTime(2026, 2, 16),
+        force: true,
+      );
+      await tester.pumpWidget(_wrapWithApp(viewModel));
+      await tester.pumpAndSettle();
+
+      final preparationsBeforeMutation = preparationCount;
+      expect(find.text('MUTATED_WEEK'), findsNothing);
+
+      viewModel.weekSchedule!.entries.add(
+        _entry(DateTime(2026, 2, 10), 'MUTATED_WEEK'),
+      );
+      viewModel.notifyListeners('weekSchedule');
+      await tester.pumpAndSettle();
+
+      expect(find.text('MUTATED_WEEK'), findsOneWidget);
+      expect(preparationCount, greaterThan(preparationsBeforeMutation));
     } finally {
       ScheduleRenderData.debugOnPrepare = null;
       await tester.pumpWidget(const SizedBox.shrink());

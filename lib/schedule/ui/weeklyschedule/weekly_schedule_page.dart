@@ -467,8 +467,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     final cachedSchedule = model.getCachedWeek(weekStart, weekEnd);
     final cacheKey = weekStart.toIso8601String();
     final cachedPage = _weekPageDataCache[cacheKey];
-    if (cachedPage != null &&
-        identical(cachedPage.sourceSchedule, cachedSchedule)) {
+    if (cachedPage != null && cachedPage.matches(cachedSchedule)) {
       return cachedPage.pageData;
     }
 
@@ -791,12 +790,28 @@ class _WeekPageData {
 
 class _CachedWeekPageData {
   final Schedule? sourceSchedule;
+  final List<ScheduleEntry> sourceEntries;
   final _WeekPageData pageData;
 
-  const _CachedWeekPageData({
-    required this.sourceSchedule,
-    required this.pageData,
-  });
+  _CachedWeekPageData({required this.sourceSchedule, required this.pageData})
+    : sourceEntries = List<ScheduleEntry>.unmodifiable(
+        sourceSchedule?.entries ?? const <ScheduleEntry>[],
+      );
+
+  bool matches(Schedule? schedule) {
+    if (!identical(sourceSchedule, schedule)) return false;
+
+    final currentEntries = schedule?.entries ?? const <ScheduleEntry>[];
+    if (sourceEntries.length != currentEntries.length) return false;
+
+    // ScheduleEntry's render-affecting fields are immutable, so identity and
+    // order are sufficient to detect every in-place list mutation that can
+    // change the prepared layout without hashing entry content on each build.
+    for (var index = 0; index < currentEntries.length; index++) {
+      if (!identical(sourceEntries[index], currentEntries[index])) return false;
+    }
+    return true;
+  }
 }
 
 class _TopLoadingIndicator extends StatefulWidget {

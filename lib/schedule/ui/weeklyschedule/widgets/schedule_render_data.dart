@@ -76,16 +76,6 @@ class ScheduleRenderData {
       ),
     );
   }
-
-  bool matches({
-    required Schedule schedule,
-    required DateTime displayStart,
-    required DateTime displayEnd,
-  }) {
-    return identical(this.schedule, schedule) &&
-        this.displayStart == displayStart &&
-        this.displayEnd == displayEnd;
-  }
 }
 
 class PreparedScheduleEntry {
