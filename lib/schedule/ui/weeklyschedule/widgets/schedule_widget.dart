@@ -3,12 +3,12 @@ import 'package:dualmate/common/ui/colors.dart';
 import 'package:dualmate/common/ui/text_styles.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
-import 'package:dualmate/schedule/model/schedule_entry.dart';
-import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_entry_alignment.dart';
+import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_render_data.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_entry_widget.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_current_time_indicator.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_grid.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_past_overlay.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -31,6 +31,9 @@ class ScheduleWidget extends StatelessWidget {
   final double displayEndHour;
   final ScheduleEntryTapCallback onScheduleEntryTap;
   final bool showTimeLabels;
+  final ScheduleRenderData? preparedData;
+  final ValueListenable<ScheduleViewport>? viewportListenable;
+  final ScheduleViewport? targetViewport;
 
   const ScheduleWidget({
     Key? key,
@@ -42,16 +45,54 @@ class ScheduleWidget extends StatelessWidget {
     required this.displayStartHour,
     required this.displayEndHour,
     this.showTimeLabels = true,
+    this.preparedData,
+    this.viewportListenable,
+    this.targetViewport,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        return buildWithSize(
+        final viewport = viewportListenable;
+        final width = constraints.biggest.width;
+        final height = constraints.biggest.height;
+        if (viewport == null || showTimeLabels) {
+          return buildWithSize(
+            context,
+            width,
+            height,
+            ScheduleViewport(
+              startHour: displayStartHour,
+              endHour: displayEndHour,
+            ),
+          );
+        }
+
+        final renderData =
+            preparedData ??
+            ScheduleRenderData.prepare(
+              schedule: schedule,
+              displayStart: displayStart,
+              displayEnd: displayEnd,
+            );
+        final days = renderData.displayedDays;
+        final layoutProfile = _resolveLayoutProfile(width, days);
+        final target =
+            targetViewport ??
+            ScheduleViewport(
+              startHour: displayStartHour,
+              endHour: displayEndHour,
+            );
+
+        return _buildAnimatedWithSize(
           context,
-          constraints.biggest.width,
-          constraints.biggest.height,
+          width,
+          height,
+          renderData,
+          layoutProfile,
+          viewport,
+          target,
         );
       },
     );
@@ -69,19 +110,153 @@ class ScheduleWidget extends StatelessWidget {
         width <= _compactWidthThreshold;
   }
 
-  Widget buildWithSize(BuildContext context, double width, double height) {
-    var days = calculateDisplayedDays();
+  Widget _buildAnimatedWithSize(
+    BuildContext context,
+    double width,
+    double height,
+    ScheduleRenderData renderData,
+    _ScheduleWidgetLayoutProfile layoutProfile,
+    ValueListenable<ScheduleViewport> viewport,
+    ScheduleViewport target,
+  ) {
+    final days = renderData.displayedDays;
+    final dayLabelsHeight = layoutProfile.dayLabelsHeight;
+    const timeLabelsWidth = 0.0;
+    final targetVisibleHours = (target.endHour - target.startHour).clamp(
+      1.0,
+      24.0,
+    );
+    final targetHourHeight = (height - dayLabelsHeight) / targetVisibleHours;
+    final targetMinuteHeight = targetHourHeight / 60;
+
+    final staticLayers = Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        Padding(
+          padding: EdgeInsets.fromLTRB(timeLabelsWidth, dayLabelsHeight, 0, 0),
+          child: _AnimatedScheduleEntryLayer(
+            renderData: renderData,
+            layoutProfile: layoutProfile,
+            viewport: viewport,
+            targetViewport: target,
+            onScheduleEntryTap: onScheduleEntryTap,
+          ),
+        ),
+        Stack(
+          children: buildLabelWidgets(
+            context,
+            targetHourHeight,
+            width / days,
+            dayLabelsHeight,
+            timeLabelsWidth,
+            targetHourHeight,
+            targetMinuteHeight,
+            layoutProfile,
+            target.startHour,
+            target.endHour,
+          ),
+        ),
+      ],
+    );
+
+    return ValueListenableBuilder<ScheduleViewport>(
+      valueListenable: viewport,
+      child: staticLayers,
+      builder: (context, currentViewport, child) {
+        final visibleHours =
+            (currentViewport.endHour - currentViewport.startHour).clamp(
+              1.0,
+              24.0,
+            );
+        final hourHeight = (height - dayLabelsHeight) / visibleHours;
+        final minuteHeight = hourHeight / 60;
+        final currentTimeIndicatorGeometry =
+            _resolveCurrentTimeIndicatorGeometry(
+              days,
+              minuteHeight,
+              currentViewport.startHour,
+              currentViewport.endHour,
+            );
+
+        return Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            ScheduleGrid(
+              currentViewport.startHour,
+              currentViewport.endHour,
+              timeLabelsWidth,
+              dayLabelsHeight,
+              days,
+              colorScheduleGridGridLines(context),
+            ),
+            child!,
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                timeLabelsWidth,
+                dayLabelsHeight,
+                0,
+                0,
+              ),
+              child: SchedulePastOverlay(
+                currentViewport.startHour,
+                currentViewport.endHour,
+                colorScheduleInPastOverlay(context),
+                displayStart,
+                displayEnd,
+                now,
+                days,
+              ),
+            ),
+            if (currentTimeIndicatorGeometry != null)
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  timeLabelsWidth,
+                  dayLabelsHeight,
+                  0,
+                  0,
+                ),
+                child: ScheduleCurrentTimeIndicator(
+                  dayIndex: currentTimeIndicatorGeometry.dayIndex,
+                  columns: days,
+                  yOffset: currentTimeIndicatorGeometry.yOffset,
+                  color: colorCurrentTimeIndicator(context),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget buildWithSize(
+    BuildContext context,
+    double width,
+    double height,
+    ScheduleViewport viewport,
+  ) {
+    final renderData =
+        preparedData ??
+        ScheduleRenderData.prepare(
+          schedule: schedule,
+          displayStart: displayStart,
+          displayEnd: displayEnd,
+        );
+    var days = renderData.displayedDays;
     final layoutProfile = _resolveLayoutProfile(width, days);
 
     var dayLabelsHeight = layoutProfile.dayLabelsHeight;
     var timeLabelsWidth = showTimeLabels ? layoutProfile.timeLabelsWidth : 0.0;
 
+    final displayStartHour = viewport.startHour;
+    final displayEndHour = viewport.endHour;
     final visibleHours = (displayEndHour - displayStartHour).clamp(1.0, 24.0);
     var hourHeight = (height - dayLabelsHeight) / visibleHours;
     var minuteHeight = hourHeight / 60;
     final currentTimeIndicatorGeometry = _resolveCurrentTimeIndicatorGeometry(
       days,
       minuteHeight,
+      displayStartHour,
+      displayEndHour,
     );
 
     var labelWidgets = buildLabelWidgets(
@@ -93,16 +268,20 @@ class ScheduleWidget extends StatelessWidget {
       hourHeight,
       minuteHeight,
       layoutProfile,
+      displayStartHour,
+      displayEndHour,
     );
 
     var entryWidgets = <Widget>[];
 
     entryWidgets = buildEntryWidgets(
+      renderData,
       hourHeight,
       minuteHeight,
       width - timeLabelsWidth,
       days,
       layoutProfile,
+      displayStartHour,
     );
 
     return Stack(
@@ -155,6 +334,8 @@ class ScheduleWidget extends StatelessWidget {
   _CurrentTimeIndicatorGeometry? _resolveCurrentTimeIndicatorGeometry(
     int days,
     double minuteHeight,
+    double displayStartHour,
+    double displayEndHour,
   ) {
     final visibleStartDay = toStartOfDay(displayStart);
     final visibleEndDay = toStartOfDay(displayEnd);
@@ -203,6 +384,8 @@ class ScheduleWidget extends StatelessWidget {
     double hourHeight,
     double minuteHeight,
     _ScheduleWidgetLayoutProfile layoutProfile,
+    double displayStartHour,
+    double displayEndHour,
   ) {
     var labelWidgets = <Widget>[];
     final locale = L.of(context).locale;
@@ -330,19 +513,20 @@ class ScheduleWidget extends StatelessWidget {
   }
 
   List<Widget> buildEntryWidgets(
+    ScheduleRenderData renderData,
     double hourHeight,
     double minuteHeight,
     double width,
     int columns,
     _ScheduleWidgetLayoutProfile layoutProfile,
+    double displayStartHour,
   ) {
-    if (schedule.entries.isEmpty) return <Widget>[];
+    if (renderData.schedule.entries.isEmpty) return <Widget>[];
 
     var entryWidgets = <Widget>[];
 
     var columnWidth = width / columns;
-    final entriesByColumn = _buildEntriesByColumn(columns);
-    var columnStartDate = toStartOfDay(displayStart);
+    final entriesByColumn = renderData.entriesByDay;
 
     for (int i = 0; i < columns; i++) {
       var xPosition = columnWidth * i;
@@ -354,38 +538,14 @@ class ScheduleWidget extends StatelessWidget {
           hourHeight,
           minuteHeight,
           xPosition,
-          entriesByColumn[columnStartDate] ?? const <ScheduleEntry>[],
+          entriesByColumn[i],
           layoutProfile,
+          displayStartHour,
         ),
       );
-
-      columnStartDate = tomorrow(columnStartDate);
     }
 
     return entryWidgets;
-  }
-
-  Map<DateTime, List<ScheduleEntry>> _buildEntriesByColumn(int columns) {
-    final result = <DateTime, List<ScheduleEntry>>{};
-    final columnStarts = <DateTime>[];
-    var cursor = toStartOfDay(displayStart);
-
-    for (var i = 0; i < columns; i++) {
-      columnStarts.add(cursor);
-      result[cursor] = <ScheduleEntry>[];
-      cursor = tomorrow(cursor);
-    }
-
-    for (final entry in schedule.entries) {
-      for (final dayStart in columnStarts) {
-        final dayEnd = tomorrow(dayStart);
-        if (entry.start.isBefore(dayEnd) && entry.end.isAfter(dayStart)) {
-          result[dayStart]!.add(entry);
-        }
-      }
-    }
-
-    return result;
   }
 
   List<Widget> buildEntryWidgetsForColumn(
@@ -393,16 +553,13 @@ class ScheduleWidget extends StatelessWidget {
     double hourHeight,
     double minuteHeight,
     double xPosition,
-    List<ScheduleEntry> entries,
+    List<PreparedScheduleEntry> entries,
     _ScheduleWidgetLayoutProfile layoutProfile,
+    double displayStartHour,
   ) {
     var entryWidgets = <Widget>[];
 
-    var laidOutEntries = ScheduleEntryAlignmentAlgorithm().layoutEntries(
-      entries,
-    );
-
-    for (var value in laidOutEntries) {
+    for (var value in entries) {
       var entry = value.entry;
 
       var rawYStart =
@@ -488,6 +645,176 @@ class ScheduleWidget extends StatelessWidget {
       dayBoundaryInset: 1.0,
     );
   }
+}
+
+class _AnimatedScheduleEntryLayer extends StatelessWidget {
+  final ScheduleRenderData renderData;
+  final _ScheduleWidgetLayoutProfile layoutProfile;
+  final ValueListenable<ScheduleViewport> viewport;
+  final ScheduleViewport targetViewport;
+  final ScheduleEntryTapCallback onScheduleEntryTap;
+
+  const _AnimatedScheduleEntryLayer({
+    required this.renderData,
+    required this.layoutProfile,
+    required this.viewport,
+    required this.targetViewport,
+    required this.onScheduleEntryTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final slots = <_PreparedEntrySlot>[];
+    for (
+      var dayIndex = 0;
+      dayIndex < renderData.entriesByDay.length;
+      dayIndex++
+    ) {
+      for (final entry in renderData.entriesByDay[dayIndex]) {
+        slots.add(_PreparedEntrySlot(dayIndex: dayIndex, entry: entry));
+      }
+    }
+    if (slots.isEmpty) return const SizedBox.expand();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = constraints.biggest;
+        return ClipRect(
+          child: CustomMultiChildLayout(
+            delegate: _ScheduleEntryLayoutDelegate(
+              slots: slots,
+              columns: renderData.displayedDays,
+              layoutProfile: layoutProfile,
+              viewport: viewport,
+            ),
+            children: <Widget>[
+              for (var index = 0; index < slots.length; index++)
+                LayoutId(
+                  id: index,
+                  child: _buildEntry(
+                    slots[index],
+                    _ScheduleEntryLayoutDelegate.resolveRect(
+                      size: size,
+                      slot: slots[index],
+                      columns: renderData.displayedDays,
+                      layoutProfile: layoutProfile,
+                      viewport: targetViewport,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEntry(_PreparedEntrySlot slot, Rect targetRect) {
+    return ScheduleEntryWidget(
+      scheduleEntry: slot.entry.entry,
+      onScheduleEntryTap: onScheduleEntryTap,
+      renderedWidth: targetRect.width,
+      renderedHeight: targetRect.height,
+    );
+  }
+}
+
+class _ScheduleEntryLayoutDelegate extends MultiChildLayoutDelegate {
+  final List<_PreparedEntrySlot> slots;
+  final int columns;
+  final _ScheduleWidgetLayoutProfile layoutProfile;
+  final ValueListenable<ScheduleViewport> viewport;
+
+  _ScheduleEntryLayoutDelegate({
+    required this.slots,
+    required this.columns,
+    required this.layoutProfile,
+    required this.viewport,
+  }) : super(relayout: viewport);
+
+  @override
+  void performLayout(Size size) {
+    final currentViewport = viewport.value;
+    for (var index = 0; index < slots.length; index++) {
+      final rect = resolveRect(
+        size: size,
+        slot: slots[index],
+        columns: columns,
+        layoutProfile: layoutProfile,
+        viewport: currentViewport,
+      );
+      layoutChild(index, BoxConstraints.tight(rect.size));
+      positionChild(index, rect.topLeft);
+    }
+  }
+
+  static Rect resolveRect({
+    required Size size,
+    required _PreparedEntrySlot slot,
+    required int columns,
+    required _ScheduleWidgetLayoutProfile layoutProfile,
+    required ScheduleViewport viewport,
+  }) {
+    final columnWidth = size.width / columns;
+    final visibleHours = (viewport.endHour - viewport.startHour).clamp(
+      1.0,
+      24.0,
+    );
+    final hourHeight = size.height / visibleHours;
+    final minuteHeight = hourHeight / 60;
+    final entry = slot.entry.entry;
+
+    final rawYStart =
+        hourHeight * (entry.start.hour - viewport.startHour) +
+        minuteHeight * entry.start.minute;
+    final rawYEnd =
+        hourHeight * (entry.end.hour - viewport.startHour) +
+        minuteHeight * entry.end.minute;
+    final rawEntryLeft = columnWidth * slot.entry.leftColumn;
+    final rawEntryWidth =
+        columnWidth * (slot.entry.rightColumn - slot.entry.leftColumn);
+
+    final compactMinInset = layoutProfile.compactPhone ? 0.1 : 1.0;
+    final verticalInset =
+        rawYEnd - rawYStart > (layoutProfile.eventVerticalGap + 6)
+        ? layoutProfile.eventVerticalGap / 2
+        : compactMinInset;
+    final spansMultipleOverlapColumns =
+        (slot.entry.rightColumn - slot.entry.leftColumn) <
+        ScheduleWidget._fullColumnThreshold;
+    final overlapMinInset = layoutProfile.compactPhone ? 0.25 : 1.0;
+    final horizontalInset = spansMultipleOverlapColumns
+        ? (rawEntryWidth > (layoutProfile.overlapColumnGap + 10)
+              ? layoutProfile.overlapColumnGap / 2
+              : overlapMinInset)
+        : layoutProfile.dayBoundaryInset;
+
+    final top = rawYStart + verticalInset;
+    final height = (rawYEnd - rawYStart - (verticalInset * 2))
+        .clamp(ScheduleWidget._minimumEventExtent, double.infinity)
+        .toDouble();
+    final left = (columnWidth * slot.dayIndex) + rawEntryLeft + horizontalInset;
+    final width = (rawEntryWidth - (horizontalInset * 2))
+        .clamp(ScheduleWidget._minimumEventExtent, double.infinity)
+        .toDouble();
+
+    return Rect.fromLTWH(left, top, width, height);
+  }
+
+  @override
+  bool shouldRelayout(covariant _ScheduleEntryLayoutDelegate oldDelegate) {
+    return !identical(slots, oldDelegate.slots) ||
+        columns != oldDelegate.columns ||
+        layoutProfile != oldDelegate.layoutProfile ||
+        !identical(viewport, oldDelegate.viewport);
+  }
+}
+
+class _PreparedEntrySlot {
+  final int dayIndex;
+  final PreparedScheduleEntry entry;
+
+  const _PreparedEntrySlot({required this.dayIndex, required this.entry});
 }
 
 class _ScheduleWidgetLayoutProfile {

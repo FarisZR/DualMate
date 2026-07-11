@@ -8,6 +8,8 @@ import 'package:dualmate/schedule/model/schedule_query_result.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:dualmate/schedule/ui/viewmodels/weekly_schedule_view_model.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/weekly_schedule_page.dart';
+import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_entry_widget.dart';
+import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_render_data.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -77,6 +79,115 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
     viewModel.dispose();
+  });
+
+  testWidgets('viewport animation reuses pager and prepared overlap layout', (
+    tester,
+  ) async {
+    var preparationCount = 0;
+    final viewModel = _buildViewModel(
+      now: DateTime(2026, 2, 10, 10),
+      entries: <ScheduleEntry>[
+        _entry(DateTime(2026, 2, 9), 'CURRENT_WEEK'),
+        _entry(DateTime(2026, 2, 16), 'NEXT_WEEK'),
+      ],
+    );
+
+    try {
+      ScheduleRenderData.debugOnPrepare = () {
+        preparationCount += 1;
+      };
+      await viewModel.updateSchedule(
+        DateTime(2026, 2, 9),
+        DateTime(2026, 2, 16),
+        force: true,
+      );
+      await tester.pumpWidget(_wrapWithApp(viewModel));
+      await tester.pump();
+
+      viewModel.displayEndHour = 21;
+      viewModel.notifyListeners('weekSchedule');
+      await tester.pump();
+
+      final pagerFinder = find.byKey(
+        const ValueKey<String>('weekly_schedule_page_view'),
+      );
+      final pagerAtAnimationStart = tester.widget<PageView>(pagerFinder);
+      final entryAtAnimationStart = tester.widget<ScheduleEntryWidget>(
+        find.byType(ScheduleEntryWidget).first,
+      );
+      final preparationsAtAnimationStart = preparationCount;
+      expect(preparationsAtAnimationStart, greaterThan(0));
+
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 35));
+        expect(
+          identical(
+            tester.widget<PageView>(pagerFinder),
+            pagerAtAnimationStart,
+          ),
+          isTrue,
+        );
+        expect(
+          identical(
+            tester.widget<ScheduleEntryWidget>(
+              find.byType(ScheduleEntryWidget).first,
+            ),
+            entryAtAnimationStart,
+          ),
+          isTrue,
+        );
+        expect(preparationCount, preparationsAtAnimationStart);
+      }
+
+      await tester.pumpAndSettle();
+      expect(preparationCount, preparationsAtAnimationStart);
+    } finally {
+      ScheduleRenderData.debugOnPrepare = null;
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      viewModel.dispose();
+    }
+  });
+
+  testWidgets('in-place schedule mutations invalidate prepared render data', (
+    tester,
+  ) async {
+    var preparationCount = 0;
+    final viewModel = _buildViewModel(
+      now: DateTime(2026, 2, 10, 10),
+      entries: <ScheduleEntry>[_entry(DateTime(2026, 2, 9), 'CURRENT_WEEK')],
+    );
+
+    try {
+      ScheduleRenderData.debugOnPrepare = () {
+        preparationCount += 1;
+      };
+      await viewModel.updateSchedule(
+        DateTime(2026, 2, 9),
+        DateTime(2026, 2, 16),
+        force: true,
+      );
+      await tester.pumpWidget(_wrapWithApp(viewModel));
+      await tester.pumpAndSettle();
+
+      final preparationsBeforeMutation = preparationCount;
+      expect(find.text('MUTATED_WEEK'), findsNothing);
+
+      viewModel.weekSchedule!.entries.add(
+        _entry(DateTime(2026, 2, 10), 'MUTATED_WEEK'),
+      );
+      viewModel.notifyListeners('weekSchedule');
+      await tester.pumpAndSettle();
+
+      expect(find.text('MUTATED_WEEK'), findsOneWidget);
+      expect(preparationCount, greaterThan(preparationsBeforeMutation));
+    } finally {
+      ScheduleRenderData.debugOnPrepare = null;
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      viewModel.dispose();
+    }
   });
 
   testWidgets('dragging weekly pager updates page progress before release', (

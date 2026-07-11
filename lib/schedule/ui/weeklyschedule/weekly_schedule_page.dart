@@ -1,9 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as developer;
-import 'dart:ui' show lerpDouble;
-
 import 'package:dualmate/common/i18n/localizations.dart';
-import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/ui/widgets/error_display.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
@@ -11,7 +8,9 @@ import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/ui/viewmodels/weekly_schedule_view_model.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/schedule_entry_detail_bottom_sheet.dart';
+import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_render_data.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_widget.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -47,7 +46,9 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   late DateTime _anchorWeekStart;
   int _currentPageIndex = _initialPageIndex;
   int _weekOpenRequestId = 0;
-  _HourViewport? _lockedViewport;
+  ScheduleViewport? _lockedViewport;
+  final Map<String, _CachedWeekPageData> _weekPageDataCache =
+      <String, _CachedWeekPageData>{};
 
   @override
   void initState() {
@@ -328,25 +329,15 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
           displayedDays,
         );
 
-        return TweenAnimationBuilder<_HourViewport>(
-          tween: _HourViewportTween(end: targetViewport),
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          builder: (context, viewport, child) {
-            return Row(
-              children: [
-                SizedBox(
-                  key: const ValueKey<String>('weekly_fixed_hour_axis'),
-                  width: axisMetrics.axisWidth,
-                  child: _FixedHourAxis(
-                    dayLabelsHeight: axisMetrics.dayLabelsHeight,
-                    startHour: viewport.startHour,
-                    endHour: viewport.endHour,
-                    compactPhone: axisMetrics.compactPhone,
-                  ),
-                ),
-                Expanded(child: _buildWeeklyPager(context, model, viewport)),
-              ],
+        return _AnimatedWeeklyViewport(
+          targetViewport: targetViewport,
+          axisMetrics: axisMetrics,
+          pagerBuilder: (context, viewportListenable) {
+            return _buildWeeklyPager(
+              context,
+              model,
+              viewportListenable,
+              targetViewport,
             );
           },
         );
@@ -357,7 +348,8 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   Widget _buildWeeklyPager(
     BuildContext context,
     WeeklyScheduleViewModel model,
-    _HourViewport viewport,
+    ValueListenable<ScheduleViewport> viewportListenable,
+    ScheduleViewport targetViewport,
   ) {
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
@@ -381,31 +373,29 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
         },
         itemBuilder: (context, pageIndex) {
           final weekStart = _weekStartForPage(pageIndex);
-          return PerformanceTelemetry.instance.measureSync(
-            'schedule.list.build',
-            args: {'weekOffset': pageIndex - _currentPageIndex},
-            action: (task) {
-              final pageData = _buildPageData(weekStart, model);
-              task.setData('entryCount', pageData.schedule.entries.length);
+          final pageData = _buildPageData(weekStart, model);
+          final animatesViewport = pageIndex == _currentPageIndex;
+          final pageViewport = animatesViewport
+              ? viewportListenable.value
+              : targetViewport;
 
-              return RepaintBoundary(
-                key: ValueKey<String>(
-                  'week_page_${weekStart.toIso8601String()}',
-                ),
-                child: ScheduleWidget(
-                  schedule: pageData.schedule,
-                  displayStart: pageData.displayStart,
-                  displayEnd: pageData.displayEnd,
-                  onScheduleEntryTap: (entry) {
-                    _onScheduleEntryTap(context, entry);
-                  },
-                  now: model.now,
-                  displayStartHour: viewport.startHour,
-                  displayEndHour: viewport.endHour,
-                  showTimeLabels: false,
-                ),
-              );
-            },
+          return RepaintBoundary(
+            key: ValueKey<String>('week_page_${weekStart.toIso8601String()}'),
+            child: ScheduleWidget(
+              schedule: pageData.schedule,
+              displayStart: pageData.displayStart,
+              displayEnd: pageData.displayEnd,
+              onScheduleEntryTap: (entry) {
+                _onScheduleEntryTap(context, entry);
+              },
+              now: model.now,
+              displayStartHour: pageViewport.startHour,
+              displayEndHour: pageViewport.endHour,
+              showTimeLabels: false,
+              preparedData: pageData.renderData,
+              viewportListenable: animatesViewport ? viewportListenable : null,
+              targetViewport: targetViewport,
+            ),
           );
         },
       ),
@@ -475,17 +465,41 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   ) {
     final weekEnd = toNextWeek(weekStart);
     final cachedSchedule = model.getCachedWeek(weekStart, weekEnd);
+    final cacheKey = weekStart.toIso8601String();
+    final cachedPage = _weekPageDataCache[cacheKey];
+    if (cachedPage != null && cachedPage.matches(cachedSchedule)) {
+      return cachedPage.pageData;
+    }
 
+    final schedule = cachedSchedule ?? Schedule();
     final displayRange = WeeklyScheduleViewModel.resolveWeeklyDisplayRange(
       weekStart,
       cachedSchedule,
     );
-
-    return _WeekPageData(
-      schedule: cachedSchedule ?? Schedule(),
+    final pageData = _WeekPageData(
+      schedule: schedule,
       displayStart: displayRange.start,
       displayEnd: displayRange.end,
+      renderData: ScheduleRenderData.prepare(
+        schedule: schedule,
+        displayStart: displayRange.start,
+        displayEnd: displayRange.end,
+      ),
     );
+    _weekPageDataCache[cacheKey] = _CachedWeekPageData(
+      sourceSchedule: cachedSchedule,
+      pageData: pageData,
+    );
+    if (_weekPageDataCache.length > 7) {
+      final oldestKey = _weekPageDataCache.keys.firstWhere(
+        (key) => key != cacheKey,
+        orElse: () => cacheKey,
+      );
+      if (oldestKey != cacheKey) {
+        _weekPageDataCache.remove(oldestKey);
+      }
+    }
+    return pageData;
   }
 
   void _ensurePagerInitialized() {
@@ -514,13 +528,13 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
     return toStartOfDay(toDayOfWeek(date, DateTime.monday));
   }
 
-  _HourViewport _resolveTargetViewport(WeeklyScheduleViewModel model) {
+  ScheduleViewport _resolveTargetViewport(WeeklyScheduleViewModel model) {
     final startHour = (model.displayStartHour > 0 ? model.displayStartHour : 7)
         .toDouble();
     final endHourRaw = (model.displayEndHour > 0 ? model.displayEndHour : 17)
         .toDouble();
     final endHour = endHourRaw <= startHour + 1 ? startHour + 1 : endHourRaw;
-    return _HourViewport(startHour: startHour, endHour: endHour);
+    return ScheduleViewport(startHour: startHour, endHour: endHour);
   }
 
   int _resolveDisplayedDays(WeeklyScheduleViewModel model) {
@@ -764,30 +778,40 @@ class _WeekPageData {
   final Schedule schedule;
   final DateTime displayStart;
   final DateTime displayEnd;
+  final ScheduleRenderData renderData;
 
   _WeekPageData({
     required this.schedule,
     required this.displayStart,
     required this.displayEnd,
+    required this.renderData,
   });
 }
 
-class _HourViewport {
-  final double startHour;
-  final double endHour;
+class _CachedWeekPageData {
+  final Schedule? sourceSchedule;
+  final List<ScheduleEntry> sourceEntries;
+  final _WeekPageData pageData;
 
-  const _HourViewport({required this.startHour, required this.endHour});
+  _CachedWeekPageData({required this.sourceSchedule, required this.pageData})
+    : sourceEntries = List<ScheduleEntry>.unmodifiable(
+        sourceSchedule?.entries ?? const <ScheduleEntry>[],
+      );
 
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        other is _HourViewport &&
-            other.startHour == startHour &&
-            other.endHour == endHour;
+  bool matches(Schedule? schedule) {
+    if (!identical(sourceSchedule, schedule)) return false;
+
+    final currentEntries = schedule?.entries ?? const <ScheduleEntry>[];
+    if (sourceEntries.length != currentEntries.length) return false;
+
+    // ScheduleEntry's render-affecting fields are immutable, so identity and
+    // order are sufficient to detect every in-place list mutation that can
+    // change the prepared layout without hashing entry content on each build.
+    for (var index = 0; index < currentEntries.length; index++) {
+      if (!identical(sourceEntries[index], currentEntries[index])) return false;
+    }
+    return true;
   }
-
-  @override
-  int get hashCode => Object.hash(startHour, endHour);
 }
 
 class _TopLoadingIndicator extends StatefulWidget {
@@ -913,22 +937,100 @@ class _TopLoadingIndicatorState extends State<_TopLoadingIndicator> {
   }
 }
 
-class _HourViewportTween extends Tween<_HourViewport> {
-  _HourViewportTween({_HourViewport? begin, required _HourViewport end})
-    : super(begin: begin, end: end);
+typedef _WeeklyPagerBuilder =
+    Widget Function(
+      BuildContext context,
+      ValueListenable<ScheduleViewport> viewportListenable,
+    );
+
+class _AnimatedWeeklyViewport extends StatefulWidget {
+  final ScheduleViewport targetViewport;
+  final _AxisLayoutMetrics axisMetrics;
+  final _WeeklyPagerBuilder pagerBuilder;
+
+  const _AnimatedWeeklyViewport({
+    required this.targetViewport,
+    required this.axisMetrics,
+    required this.pagerBuilder,
+  });
 
   @override
-  _HourViewport lerp(double t) {
-    final beginValue = begin ?? end!;
-    final endValue = end!;
+  State<_AnimatedWeeklyViewport> createState() =>
+      _AnimatedWeeklyViewportState();
+}
 
-    return _HourViewport(
-      startHour:
-          lerpDouble(beginValue.startHour, endValue.startHour, t) ??
-          endValue.startHour,
-      endHour:
-          lerpDouble(beginValue.endHour, endValue.endHour, t) ??
-          endValue.endHour,
+class _AnimatedWeeklyViewportState extends State<_AnimatedWeeklyViewport>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final ValueNotifier<ScheduleViewport> _viewport;
+  late ScheduleViewport _animationStart;
+  late ScheduleViewport _animationTarget;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationStart = widget.targetViewport;
+    _animationTarget = widget.targetViewport;
+    _viewport = ValueNotifier<ScheduleViewport>(widget.targetViewport);
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    )..addListener(_updateViewport);
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedWeeklyViewport oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.targetViewport == _animationTarget) {
+      return;
+    }
+    _animationStart = _viewport.value;
+    _animationTarget = widget.targetViewport;
+    _controller.forward(from: 0);
+  }
+
+  void _updateViewport() {
+    final progress = Curves.easeOutCubic.transform(_controller.value);
+    final next = ScheduleViewport.lerp(
+      _animationStart,
+      _animationTarget,
+      progress,
+    );
+    if (_viewport.value != next) {
+      _viewport.value = next;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller
+      ..removeListener(_updateViewport)
+      ..dispose();
+    _viewport.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          key: const ValueKey<String>('weekly_fixed_hour_axis'),
+          width: widget.axisMetrics.axisWidth,
+          child: ValueListenableBuilder<ScheduleViewport>(
+            valueListenable: _viewport,
+            builder: (context, viewport, _) {
+              return _FixedHourAxis(
+                dayLabelsHeight: widget.axisMetrics.dayLabelsHeight,
+                startHour: viewport.startHour,
+                endHour: viewport.endHour,
+                compactPhone: widget.axisMetrics.compactPhone,
+              );
+            },
+          ),
+        ),
+        Expanded(child: widget.pagerBuilder(context, _viewport)),
+      ],
     );
   }
 }
