@@ -73,10 +73,10 @@ void main() {
           case 'dualis':
             await _runDualisColdStart(tester, recorder);
           case 'combined':
-            await _runCombinedJourney(tester, recorder);
+            await _runCombinedJourney(tester, recorder, fixture);
           default:
             if (_profileMode == 'combined') {
-              await _runCombinedJourney(tester, recorder);
+              await _runCombinedJourney(tester, recorder, fixture);
             } else {
               await _runDiagnosticScenarios(tester, recorder, fixture);
             }
@@ -374,6 +374,44 @@ Future<void> _runDiagnosticScenarios(
     },
   );
 
+  await recorder.measure(
+    'schedule_rapid_back_swipe_burst',
+    action: () async {
+      final expectedWeeks = <DateTime>[
+        fixture.databaseCachedWeekStart,
+        fixture.intermediateWeekStart,
+        fixture.tallWeekStart,
+        fixture.currentWeekStart,
+      ];
+      final progressions = <String, bool>{};
+      var finalStateReached = true;
+      for (var index = 0; index < expectedWeeks.length; index++) {
+        final evidence = await _flingScheduleBackward(
+          tester,
+          description: 'rapid Schedule back swipe ${index + 1}',
+          expectedWeekStart: expectedWeeks[index],
+          settleAfter: false,
+          waitForSelectedWeekState: false,
+        );
+        finalStateReached = finalStateReached && evidence.finalStateReached;
+        progressions['rapid_back_swipe_${index + 1}'] =
+            evidence.intermediateFramesRendered;
+      }
+      await _waitForScheduleWeekState(tester, fixture.currentWeekStart);
+      await _settleFrameSchedulerIdle(tester);
+      return _ScenarioEvidence(
+        finalStateReached: finalStateReached,
+        intermediateFramesRendered: progressions.values.every(
+          (progressed) => progressed,
+        ),
+        finalStateDescription:
+            'four rapid populated Schedule swipes completed while week '
+            'selection work overlapped',
+        animationChecks: progressions,
+      );
+    },
+  );
+
   await _settleFrameSchedulerIdle(tester);
   await recorder.measure(
     'drawer_cold_open_over_populated_schedule',
@@ -504,46 +542,137 @@ Future<void> _runDiagnosticScenarios(
 Future<void> _runCombinedJourney(
   WidgetTester tester,
   _ScenarioRecorder recorder,
+  ColdNavigationFixture fixture,
 ) async {
   await recorder.measure(
-    'combined_cold_start_journey',
-    animated: false,
+    'combined_aggressive_real_world_journey',
     action: () async {
       unawaited(app.main());
       await _waitForLoadedSchedule(tester);
+      await _waitForWeeklyScheduleInitialization(tester);
+
+      final scheduleForward = await _flingScheduleForward(
+        tester,
+        description: 'combined fast Schedule forward swipe',
+        expectedWeekStart: fixture.tallWeekStart,
+        settleAfter: false,
+        waitForSelectedWeekState: false,
+      );
+      final scheduleBack = await _flingScheduleBackward(
+        tester,
+        description: 'combined fast Schedule backward swipe',
+        expectedWeekStart: fixture.currentWeekStart,
+        settleAfter: false,
+        waitForSelectedWeekState: false,
+      );
+      final scheduleForwardAgain = await _flingScheduleForward(
+        tester,
+        description: 'combined second fast Schedule forward swipe',
+        expectedWeekStart: fixture.tallWeekStart,
+        settleAfter: false,
+        waitForSelectedWeekState: false,
+      );
+      final scheduleForwardThird = await _flingScheduleForward(
+        tester,
+        description: 'combined third fast Schedule forward swipe',
+        expectedWeekStart: fixture.intermediateWeekStart,
+        settleAfter: false,
+        waitForSelectedWeekState: false,
+      );
+      await _waitForScheduleWeekState(tester, fixture.intermediateWeekStart);
+      await _settleFrameSchedulerIdle(tester);
 
       await _openDrawerForSetup(tester);
-      await _selectDrawerDestination(
+      final canteenDrawer = await _selectDrawerDestination(
         tester,
         keyName: 'drawer_item_canteen',
         destination: find.byType(CanteenPage),
         destinationDescription: 'Canteen',
       );
-      await _waitForCanteenContentWithProgression(tester);
+      final canteenContent = await _waitForCanteenContentWithProgression(
+        tester,
+      );
+      final canteenForward = await _flingCanteenForward(
+        tester,
+        description: 'combined fast Canteen forward swipe',
+      );
+      final canteenBack = await _flingCanteenBackward(
+        tester,
+        description: 'combined fast Canteen backward swipe',
+      );
 
       await _openDrawerForSetup(tester);
-      await _selectDrawerDestination(
+      final datesDrawer = await _selectDrawerDestination(
         tester,
         keyName: 'drawer_item_date_management',
         destination: find.byType(DateManagementPage),
         destinationDescription: 'Dates',
       );
-      await _waitForDateRowsWithProgression(tester);
+      final datesContent = await _waitForDateRowsWithProgression(tester);
+      final datesScroll = await _flingScrollFirstDescendant(
+        tester,
+        find.byType(DateManagementPage),
+      );
 
       await _openDrawerForSetup(tester);
-      await _selectDrawerDestination(
+      final dualisDrawer = await _selectDrawerDestination(
         tester,
         keyName: 'drawer_item_dualis',
         destination: find.byType(DualisPage),
         destinationDescription: 'Dualis',
       );
-      await _waitForDualisContentWithProgression(tester);
+      final dualisContent = await _waitForDualisContentWithProgression(tester);
+      final dualisScroll = await _flingScrollFirstDescendant(
+        tester,
+        find.byType(DualisPage),
+      );
+      final dualisTab = await _switchDualisTab(tester);
 
-      return const _ScenarioEvidence(
-        finalStateReached: true,
-        intermediateFramesRendered: true,
+      final evidence = <_ScenarioEvidence>[
+        scheduleForward,
+        scheduleBack,
+        scheduleForwardAgain,
+        scheduleForwardThird,
+        canteenDrawer,
+        canteenContent,
+        canteenForward,
+        canteenBack,
+        datesDrawer,
+        datesContent,
+        datesScroll,
+        dualisDrawer,
+        dualisContent,
+        dualisScroll,
+        dualisTab,
+      ];
+      final requiredProgressions = <String, bool>{
+        'schedule_forward_progression':
+            scheduleForward.intermediateFramesRendered,
+        'schedule_backward_progression':
+            scheduleBack.intermediateFramesRendered,
+        'schedule_second_forward_progression':
+            scheduleForwardAgain.intermediateFramesRendered,
+        'schedule_third_forward_progression':
+            scheduleForwardThird.intermediateFramesRendered,
+        'canteen_drawer_progression': canteenDrawer.intermediateFramesRendered,
+        'canteen_forward_progression':
+            canteenForward.intermediateFramesRendered,
+        'canteen_backward_progression': canteenBack.intermediateFramesRendered,
+        'dates_drawer_progression': datesDrawer.intermediateFramesRendered,
+        'dates_scroll_progression': datesScroll.intermediateFramesRendered,
+        'dualis_drawer_progression': dualisDrawer.intermediateFramesRendered,
+        'dualis_scroll_progression': dualisScroll.intermediateFramesRendered,
+      };
+
+      return _ScenarioEvidence(
+        finalStateReached: evidence.every((item) => item.finalStateReached),
+        intermediateFramesRendered: requiredProgressions.values.every(
+          (progressed) => progressed,
+        ),
         finalStateDescription:
-            'Schedule, Canteen, Dates, and Dualis loaded in one cold journey',
+            'Fast loaded interactions completed across Schedule, Canteen, '
+            'Dates, and Dualis',
+        animationChecks: requiredProgressions,
       );
     },
   );
@@ -558,6 +687,7 @@ Future<_ScenarioEvidence> _flingScheduleForward(
   required String description,
   required DateTime expectedWeekStart,
   bool settleAfter = true,
+  bool waitForSelectedWeekState = true,
 }) async {
   final evidence = await _flingPageView(
     tester,
@@ -569,7 +699,9 @@ Future<_ScenarioEvidence> _flingScheduleForward(
     direction: AxisDirection.left,
     settleAfter: false,
   );
-  await _waitForScheduleWeekState(tester, expectedWeekStart);
+  if (waitForSelectedWeekState) {
+    await _waitForScheduleWeekState(tester, expectedWeekStart);
+  }
   if (settleAfter) {
     await _settleFrameSchedulerIdle(tester);
   }
@@ -580,6 +712,8 @@ Future<_ScenarioEvidence> _flingScheduleBackward(
   WidgetTester tester, {
   required String description,
   required DateTime expectedWeekStart,
+  bool settleAfter = true,
+  bool waitForSelectedWeekState = true,
 }) async {
   final evidence = await _flingPageView(
     tester,
@@ -591,8 +725,12 @@ Future<_ScenarioEvidence> _flingScheduleBackward(
     direction: AxisDirection.right,
     settleAfter: false,
   );
-  await _waitForScheduleWeekState(tester, expectedWeekStart);
-  await _settleFrameSchedulerIdle(tester);
+  if (waitForSelectedWeekState) {
+    await _waitForScheduleWeekState(tester, expectedWeekStart);
+  }
+  if (settleAfter) {
+    await _settleFrameSchedulerIdle(tester);
+  }
   return evidence;
 }
 
@@ -789,22 +927,24 @@ Future<_ScenarioEvidence> _flingPageView(
   sampleProgress();
   final pageRect = tester.getRect(pageView.first);
   final startX = direction == AxisDirection.left
-      ? pageRect.center.dx + pageRect.width * 0.3
-      : pageRect.center.dx - pageRect.width * 0.3;
+      ? pageRect.center.dx + pageRect.width * 0.35
+      : pageRect.center.dx - pageRect.width * 0.35;
   final totalOffset = direction == AxisDirection.left
-      ? -pageRect.width * 0.6
-      : pageRect.width * 0.6;
+      ? -pageRect.width * 0.72
+      : pageRect.width * 0.72;
   final gesture = await tester.startGesture(Offset(startX, pageRect.center.dy));
-  const moveSteps = 12;
+  const moveSteps = 8;
+  const eventStep = Duration(milliseconds: 8);
   for (var step = 1; step <= moveSteps; step++) {
     await gesture.moveTo(
       Offset(startX + totalOffset * step / moveSteps, pageRect.center.dy),
+      timeStamp: eventStep * step,
     );
-    await tester.pump(const Duration(milliseconds: 8));
+    await tester.pump(eventStep);
     sampleProgress();
   }
-  await gesture.up();
-  await tester.pump(_pollStep);
+  await gesture.up(timeStamp: eventStep * (moveSteps + 1));
+  await tester.pump(const Duration(milliseconds: 8));
   sampleProgress();
 
   final condition = () {
@@ -919,7 +1059,12 @@ Future<_ScenarioEvidence> _flingScrollFirstDescendant(
 
   // Issue 4: Use a real fling gesture instead of programmatic animateTo.
   final scrollRect = tester.getRect(selectedScrollable);
-  await tester.flingFrom(scrollRect.center, const Offset(0, -600), 1000);
+  await tester.flingFrom(
+    scrollRect.center,
+    const Offset(0, -900),
+    4000,
+    frameInterval: const Duration(milliseconds: 8),
+  );
   await tester.pump(_pollStep);
   final intermediate =
       tester.binding.hasScheduledFrame || state.position.pixels > before;
