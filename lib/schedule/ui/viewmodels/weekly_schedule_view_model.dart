@@ -18,6 +18,7 @@ import 'package:dualmate/schedule/model/schedule_source_type.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_freshness_gate.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_update_request_gate.dart';
+import 'package:dualmate/schedule/ui/viewmodels/visible_weekly_schedule_snapshot.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:flutter/foundation.dart';
 
@@ -82,9 +83,19 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   int _scheduleSourceGeneration = 0;
   Timer? _windowRefreshTimer;
 
+  VisibleWeeklyScheduleSnapshot? _visibleScheduleSnapshot;
+  int _visibleScheduleVersion = 0;
+  int _visibleScheduleResultSequence = 0;
+  bool _isVisiblePaging = false;
+  _QueuedVisibleScheduleResult? _queuedVisibleScheduleResult;
+  int _visibleStateRequestId = 0;
+
   String? scheduleUrl;
 
   DateTime get now => _nowProvider();
+
+  VisibleWeeklyScheduleSnapshot? get visibleScheduleSnapshot =>
+      _visibleScheduleSnapshot;
 
   bool get visibleWeekNeedsInitialFetch {
     if (!_hasCurrentDateRange) {
@@ -309,6 +320,33 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     }
   }
 
+  void beginVisiblePaging() {
+    if (_isDisposed) return;
+    _isVisiblePaging = true;
+    _queuedVisibleScheduleResult = null;
+  }
+
+  void endVisiblePaging(DateTime settledStart, DateTime settledEnd) {
+    if (!_isVisiblePaging) return;
+    _isVisiblePaging = false;
+
+    final queuedResult = _queuedVisibleScheduleResult;
+    _queuedVisibleScheduleResult = null;
+    if (queuedResult == null ||
+        queuedResult.start != settledStart ||
+        queuedResult.end != settledEnd ||
+        queuedResult.visibleStateRequestId != _visibleStateRequestId ||
+        !_isCurrentScheduleSourceGeneration(queuedResult.sourceGeneration)) {
+      return;
+    }
+
+    _applyVisibleScheduleNow(
+      queuedResult.schedule,
+      queuedResult.start,
+      queuedResult.end,
+    );
+  }
+
   void _setSchedule(Schedule? schedule, DateTime start, DateTime end) {
     if (schedule != null && initializeFailed) {
       initializeFailed = false;
@@ -333,44 +371,108 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     currentDateEnd = end;
     _evictDistantWindowData(start);
 
-    if (weekSchedule != null) {
-      var displayRange = resolveWeeklyDisplayRange(
+    late final WeeklyDisplayRange displayRange;
+    var nextDisplayStartHour = displayStartHour;
+    var nextDisplayEndHour = displayEndHour;
+
+    final visibleSchedule = weekSchedule;
+    if (visibleSchedule != null) {
+      displayRange = resolveWeeklyDisplayRange(
         currentDateStart,
-        weekSchedule,
+        visibleSchedule,
       );
-      clippedDateStart = displayRange.start;
-      clippedDateEnd = displayRange.end;
 
-      displayStartHour = weekSchedule?.getStartTime()?.hour ?? 23;
-      displayStartHour = min(7, displayStartHour);
+      nextDisplayStartHour = visibleSchedule.getStartTime()?.hour ?? 23;
+      nextDisplayStartHour = min(7, nextDisplayStartHour);
 
-      displayEndHour = weekSchedule?.getEndTime()?.hour ?? 0;
-      displayEndHour = max(displayEndHour + 1, 17);
+      nextDisplayEndHour = visibleSchedule.getEndTime()?.hour ?? 0;
+      nextDisplayEndHour = max(nextDisplayEndHour + 1, 17);
     } else {
-      var displayRange = resolveWeeklyDisplayRange(currentDateStart, null);
-      clippedDateStart = displayRange.start;
-      clippedDateEnd = displayRange.end;
+      displayRange = resolveWeeklyDisplayRange(currentDateStart, null);
     }
 
-    notifyIfMounted("weekSchedule");
+    clippedDateStart = displayRange.start;
+    clippedDateEnd = displayRange.end;
+    displayStartHour = nextDisplayStartHour;
+    displayEndHour = nextDisplayEndHour;
+
+    final previousSnapshot = _visibleScheduleSnapshot;
+    final nextSnapshot = VisibleWeeklyScheduleSnapshot.fromSchedule(
+      version: _visibleScheduleVersion + 1,
+      weekStart: currentDateStart,
+      weekEnd: currentDateEnd,
+      displayStart: displayRange.start,
+      displayEnd: displayRange.end,
+      displayStartHour: displayStartHour,
+      displayEndHour: displayEndHour,
+      schedule: weekSchedule,
+    );
+    final visibleSnapshotChanged =
+        previousSnapshot == null ||
+        !previousSnapshot.hasSameVisibleContent(nextSnapshot);
+    if (visibleSnapshotChanged) {
+      _visibleScheduleVersion += 1;
+      _visibleScheduleSnapshot = nextSnapshot.withVersion(
+        _visibleScheduleVersion,
+      );
+      notifyIfMounted("weekSchedule");
+    } else {
+      _visibleScheduleSnapshot = nextSnapshot.withVersion(
+        _visibleScheduleVersion,
+      );
+    }
+
     if (shouldWarmAdjacent && _lastWarmedWeekStart != start) {
       _lastWarmedWeekStart = start;
       unawaited(_warmAdjacentWeeks(start));
     }
   }
 
-  void _applyVisibleSchedule(Schedule? schedule, DateTime start, DateTime end) {
-    PerformanceTelemetry.instance.measureSync(
-      'schedule.state.apply',
-      args: {
-        'entryCount': schedule?.entries.length ?? 0,
-        'weekOffset': _weekOffsetFromCurrent(start),
-        'sourceType': _coarseSourceType(),
-      },
-      action: (_) {
-        _setSchedule(schedule, start, end);
-      },
-    );
+  void _applyVisibleSchedule(
+    Schedule? schedule,
+    DateTime start,
+    DateTime end, {
+    int? sourceGeneration,
+    int? visibleStateRequestId,
+  }) {
+    if (_isDisposed) return;
+    if (sourceGeneration != null &&
+        !_isCurrentScheduleSourceGeneration(sourceGeneration)) {
+      return;
+    }
+    if (visibleStateRequestId != null &&
+        visibleStateRequestId != _visibleStateRequestId) {
+      return;
+    }
+
+    if (_isVisiblePaging) {
+      if (currentDateStart != start || currentDateEnd != end) {
+        return;
+      }
+      final result = _QueuedVisibleScheduleResult(
+        schedule: schedule,
+        start: start,
+        end: end,
+        sourceGeneration: sourceGeneration ?? _scheduleSourceGeneration,
+        visibleStateRequestId: visibleStateRequestId ?? _visibleStateRequestId,
+        sequence: ++_visibleScheduleResultSequence,
+      );
+      final previous = _queuedVisibleScheduleResult;
+      if (previous == null || result.sequence >= previous.sequence) {
+        _queuedVisibleScheduleResult = result;
+      }
+      return;
+    }
+
+    _applyVisibleScheduleNow(schedule, start, end);
+  }
+
+  void _applyVisibleScheduleNow(
+    Schedule? schedule,
+    DateTime start,
+    DateTime end,
+  ) {
+    _setSchedule(schedule, start, end);
   }
 
   Future nextWeek() async {
@@ -440,6 +542,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     DateTime end, {
     bool Function()? isCurrentRequest,
   }) async {
+    final sourceGeneration = _scheduleSourceGeneration;
+    final visibleStateRequestId = ++_visibleStateRequestId;
     await PerformanceTelemetry.instance.measureTask(
       'schedule.week.change',
       args: {
@@ -466,10 +570,17 @@ class WeeklyScheduleViewModel extends BaseViewModel {
                   return schedule;
                 },
               );
-          if (_isDisposed) return;
+          if (!_isCurrentScheduleSourceGeneration(sourceGeneration)) return;
+          if (visibleStateRequestId != _visibleStateRequestId) return;
           if (isCurrentRequest != null && !isCurrentRequest()) return;
           _memoryWeekCache[cacheKey] = cachedSchedule;
-          _applyVisibleSchedule(cachedSchedule, start, end);
+          _applyVisibleSchedule(
+            cachedSchedule,
+            start,
+            end,
+            sourceGeneration: sourceGeneration,
+            visibleStateRequestId: visibleStateRequestId,
+          );
         } catch (error, trace) {
           _debugScheduleError("Failed to open cached week", error, trace);
           await reportException(error, trace);
@@ -504,6 +615,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     lastRequestedStart = start;
 
     final sourceGeneration = _scheduleSourceGeneration;
+    final visibleStateRequestId = _visibleStateRequestId;
     final refreshKey = _refreshKey(start, end, sourceGeneration);
     final inFlightRefresh = _refreshInFlightByWindow[refreshKey];
     if (inFlightRefresh != null) {
@@ -513,6 +625,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         sourceGeneration,
         inFlightRefresh,
         applyToVisibleState: applyToVisibleState,
+        visibleStateRequestId: visibleStateRequestId,
       );
       if (awaitRefresh) {
         await joinFuture;
@@ -562,6 +675,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         awaitRefresh: awaitRefresh,
         forceRefresh: force,
         sourceGeneration: sourceGeneration,
+        visibleStateRequestId: visibleStateRequestId,
         origin: applyToVisibleState
             ? ScheduleRefreshOrigin.userBrowsing
             : ScheduleRefreshOrigin.foregroundMaintenance,
@@ -582,6 +696,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     bool awaitRefresh = false,
     bool forceRefresh = false,
     required int sourceGeneration,
+    required int visibleStateRequestId,
     ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
   }) async {
     final task = PerformanceTelemetry.instance.startTask(
@@ -614,12 +729,19 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         return schedule;
       },
     );
-    _memoryWeekCache[cacheKey] = cachedSchedule;
     cancellationToken.throwIfCancelled();
+    if (!_isCurrentScheduleSourceGeneration(sourceGeneration)) return false;
+    _memoryWeekCache[cacheKey] = cachedSchedule;
     if (_isDisposed) return false;
 
     if (applyToVisibleState) {
-      _applyVisibleSchedule(cachedSchedule, start, end);
+      _applyVisibleSchedule(
+        cachedSchedule,
+        start,
+        end,
+        sourceGeneration: sourceGeneration,
+        visibleStateRequestId: visibleStateRequestId,
+      );
     }
 
     final nowValue = now;
@@ -644,6 +766,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       visibleUpdateRequestId: visibleUpdateRequestId,
       applyToVisibleState: applyToVisibleState,
       sourceGeneration: sourceGeneration,
+      visibleStateRequestId: visibleStateRequestId,
       origin: origin,
     );
 
@@ -664,6 +787,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     int? visibleUpdateRequestId,
     bool applyToVisibleState = true,
     required int sourceGeneration,
+    required int visibleStateRequestId,
     ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
   }) async {
     ScheduleQueryResult? updatedSchedule;
@@ -682,6 +806,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         if (updatedSchedule != null) {
           _freshnessGate.markFetched(start, end, now);
           _markWindowFetched(start, end, now);
+          _cacheUpdatedScheduleResult(start, end, updatedSchedule);
         }
       } on OperationCancelledException {
         return;
@@ -708,16 +833,21 @@ class WeeklyScheduleViewModel extends BaseViewModel {
         return;
       }
 
-      if (!applyToVisibleState) {
-        return;
-      }
-
-      if (currentDateStart != start || currentDateEnd != end) {
+      if (!applyToVisibleState ||
+          currentDateStart != start ||
+          currentDateEnd != end ||
+          visibleStateRequestId != _visibleStateRequestId) {
         return;
       }
 
       if (updatedSchedule != null) {
-        _applyUpdatedScheduleResult(start, end, updatedSchedule);
+        _applyUpdatedScheduleResult(
+          start,
+          end,
+          updatedSchedule,
+          sourceGeneration: sourceGeneration,
+          visibleStateRequestId: visibleStateRequestId,
+        );
       }
 
       if (updatedSchedule != null) {
@@ -776,6 +906,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     int sourceGeneration,
     Future<ScheduleQueryResult?> refreshFuture, {
     bool applyToVisibleState = true,
+    required int visibleStateRequestId,
   }) async {
     int? visibleUpdateRequestId;
     if (applyToVisibleState) {
@@ -792,18 +923,27 @@ class WeeklyScheduleViewModel extends BaseViewModel {
       if (updatedSchedule != null) {
         _freshnessGate.markFetched(start, end, now);
         _markWindowFetched(start, end, now);
+        _cacheUpdatedScheduleResult(start, end, updatedSchedule);
       }
 
       if (_isDisposed || !applyToVisibleState) {
         return;
       }
 
-      if (currentDateStart != start || currentDateEnd != end) {
+      if (currentDateStart != start ||
+          currentDateEnd != end ||
+          visibleStateRequestId != _visibleStateRequestId) {
         return;
       }
 
       if (updatedSchedule != null) {
-        _applyUpdatedScheduleResult(start, end, updatedSchedule);
+        _applyUpdatedScheduleResult(
+          start,
+          end,
+          updatedSchedule,
+          sourceGeneration: sourceGeneration,
+          visibleStateRequestId: visibleStateRequestId,
+        );
         _entryRefreshGate.markFetched(start, end, now);
       }
 
@@ -838,21 +978,40 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   void _applyUpdatedScheduleResult(
     DateTime start,
     DateTime end,
-    ScheduleQueryResult updatedSchedule,
-  ) {
-    var schedule = updatedSchedule.schedule;
-    _memoryWeekCache[_windowKey(start, end)] = schedule;
+    ScheduleQueryResult updatedSchedule, {
+    required int sourceGeneration,
+    required int visibleStateRequestId,
+  }) {
+    if (!_isCurrentScheduleSourceGeneration(sourceGeneration)) return;
+    final schedule = updatedSchedule.schedule;
+    _cacheUpdatedScheduleResult(start, end, updatedSchedule);
 
-    _applyVisibleSchedule(schedule, start, end);
+    _applyVisibleSchedule(
+      schedule,
+      start,
+      end,
+      sourceGeneration: sourceGeneration,
+      visibleStateRequestId: visibleStateRequestId,
+    );
 
-    _hasQueryErrors = updatedSchedule.hasError;
-    notifyIfMounted("hasQueryErrors");
+    if (_hasQueryErrors != updatedSchedule.hasError) {
+      _hasQueryErrors = updatedSchedule.hasError;
+      notifyIfMounted("hasQueryErrors");
+    }
 
     if (updatedSchedule.hasError) {
       _queryFailedCallback?.call();
     }
 
     scheduleUrl = schedule.urls.isNotEmpty ? schedule.urls[0] : null;
+  }
+
+  void _cacheUpdatedScheduleResult(
+    DateTime start,
+    DateTime end,
+    ScheduleQueryResult updatedSchedule,
+  ) {
+    _memoryWeekCache[_windowKey(start, end)] = updatedSchedule.schedule;
   }
 
   Future<ScheduleQueryResult?> _readScheduleFromServiceDeduped(
@@ -1235,6 +1394,24 @@ class WeeklyDisplayRange {
   final DateTime end;
 
   WeeklyDisplayRange(this.start, this.end);
+}
+
+class _QueuedVisibleScheduleResult {
+  final Schedule? schedule;
+  final DateTime start;
+  final DateTime end;
+  final int sourceGeneration;
+  final int visibleStateRequestId;
+  final int sequence;
+
+  const _QueuedVisibleScheduleResult({
+    required this.schedule,
+    required this.start,
+    required this.end,
+    required this.sourceGeneration,
+    required this.visibleStateRequestId,
+    required this.sequence,
+  });
 }
 
 bool _hasEntriesOnDay(Schedule schedule, DateTime dayStart) {

@@ -132,28 +132,39 @@ class ScheduleWidget extends StatelessWidget {
     final staticLayers = Stack(
       fit: StackFit.expand,
       children: <Widget>[
-        Padding(
-          padding: EdgeInsets.fromLTRB(timeLabelsWidth, dayLabelsHeight, 0, 0),
-          child: _AnimatedScheduleEntryLayer(
-            renderData: renderData,
-            layoutProfile: layoutProfile,
-            viewport: viewport,
-            targetViewport: target,
-            onScheduleEntryTap: onScheduleEntryTap,
+        RepaintBoundary(
+          key: const ValueKey<String>('schedule-entry-layer'),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              timeLabelsWidth,
+              dayLabelsHeight,
+              0,
+              0,
+            ),
+            child: _AnimatedScheduleEntryLayer(
+              renderData: renderData,
+              layoutProfile: layoutProfile,
+              viewport: viewport,
+              targetViewport: target,
+              onScheduleEntryTap: onScheduleEntryTap,
+            ),
           ),
         ),
-        Stack(
-          children: buildLabelWidgets(
-            context,
-            targetHourHeight,
-            width / days,
-            dayLabelsHeight,
-            timeLabelsWidth,
-            targetHourHeight,
-            targetMinuteHeight,
-            layoutProfile,
-            target.startHour,
-            target.endHour,
+        RepaintBoundary(
+          key: const ValueKey<String>('schedule-label-layer'),
+          child: Stack(
+            children: buildLabelWidgets(
+              context,
+              targetHourHeight,
+              width / days,
+              dayLabelsHeight,
+              timeLabelsWidth,
+              targetHourHeight,
+              targetMinuteHeight,
+              layoutProfile,
+              target.startHour,
+              target.endHour,
+            ),
           ),
         ),
       ],
@@ -188,38 +199,47 @@ class ScheduleWidget extends StatelessWidget {
               dayLabelsHeight,
               days,
               colorScheduleGridGridLines(context),
+              key: const ValueKey<String>('schedule-grid-layer'),
             ),
             child!,
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                timeLabelsWidth,
-                dayLabelsHeight,
-                0,
-                0,
-              ),
-              child: SchedulePastOverlay(
-                currentViewport.startHour,
-                currentViewport.endHour,
-                colorScheduleInPastOverlay(context),
-                displayStart,
-                displayEnd,
-                now,
-                days,
-              ),
-            ),
-            if (currentTimeIndicatorGeometry != null)
-              Padding(
+            RepaintBoundary(
+              key: const ValueKey<String>('schedule-past-overlay-layer'),
+              child: Padding(
                 padding: EdgeInsets.fromLTRB(
                   timeLabelsWidth,
                   dayLabelsHeight,
                   0,
                   0,
                 ),
-                child: ScheduleCurrentTimeIndicator(
-                  dayIndex: currentTimeIndicatorGeometry.dayIndex,
-                  columns: days,
-                  yOffset: currentTimeIndicatorGeometry.yOffset,
-                  color: colorCurrentTimeIndicator(context),
+                child: SchedulePastOverlay(
+                  currentViewport.startHour,
+                  currentViewport.endHour,
+                  colorScheduleInPastOverlay(context),
+                  displayStart,
+                  displayEnd,
+                  now,
+                  days,
+                ),
+              ),
+            ),
+            if (currentTimeIndicatorGeometry != null)
+              RepaintBoundary(
+                key: const ValueKey<String>(
+                  'schedule-current-time-indicator-layer',
+                ),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    timeLabelsWidth,
+                    dayLabelsHeight,
+                    0,
+                    0,
+                  ),
+                  child: ScheduleCurrentTimeIndicator(
+                    dayIndex: currentTimeIndicatorGeometry.dayIndex,
+                    columns: days,
+                    yOffset: currentTimeIndicatorGeometry.yOffset,
+                    color: colorCurrentTimeIndicator(context),
+                  ),
                 ),
               ),
           ],
@@ -294,37 +314,62 @@ class ScheduleWidget extends StatelessWidget {
           dayLabelsHeight,
           days,
           colorScheduleGridGridLines(context),
+          key: const ValueKey<String>('schedule-grid-layer'),
         ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(timeLabelsWidth, dayLabelsHeight, 0, 0),
-          child: Stack(clipBehavior: Clip.hardEdge, children: entryWidgets),
-        ),
-        Stack(children: labelWidgets),
-        Padding(
-          padding: EdgeInsets.fromLTRB(timeLabelsWidth, dayLabelsHeight, 0, 0),
-          child: SchedulePastOverlay(
-            displayStartHour,
-            displayEndHour,
-            colorScheduleInPastOverlay(context),
-            displayStart,
-            displayEnd,
-            now,
-            days,
-          ),
-        ),
-        if (currentTimeIndicatorGeometry != null)
-          Padding(
+        RepaintBoundary(
+          key: const ValueKey<String>('schedule-entry-layer'),
+          child: Padding(
             padding: EdgeInsets.fromLTRB(
               timeLabelsWidth,
               dayLabelsHeight,
               0,
               0,
             ),
-            child: ScheduleCurrentTimeIndicator(
-              dayIndex: currentTimeIndicatorGeometry.dayIndex,
-              columns: days,
-              yOffset: currentTimeIndicatorGeometry.yOffset,
-              color: colorCurrentTimeIndicator(context),
+            child: Stack(clipBehavior: Clip.hardEdge, children: entryWidgets),
+          ),
+        ),
+        RepaintBoundary(
+          key: const ValueKey<String>('schedule-label-layer'),
+          child: Stack(children: labelWidgets),
+        ),
+        RepaintBoundary(
+          key: const ValueKey<String>('schedule-past-overlay-layer'),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              timeLabelsWidth,
+              dayLabelsHeight,
+              0,
+              0,
+            ),
+            child: SchedulePastOverlay(
+              displayStartHour,
+              displayEndHour,
+              colorScheduleInPastOverlay(context),
+              displayStart,
+              displayEnd,
+              now,
+              days,
+            ),
+          ),
+        ),
+        if (currentTimeIndicatorGeometry != null)
+          RepaintBoundary(
+            key: const ValueKey<String>(
+              'schedule-current-time-indicator-layer',
+            ),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                timeLabelsWidth,
+                dayLabelsHeight,
+                0,
+                0,
+              ),
+              child: ScheduleCurrentTimeIndicator(
+                dayIndex: currentTimeIndicatorGeometry.dayIndex,
+                columns: days,
+                yOffset: currentTimeIndicatorGeometry.yOffset,
+                color: colorCurrentTimeIndicator(context),
+              ),
             ),
           ),
       ],

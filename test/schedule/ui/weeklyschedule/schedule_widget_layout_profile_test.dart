@@ -9,15 +9,88 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('uses compact mobile grid dimensions on narrow layouts', (
+  test('grid painters isolate static columns from changing hour lines', () {
+    final staticColumns = ScheduleGridVerticalLinesPainter(46, 5, Colors.grey);
+    expect(
+      staticColumns.shouldRepaint(
+        ScheduleGridVerticalLinesPainter(46, 5, Colors.grey),
+      ),
+      isFalse,
+    );
+    expect(
+      staticColumns.shouldRepaint(
+        ScheduleGridVerticalLinesPainter(54, 5, Colors.grey),
+      ),
+      isTrue,
+    );
+
+    final hourLines = ScheduleGridHorizontalLinesPainter(
+      7,
+      19,
+      52,
+      Colors.grey,
+    );
+    expect(
+      hourLines.shouldRepaint(
+        ScheduleGridHorizontalLinesPainter(7, 19, 52, Colors.grey),
+      ),
+      isFalse,
+    );
+    expect(
+      hourLines.shouldRepaint(
+        ScheduleGridHorizontalLinesPainter(7, 20, 52, Colors.grey),
+      ),
+      isTrue,
+    );
+  });
+
+  testWidgets('weekly layers have independent repaint boundaries', (
     tester,
   ) async {
     await tester.pumpWidget(
-      _buildApp(
-        width: 360,
-        height: 680,
-      ),
+      _buildApp(width: 360, height: 680, now: DateTime(2026, 2, 11, 12)),
     );
+
+    final gridLayer = find.byKey(const ValueKey<String>('schedule-grid-layer'));
+    expect(gridLayer, findsOneWidget);
+    expect(
+      find.descendant(of: gridLayer, matching: find.byType(RepaintBoundary)),
+      findsNWidgets(2),
+    );
+    expect(
+      find.byKey(const ValueKey<String>('schedule-entry-layer')),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget<RepaintBoundary>(
+        find.byKey(const ValueKey<String>('schedule-entry-layer')),
+      ),
+      isA<RepaintBoundary>(),
+    );
+    expect(
+      find.byKey(const ValueKey<String>('schedule-past-overlay-layer')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const ValueKey<String>('schedule-current-time-indicator-layer'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('schedule-grid-static-columns')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('schedule-grid-hour-lines')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('uses compact mobile grid dimensions on narrow layouts', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_buildApp(width: 360, height: 680));
 
     final grid = tester.widget<ScheduleGrid>(find.byType(ScheduleGrid));
     expect(grid.timeLabelsWidth, 46);
@@ -25,20 +98,16 @@ void main() {
   });
 
   testWidgets('keeps default grid dimensions on wide layouts', (tester) async {
-    await tester.pumpWidget(
-      _buildApp(
-        width: 800,
-        height: 680,
-      ),
-    );
+    await tester.pumpWidget(_buildApp(width: 800, height: 680));
 
     final grid = tester.widget<ScheduleGrid>(find.byType(ScheduleGrid));
     expect(grid.timeLabelsWidth, 54);
     expect(grid.dateLabelsHeight, 72);
   });
 
-  testWidgets('compact layout keeps adjacent day event cards nearly touching',
-      (tester) async {
+  testWidgets('compact layout keeps adjacent day event cards nearly touching', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _buildApp(
         width: 360,
@@ -65,8 +134,9 @@ void main() {
     expect(gap, lessThanOrEqualTo(0.3));
   });
 
-  testWidgets('compact layout keeps overlap cards visually separated',
-      (tester) async {
+  testWidgets('compact layout keeps overlap cards visually separated', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _buildApp(
         width: 360,
@@ -74,7 +144,10 @@ void main() {
         schedule: Schedule.fromList([
           _entry(DateTime(2026, 2, 9, 9), DateTime(2026, 2, 9, 11), 'C1'),
           _entry(
-              DateTime(2026, 2, 9, 9, 30), DateTime(2026, 2, 9, 10, 30), 'C2'),
+            DateTime(2026, 2, 9, 9, 30),
+            DateTime(2026, 2, 9, 10, 30),
+            'C2',
+          ),
         ]),
       ),
     );
@@ -100,6 +173,7 @@ void main() {
 Widget _buildApp({
   required double width,
   required double height,
+  DateTime? now,
   Schedule? schedule,
 }) {
   return MaterialApp(
@@ -120,7 +194,7 @@ Widget _buildApp({
             displayStart: DateTime(2026, 2, 9),
             displayEnd: DateTime(2026, 2, 13),
             onScheduleEntryTap: (_) {},
-            now: DateTime(2026, 2, 11, 12),
+            now: now ?? DateTime(2026, 2, 11, 12),
             displayStartHour: 7.0,
             displayEndHour: 19.0,
           ),
