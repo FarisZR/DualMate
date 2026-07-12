@@ -161,6 +161,9 @@ class _CanteenPageState extends State<CanteenPage> {
   DateTime? _lastInteractionWeekStart;
   bool _isApplyingWidgetPayload = false;
   bool _pageSyncRetryScheduled = false;
+  bool _visibleDaysSyncScheduled = false;
+  final Map<DateTime, GlobalKey<_CanteenDayContentState>> _dayContentKeys =
+      <DateTime, GlobalKey<_CanteenDayContentState>>{};
 
   @override
   void initState() {
@@ -230,7 +233,7 @@ class _CanteenPageState extends State<CanteenPage> {
                   builder: (context, model, _) {
                     if (model == null) return const SizedBox();
                     final visibleDays = model.visibleContentDays;
-                    _syncPageForVisibleDays(model, visibleDays);
+                    _scheduleVisibleDaysSync(model);
                     if (WidgetNavigationPayloadStore.instance
                                 .peekCanteenPayload() !=
                             null &&
@@ -240,7 +243,16 @@ class _CanteenPageState extends State<CanteenPage> {
                         _applyWidgetPayload(visibleDays: visibleDays);
                       });
                     }
-                    return _buildPageContent(model, visibleDays);
+                    final baseWeekStart = model.weekStartFor(baseDate);
+                    return _CanteenInitialLoadingTransition(
+                      key: const ValueKey<String>(
+                        'canteen_initial_loading_transition',
+                      ),
+                      showLoading:
+                          visibleDays.isEmpty &&
+                          model.isLoadingWeek(baseWeekStart),
+                      child: _buildPageContent(model, visibleDays),
+                    );
                   },
                 ),
                 ValueListenableBuilder<DateTime>(
@@ -326,7 +338,16 @@ class _CanteenPageState extends State<CanteenPage> {
         },
         itemBuilder: (context, index) {
           final date = pageDates[index];
-          return _CanteenDayView(key: canteenDayViewKey(date), date: date);
+          final normalizedDate = toStartOfDay(date);
+          final contentKey = _dayContentKeys.putIfAbsent(
+            normalizedDate,
+            GlobalKey<_CanteenDayContentState>.new,
+          );
+          return _CanteenDayView(
+            key: canteenDayViewKey(date),
+            date: date,
+            contentKey: contentKey,
+          );
         },
       ),
     );
@@ -432,6 +453,16 @@ class _CanteenPageState extends State<CanteenPage> {
     _syncPageForVisibleDays(model, model.visibleContentDays);
   }
 
+  void _scheduleVisibleDaysSync(CanteenViewModel model) {
+    if (_visibleDaysSyncScheduled) return;
+    _visibleDaysSyncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _visibleDaysSyncScheduled = false;
+      if (!mounted) return;
+      _syncPageForVisibleDays(model, model.visibleContentDays);
+    });
+  }
+
   bool _pageTargetExceedsMountedPageRange(int targetIndex) {
     if (!pageController.hasClients ||
         pageController.positions.length != 1 ||
@@ -520,17 +551,219 @@ class _CanteenPageState extends State<CanteenPage> {
   }
 }
 
+class _CanteenInitialLoadingTransition extends StatefulWidget {
+  final bool showLoading;
+  final Widget child;
+
+  const _CanteenInitialLoadingTransition({
+    super.key,
+    required this.showLoading,
+    required this.child,
+  });
+
+  @override
+  State<_CanteenInitialLoadingTransition> createState() =>
+      _CanteenInitialLoadingTransitionState();
+}
+
+class _CanteenInitialLoadingTransitionState
+    extends State<_CanteenInitialLoadingTransition>
+    with SingleTickerProviderStateMixin {
+  static const Duration _duration = Duration(milliseconds: 320);
+
+  late final AnimationController _controller;
+  late final Animation<double> _fadeOut;
+  bool _retainLoading = false;
+  bool _tickerEnabled = false;
+  bool _pendingHide = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _retainLoading = widget.showLoading;
+    _controller = AnimationController(vsync: this, duration: _duration)
+      ..addStatusListener(_handleStatus);
+    _fadeOut = Tween<double>(
+      begin: 1,
+      end: 0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final enabled = TickerMode.valuesOf(context).enabled;
+    if (_tickerEnabled == enabled) return;
+    _tickerEnabled = enabled;
+    if (enabled && _pendingHide) {
+      _pendingHide = false;
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _CanteenInitialLoadingTransition oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.showLoading) {
+      _retainLoading = true;
+      _pendingHide = false;
+      _controller
+        ..stop()
+        ..value = 0;
+      return;
+    }
+    if (!_retainLoading) return;
+    if (_tickerEnabled) {
+      _pendingHide = false;
+      _controller.forward(from: 0);
+    } else {
+      _pendingHide = true;
+    }
+  }
+
+  void _handleStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !_retainLoading) return;
+    setState(() {
+      _retainLoading = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller
+      ..removeStatusListener(_handleStatus)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        widget.child,
+        if (_retainLoading)
+          FadeTransition(
+            opacity: _fadeOut,
+            child: const _CanteenLoadingSkeletonOverlay(),
+          ),
+      ],
+    );
+  }
+}
+
+class _CanteenLoadingSkeletonOverlay extends StatelessWidget {
+  const _CanteenLoadingSkeletonOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = dark ? const Color(0xFF2A2A2A) : const Color(0xFFE6E6E8);
+    final shimmerColor = dark
+        ? const Color(0xFF3A3A3A)
+        : const Color(0xFFF2F2F2);
+    return IgnorePointer(
+      child: ColoredBox(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: KeyedSubtree(
+          key: const ValueKey<String>('canteen_state_loading_shell'),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Column(
+              children: List<Widget>.generate(4, (index) {
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: index == 3 ? 0 : 12),
+                    child: _InitialMealSkeletonCard(
+                      baseColor: baseColor,
+                      shimmerColor: shimmerColor,
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InitialMealSkeletonCard extends StatelessWidget {
+  final Color baseColor;
+  final Color shimmerColor;
+
+  const _InitialMealSkeletonCard({
+    required this.baseColor,
+    required this.shimmerColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: baseColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final height = constraints.maxHeight;
+          final firstBarHeight = math.min(12.0, height * 0.18);
+          final secondBarHeight = math.min(9.0, height * 0.14);
+          return Stack(
+            children: [
+              Positioned(
+                left: 16,
+                right: 52,
+                top: height * 0.25,
+                height: firstBarHeight,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: shimmerColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 16,
+                right: 110,
+                top: height * 0.58,
+                height: secondBarHeight,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: shimmerColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _CanteenDayView extends StatelessWidget {
   final DateTime date;
+  final GlobalKey<_CanteenDayContentState> contentKey;
 
-  const _CanteenDayView({Key? key, required this.date}) : super(key: key);
+  const _CanteenDayView({
+    Key? key,
+    required this.date,
+    required this.contentKey,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Selector<CanteenViewModel, CanteenDayContentState>(
       selector: (context, model) => model.dayContentStateFor(date),
       builder: (context, selection, _) {
-        return _CanteenDayContent(selection: selection, date: date);
+        return _CanteenDayContent(
+          key: contentKey,
+          selection: selection,
+          date: date,
+        );
       },
     );
   }
@@ -540,7 +773,11 @@ class _CanteenDayContent extends StatefulWidget {
   final DateTime date;
   final CanteenDayContentState selection;
 
-  const _CanteenDayContent({required this.date, required this.selection});
+  const _CanteenDayContent({
+    super.key,
+    required this.date,
+    required this.selection,
+  });
 
   @override
   State<_CanteenDayContent> createState() => _CanteenDayContentState();

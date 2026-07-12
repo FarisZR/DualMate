@@ -43,9 +43,10 @@ durations, skeleton content, paging rules, or performance harness thresholds.
 - The existing 320 ms fade/slide transition is retained at the item boundary,
   allowing skeleton-to-meal and meal-count changes to progress without two
   full scrollable trees overlapping.
-- If cached data becomes ready while Canteen is still offstage, the outgoing
-  loading state is retained and the transition starts when `TickerMode` becomes
-  active. This prevents the animation from elapsing before the page is visible.
+- If cached data becomes ready while Canteen is still offstage, a lightweight
+  non-scrollable stable shell overlay retains the loading state and begins its
+  320 ms fade only when `TickerMode` becomes active. This prevents PageView child
+  reconfiguration from discarding the visible transition.
 - State keys remain available for loading, ready, and error/empty regression
   checks, and the existing skeleton card layout is unchanged.
 
@@ -98,7 +99,7 @@ remained the only diagnostic warning.
 # Validation
 
 - full `flutter analyze`: passed;
-- `flutter test test/canteen`: 56 tests passed;
+- `flutter test test/canteen`: 59 tests passed;
 - three-run diagnostic profile on the Pixel 8 Pro;
 - final post-hardening diagnostic profile on the Pixel 8 Pro;
 - no performance thresholds, fixture data, or integration harness files were

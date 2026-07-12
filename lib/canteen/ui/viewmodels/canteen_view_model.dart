@@ -120,8 +120,11 @@ class CanteenViewModel extends BaseViewModel {
   }
 
   List<Meal> mealsForDay(DateTime weekStart, DateTime date) {
+    final normalizedWeekStart = weekStartFor(weekStart);
     final normalizedDate = toStartOfDay(date);
-    final day = _weeklyRenderStates[weekStart]?.dayFor(normalizedDate);
+    final day = _weeklyRenderStates[normalizedWeekStart]?.dayFor(
+      normalizedDate,
+    );
     if (day == null) return const <Meal>[];
 
     final mealsByFilter = _filteredMealsCache.putIfAbsent(
@@ -460,10 +463,11 @@ class CanteenViewModel extends BaseViewModel {
   }
 
   void _setWeekLoading(DateTime weekStart, {required bool isLoading}) {
-    final current =
-        _weeklyRenderStates[weekStart] ??
-        CanteenWeekRenderState.empty(weekStart, isLoading: isLoading);
-    _setWeekState(weekStart, current.copyWith(isLoading: isLoading));
+    final current = _weeklyRenderStates[weekStart];
+    final next = current == null
+        ? CanteenWeekRenderState.empty(weekStart, isLoading: isLoading)
+        : current.copyWith(isLoading: isLoading);
+    _setWeekState(weekStart, next);
   }
 
   void _setWeekState(DateTime weekStart, CanteenWeekRenderState state) {

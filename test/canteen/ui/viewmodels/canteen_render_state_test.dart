@@ -6,6 +6,7 @@ import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/model/meal_type.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
 import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
+import 'package:dualmate/canteen/ui/viewmodels/canteen_render_state.dart';
 import 'package:dualmate/canteen/ui/viewmodels/canteen_view_model.dart';
 import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
@@ -37,6 +38,16 @@ void main() {
       final allMeals = model.mealsForDay(weekStart, weekStart);
       expect(
         identical(allMeals, model.mealsForDay(weekStart, weekStart)),
+        isTrue,
+      );
+      expect(
+        identical(
+          allMeals,
+          model.mealsForDay(
+            weekStart.add(const Duration(hours: 12)),
+            weekStart,
+          ),
+        ),
         isTrue,
       );
 
@@ -91,6 +102,157 @@ void main() {
     );
     expect(model.contentDaysForWeek(weekStart), <DateTime>[weekStart]);
   });
+
+  test('day render-state equality uses meal-list identity', () {
+    final date = DateTime(2026, 7, 13);
+    final meal = _meal(date, 'meal');
+    final meals = <Meal>[meal];
+    final first = CanteenDayRenderState(
+      date: date,
+      meals: meals,
+      hasWeekData: true,
+      isLoading: false,
+      error: null,
+      lastUpdated: null,
+    );
+    final sameIdentity = CanteenDayRenderState(
+      date: date,
+      meals: meals,
+      hasWeekData: true,
+      isLoading: false,
+      error: null,
+      lastUpdated: null,
+    );
+    final copiedList = CanteenDayRenderState(
+      date: date,
+      meals: <Meal>[meal],
+      hasWeekData: true,
+      isLoading: false,
+      error: null,
+      lastUpdated: null,
+    );
+
+    expect(first, sameIdentity);
+    expect(first.hashCode, sameIdentity.hashCode);
+    expect(first, isNot(copiedList));
+  });
+
+  test('week snapshots reuse meals and propagate status changes', () {
+    final weekStart = DateTime(2026, 7, 13);
+    final meal = _meal(weekStart, 'meal');
+    final first = CanteenWeekRenderState.fromMenus(weekStart, <DailyMenu>[
+      DailyMenu(date: weekStart, meals: <Meal>[meal]),
+    ]);
+    final refreshed = CanteenWeekRenderState.fromMenus(weekStart, <DailyMenu>[
+      DailyMenu(date: weekStart, meals: <Meal>[meal]),
+    ], previous: first);
+
+    expect(
+      identical(
+        first.dayFor(weekStart)!.meals,
+        refreshed.dayFor(weekStart)!.meals,
+      ),
+      isTrue,
+    );
+
+    final updatedAt = DateTime(2026, 7, 13, 12);
+    final loading = first.copyWith(
+      isLoading: true,
+      error: 'offline',
+      lastUpdated: updatedAt,
+    );
+    expect(loading.isLoading, isTrue);
+    expect(loading.error, 'offline');
+    expect(loading.lastUpdated, updatedAt);
+    for (final day in loading.days) {
+      expect(day.isLoading, isTrue);
+      expect(day.error, 'offline');
+      expect(day.lastUpdated, updatedAt);
+    }
+
+    final unchanged = loading.copyWith();
+    expect(unchanged.error, 'offline');
+    expect(unchanged.lastUpdated, updatedAt);
+
+    final cleared = loading.copyWith(error: null, lastUpdated: null);
+    expect(cleared.error, isNull);
+    expect(cleared.lastUpdated, isNull);
+    expect(cleared.days.every((day) => day.error == null), isTrue);
+    expect(cleared.days.every((day) => day.lastUpdated == null), isTrue);
+
+    expect(() => first.copyWith(menus: first.menus), throwsAssertionError);
+  });
+
+  test('day content equality ignores hidden status when meals are visible', () {
+    final date = DateTime(2026, 7, 13);
+    final meals = <Meal>[_meal(date, 'meal')];
+    final visible = CanteenDayContentState(
+      day: CanteenDayRenderState(
+        date: date,
+        meals: meals,
+        hasWeekData: true,
+        isLoading: false,
+        error: null,
+        lastUpdated: null,
+      ),
+      filter: CanteenFilter.all,
+      meals: meals,
+    );
+    final visibleWithBackgroundStatus = CanteenDayContentState(
+      day: CanteenDayRenderState(
+        date: date,
+        meals: meals,
+        hasWeekData: true,
+        isLoading: true,
+        error: 'offline',
+        lastUpdated: DateTime(2026, 7, 13, 12),
+      ),
+      filter: CanteenFilter.all,
+      meals: meals,
+    );
+
+    expect(visible, visibleWithBackgroundStatus);
+    expect(visible.hashCode, visibleWithBackgroundStatus.hashCode);
+
+    final emptyMeals = <Meal>[];
+    final empty = CanteenDayContentState(
+      day: CanteenDayRenderState(
+        date: date,
+        meals: emptyMeals,
+        hasWeekData: true,
+        isLoading: false,
+        error: null,
+        lastUpdated: null,
+      ),
+      filter: CanteenFilter.all,
+      meals: emptyMeals,
+    );
+    final emptyLoading = CanteenDayContentState(
+      day: CanteenDayRenderState(
+        date: date,
+        meals: emptyMeals,
+        hasWeekData: true,
+        isLoading: true,
+        error: null,
+        lastUpdated: null,
+      ),
+      filter: CanteenFilter.all,
+      meals: emptyMeals,
+    );
+
+    expect(empty, isNot(emptyLoading));
+  });
+}
+
+Meal _meal(DateTime date, String name) {
+  return Meal(
+    date: date,
+    name: name,
+    category: 'Main dish',
+    price: 3.5,
+    notes: const [],
+    mealTypes: const [MealType.vegan],
+  );
 }
 
 List<DailyMenu> _menusForWeek(DateTime weekStart, {String mealPrefix = ''}) {

@@ -198,6 +198,14 @@ class CanteenWeekRenderState {
     Object? error = _notSpecified,
     Object? lastUpdated = _notSpecified,
   }) {
+    assert(
+      (menus == null) == (days == null),
+      'menus and days must be supplied together so their entries correspond.',
+    );
+    assert(
+      menus == null || menus.length == days!.length,
+      'menus and days must contain corresponding entries.',
+    );
     final nextIsLoading = isLoading ?? this.isLoading;
     final nextError = identical(error, _notSpecified)
         ? this.error
