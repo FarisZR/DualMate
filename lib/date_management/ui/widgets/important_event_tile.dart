@@ -1,14 +1,9 @@
-import 'package:dualmate/common/i18n/localizations.dart';
-import 'package:dualmate/date_management/model/important_event.dart';
+import 'package:dualmate/date_management/ui/widgets/dates_render_data.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 class ImportantEventTile extends StatelessWidget {
-  static final Map<String, DateFormat> _dateFormats = <String, DateFormat>{};
-  static final Map<String, DateFormat> _timeFormats = <String, DateFormat>{};
-
-  final ImportantEvent event;
+  final ImportantEventRenderData renderData;
   final EdgeInsets contentPadding;
   final VisualDensity? visualDensity;
   final double dotSize;
@@ -18,7 +13,7 @@ class ImportantEventTile extends StatelessWidget {
 
   const ImportantEventTile({
     Key? key,
-    required this.event,
+    required this.renderData,
     required this.contentPadding,
     this.visualDensity,
     this.dotSize = 12,
@@ -29,48 +24,51 @@ class ImportantEventTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedTitleStyle = titleStyle ??
+    final preparedData = renderData;
+    final resolvedTitleStyle =
+        titleStyle ??
         (Theme.of(context).textTheme.bodyLarge ?? const TextStyle()).copyWith(
-          decoration: event.end.isBefore(DateTime.now())
-              ? TextDecoration.lineThrough
-              : null,
+          decoration: preparedData.isPast ? TextDecoration.lineThrough : null,
         );
 
     return ListTile(
       contentPadding: contentPadding,
       visualDensity: visualDensity,
       leading: _EventDot(
-        color: dotColor ?? _eventColor(context, event),
+        color: dotColor ?? _eventColor(context, preparedData),
         size: dotSize,
       ),
       isThreeLine: _showsProfessor,
-      title: Text(event.title, style: resolvedTitleStyle),
-      subtitle: _buildSubtitle(context),
+      title: Text(preparedData.event.title, style: resolvedTitleStyle),
+      subtitle: _buildSubtitle(context, preparedData),
     );
   }
 
   bool get _showsProfessor {
     return showProfessor &&
-        event.type == ScheduleEntryType.Exam &&
-        event.professor.trim().isNotEmpty;
+        renderData.event.type == ScheduleEntryType.Exam &&
+        renderData.event.professor.trim().isNotEmpty;
   }
 
-  Widget _buildSubtitle(BuildContext context) {
+  Widget _buildSubtitle(
+    BuildContext context,
+    ImportantEventRenderData preparedData,
+  ) {
     if (!_showsProfessor) {
-      return Text(_formatEventDate(context, event));
+      return Text(preparedData.dateText);
     }
 
     final professorStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        );
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(_formatEventDate(context, event)),
+        Text(preparedData.dateText),
         Text(
-          event.professor,
+          preparedData.event.professor,
           key: const Key('important_event_professor_text'),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -81,8 +79,8 @@ class ImportantEventTile extends StatelessWidget {
     );
   }
 
-  Color _eventColor(BuildContext context, ImportantEvent event) {
-    switch (event.type) {
+  Color _eventColor(BuildContext context, ImportantEventRenderData data) {
+    switch (data.event.type) {
       case ScheduleEntryType.Exam:
         return const Color(0xffff0000);
       case ScheduleEntryType.SpecialEvent:
@@ -93,28 +91,6 @@ class ImportantEventTile extends StatelessWidget {
         return Theme.of(context).disabledColor;
     }
   }
-
-  String _formatEventDate(BuildContext context, ImportantEvent event) {
-    final locale = L.of(context).locale.languageCode;
-    final dateFormat = _dateFormats.putIfAbsent(
-      locale,
-      () => DateFormat('dd/MM/yyyy', locale),
-    );
-    if (event.isSingleDay) {
-      final dateText = dateFormat.format(event.start);
-      if (event.hasTime) {
-        final timeText = _timeFormats
-            .putIfAbsent(locale, () => DateFormat.Hm(locale))
-            .format(event.start);
-        return "$dateText · $timeText";
-      }
-      return dateText;
-    }
-
-    final startDate = dateFormat.format(event.start);
-    final endDate = dateFormat.format(event.end);
-    return "$startDate - $endDate";
-  }
 }
 
 class _EventDot extends StatelessWidget {
@@ -122,17 +98,14 @@ class _EventDot extends StatelessWidget {
   final double size;
 
   const _EventDot({Key? key, required this.color, required this.size})
-      : super(key: key);
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }

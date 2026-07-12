@@ -2,19 +2,21 @@ import 'dart:async';
 
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/widgets/error_display.dart';
-import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/date_management/model/date_entry.dart';
+import 'package:dualmate/date_management/model/important_event_section.dart';
 import 'package:dualmate/date_management/ui/viewmodels/date_management_view_model.dart';
 import 'package:dualmate/date_management/ui/widgets/date_detail_bottom_sheet.dart';
 import 'package:dualmate/date_management/ui/widgets/date_filter_options.dart';
 import 'package:dualmate/date_management/ui/widgets/dates_empty_state.dart';
+import 'package:dualmate/date_management/ui/widgets/dates_render_data.dart';
+import 'package:dualmate/date_management/ui/widgets/dh_mine_dates_table.dart';
 import 'package:dualmate/date_management/ui/widgets/important_event_section_card.dart';
+import 'package:dualmate/date_management/ui/widgets/important_event_section_row.dart';
 import 'package:dualmate/schedule/ui/widgets/select_source_dialog.dart';
 import 'package:dualmate/ui/banner_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:intl/intl.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:provider/provider.dart';
@@ -24,13 +26,121 @@ class DateManagementPage extends StatefulWidget {
   State<DateManagementPage> createState() => _DateManagementPageState();
 }
 
+class _DatesLoadingIndicatorTransition extends StatefulWidget {
+  final bool showLoading;
+
+  const _DatesLoadingIndicatorTransition({required this.showLoading});
+
+  @override
+  State<_DatesLoadingIndicatorTransition> createState() =>
+      _DatesLoadingIndicatorTransitionState();
+}
+
+class _DatesLoadingIndicatorTransitionState
+    extends State<_DatesLoadingIndicatorTransition>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _hideController;
+  late final Animation<double> _opacity;
+  late bool _retainLoading;
+  bool _tickerEnabled = true;
+  bool _pendingHide = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _retainLoading = widget.showLoading;
+    _hideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    )..addStatusListener(_handleAnimationStatus);
+    _opacity = Tween<double>(
+      begin: 1,
+      end: 0,
+    ).animate(CurvedAnimation(parent: _hideController, curve: Curves.easeOut));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final tickerEnabled = TickerMode.valuesOf(context).enabled;
+    if (_tickerEnabled == tickerEnabled) return;
+
+    _tickerEnabled = tickerEnabled;
+    if (tickerEnabled && _pendingHide) {
+      _pendingHide = false;
+      _hideController.forward(from: 0);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _DatesLoadingIndicatorTransition oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.showLoading) {
+      _retainLoading = true;
+      _pendingHide = false;
+      _hideController
+        ..stop()
+        ..value = 0;
+      return;
+    }
+
+    if (!_retainLoading) return;
+    if (_tickerEnabled) {
+      _pendingHide = false;
+      _hideController.forward(from: 0);
+    } else {
+      _pendingHide = true;
+    }
+  }
+
+  void _handleAnimationStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !_retainLoading) return;
+    setState(() {
+      _retainLoading = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _hideController
+      ..removeStatusListener(_handleAnimationStatus)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_retainLoading) {
+      return const SizedBox(
+        key: ValueKey<String>('dates_loading_indicator_hidden'),
+      );
+    }
+    return FadeTransition(
+      opacity: _opacity,
+      child: const LinearProgressIndicator(
+        key: ValueKey<String>('dates_loading_indicator'),
+      ),
+    );
+  }
+}
+
 class _DateManagementPageState extends State<DateManagementPage> {
   static const Duration _initialLoadDelay = Duration(milliseconds: 320);
   static const double _importantEventsCacheExtent = 560;
 
   final ScrollController _raplaScrollController = ScrollController();
   Timer? _initializeTimer;
+  Timer? _renderDataTimeTimer;
   bool _raplaAutoloadScheduled = false;
+
+  DatesRenderData? _datesRenderData;
+  DateManagementViewModel? _renderedModel;
+  List<ImportantEventSection>? _renderedSections;
+  List<DateEntry>? _renderedDateEntries;
+  String? _renderedLocale;
+  int? _renderedDateEntriesKeyIndex;
+  int _renderDataTimeVersion = 0;
+  int? _renderedTimeVersion;
 
   @override
   void initState() {
@@ -55,6 +165,7 @@ class _DateManagementPageState extends State<DateManagementPage> {
   @override
   void dispose() {
     _initializeTimer?.cancel();
+    _renderDataTimeTimer?.cancel();
     _raplaScrollController.dispose();
     super.dispose();
   }
@@ -93,17 +204,12 @@ class _DateManagementPageState extends State<DateManagementPage> {
                       Stack(
                         children: <Widget>[
                           const Divider(),
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
-                            child:
-                                (headerModel.isLoading ||
-                                    (!headerModel.useDhMineForDates &&
-                                        headerModel.isLoadingNextRaplaPage &&
-                                        headerModel
-                                            .importantEventSections
-                                            .isEmpty))
-                                ? const LinearProgressIndicator()
-                                : Container(),
+                          _DatesLoadingIndicatorTransition(
+                            showLoading:
+                                headerModel.isLoading ||
+                                (!headerModel.useDhMineForDates &&
+                                    headerModel.isLoadingNextRaplaPage &&
+                                    headerModel.importantEventSections.isEmpty),
                           ),
                         ],
                       ),
@@ -154,89 +260,18 @@ class _DateManagementPageState extends State<DateManagementPage> {
     );
   }
 
-  Widget _buildAllDatesDataTable(
-    DateManagementViewModel model,
-    BuildContext context,
-  ) {
-    return DataTable(
-      key: ValueKey(model.dateEntriesKeyIndex),
-      rows: _buildDataTableRows(model, context),
-      columns: <DataColumn>[
-        DataColumn(
-          label: Text(L.of(context).dateManagementTableHeaderDescription),
-        ),
-        DataColumn(label: Text(L.of(context).dateManagementTableHeaderDate)),
-      ],
-    );
-  }
-
-  List<DataRow> _buildDataTableRows(
-    DateManagementViewModel model,
-    BuildContext context,
-  ) {
-    var dataRows = <DataRow>[];
-    for (DateEntry dateEntry in model.allDates) {
-      dataRows.add(
-        DataRow(
-          cells: <DataCell>[
-            DataCell(
-              Text(
-                dateEntry.description,
-                style: dateEntry.end.isBefore(DateTime.now())
-                    ? TextStyle(decoration: TextDecoration.lineThrough)
-                    : null,
-              ),
-              onTap: () {
-                showDateEntryDetailBottomSheet(context, dateEntry);
-              },
-            ),
-            DataCell(
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    DateFormat(
-                      'dd/MM/yyyy',
-                      L.of(context).locale.languageCode,
-                    ).format(dateEntry.start),
-                    style:
-                        Theme.of(context).textTheme.bodyLarge ??
-                        const TextStyle(),
-                  ),
-                  // When the date entry has a time of 00:00 don't show it.
-                  // It means the date entry is for the whole day
-                  isAtMidnight(dateEntry.start)
-                      ? Container()
-                      : Padding(
-                          padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
-                          child: Text(
-                            DateFormat.Hm(
-                              L.of(context).locale.languageCode,
-                            ).format(dateEntry.start),
-                          ),
-                        ),
-                ],
-              ),
-              onTap: () {
-                showDateEntryDetailBottomSheet(context, dateEntry);
-              },
-            ),
-          ],
-        ),
-      );
-    }
-
-    return dataRows;
-  }
-
   Widget _buildContent(DateManagementViewModel model, BuildContext context) {
+    final renderData = _getRenderData(model, context);
     if (model.useDhMineForDates) {
       return RefreshIndicator(
         onRefresh: () => model.updateDates(),
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: _buildAllDatesDataTable(model, context),
+        child: DhMineDatesTable(
+          key: ValueKey<String>('dhmine_dates_${model.dateEntriesKeyIndex}'),
+          entries: renderData.dateEntries,
+          dataKeyIndex: model.dateEntriesKeyIndex,
+          onEntryTap: (entry) {
+            showDateEntryDetailBottomSheet(context, entry.entry);
+          },
         ),
       );
     }
@@ -270,16 +305,62 @@ class _DateManagementPageState extends State<DateManagementPage> {
 
     return RefreshIndicator(
       onRefresh: () => model.updateDates(),
-      child: _buildImportantEventsList(model, context),
+      child: _buildImportantEventsList(model, context, renderData),
     );
+  }
+
+  DatesRenderData _getRenderData(
+    DateManagementViewModel model,
+    BuildContext context,
+  ) {
+    final locale = L.of(context).locale.languageCode;
+    final isCurrent =
+        _datesRenderData != null &&
+        identical(_renderedModel, model) &&
+        identical(_renderedSections, model.importantEventSections) &&
+        identical(_renderedDateEntries, model.allDates) &&
+        _renderedLocale == locale &&
+        _renderedDateEntriesKeyIndex == model.dateEntriesKeyIndex &&
+        _renderedTimeVersion == _renderDataTimeVersion;
+    if (isCurrent) return _datesRenderData!;
+
+    final now = DateTime.now();
+    final renderData = DatesRenderData.prepare(
+      sections: model.importantEventSections,
+      entries: model.allDates,
+      locale: locale,
+      now: now,
+    );
+    _datesRenderData = renderData;
+    _renderedModel = model;
+    _renderedSections = model.importantEventSections;
+    _renderedDateEntries = model.allDates;
+    _renderedLocale = locale;
+    _renderedDateEntriesKeyIndex = model.dateEntriesKeyIndex;
+    _renderedTimeVersion = _renderDataTimeVersion;
+    _scheduleRenderDataTimeUpdate(renderData.nextPastStateChange, now);
+    return renderData;
+  }
+
+  void _scheduleRenderDataTimeUpdate(DateTime? nextChange, DateTime now) {
+    _renderDataTimeTimer?.cancel();
+    if (nextChange == null) return;
+
+    final delay = nextChange.difference(now) + const Duration(milliseconds: 1);
+    _renderDataTimeTimer = Timer(delay, () {
+      if (!mounted) return;
+      setState(() {
+        _renderDataTimeVersion++;
+      });
+    });
   }
 
   Widget _buildImportantEventsList(
     DateManagementViewModel model,
     BuildContext context,
+    DatesRenderData renderData,
   ) {
-    var sections = model.importantEventSections;
-    if (sections.isEmpty) {
+    if (renderData.raplaItems.isEmpty) {
       _scheduleRaplaAutoload(model);
       return ListView(
         controller: _raplaScrollController,
@@ -293,7 +374,6 @@ class _DateManagementPageState extends State<DateManagementPage> {
       );
     }
 
-    var itemCount = sections.length + 1;
     _scheduleRaplaAutoload(model);
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
@@ -303,30 +383,40 @@ class _DateManagementPageState extends State<DateManagementPage> {
         }
         return false;
       },
-      child: ListView.separated(
+      child: ListView.builder(
+        key: const Key('rapla_dates_list'),
         controller: _raplaScrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        scrollCacheExtent: ScrollCacheExtent.pixels(_importantEventsCacheExtent),
+        scrollCacheExtent: ScrollCacheExtent.pixels(
+          _importantEventsCacheExtent,
+        ),
         itemBuilder: (context, index) {
-          if (index < sections.length) {
-            final section = sections[index];
-            final sectionKey =
-                section.header?.start.toIso8601String() ??
-                (section.events.isNotEmpty
-                    ? section.events.first.start.toIso8601String()
-                    : 'section_$index');
-            return RepaintBoundary(
-              child: ImportantEventSectionCard(
-                key: ValueKey('section_$sectionKey'),
-                section: section,
-              ),
-            );
+          if (index < renderData.raplaItems.length) {
+            final item = renderData.raplaItems[index];
+            Widget child;
+            if (item.isSection) {
+              child = Padding(
+                padding: EdgeInsets.only(top: item.sectionIndex > 0 ? 12 : 0),
+                child: ImportantEventSectionCard(renderData: item.section!),
+              );
+            } else {
+              child = ImportantEventSectionRow(item: item);
+            }
+            if (index == 0) {
+              return KeyedSubtree(
+                key: const Key('dates_rapla_first_item'),
+                child: child,
+              );
+            }
+            return child;
           }
-          return _buildRaplaFooter(model, context);
+          return Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: _buildRaplaFooter(model, context),
+          );
         },
-        separatorBuilder: (context, index) => const SizedBox(height: 12),
-        itemCount: itemCount,
+        itemCount: renderData.raplaItems.length + 1,
       ),
     );
   }

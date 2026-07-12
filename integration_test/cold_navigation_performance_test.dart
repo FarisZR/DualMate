@@ -7,7 +7,6 @@ import 'package:dualmate/canteen/ui/widgets/meal_card.dart';
 import 'package:dualmate/common/appstart/performance_fixture_mode.dart';
 import 'package:dualmate/common/appstart/performance_fixture_schedule_source.dart';
 import 'package:dualmate/date_management/ui/date_management_page.dart';
-import 'package:dualmate/date_management/ui/widgets/important_event_section_card.dart';
 import 'package:dualmate/dualis/ui/dualis_page.dart';
 import 'package:dualmate/dualis/ui/exam_results_page/exam_results_page.dart';
 import 'package:dualmate/dualis/service/fake_data_dualis_scraper.dart';
@@ -1241,7 +1240,7 @@ Future<_ScenarioEvidence> _waitForDateRowsWithProgression(
   WidgetTester tester, {
   bool settle = true,
 }) async {
-  final sections = find.byType(ImportantEventSectionCard);
+  final sections = find.byKey(const Key('dates_rapla_first_item'));
   final loading = find.byType(LinearProgressIndicator);
   var sawLoading = false;
   var sawRows = false;
@@ -1259,7 +1258,7 @@ Future<_ScenarioEvidence> _waitForDateRowsWithProgression(
   await _pumpUntilWithCallback(
     tester,
     condition: () => sections.evaluate().isNotEmpty,
-    description: 'populated cached Rapla Date sections',
+    description: 'populated cached Rapla Date rows',
     timeout: const Duration(seconds: 8),
     onPump: sample,
   );
