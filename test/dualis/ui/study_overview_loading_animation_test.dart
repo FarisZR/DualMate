@@ -45,14 +45,7 @@ void main() {
     );
 
     dualisService.completeModules([
-      Module(
-        const <Exam>[],
-        'M1',
-        'Algorithms',
-        '5',
-        '1.3',
-        ExamState.Passed,
-      ),
+      Module(const <Exam>[], 'M1', 'Algorithms', '5', '1.3', ExamState.Passed),
     ]);
 
     await tester.pumpAndSettle();
@@ -61,7 +54,16 @@ void main() {
       find.byKey(const ValueKey<String>('dualis_modules_loading')),
       findsNothing,
     );
-    expect(find.byType(DataTable), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('dualis_overview_module_row_0')),
+      findsOneWidget,
+    );
+    expect(find.byType(DataTable), findsNothing);
+
+    final tooltip = tester.widget<Tooltip>(find.byType(Tooltip).last);
+    final tooltipTarget = tester.getSize(find.byWidget(tooltip.child!));
+    expect(tooltipTarget.width, greaterThan(0));
+    expect(tooltipTarget.height, greaterThan(0));
   });
 
   testWidgets('shows loading placeholder while semester modules are fetched', (
@@ -87,19 +89,9 @@ void main() {
 
     dualisService.completeSemester(
       'WS2026',
-      Semester(
-        'WS2026',
-        [
-          Module(
-            const <Exam>[],
-            'M2',
-            'Databases',
-            '5',
-            '2.0',
-            ExamState.Passed,
-          ),
-        ],
-      ),
+      Semester('WS2026', [
+        Module(const <Exam>[], 'M2', 'Databases', '5', '2.0', ExamState.Passed),
+      ]),
     );
 
     await tester.pumpAndSettle();
@@ -108,7 +100,11 @@ void main() {
       find.byKey(const ValueKey<String>('dualis_semester_loading')),
       findsNothing,
     );
-    expect(find.byType(DataTable), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('dualis_exam_module_header_0')),
+      findsOneWidget,
+    );
+    expect(find.byType(DataTable), findsNothing);
   });
 
   testWidgets('exam rows do not overflow with long wrapped labels', (
@@ -129,26 +125,23 @@ void main() {
 
     dualisService.completeSemester(
       'SoSe 2026',
-      Semester(
-        'SoSe 2026',
-        [
-          Module(
-            [
-              Exam(
-                'Kombinierte Pruefung mit Klausur (<50 %) (100%)',
-                ExamGrade.graded('1,7'),
-                ExamState.Passed,
-                'SoSe 2026',
-              ),
-            ],
-            'M3',
-            'Schluesselqualifikationen',
-            '5,0',
-            '1,7',
-            ExamState.Passed,
-          ),
-        ],
-      ),
+      Semester('SoSe 2026', [
+        Module(
+          [
+            Exam(
+              'Kombinierte Pruefung mit Klausur (<50 %) (100%)',
+              ExamGrade.graded('1,7'),
+              ExamState.Passed,
+              'SoSe 2026',
+            ),
+          ],
+          'M3',
+          'Schluesselqualifikationen',
+          '5,0',
+          '1,7',
+          ExamState.Passed,
+        ),
+      ]),
     );
 
     await tester.pumpAndSettle();
@@ -160,7 +153,11 @@ void main() {
     }
 
     expect(exceptions, isEmpty);
-    expect(find.byType(DataTable), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('dualis_exam_row_0_0')),
+      findsOneWidget,
+    );
+    expect(find.byType(DataTable), findsNothing);
     expect(find.textContaining('Kombinierte Pruefung'), findsOneWidget);
   });
 }
@@ -223,9 +220,7 @@ class _BlockingDualisService extends DualisService {
   }
 
   @override
-  Future<List<Module>> queryAllModules([
-    CancellationToken? cancellationToken,
-  ]) {
+  Future<List<Module>> queryAllModules([CancellationToken? cancellationToken]) {
     return _allModulesCompleter.future;
   }
 
@@ -254,9 +249,7 @@ class _BlockingDualisService extends DualisService {
   }
 
   @override
-  Future<void> logout([
-    CancellationToken? cancellationToken,
-  ]) async {}
+  Future<void> logout([CancellationToken? cancellationToken]) async {}
 
   @override
   void clearCache() {}
@@ -269,8 +262,10 @@ class _BlockingDualisService extends DualisService {
   }
 
   void completeSemester(String name, Semester semester) {
-    final completer =
-        _semesterCompleters.putIfAbsent(name, () => Completer<Semester>());
+    final completer = _semesterCompleters.putIfAbsent(
+      name,
+      () => Completer<Semester>(),
+    );
     if (completer.isCompleted) {
       return;
     }
