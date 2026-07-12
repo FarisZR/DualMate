@@ -244,7 +244,7 @@ class RaplaListItem {
   final bool showDividerAfter;
   final bool isExamSection;
 
-  const RaplaListItem.section({
+  RaplaListItem.section({
     required ImportantEventSectionRenderData section,
     required this.sectionIndex,
   }) : section = section,
@@ -253,7 +253,7 @@ class RaplaListItem {
        position = ImportantEventRowPosition.single,
        isHeader = false,
        showDividerAfter = false,
-       isExamSection = false;
+       isExamSection = section.isExamSection;
 
   const RaplaListItem.row({
     required ImportantEventRenderData data,

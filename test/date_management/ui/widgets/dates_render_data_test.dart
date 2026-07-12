@@ -45,6 +45,41 @@ void main() {
     expect(renderData.dateEntries.single.isPast, isTrue);
   });
 
+  test('computes next past-state change from earliest future end', () {
+    final pastEvent = ImportantEvent(
+      title: 'Past',
+      start: DateTime(2026, 1, 1, 8),
+      end: DateTime(2026, 1, 1, 10),
+      type: ScheduleEntryType.Exam,
+    );
+    final laterFutureEvent = ImportantEvent(
+      title: 'Later future',
+      start: DateTime(2026, 3, 1, 8),
+      end: DateTime(2026, 3, 1, 10),
+      type: ScheduleEntryType.Exam,
+    );
+    final earlierFutureEvent = ImportantEvent(
+      title: 'Earlier future',
+      start: DateTime(2026, 2, 1, 8),
+      end: DateTime(2026, 2, 1, 9),
+      type: ScheduleEntryType.Exam,
+    );
+
+    final renderData = DatesRenderData.prepare(
+      sections: [
+        ImportantEventSection(
+          header: null,
+          events: [pastEvent, laterFutureEvent, earlierFutureEvent],
+        ),
+      ],
+      entries: const [],
+      locale: 'en',
+      now: DateTime(2026, 1, 15),
+    );
+
+    expect(renderData.nextPastStateChange, DateTime(2026, 2, 1, 9));
+  });
+
   test('flattens grouped sections with row positions', () {
     final section = ImportantEventSection(
       header: ImportantEvent(
@@ -122,6 +157,50 @@ void main() {
     expect(renderData.raplaItems, hasLength(1));
     expect(renderData.raplaItems.single.isSection, isTrue);
     expect(renderData.raplaItems.single.section!.events.single.event, event);
+  });
+
+  test('keeps the eager-row boundary as one card item', () {
+    final events = List<ImportantEvent>.generate(
+      DatesRenderData.maxEagerRowsPerSection,
+      (index) => ImportantEvent(
+        title: 'Event $index',
+        start: DateTime(2026, 2, index + 1),
+        end: DateTime(2026, 2, index + 1),
+        type: ScheduleEntryType.SpecialEvent,
+      ),
+    );
+
+    final renderData = DatesRenderData.prepare(
+      sections: [ImportantEventSection(header: null, events: events)],
+      entries: const [],
+      locale: 'en',
+      now: DateTime(2026, 1, 1),
+    );
+
+    expect(renderData.raplaItems, hasLength(1));
+    expect(renderData.raplaItems.single.isSection, isTrue);
+    expect(renderData.raplaItems.single.isExamSection, isFalse);
+  });
+
+  test('section items preserve exam-section metadata', () {
+    final event = ImportantEvent(
+      title: 'Exam',
+      start: DateTime(2026, 2, 2),
+      end: DateTime(2026, 2, 2),
+      type: ScheduleEntryType.Exam,
+    );
+
+    final renderData = DatesRenderData.prepare(
+      sections: [
+        ImportantEventSection(header: null, events: [event]),
+      ],
+      entries: const [],
+      locale: 'en',
+      now: DateTime(2026, 1, 1),
+    );
+
+    expect(renderData.raplaItems.single.isSection, isTrue);
+    expect(renderData.raplaItems.single.isExamSection, isTrue);
   });
 
   test('computes fixed table widths once for the viewport', () {

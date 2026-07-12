@@ -236,6 +236,7 @@ void main() {
       expect(find.byKey(const Key('rapla_section_0_row_0')), findsOneWidget);
       expect(find.byKey(const Key('rapla_section_0_row_1')), findsOneWidget);
       expect(find.byKey(const Key('rapla_section_0_row_2')), findsOneWidget);
+      expect(find.byKey(const Key('rapla_section_0_row_4')), findsOneWidget);
 
       final top = tester.widget<DecoratedBox>(
         find.byKey(const Key('rapla_section_0_row_0')),
