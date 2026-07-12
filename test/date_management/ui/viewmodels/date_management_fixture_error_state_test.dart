@@ -25,6 +25,30 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('prepare loads preferences without a remote date request', () async {
+    final preferences = PreferencesProvider(
+      _FakePreferencesAccess({
+        PreferencesProvider.UseDhMineForDates: true,
+        PreferencesProvider.RaplaUrlKey: '',
+        PreferencesProvider.LastViewedDateEntryDatabase: '',
+        PreferencesProvider.LastViewedDateEntryYear: DateTime.now().year
+            .toString(),
+      }),
+      _FakeSecureStorageAccess(),
+    );
+    final dateEntryProvider = _ThrowingDateEntryProvider();
+    final viewModel = DateManagementViewModel(
+      dateEntryProvider,
+      preferences,
+      _StubRaplaProvider(preferences),
+    );
+    addTearDown(viewModel.dispose);
+
+    await viewModel.prepare();
+
+    expect(dateEntryProvider.remoteRequests, 0);
+  });
+
   test(
     'fixture mode: successful cached DhMine load does not show error state',
     () async {
@@ -40,8 +64,8 @@ void main() {
           PreferencesProvider.UseDhMineForDates: true,
           PreferencesProvider.RaplaUrlKey: '',
           PreferencesProvider.LastViewedDateEntryDatabase: '',
-          PreferencesProvider.LastViewedDateEntryYear:
-              DateTime.now().year.toString(),
+          PreferencesProvider.LastViewedDateEntryYear: DateTime.now().year
+              .toString(),
         }),
         _FakeSecureStorageAccess(),
       );
@@ -59,9 +83,13 @@ void main() {
       viewModel.initialize();
       await Future<void>.delayed(const Duration(milliseconds: 200));
 
-      expect(viewModel.updateFailed, isFalse,
-          reason: 'Fixture mode must not report an error when the remote '
-              'fetch is intentionally skipped.');
+      expect(
+        viewModel.updateFailed,
+        isFalse,
+        reason:
+            'Fixture mode must not report an error when the remote '
+            'fetch is intentionally skipped.',
+      );
     },
   );
 }
@@ -96,8 +124,10 @@ class _FakeSecureStorageAccess extends SecureStorageAccess {
 }
 
 class _ThrowingDateEntryProvider extends DateEntryProvider {
+  int remoteRequests = 0;
+
   _ThrowingDateEntryProvider()
-      : super(_StubDateManagementService(), _StubDateEntryRepository());
+    : super(_StubDateManagementService(), _StubDateEntryRepository());
 
   @override
   Future<List<DateEntry>> getCachedDateEntries(
@@ -111,6 +141,7 @@ class _ThrowingDateEntryProvider extends DateEntryProvider {
     DateSearchParameters parameters,
     CancellationToken cancellationToken,
   ) async {
+    remoteRequests += 1;
     throw ServiceRequestFailed('simulated network failure');
   }
 }
@@ -129,11 +160,11 @@ class _StubDateEntryRepository extends DateEntryRepository {
 
 class _StubRaplaProvider extends RaplaImportantEventsProvider {
   _StubRaplaProvider(PreferencesProvider preferences)
-      : super(
-          preferences,
-          _StubScheduleProvider(preferences),
-          _StubScheduleSourceProvider(preferences),
-        );
+    : super(
+        preferences,
+        _StubScheduleProvider(preferences),
+        _StubScheduleSourceProvider(preferences),
+      );
 
   @override
   Future<List<ImportantEvent>> getCachedImportantEvents(
@@ -151,13 +182,13 @@ class _StubRaplaProvider extends RaplaImportantEventsProvider {
 
 class _StubScheduleProvider extends ScheduleProvider {
   _StubScheduleProvider(PreferencesProvider preferences)
-      : super(
-          _StubScheduleSourceProvider(preferences),
-          _StubScheduleEntryRepository(),
-          _StubScheduleQueryInfoRepository(),
-          preferences,
-          _StubScheduleFilterRepository(),
-        );
+    : super(
+        _StubScheduleSourceProvider(preferences),
+        _StubScheduleEntryRepository(),
+        _StubScheduleQueryInfoRepository(),
+        preferences,
+        _StubScheduleFilterRepository(),
+      );
 
   @override
   Future<Schedule> getCachedSchedule(DateTime start, DateTime end) async =>
@@ -169,18 +200,17 @@ class _StubScheduleProvider extends ScheduleProvider {
     DateTime end,
     CancellationToken cancellationToken, {
     ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
-  }) async =>
-      ScheduleQueryResult(Schedule(), <ParseError>[]);
+  }) async => ScheduleQueryResult(Schedule(), <ParseError>[]);
 }
 
 class _StubScheduleSourceProvider extends ScheduleSourceProvider {
   _StubScheduleSourceProvider(PreferencesProvider preferences)
-      : super(
-          preferences,
-          false,
-          _StubScheduleEntryRepository(),
-          _StubScheduleQueryInfoRepository(),
-        );
+    : super(
+        preferences,
+        false,
+        _StubScheduleEntryRepository(),
+        _StubScheduleQueryInfoRepository(),
+      );
 
   @override
   Future<bool> setupScheduleSource() async => true;
@@ -197,7 +227,8 @@ class _StubScheduleFilterRepository extends ScheduleFilterRepository {
   _StubScheduleFilterRepository() : super(_StubDatabaseAccess());
 }
 
-class _StubScheduleQueryInfoRepository extends ScheduleQueryInformationRepository {
+class _StubScheduleQueryInfoRepository
+    extends ScheduleQueryInformationRepository {
   _StubScheduleQueryInfoRepository() : super(_StubDatabaseAccess());
 }
 

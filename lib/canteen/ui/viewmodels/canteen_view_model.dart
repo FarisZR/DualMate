@@ -46,6 +46,21 @@ class CanteenViewModel extends BaseViewModel {
   CanteenViewModel(this._provider, this._locationService)
     : todayWeekStart = toStartOfDay(toMonday(DateTime.now()));
 
+  Future<void> prepareForNavigation() async {
+    if (isPerformanceFixtureMode) {
+      await _loadPerformanceFixtureData();
+      return;
+    }
+
+    await _loadSelectedLocation();
+    if (isDisposed || hasWeekData(todayWeekStart)) return;
+    await loadWeek(
+      todayWeekStart,
+      allowNetworkRefresh: false,
+      prefetchNextWeek: false,
+    );
+  }
+
   void initialize() {
     if (_initialized) return;
     _initialized = true;

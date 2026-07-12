@@ -1,6 +1,7 @@
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/ui/schedule_navigation_entry.dart';
 import 'package:dualmate/schedule/ui/schedule_page.dart';
 import 'package:dualmate/ui/main_page.dart';
@@ -34,10 +35,7 @@ void main() {
         GlobalCupertinoLocalizations.delegate,
         DefaultCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('en'),
-        Locale('de'),
-      ],
+      supportedLocales: const [Locale('en'), Locale('de')],
       home: const MainPage(
         initialRoute: 'schedule',
         showAppLaunchDialogs: false,
@@ -45,22 +43,30 @@ void main() {
     );
   }
 
-  testWidgets('shows a placeholder before the initial section mounts',
-      (tester) async {
+  testWidgets('shows a placeholder before the initial section mounts', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildTestApp());
 
-    expect(find.byKey(const ValueKey<String>('main_page_initial_placeholder')),
-        findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('main_page_initial_placeholder')),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('mounts the initial section after the startup delay',
-      (tester) async {
+  testWidgets('mounts the initial section after the startup delay', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildTestApp());
 
     await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump();
+    await tester.pump();
 
-    expect(find.byKey(const ValueKey<String>('main_page_initial_placeholder')),
-        findsNothing);
+    expect(
+      find.byKey(const ValueKey<String>('main_page_initial_placeholder')),
+      findsNothing,
+    );
 
     // Tear down the mounted section so its deferred timers are cancelled
     // before the binding checks for pending timers. The schedule view model is
@@ -79,6 +85,11 @@ void main() {
 }
 
 class _FakeScheduleProvider implements ScheduleProvider {
+  @override
+  Future<Schedule> getCachedSchedule(DateTime start, DateTime end) async {
+    return Schedule();
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) {
     throw UnsupportedError('Unexpected ScheduleProvider call: $invocation');

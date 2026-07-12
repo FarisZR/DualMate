@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 abstract class NavigationEntry<T extends BaseViewModel> {
   T? _viewModel;
+  Future<void>? _preparation;
+  NavigationEntryLifecycle _lifecycle = NavigationEntryLifecycle.cold;
 
   String get route;
 
@@ -11,22 +13,67 @@ abstract class NavigationEntry<T extends BaseViewModel> {
 
   Widget icon(BuildContext context);
 
-  Widget buildRoute(BuildContext context) {
-    var model = viewModel();
-    return ChangeNotifierProvider<T>.value(
-      value: model,
-      child: build(context),
-    );
+  NavigationEntryLifecycle get lifecycle => _lifecycle;
+
+  Future<void> prepare() {
+    _resetDisposedViewModel();
+    final existingPreparation = _preparation;
+    if (existingPreparation != null) {
+      return existingPreparation;
+    }
+
+    _lifecycle = NavigationEntryLifecycle.preparing;
+    final preparation = _prepare();
+    _preparation = preparation;
+    return preparation;
   }
+
+  Future<void> _prepare() async {
+    try {
+      viewModel();
+      await prepareSection();
+      if (_lifecycle != NavigationEntryLifecycle.active) {
+        _lifecycle = NavigationEntryLifecycle.prepared;
+      }
+    } catch (_) {
+      if (_lifecycle != NavigationEntryLifecycle.active) {
+        _lifecycle = NavigationEntryLifecycle.failed;
+      }
+      _preparation = null;
+      rethrow;
+    }
+  }
+
+  /// Hook for section-owned view-model/cache preparation. It must not mount
+  /// widgets; activation is the only lifecycle phase that builds a route.
+  Future<void> prepareSection() async {}
+
+  Widget activate(BuildContext context) {
+    final model = viewModel();
+    _lifecycle = NavigationEntryLifecycle.active;
+    return ChangeNotifierProvider<T>.value(value: model, child: build(context));
+  }
+
+  Widget buildRoute(BuildContext context) => activate(context);
 
   Widget build(BuildContext context);
 
   T viewModel() {
+    _resetDisposedViewModel();
     _viewModel ??= initViewModel();
     return _viewModel!;
+  }
+
+  void _resetDisposedViewModel() {
+    if (!(_viewModel?.isDisposed ?? false)) return;
+    _viewModel = null;
+    _preparation = null;
+    _lifecycle = NavigationEntryLifecycle.cold;
   }
 
   T initViewModel();
 
   List<Widget> appBarActions(BuildContext context) => [];
 }
+
+enum NavigationEntryLifecycle { cold, preparing, prepared, active, failed }

@@ -25,6 +25,14 @@ class SchedulePage extends StatefulWidget {
     _sharedWeeklyScheduleViewModel = null;
   }
 
+  static Future<void> prepareForActivation() {
+    SchedulePage._sharedWeeklyScheduleViewModel ??= WeeklyScheduleViewModel(
+      KiwiContainer().resolve(),
+      KiwiContainer().resolve(),
+    );
+    return SchedulePage._sharedWeeklyScheduleViewModel!.initialize();
+  }
+
   @override
   _SchedulePageState createState() => _SchedulePageState();
 }
