@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/data/preferences/preferences_access.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/data/preferences/secure_storage_access.dart';
@@ -10,6 +12,7 @@ import 'package:dualmate/date_management/model/date_search_parameters.dart';
 import 'package:dualmate/date_management/ui/date_management_page.dart';
 import 'package:dualmate/date_management/ui/viewmodels/date_management_view_model.dart';
 import 'package:dualmate/date_management/ui/widgets/dates_empty_state.dart';
+import 'package:dualmate/date_management/ui/widgets/important_event_tile.dart';
 import 'package:dualmate/date_management/service/date_management_service.dart';
 import 'package:dualmate/date_management/data/date_entry_repository.dart';
 import 'package:dualmate/common/data/database_access.dart';
@@ -22,6 +25,7 @@ import 'package:dualmate/schedule/data/schedule_query_information_repository.dar
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,12 +34,10 @@ import 'package:provider/provider.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('shows empty state when rapla and DHmine unconfigured',
-      (WidgetTester tester) async {
-    final viewModel = _buildViewModel(
-      useDhMineForDates: false,
-      raplaUrl: '',
-    );
+  testWidgets('shows empty state when rapla and DHmine unconfigured', (
+    WidgetTester tester,
+  ) async {
+    final viewModel = _buildViewModel(useDhMineForDates: false, raplaUrl: '');
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
     await tester.pump(const Duration(milliseconds: 420));
@@ -72,8 +74,9 @@ void main() {
     viewModel.dispose();
   });
 
-  testWidgets('pull to refresh triggers updateDates in rapla mode',
-      (WidgetTester tester) async {
+  testWidgets('pull to refresh triggers updateDates in rapla mode', (
+    WidgetTester tester,
+  ) async {
     final viewModel = _buildViewModel(
       useDhMineForDates: false,
       raplaUrl: 'https://rapla.dhbw-stuttgart.de/rapla?key=abc',
@@ -98,8 +101,9 @@ void main() {
     viewModel.dispose();
   });
 
-  testWidgets('pull to refresh triggers updateDates in DHmine mode',
-      (WidgetTester tester) async {
+  testWidgets('pull to refresh triggers updateDates in DHmine mode', (
+    WidgetTester tester,
+  ) async {
     final viewModel = _buildViewModel(
       useDhMineForDates: true,
       raplaUrl: '',
@@ -124,8 +128,9 @@ void main() {
     viewModel.dispose();
   });
 
-  testWidgets('defers dates initialization to keep first drawer open smooth',
-      (WidgetTester tester) async {
+  testWidgets('defers dates initialization to keep first drawer open smooth', (
+    WidgetTester tester,
+  ) async {
     final viewModel = _buildViewModel(
       useDhMineForDates: false,
       raplaUrl: 'https://rapla.dhbw-stuttgart.de/rapla?key=abc',
@@ -148,9 +153,268 @@ void main() {
     await tester.pump();
     viewModel.dispose();
   });
+
+  testWidgets('lazily constructs flattened Rapla rows', (
+    WidgetTester tester,
+  ) async {
+    final events = List<ImportantEvent>.generate(
+      80,
+      (index) => ImportantEvent(
+        title: 'Rapla event $index',
+        start: DateTime(2026, 8, 1).add(Duration(days: index)),
+        end: DateTime(2026, 8, 1, 1).add(Duration(days: index)),
+        type: ScheduleEntryType.PublicHoliday,
+      ),
+    );
+    final viewModel = _buildViewModel(
+      useDhMineForDates: false,
+      raplaUrl: 'https://rapla.dhbw-stuttgart.de/rapla?key=abc',
+      importantEvents: events,
+    );
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump(const Duration(milliseconds: 420));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('rapla_dates_list')), findsOneWidget);
+    expect(find.text('Rapla event 0'), findsOneWidget);
+    expect(find.text('Rapla event 79'), findsNothing);
+    expect(
+      find.byType(ImportantEventTile).evaluate().length,
+      lessThan(events.length),
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
+
+  testWidgets(
+    'preserves flattened section top, middle, and bottom decoration',
+    (WidgetTester tester) async {
+      final viewModel = _buildViewModel(
+        useDhMineForDates: false,
+        raplaUrl: 'https://rapla.dhbw-stuttgart.de/rapla?key=abc',
+        importantEvents: [
+          ImportantEvent(
+            title: 'Klausurwoche',
+            start: DateTime(2026, 8, 10),
+            end: DateTime(2026, 8, 14),
+            type: ScheduleEntryType.SpecialEvent,
+          ),
+          ImportantEvent(
+            title: 'Exam 1',
+            start: DateTime(2026, 8, 11, 8),
+            end: DateTime(2026, 8, 11, 10),
+            type: ScheduleEntryType.Exam,
+          ),
+          ImportantEvent(
+            title: 'Exam 2',
+            start: DateTime(2026, 8, 12, 8),
+            end: DateTime(2026, 8, 12, 10),
+            type: ScheduleEntryType.Exam,
+          ),
+          ImportantEvent(
+            title: 'Exam 3',
+            start: DateTime(2026, 8, 13, 8),
+            end: DateTime(2026, 8, 13, 10),
+            type: ScheduleEntryType.Exam,
+          ),
+          ImportantEvent(
+            title: 'Exam 4',
+            start: DateTime(2026, 8, 14, 8),
+            end: DateTime(2026, 8, 14, 10),
+            type: ScheduleEntryType.Exam,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(_wrapWithApp(viewModel));
+      await tester.pump(const Duration(milliseconds: 420));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('rapla_section_0_row_0')), findsOneWidget);
+      expect(find.byKey(const Key('rapla_section_0_row_1')), findsOneWidget);
+      expect(find.byKey(const Key('rapla_section_0_row_2')), findsOneWidget);
+      expect(find.byKey(const Key('rapla_section_0_row_4')), findsOneWidget);
+
+      final top = tester.widget<DecoratedBox>(
+        find.byKey(const Key('rapla_section_0_row_0')),
+      );
+      final middle = tester.widget<DecoratedBox>(
+        find.byKey(const Key('rapla_section_0_row_1')),
+      );
+      final bottom = tester.widget<DecoratedBox>(
+        find.byKey(const Key('rapla_section_0_row_4')),
+      );
+
+      expect(top.decoration, isA<BoxDecoration>());
+      expect(
+        (top.decoration as BoxDecoration).borderRadius,
+        isA<BorderRadius>(),
+      );
+      expect(
+        (middle.decoration as BoxDecoration).borderRadius,
+        BorderRadius.zero,
+      );
+      expect(
+        (bottom.decoration as BoxDecoration).borderRadius,
+        isA<BorderRadius>(),
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      viewModel.dispose();
+    },
+  );
+
+  testWidgets('uses lazy fixed-width DH-Mine rows for long data', (
+    WidgetTester tester,
+  ) async {
+    final entries = List<DateEntry>.generate(
+      100,
+      (index) => DateEntry(
+        description: 'DH-Mine date $index with a long description',
+        year: '2026',
+        comment: '',
+        databaseName: 'Termine_Horb_INF',
+        start: DateTime(2026, 8, 1, 8).add(Duration(days: index)),
+        end: DateTime(2026, 8, 1, 10).add(Duration(days: index)),
+        room: '',
+      ),
+    );
+    final viewModel = _buildViewModel(
+      useDhMineForDates: true,
+      raplaUrl: '',
+      dateEntries: entries,
+    );
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump(const Duration(milliseconds: 420));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('dhmine_dates_list')), findsOneWidget);
+    expect(find.byType(DataTable), findsNothing);
+    expect(find.byType(SingleChildScrollView), findsNothing);
+    expect(find.text('DH-Mine date 99 with a long description'), findsNothing);
+
+    await tester.scrollUntilVisible(
+      find.text('DH-Mine date 99 with a long description'),
+      500,
+      scrollable: find.descendant(
+        of: find.byKey(const Key('dhmine_dates_list')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    expect(
+      find.text('DH-Mine date 99 with a long description'),
+      findsOneWidget,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
+
+  testWidgets(
+    'keeps loading indicator through the loading-to-content transition',
+    (WidgetTester tester) async {
+      final loading = Completer<void>();
+      final viewModel = _buildViewModel(
+        useDhMineForDates: false,
+        raplaUrl: 'https://rapla.dhbw-stuttgart.de/rapla?key=abc',
+        importantEvents: _sampleEvents(),
+        raplaLoading: loading.future,
+      );
+      final tickerEnabled = ValueNotifier<bool>(false);
+      addTearDown(tickerEnabled.dispose);
+
+      await tester.pumpWidget(
+        _wrapWithApp(viewModel, tickerEnabledNotifier: tickerEnabled),
+      );
+      await tester.pump(const Duration(milliseconds: 420));
+      await tester.pump();
+
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(find.text('Exam A'), findsNothing);
+
+      loading.complete();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 240));
+
+      expect(find.text('Exam A'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+
+      tickerEnabled.value = true;
+      await tester.pump();
+      expect(find.text('Exam A'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 120));
+      expect(find.byType(LinearProgressIndicator), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      viewModel.dispose();
+    },
+  );
+
+  testWidgets('keeps Rapla scroll position correct while constructing rows', (
+    WidgetTester tester,
+  ) async {
+    final events = List<ImportantEvent>.generate(
+      60,
+      (index) => ImportantEvent(
+        title: 'Scrollable event $index',
+        start: DateTime(2026, 8, 1).add(Duration(days: index)),
+        end: DateTime(2026, 8, 1, 1).add(Duration(days: index)),
+        type: ScheduleEntryType.PublicHoliday,
+      ),
+    );
+    final viewModel = _buildViewModel(
+      useDhMineForDates: false,
+      raplaUrl: 'https://rapla.dhbw-stuttgart.de/rapla?key=abc',
+      importantEvents: events,
+    );
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump(const Duration(milliseconds: 420));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Scrollable event 59'),
+      500,
+      scrollable: find.descendant(
+        of: find.byKey(const Key('rapla_dates_list')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    expect(find.text('Scrollable event 59'), findsOneWidget);
+    expect(find.text('Scrollable event 0'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
 }
 
-Widget _wrapWithApp(DateManagementViewModel viewModel) {
+Widget _wrapWithApp(
+  DateManagementViewModel viewModel, {
+  bool tickerEnabled = true,
+  ValueListenable<bool>? tickerEnabledNotifier,
+}) {
+  final page = DateManagementPage();
+  final body = tickerEnabledNotifier == null
+      ? TickerMode(enabled: tickerEnabled, child: page)
+      : ValueListenableBuilder<bool>(
+          valueListenable: tickerEnabledNotifier,
+          child: page,
+          builder: (context, enabled, child) {
+            return TickerMode(enabled: enabled, child: child!);
+          },
+        );
   return ChangeNotifierProvider<DateManagementViewModel>.value(
     value: viewModel,
     child: MaterialApp(
@@ -161,9 +425,7 @@ Widget _wrapWithApp(DateManagementViewModel viewModel) {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('en'), Locale('de')],
-      home: Scaffold(
-        body: DateManagementPage(),
-      ),
+      home: Scaffold(body: body),
     ),
   );
 }
@@ -172,6 +434,8 @@ _TrackingDateManagementViewModel _buildViewModel({
   required bool useDhMineForDates,
   required String raplaUrl,
   List<ImportantEvent> importantEvents = const [],
+  List<DateEntry> dateEntries = const [],
+  Future<void>? raplaLoading,
 }) {
   final preferencesAccess = _FakePreferencesAccess({
     PreferencesProvider.UseDhMineForDates: useDhMineForDates,
@@ -184,10 +448,11 @@ _TrackingDateManagementViewModel _buildViewModel({
     _FakeSecureStorageAccess(),
   );
 
-  final dateEntryProvider = _FakeDateEntryProvider();
+  final dateEntryProvider = _FakeDateEntryProvider(dateEntries);
   final raplaProvider = _FakeRaplaImportantEventsProvider(
     preferencesProvider,
     importantEvents,
+    raplaLoading,
   );
 
   return _TrackingDateManagementViewModel(
@@ -206,10 +471,10 @@ class _TrackingDateManagementViewModel extends DateManagementViewModel {
     PreferencesProvider preferencesProvider,
     RaplaImportantEventsProvider raplaImportantEventsProvider,
   ) : super(
-          dateEntryProvider,
-          preferencesProvider,
-          raplaImportantEventsProvider,
-        );
+        dateEntryProvider,
+        preferencesProvider,
+        raplaImportantEventsProvider,
+      );
 
   @override
   void initialize() {
@@ -273,13 +538,16 @@ class _FakeSecureStorageAccess extends SecureStorageAccess {
 }
 
 class _FakeDateEntryProvider extends DateEntryProvider {
-  _FakeDateEntryProvider()
-      : super(_FakeDateManagementService(), _FakeDateEntryRepository());
+  final List<DateEntry> _entries;
+
+  _FakeDateEntryProvider(this._entries)
+    : super(_FakeDateManagementService(), _FakeDateEntryRepository());
 
   @override
   Future<List<DateEntry>> getCachedDateEntries(
-      DateSearchParameters parameters) async {
-    return <DateEntry>[];
+    DateSearchParameters parameters,
+  ) async {
+    return _entries;
   }
 
   @override
@@ -287,7 +555,7 @@ class _FakeDateEntryProvider extends DateEntryProvider {
     DateSearchParameters parameters,
     CancellationToken cancellationToken,
   ) async {
-    return <DateEntry>[];
+    return _entries;
   }
 }
 
@@ -307,21 +575,26 @@ class _FakeDateEntryRepository extends DateEntryRepository {
 
 class _FakeRaplaImportantEventsProvider extends RaplaImportantEventsProvider {
   final List<ImportantEvent> _events;
+  final Future<void>? _loading;
 
   _FakeRaplaImportantEventsProvider(
     PreferencesProvider preferencesProvider,
     this._events,
+    this._loading,
   ) : super(
-          preferencesProvider,
-          _FakeScheduleProvider(preferencesProvider),
-          _FakeScheduleSourceProvider(preferencesProvider),
-        );
+        preferencesProvider,
+        _FakeScheduleProvider(preferencesProvider),
+        _FakeScheduleSourceProvider(preferencesProvider),
+      );
 
   @override
   Future<List<ImportantEvent>> getCachedImportantEvents(
     DateTime start,
     DateTime end,
   ) async {
+    if (_loading != null) {
+      await _loading;
+    }
     return _events;
   }
 
@@ -337,13 +610,13 @@ class _FakeRaplaImportantEventsProvider extends RaplaImportantEventsProvider {
 
 class _FakeScheduleProvider extends ScheduleProvider {
   _FakeScheduleProvider(PreferencesProvider preferencesProvider)
-      : super(
-          _FakeScheduleSourceProvider(preferencesProvider),
-          _FakeScheduleEntryRepository(),
-          _FakeScheduleQueryInformationRepository(),
-          preferencesProvider,
-          _FakeScheduleFilterRepository(),
-        );
+    : super(
+        _FakeScheduleSourceProvider(preferencesProvider),
+        _FakeScheduleEntryRepository(),
+        _FakeScheduleQueryInformationRepository(),
+        preferencesProvider,
+        _FakeScheduleFilterRepository(),
+      );
 
   @override
   Future<Schedule> getCachedSchedule(DateTime start, DateTime end) async {
@@ -363,12 +636,12 @@ class _FakeScheduleProvider extends ScheduleProvider {
 
 class _FakeScheduleSourceProvider extends ScheduleSourceProvider {
   _FakeScheduleSourceProvider(PreferencesProvider preferencesProvider)
-      : super(
-          preferencesProvider,
-          false,
-          _FakeScheduleEntryRepository(),
-          _FakeScheduleQueryInformationRepository(),
-        );
+    : super(
+        preferencesProvider,
+        false,
+        _FakeScheduleEntryRepository(),
+        _FakeScheduleQueryInformationRepository(),
+      );
 
   @override
   Future<bool> setupScheduleSource() async {
@@ -399,22 +672,26 @@ class _FakeDatabaseAccess extends DatabaseAccess {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> queryRows(String table,
-      {bool? distinct,
-      List<String>? columns,
-      String? where,
-      List<dynamic>? whereArgs,
-      String? groupBy,
-      String? having,
-      String? orderBy,
-      int? limit,
-      int? offset}) async {
+  Future<List<Map<String, dynamic>>> queryRows(
+    String table, {
+    bool? distinct,
+    List<String>? columns,
+    String? where,
+    List<dynamic>? whereArgs,
+    String? groupBy,
+    String? having,
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) async {
     return <Map<String, dynamic>>[];
   }
 
   @override
   Future<List<Map<String, dynamic>>> rawQuery(
-      String sql, List<dynamic> parameters) async {
+    String sql,
+    List<dynamic> parameters,
+  ) async {
     return <Map<String, dynamic>>[];
   }
 
