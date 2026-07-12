@@ -24,5 +24,7 @@ void main() {
     expect(PerformanceTelemetry.frameBudgetMicrosForRefreshRate(120), 8334);
     expect(PerformanceTelemetry.frameBudgetMicrosForRefreshRate(60), 16667);
     expect(PerformanceTelemetry.frameBudgetMicrosForRefreshRate(null), 16667);
+    expect(PerformanceTelemetry.frameBudgetMicrosForRefreshRate(0), 16667);
+    expect(PerformanceTelemetry.frameBudgetMicrosForRefreshRate(-1), 16667);
   });
 }

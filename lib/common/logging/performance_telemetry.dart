@@ -37,11 +37,12 @@ class PerformanceTelemetry {
   void _onFrameTimings(List<FrameTiming> timings) {
     final frameBudgetMicros = _frameBudgetMicros();
     for (final timing in timings) {
-      final build = timing.buildDuration.inMilliseconds;
-      final raster = timing.rasterDuration.inMilliseconds;
+      final buildMicros = timing.buildDuration.inMicroseconds;
+      final rasterMicros = timing.rasterDuration.inMicroseconds;
+      final buildMs = buildMicros / Duration.microsecondsPerMillisecond;
+      final rasterMs = rasterMicros / Duration.microsecondsPerMillisecond;
       final isJanky =
-          timing.buildDuration.inMicroseconds > frameBudgetMicros ||
-          timing.rasterDuration.inMicroseconds > frameBudgetMicros;
+          buildMicros > frameBudgetMicros || rasterMicros > frameBudgetMicros;
       if (!isJanky) continue;
 
       final now = DateTime.now();
@@ -53,14 +54,14 @@ class PerformanceTelemetry {
 
       _lastJankFrameLogAt = now;
       developer.log(
-        'janky frame timing: build=${build}ms raster=${raster}ms',
+        'janky frame timing: build=${buildMs}ms raster=${rasterMs}ms',
         name: 'perf.frame',
       );
       unawaited(
         AppDiagnostics.instance.recordInfo(
           'perf.frame',
           'janky frame timing',
-          data: {'buildMs': build, 'rasterMs': raster},
+          data: {'buildMs': buildMs, 'rasterMs': rasterMs},
         ),
       );
     }
