@@ -8,11 +8,13 @@ import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/appstart/performance_fixture_mode.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/util/date_utils.dart';
+import 'package:dualmate/canteen/ui/viewmodels/canteen_render_state.dart';
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
 class CanteenViewModel extends BaseViewModel {
+  static const String weekStateProperty = 'weekState';
   static const Duration defaultStaleAfter = Duration(hours: 2);
   static const Duration _adjacentPrefetchDebounceDelay = Duration(
     milliseconds: 250,
@@ -24,16 +26,15 @@ class CanteenViewModel extends BaseViewModel {
   final DateTime todayWeekStart;
   CanteenFilter filter = CanteenFilter.all;
 
-  final Map<DateTime, List<DailyMenu>> _weeklyMenus = {};
-  final Map<DateTime, String?> _weekErrors = {};
+  final Map<DateTime, CanteenWeekRenderState> _weeklyRenderStates = {};
   final Map<DateTime, int> _loadingWeeks = {};
-  final Map<DateTime, DateTime> _weekLastUpdated = {};
   final Map<DateTime, DateTime> _weekLastRefreshRequestAt = {};
+  final Map<DateTime, Map<CanteenFilter, List<Meal>>> _filteredMealsCache = {};
   bool _initialized = false;
   Timer? _adjacentPrefetchDebounceTimer;
   DateTime? _lastAdjacentPrefetchCenterWeekStart;
   List<DateTime> _visibleContentDaysCache = const <DateTime>[];
-  bool _visibleContentDaysDirty = true;
+  final Set<DateTime> _visibleContentDaySet = <DateTime>{};
   CanteenLocation _selectedLocation = CanteenLocations.defaultLocation;
   int _locationGeneration = 0;
   CanteenMenuUpdatedCallback? _menuUpdatedCallback;
@@ -64,7 +65,7 @@ class CanteenViewModel extends BaseViewModel {
 
     unawaited(_loadSelectedLocation());
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_weeklyMenus.containsKey(todayWeekStart)) return;
+      if (_weeklyRenderStates.containsKey(todayWeekStart)) return;
       primeVisibleWeek(todayWeekStart);
     });
   }
@@ -95,23 +96,23 @@ class CanteenViewModel extends BaseViewModel {
   }
 
   List<DailyMenu> weeklyMenusFor(DateTime weekStart) {
-    return _weeklyMenus[weekStart] ?? [];
+    return _weeklyRenderStates[weekStart]?.menus ?? const <DailyMenu>[];
   }
 
   bool hasWeekData(DateTime weekStart) {
-    return _weeklyMenus.containsKey(weekStart);
+    return _weeklyRenderStates.containsKey(weekStart);
   }
 
   bool isLoadingWeek(DateTime weekStart) {
-    return _loadingWeeks.containsKey(weekStart);
+    return _weeklyRenderStates[weekStart]?.isLoading ?? false;
   }
 
   String? errorForWeek(DateTime weekStart) {
-    return _weekErrors[weekStart];
+    return _weeklyRenderStates[weekStart]?.error;
   }
 
   DateTime? lastUpdatedForWeek(DateTime weekStart) {
-    return _weekLastUpdated[weekStart];
+    return _weeklyRenderStates[weekStart]?.lastUpdated;
   }
 
   DateTime weekStartFor(DateTime date) {
@@ -119,12 +120,39 @@ class CanteenViewModel extends BaseViewModel {
   }
 
   List<Meal> mealsForDay(DateTime weekStart, DateTime date) {
-    var menu = weeklyMenusFor(weekStart).firstWhere(
-      (entry) => isAtSameDay(entry.date, date),
-      orElse: () => DailyMenu(date: date, meals: []),
+    final normalizedWeekStart = weekStartFor(weekStart);
+    final normalizedDate = toStartOfDay(date);
+    final day = _weeklyRenderStates[normalizedWeekStart]?.dayFor(
+      normalizedDate,
     );
+    if (day == null) return const <Meal>[];
 
-    return menu.meals.where(filter.allowsMeal).toList();
+    final mealsByFilter = _filteredMealsCache.putIfAbsent(
+      normalizedDate,
+      () => <CanteenFilter, List<Meal>>{},
+    );
+    return mealsByFilter.putIfAbsent(
+      filter,
+      () => List<Meal>.unmodifiable(day.meals.where(filter.allowsMeal)),
+    );
+  }
+
+  CanteenDayRenderState dayRenderStateFor(DateTime date) {
+    final weekStart = weekStartFor(date);
+    return _weeklyRenderStates[weekStart]?.dayFor(date) ??
+        CanteenDayRenderState.empty(date);
+  }
+
+  CanteenDayContentState dayContentStateFor(DateTime date) {
+    return CanteenDayContentState(
+      day: dayRenderStateFor(date),
+      filter: filter,
+      meals: mealsForDay(weekStartFor(date), date),
+    );
+  }
+
+  List<DateTime> contentDaysForWeek(DateTime weekStart) {
+    return _weeklyRenderStates[weekStart]?.contentDays ?? const <DateTime>[];
   }
 
   List<Meal> mealsForDate(DateTime date) {
@@ -132,24 +160,7 @@ class CanteenViewModel extends BaseViewModel {
   }
 
   List<DateTime> get visibleContentDays {
-    if (!_visibleContentDaysDirty) {
-      return List.unmodifiable(_visibleContentDaysCache);
-    }
-
-    final days = <DateTime>{};
-
-    for (final weeklyMenus in _weeklyMenus.values) {
-      for (final menu in weeklyMenus) {
-        if (menu.meals.isEmpty) continue;
-        days.add(toStartOfDay(menu.date));
-      }
-    }
-
-    final sortedDays = days.toList();
-    sortedDays.sort((a, b) => a.compareTo(b));
-    _visibleContentDaysCache = List.unmodifiable(sortedDays);
-    _visibleContentDaysDirty = false;
-    return List.unmodifiable(_visibleContentDaysCache);
+    return _visibleContentDaysCache;
   }
 
   DateTime? nearestVisibleContentDay(
@@ -188,12 +199,19 @@ class CanteenViewModel extends BaseViewModel {
       args: {'isForcedRefresh': forceRefresh, 'sourceType': 'unknown'},
       action: (_) async {
         final requestGeneration = _locationGeneration;
+        final hadWeekDataBeforeLoad = _weeklyRenderStates.containsKey(
+          weekStart,
+        );
+        final hadContentBeforeLoad = _hasWeekContent(weekStart);
         _loadingWeeks[weekStart] = requestGeneration;
-        notifyIfMounted("loadingWeeks");
+        _setWeekLoading(weekStart, isLoading: true);
+        if (!hadContentBeforeLoad) {
+          notifyIfMounted(weekStateProperty);
+        }
 
         try {
           final shouldReloadFromDatabase =
-              forceRefresh || !_weeklyMenus.containsKey(weekStart);
+              forceRefresh || !hadWeekDataBeforeLoad;
 
           if (shouldReloadFromDatabase) {
             final cachedMenusFuture = PerformanceTelemetry.instance.measureTask(
@@ -213,9 +231,13 @@ class CanteenViewModel extends BaseViewModel {
             var lastUpdated = await lastUpdatedFuture;
             if (!_isCurrentLocationRequest(requestGeneration)) return;
             if (lastUpdated != null) {
-              _weekLastUpdated[weekStart] = lastUpdated;
+              _setWeekState(
+                weekStart,
+                _weeklyRenderStates[weekStart]!.copyWith(
+                  lastUpdated: lastUpdated,
+                ),
+              );
             }
-            notifyIfMounted("weeklyMenus");
           }
 
           if (allowNetworkRefresh) {
@@ -243,21 +265,31 @@ class CanteenViewModel extends BaseViewModel {
               );
               if (!_isCurrentLocationRequest(requestGeneration)) return;
               _applyMenusForWeek(weekStart, menus);
-              _weekErrors[weekStart] = null;
-              _weekLastUpdated[weekStart] = DateTime.now();
+              _setWeekState(
+                weekStart,
+                _weeklyRenderStates[weekStart]!.copyWith(
+                  error: null,
+                  lastUpdated: DateTime.now(),
+                ),
+              );
             } catch (exception) {
               if (!_isCurrentLocationRequest(requestGeneration)) return;
               // keep cached data visible
-              _weekErrors[weekStart] = exception.toString();
+              final current =
+                  _weeklyRenderStates[weekStart] ??
+                  CanteenWeekRenderState.empty(weekStart);
+              _setWeekState(
+                weekStart,
+                current.copyWith(error: exception.toString()),
+              );
             }
           }
         } finally {
           if (_loadingWeeks[weekStart] == requestGeneration) {
             _loadingWeeks.remove(weekStart);
+            _setWeekLoading(weekStart, isLoading: false);
+            notifyIfMounted(weekStateProperty);
           }
-          notifyIfMounted("weeklyMenus");
-          notifyIfMounted("weekErrors");
-          notifyIfMounted("loadingWeeks");
         }
       },
     );
@@ -269,7 +301,7 @@ class CanteenViewModel extends BaseViewModel {
     bool prefetchNextWeek = true,
     Duration staleAfter = defaultStaleAfter,
   }) {
-    if (_weeklyMenus.containsKey(weekStart) ||
+    if (_weeklyRenderStates.containsKey(weekStart) ||
         _loadingWeeks.containsKey(weekStart)) {
       return;
     }
@@ -367,9 +399,7 @@ class CanteenViewModel extends BaseViewModel {
     notifyIfMounted("filter");
   }
 
-  Future<void> reloadSelectedLocation({
-    bool allowNetworkRefresh = true,
-  }) async {
+  Future<void> reloadSelectedLocation({bool allowNetworkRefresh = true}) async {
     await _loadSelectedLocation(
       reloadWeek: true,
       allowNetworkRefresh: allowNetworkRefresh,
@@ -385,11 +415,12 @@ class CanteenViewModel extends BaseViewModel {
     if (!_isCurrentLocationRequest(requestGeneration)) return;
     var weekStart = toStartOfDay(toMonday(start));
     _applyMenusForWeek(weekStart, menus);
-    _weekLastUpdated[weekStart] = DateTime.now();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_isCurrentLocationRequest(requestGeneration)) return;
-      notifyIfMounted("weeklyMenus");
-    });
+    final current = _weeklyRenderStates[weekStart];
+    if (current == null) return;
+    _setWeekState(weekStart, current.copyWith(lastUpdated: DateTime.now()));
+    if (!_loadingWeeks.containsKey(weekStart)) {
+      notifyIfMounted(weekStateProperty);
+    }
   }
 
   void _registerMenuUpdatedCallback() {
@@ -406,19 +437,56 @@ class CanteenViewModel extends BaseViewModel {
     _provider.addMenuUpdatedCallback(_menuUpdatedCallback!);
   }
 
-  void _markVisibleContentDaysDirty() {
-    _visibleContentDaysDirty = true;
-  }
-
   void _applyMenusForWeek(DateTime weekStart, List<DailyMenu> menus) {
     PerformanceTelemetry.instance.measureSync(
       'canteen.state.apply',
       args: {'entryCount': menus.length, 'sourceType': 'unknown'},
       action: (_) {
-        _weeklyMenus[weekStart] = menus;
-        _markVisibleContentDaysDirty();
+        final previous = _weeklyRenderStates[weekStart];
+        if (previous != null) {
+          _visibleContentDaySet.removeAll(previous.contentDays);
+          _invalidateFilteredMeals(previous);
+        }
+        final current = CanteenWeekRenderState.fromMenus(
+          weekStart,
+          menus,
+          previous: previous,
+          isLoading: previous?.isLoading ?? false,
+          error: previous?.error,
+          lastUpdated: previous?.lastUpdated,
+        );
+        _setWeekState(weekStart, current);
+        _visibleContentDaySet.addAll(current.contentDays);
+        _updateVisibleContentDaysCache();
       },
     );
+  }
+
+  void _setWeekLoading(DateTime weekStart, {required bool isLoading}) {
+    final current = _weeklyRenderStates[weekStart];
+    final next = current == null
+        ? CanteenWeekRenderState.empty(weekStart, isLoading: isLoading)
+        : current.copyWith(isLoading: isLoading);
+    _setWeekState(weekStart, next);
+  }
+
+  void _setWeekState(DateTime weekStart, CanteenWeekRenderState state) {
+    _weeklyRenderStates[weekStart] = state;
+  }
+
+  bool _hasWeekContent(DateTime weekStart) {
+    return _weeklyRenderStates[weekStart]?.contentDays.isNotEmpty ?? false;
+  }
+
+  void _invalidateFilteredMeals(CanteenWeekRenderState state) {
+    for (final day in state.days) {
+      _filteredMealsCache.remove(day.date);
+    }
+  }
+
+  void _updateVisibleContentDaysCache() {
+    final sortedDays = _visibleContentDaySet.toList()..sort();
+    _visibleContentDaysCache = List<DateTime>.unmodifiable(sortedDays);
   }
 
   bool _isCurrentLocationRequest(int requestGeneration) {
@@ -438,16 +506,15 @@ class CanteenViewModel extends BaseViewModel {
       return;
     }
 
-    _weeklyMenus.clear();
-    _weekErrors.clear();
+    _weeklyRenderStates.clear();
     _loadingWeeks.clear();
-    _weekLastUpdated.clear();
     _weekLastRefreshRequestAt.clear();
     _locationGeneration++;
     _registerMenuUpdatedCallback();
-    _markVisibleContentDaysDirty();
-    notifyIfMounted('weeklyMenus');
-    notifyIfMounted('loadingWeeks');
+    _filteredMealsCache.clear();
+    _visibleContentDaySet.clear();
+    _visibleContentDaysCache = const <DateTime>[];
+    notifyIfMounted(weekStateProperty);
     unawaited(
       loadWeek(
         todayWeekStart,
