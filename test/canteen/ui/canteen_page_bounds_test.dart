@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/canteen/business/canteen_provider.dart';
 import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
 import 'package:dualmate/canteen/model/daily_menu.dart';
@@ -142,6 +144,103 @@ void main() {
     expect(delegate.childCount, 2);
   });
 
+  testWidgets('keeps the pager mounted while loading becomes content', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    final today = _normalizeToWeekday(now);
+    final weekStart = toStartOfDay(toMonday(today));
+    final cacheGate = Completer<void>();
+    final provider = _FakeCanteenProvider({
+      weekStart: _buildWeekMenusWithSingleDayMeal(weekStart, today),
+    }, cacheGate: cacheGate);
+    final viewModel = CanteenViewModel(provider, TestCanteenLocationService());
+    addTearDown(viewModel.dispose);
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump(const Duration(milliseconds: 260));
+    await tester.pump();
+
+    final pageViewFinder = find.byKey(
+      const ValueKey<String>('canteen_page_view'),
+    );
+    final pageViewElement = tester.element(pageViewFinder);
+    expect(
+      find.byKey(const ValueKey<String>('canteen_page_view')),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate((widget) {
+        final key = widget.key;
+        return key is ValueKey<String> &&
+            key.value.startsWith('canteen_state_loading_');
+      }),
+      findsWidgets,
+    );
+
+    cacheGate.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 160));
+
+    expect(tester.element(pageViewFinder), same(pageViewElement));
+    expect(
+      find
+          .descendant(
+            of: find.byType(CanteenPage),
+            matching: find.byType(Scrollable),
+          )
+          .evaluate()
+          .length,
+      2,
+    );
+    expect(
+      find.byWidgetPredicate((widget) {
+        final key = widget.key;
+        return key is ValueKey<String> &&
+            key.value.startsWith('canteen_state_loading_');
+      }),
+      findsWidgets,
+    );
+    expect(
+      find.byWidgetPredicate((widget) {
+        final key = widget.key;
+        return key is ValueKey<String> &&
+            key.value.startsWith('canteen_state_ready_');
+      }),
+      findsWidgets,
+    );
+    await tester.pump(const Duration(milliseconds: 220));
+    expect(find.text(_mealNameFor(today)), findsOneWidget);
+  });
+
+  testWidgets('does not keep the previous day content after a pager swipe', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    final today = _normalizeToWeekday(now);
+    final tomorrow = today.add(const Duration(days: 1));
+    final weekStart = toStartOfDay(toMonday(today));
+    final provider = _FakeCanteenProvider({
+      weekStart: _buildWeekMenusWithMealDays(weekStart, {today, tomorrow}),
+    });
+    final viewModel = CanteenViewModel(provider, TestCanteenLocationService());
+    addTearDown(viewModel.dispose);
+    await viewModel.loadWeek(weekStart, allowNetworkRefresh: false);
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await _pumpFor(tester, const Duration(milliseconds: 700));
+    final pageRect = tester.getRect(
+      find.byKey(const ValueKey<String>('canteen_page_view')),
+    );
+    expect(_hasVisibleText(tester, _mealNameFor(today), pageRect), isTrue);
+
+    await tester.fling(find.byType(PageView), const Offset(-600, 0), 1400);
+    await _pumpFor(tester, const Duration(milliseconds: 600));
+
+    expect(_hasVisibleText(tester, _mealNameFor(tomorrow), pageRect), isTrue);
+    expect(_hasVisibleText(tester, _mealNameFor(today), pageRect), isFalse);
+  });
+
   test('defers page sync while pager is transitioning or scrolling', () {
     expect(
       shouldDeferCanteenPageSync(
@@ -255,23 +354,26 @@ void main() {
     );
   });
 
-  test('keeps the page-content mode key stable for paged content', () {
-    final monday = DateTime(2026, 2, 9);
-    final tuesday = monday.add(const Duration(days: 1));
+  test(
+    'keeps the page-content mode key stable from loading through paging',
+    () {
+      final monday = DateTime(2026, 2, 9);
+      final tuesday = monday.add(const Duration(days: 1));
 
-    expect(
-      canteenPageContentModeKey(const <DateTime>[]),
-      'canteen_page_content_single',
-    );
-    expect(
-      canteenPageContentModeKey(<DateTime>[monday]),
-      'canteen_page_content_paged',
-    );
-    expect(
-      canteenPageContentModeKey(<DateTime>[monday, tuesday]),
-      'canteen_page_content_paged',
-    );
-  });
+      expect(
+        canteenPageContentModeKey(const <DateTime>[]),
+        'canteen_page_content',
+      );
+      expect(
+        canteenPageContentModeKey(<DateTime>[monday]),
+        'canteen_page_content',
+      );
+      expect(
+        canteenPageContentModeKey(<DateTime>[monday, tuesday]),
+        'canteen_page_content',
+      );
+    },
+  );
 
   test('finds a canteen day index from its stable key', () {
     final monday = DateTime(2026, 2, 9);
@@ -294,6 +396,16 @@ Future<void> _pumpFor(WidgetTester tester, Duration total) async {
   for (var i = 0; i < iterations; i++) {
     await tester.pump(step);
   }
+}
+
+bool _hasVisibleText(WidgetTester tester, String text, Rect viewport) {
+  for (final element in find.text(text).evaluate()) {
+    final renderObject = element.renderObject;
+    if (renderObject is! RenderBox || !renderObject.hasSize) continue;
+    final rect = renderObject.localToGlobal(Offset.zero) & renderObject.size;
+    if (!rect.intersect(viewport).isEmpty) return true;
+  }
+  return false;
 }
 
 Widget _wrapWithApp(CanteenViewModel viewModel) {
@@ -369,15 +481,19 @@ class _FakeCanteenProvider extends CanteenProvider {
   final Map<DateTime, List<DailyMenu>> _menusByWeek;
   final List<CanteenMenuUpdatedCallback> _callbacks = [];
   final bool cacheOnlyKnownWeeks;
+  final Completer<void>? cacheGate;
   final Set<DateTime> _cachedWeeks = <DateTime>{};
 
-  _FakeCanteenProvider(this._menusByWeek, {this.cacheOnlyKnownWeeks = false})
-    : super(
-        CanteenMealRepository(_FakeDatabaseAccess()),
-        TestCanteenLocationService(),
-        CanteenScraper(),
-        DhbwAppCanteenSource(),
-      );
+  _FakeCanteenProvider(
+    this._menusByWeek, {
+    this.cacheOnlyKnownWeeks = false,
+    this.cacheGate,
+  }) : super(
+         CanteenMealRepository(_FakeDatabaseAccess()),
+         TestCanteenLocationService(),
+         CanteenScraper(),
+         DhbwAppCanteenSource(),
+       );
 
   @override
   void addMenuUpdatedCallback(CanteenMenuUpdatedCallback callback) {
@@ -391,6 +507,7 @@ class _FakeCanteenProvider extends CanteenProvider {
 
   @override
   Future<List<DailyMenu>> getCachedWeek(DateTime date) async {
+    await cacheGate?.future;
     final weekStart = toStartOfDay(toMonday(date));
     if (cacheOnlyKnownWeeks && !_cachedWeeks.contains(weekStart)) {
       return _emptyWeek(weekStart);
