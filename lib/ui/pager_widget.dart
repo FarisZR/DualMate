@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
@@ -33,6 +35,8 @@ class _PagerWidgetState extends State<PagerWidget> {
   int _currentPage = 0;
   final Set<int> _loadedPages = <int>{};
   final Map<int, Widget> _pageCache = {};
+  int? _pendingPageToPersist;
+  bool _pagePersistenceScheduled = false;
 
   @override
   void initState() {
@@ -73,9 +77,7 @@ class _PagerWidgetState extends State<PagerWidget> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentPage,
-        onTap: (int index) async {
-          await setActivePage(index);
-        },
+        onTap: setActivePage,
         items: buildBottomNavigationBarItems(),
       ),
     );
@@ -86,16 +88,13 @@ class _PagerWidgetState extends State<PagerWidget> {
 
     for (var page in widget.pages) {
       bottomNavigationBarItems.add(
-        BottomNavigationBarItem(
-          icon: page.icon,
-          label: page.text,
-        ),
+        BottomNavigationBarItem(icon: page.icon, label: page.text),
       );
     }
     return bottomNavigationBarItems;
   }
 
-  Future<void> setActivePage(int page, {bool force = false}) async {
+  void setActivePage(int page, {bool force = false}) {
     if (page < 0 || page >= widget.pages.length) {
       return;
     }
@@ -105,8 +104,30 @@ class _PagerWidgetState extends State<PagerWidget> {
       _loadedPages.add(page);
     });
     if (widget.pagesId != null) {
-      await preferencesProvider.set("${widget.pagesId}_active_page", page);
+      _schedulePagePersistence(page);
     }
+  }
+
+  void _schedulePagePersistence(int page) {
+    _pendingPageToPersist = page;
+    if (_pagePersistenceScheduled) {
+      return;
+    }
+
+    _pagePersistenceScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _pagePersistenceScheduled = false;
+      final pageToPersist = _pendingPageToPersist;
+      _pendingPageToPersist = null;
+      final pagesId = widget.pagesId;
+      if (pageToPersist == null || pagesId == null) {
+        return;
+      }
+
+      unawaited(
+        preferencesProvider.set("${pagesId}_active_page", pageToPersist),
+      );
+    });
   }
 
   Future<void> loadActivePage() async {
@@ -129,7 +150,7 @@ class _PagerWidgetState extends State<PagerWidget> {
   void _handleForcedPage() async {
     final forced = widget.forcedPage?.value;
     if (forced == null) return;
-    await setActivePage(forced, force: true);
+    setActivePage(forced, force: true);
     widget.forcedPage?.value = null;
   }
 
