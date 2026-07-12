@@ -12,6 +12,114 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+    'equivalent visible schedule results keep the same snapshot version',
+    () async {
+      final provider = _EquivalentScheduleProvider(<ScheduleEntry>[
+        _entry(DateTime(2026, 2, 9), 'CURRENT_WEEK'),
+      ]);
+      final viewModel = WeeklyScheduleViewModel(
+        provider,
+        _FakeScheduleSourceProvider(),
+        nowProvider: () => DateTime(2026, 2, 10, 10),
+      );
+      addTearDown(viewModel.dispose);
+
+      final weekStart = DateTime(2026, 2, 9);
+      final weekEnd = DateTime(2026, 2, 16);
+      await viewModel.updateSchedule(weekStart, weekEnd, force: true);
+
+      final initialSnapshot = viewModel.visibleScheduleSnapshot!;
+      var notifications = 0;
+      viewModel.addListener((_) => notifications += 1, const ['weekSchedule']);
+
+      await viewModel.updateSchedule(
+        weekStart,
+        weekEnd,
+        force: true,
+        awaitRefresh: true,
+      );
+
+      expect(notifications, 0);
+      expect(
+        viewModel.visibleScheduleSnapshot!.version,
+        initialSnapshot.version,
+      );
+      expect(
+        viewModel.visibleScheduleSnapshot!.entries.single.title,
+        'CURRENT_WEEK',
+      );
+    },
+  );
+
+  test(
+    'latest valid cache and refresh result wins after paging settles',
+    () async {
+      final provider = _CacheThenUpdatedScheduleProvider();
+      final viewModel = WeeklyScheduleViewModel(
+        provider,
+        _FakeScheduleSourceProvider(),
+        nowProvider: () => DateTime(2026, 2, 10, 10),
+      );
+      addTearDown(viewModel.dispose);
+
+      final weekStart = DateTime(2026, 2, 9);
+      final weekEnd = DateTime(2026, 2, 16);
+      await viewModel.updateSchedule(
+        weekStart,
+        weekEnd,
+        force: true,
+        awaitRefresh: true,
+      );
+      expect(viewModel.weekSchedule!.entries.single.title, 'CACHED_WEEK');
+
+      viewModel.beginVisiblePaging();
+      await viewModel.updateSchedule(
+        weekStart,
+        weekEnd,
+        force: true,
+        awaitRefresh: true,
+      );
+
+      expect(viewModel.weekSchedule!.entries.single.title, 'CACHED_WEEK');
+
+      viewModel.endVisiblePaging(weekStart, weekEnd);
+
+      expect(viewModel.weekSchedule!.entries.single.title, 'REFRESHED_WEEK');
+    },
+  );
+
+  test(
+    'queued result for a week that is no longer settled is discarded',
+    () async {
+      final provider = _CacheThenUpdatedScheduleProvider();
+      final viewModel = WeeklyScheduleViewModel(
+        provider,
+        _FakeScheduleSourceProvider(),
+        nowProvider: () => DateTime(2026, 2, 10, 10),
+      );
+      addTearDown(viewModel.dispose);
+
+      final weekStart = DateTime(2026, 2, 9);
+      final weekEnd = DateTime(2026, 2, 16);
+      final otherWeekStart = DateTime(2026, 2, 16);
+      final otherWeekEnd = DateTime(2026, 2, 23);
+      await viewModel.updateSchedule(weekStart, weekEnd, force: true);
+
+      viewModel.beginVisiblePaging();
+      await viewModel.updateSchedule(
+        weekStart,
+        weekEnd,
+        force: true,
+        awaitRefresh: true,
+      );
+      viewModel.endVisiblePaging(otherWeekStart, otherWeekEnd);
+
+      expect(viewModel.currentDateStart, weekStart);
+      expect(viewModel.weekSchedule!.entries.single.title, 'CACHED_WEEK');
+    },
+  );
+
   test('cached week commit updates weekSchedule after pager settles', () async {
     final viewModel = WeeklyScheduleViewModel(
       _FakeScheduleProvider(<ScheduleEntry>[
@@ -385,6 +493,53 @@ class _FakeScheduleProvider implements ScheduleProvider {
   @override
   dynamic noSuchMethod(Invocation invocation) {
     throw UnsupportedError('Unexpected ScheduleProvider call: $invocation');
+  }
+}
+
+class _EquivalentScheduleProvider extends _FakeScheduleProvider {
+  _EquivalentScheduleProvider(super.entries);
+
+  @override
+  Future<Schedule> getCachedSchedule(DateTime start, DateTime end) async {
+    final schedule = await super.getCachedSchedule(start, end);
+    return Schedule.fromList(
+      schedule.entries.map((entry) => entry.copyWith()).toList(),
+    );
+  }
+
+  @override
+  Future<ScheduleQueryResult> getUpdatedSchedule(
+    DateTime start,
+    DateTime end,
+    CancellationToken cancellationToken, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
+  }) async {
+    return ScheduleQueryResult(await getCachedSchedule(start, end), const []);
+  }
+}
+
+class _CacheThenUpdatedScheduleProvider extends _FakeScheduleProvider {
+  var _updateCount = 0;
+
+  _CacheThenUpdatedScheduleProvider() : super(const <ScheduleEntry>[]);
+
+  @override
+  Future<Schedule> getCachedSchedule(DateTime start, DateTime end) async {
+    return Schedule.fromList([_entry(start, 'CACHED_WEEK')]);
+  }
+
+  @override
+  Future<ScheduleQueryResult> getUpdatedSchedule(
+    DateTime start,
+    DateTime end,
+    CancellationToken cancellationToken, {
+    ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
+  }) async {
+    final title = _updateCount++ == 0 ? 'CACHED_WEEK' : 'REFRESHED_WEEK';
+    return ScheduleQueryResult(
+      Schedule.fromList([_entry(start, title)]),
+      const [],
+    );
   }
 }
 

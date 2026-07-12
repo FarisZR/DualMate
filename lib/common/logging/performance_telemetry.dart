@@ -35,10 +35,13 @@ class PerformanceTelemetry {
   }
 
   void _onFrameTimings(List<FrameTiming> timings) {
+    final frameBudgetMicros = _frameBudgetMicros();
     for (final timing in timings) {
       final build = timing.buildDuration.inMilliseconds;
       final raster = timing.rasterDuration.inMilliseconds;
-      final isJanky = build > 16 || raster > 16;
+      final isJanky =
+          timing.buildDuration.inMicroseconds > frameBudgetMicros ||
+          timing.rasterDuration.inMicroseconds > frameBudgetMicros;
       if (!isJanky) continue;
 
       final now = DateTime.now();
@@ -184,6 +187,18 @@ class PerformanceTelemetry {
     } catch (_) {
       return null;
     }
+  }
+
+  int _frameBudgetMicros() {
+    return frameBudgetMicrosForRefreshRate(_refreshRateHz());
+  }
+
+  @visibleForTesting
+  static int frameBudgetMicrosForRefreshRate(int? refreshRateHz) {
+    if (refreshRateHz == null || refreshRateHz <= 0) {
+      return (Duration.microsecondsPerSecond / 60).ceil();
+    }
+    return (Duration.microsecondsPerSecond / refreshRateHz).ceil();
   }
 
   String _deviceTier(int refreshRateHz) {

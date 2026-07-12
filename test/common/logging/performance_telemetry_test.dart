@@ -19,4 +19,10 @@ void main() {
       'parse_error',
     );
   });
+
+  test('frame budget follows the active display refresh rate', () {
+    expect(PerformanceTelemetry.frameBudgetMicrosForRefreshRate(120), 8334);
+    expect(PerformanceTelemetry.frameBudgetMicrosForRefreshRate(60), 16667);
+    expect(PerformanceTelemetry.frameBudgetMicrosForRefreshRate(null), 16667);
+  });
 }

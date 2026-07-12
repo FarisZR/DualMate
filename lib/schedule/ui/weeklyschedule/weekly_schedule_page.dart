@@ -355,6 +355,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
       onNotification: (notification) {
         if (notification is ScrollStartNotification) {
           _setPagerScrolling(true);
+          viewModel.beginVisiblePaging();
         }
         if (notification is ScrollEndNotification) {
           _setPagerScrolling(false);
@@ -403,13 +404,21 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   }
 
   Future<void> _commitVisibleWeekFromPager() async {
-    if (_isApplyingWidgetPayload) return;
     final page = _weekPageController.hasClients
         ? (_weekPageController.page ?? _currentPageIndex.toDouble()).round()
         : _currentPageIndex;
     _currentPageIndex = page;
 
     final targetWeekStart = _weekStartForPage(page);
+    final targetWeekEnd = toNextWeek(targetWeekStart);
+    if (_isApplyingWidgetPayload) {
+      viewModel.endVisiblePaging(
+        viewModel.currentDateStart,
+        viewModel.currentDateEnd,
+      );
+      return;
+    }
+    viewModel.endVisiblePaging(targetWeekStart, targetWeekEnd);
     if (isAtSameDay(
       targetWeekStart,
       _normalizeWeekStart(viewModel.currentDateStart),
