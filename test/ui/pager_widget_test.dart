@@ -17,66 +17,65 @@ void main() {
     KiwiContainer().clear();
   });
 
-  testWidgets(
-    'Dualis tab selection is immediate and persisted after the frame',
-    (tester) async {
-      final preferencesAccess = _TrackingPreferencesAccess();
-      KiwiContainer().registerInstance<PreferencesProvider>(
-        PreferencesProvider(preferencesAccess, _FakeSecureStorageAccess()),
-      );
+  testWidgets('tab selection is immediate and persisted after the frame', (
+    tester,
+  ) async {
+    final preferencesAccess = _TrackingPreferencesAccess();
+    KiwiContainer().registerInstance<PreferencesProvider>(
+      PreferencesProvider(preferencesAccess, _FakeSecureStorageAccess()),
+    );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: PagerWidget(
-            pagesId: 'dualis_pager',
-            pages: [
-              PageDefinition(
-                text: 'Overview',
-                icon: const Icon(Icons.dashboard),
-                builder: (_) => const Text('overview_content'),
-              ),
-              PageDefinition(
-                text: 'Exams',
-                icon: const Icon(Icons.book),
-                builder: (_) => const Text('exams_content'),
-              ),
-            ],
-          ),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PagerWidget(
+          pagesId: 'dualis_pager',
+          pages: [
+            PageDefinition(
+              text: 'Overview',
+              icon: const Icon(Icons.dashboard),
+              builder: (_) => const Text('overview_content'),
+            ),
+            PageDefinition(
+              text: 'Exams',
+              icon: const Icon(Icons.book),
+              builder: (_) => const Text('exams_content'),
+            ),
+          ],
         ),
-      );
-      await tester.pump();
+      ),
+    );
+    await tester.pump();
 
-      final bottomNavigationBar = tester.widget<BottomNavigationBar>(
-        find.byType(BottomNavigationBar),
-      );
-      bottomNavigationBar.onTap!(1);
-      expect(preferencesAccess.writes, isEmpty);
+    final bottomNavigationBar = tester.widget<BottomNavigationBar>(
+      find.byType(BottomNavigationBar),
+    );
+    bottomNavigationBar.onTap!(1);
+    expect(preferencesAccess.writes, isEmpty);
 
-      await tester.pump();
-      expect(find.text('exams_content'), findsOneWidget);
-      expect(preferencesAccess.writes, hasLength(1));
-      expect(preferencesAccess.writes.single.key, 'dualis_pager_active_page');
-      expect(preferencesAccess.writes.single.value, 1);
+    await tester.pump();
+    expect(find.text('exams_content'), findsOneWidget);
+    expect(preferencesAccess.writes, hasLength(1));
+    expect(preferencesAccess.writes.single.key, 'dualis_pager_active_page');
+    expect(preferencesAccess.writes.single.value, 1);
 
-      final switchedBackNavigationBar = tester.widget<BottomNavigationBar>(
-        find.byType(BottomNavigationBar),
-      );
-      switchedBackNavigationBar.onTap!(0);
-      expect(preferencesAccess.writes, hasLength(1));
+    final switchedBackNavigationBar = tester.widget<BottomNavigationBar>(
+      find.byType(BottomNavigationBar),
+    );
+    switchedBackNavigationBar.onTap!(0);
+    expect(preferencesAccess.writes, hasLength(1));
 
-      await tester.pump();
-      expect(find.text('overview_content'), findsOneWidget);
+    await tester.pump();
+    expect(find.text('overview_content'), findsOneWidget);
 
-      expect(
-        preferencesAccess.writes.map((entry) => entry.key),
-        everyElement('dualis_pager_active_page'),
-      );
-      expect(preferencesAccess.writes.map((entry) => entry.value), <Object>[
-        1,
-        0,
-      ]);
-    },
-  );
+    expect(
+      preferencesAccess.writes.map((entry) => entry.key),
+      everyElement('dualis_pager_active_page'),
+    );
+    expect(preferencesAccess.writes.map((entry) => entry.value), <Object>[
+      1,
+      0,
+    ]);
+  });
 
   testWidgets('pending tab selection persists when pager is disposed', (
     tester,

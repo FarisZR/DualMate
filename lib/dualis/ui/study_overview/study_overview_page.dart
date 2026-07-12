@@ -325,7 +325,7 @@ class _OverviewTableHeader extends StatelessWidget {
               width: _OverviewTableLayout.stateWidth,
               child: Tooltip(
                 message: localizations.dualisOverviewPassedColumnHeader,
-                child: const SizedBox.shrink(),
+                child: const SizedBox(width: double.infinity, height: 24),
               ),
             ),
           ],

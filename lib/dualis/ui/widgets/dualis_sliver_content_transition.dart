@@ -45,7 +45,8 @@ class _DualisSliverContentTransitionState
   void didUpdateWidget(covariant DualisSliverContentTransition oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (widget.showLoading != oldWidget.showLoading) {
+    if (widget.showLoading != oldWidget.showLoading ||
+        widget.contentKey != oldWidget.contentKey) {
       _controller.forward(from: 0);
     }
   }

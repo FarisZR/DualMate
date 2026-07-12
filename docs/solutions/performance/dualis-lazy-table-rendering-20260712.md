@@ -70,6 +70,8 @@ Tests cover:
 - deferred persistence after a frame;
 - persistence when the pager is disposed;
 - rapid-selection coalescing to the latest page;
+- generic pager persistence coverage in the mirrored `test/ui` tree;
+- content-key-only sliver fade restarts and a hittable overview tooltip target;
 - absence of eager `DataTable` trees.
 
 # Pixel 8 Pro results
@@ -108,7 +110,7 @@ meaningful than that percentage.
 # Validation
 
 - full `flutter analyze`;
-- `flutter test test/dualis` — 36 tests passed after final review;
+- `flutter test test/dualis test/ui/pager_widget_test.dart` — 37 tests passed after final review;
 - three-run current-`v2` Pixel control;
 - three-run final-branch Pixel diagnostic;
 - all Dualis final-state, session-restore, and scroll-progression checks passed;

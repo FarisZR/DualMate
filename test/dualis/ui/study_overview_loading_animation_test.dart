@@ -59,6 +59,11 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(DataTable), findsNothing);
+
+    final tooltip = tester.widget<Tooltip>(find.byType(Tooltip).last);
+    final tooltipTarget = tester.getSize(find.byWidget(tooltip.child!));
+    expect(tooltipTarget.width, greaterThan(0));
+    expect(tooltipTarget.height, greaterThan(0));
   });
 
   testWidgets('shows loading placeholder while semester modules are fetched', (

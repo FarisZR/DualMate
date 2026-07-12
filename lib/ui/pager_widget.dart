@@ -94,7 +94,7 @@ class _PagerWidgetState extends State<PagerWidget> {
     return bottomNavigationBarItems;
   }
 
-  void setActivePage(int page, {bool force = false}) {
+  void setActivePage(int page) {
     if (page < 0 || page >= widget.pages.length) {
       return;
     }
@@ -150,7 +150,7 @@ class _PagerWidgetState extends State<PagerWidget> {
   void _handleForcedPage() async {
     final forced = widget.forcedPage?.value;
     if (forced == null) return;
-    setActivePage(forced, force: true);
+    setActivePage(forced);
     widget.forcedPage?.value = null;
   }
 
