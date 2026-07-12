@@ -119,6 +119,7 @@ class InteractionIdleCoordinator {
     _tasksById[taskId] = task;
     _queue.add(task);
     _idleFrameObserved = false;
+    _ensureInitialQuietPeriodTimer();
 
     if (delay > Duration.zero) {
       task.timer = Timer(delay, () {
@@ -243,6 +244,21 @@ class InteractionIdleCoordinator {
   }
 
   bool get _hasReadyTask => _queue.any((task) => !task.cancelled && task.ready);
+
+  void _ensureInitialQuietPeriodTimer() {
+    if (_taskQuietPeriod == Duration.zero ||
+        _taskQuietElapsed ||
+        hasActiveInteraction ||
+        _taskQuietTimer != null) {
+      return;
+    }
+    _taskQuietTimer = Timer(_taskQuietPeriod, () {
+      if (_disposed) return;
+      _taskQuietTimer = null;
+      _taskQuietElapsed = true;
+      _wake();
+    });
+  }
 
   bool get _taskQuietPeriodElapsed => _taskQuietElapsed;
 

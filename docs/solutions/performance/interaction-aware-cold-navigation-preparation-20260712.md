@@ -98,11 +98,11 @@ Tests verify that:
 # Validation
 
 - full `flutter analyze` — clean;
-- `flutter test test/canteen` — 53 tests passed;
+- `flutter test test/canteen` — 59 tests passed;
 - `flutter test test/date_management` — 29 tests passed;
-- `flutter test test/schedule` — 154 tests passed;
-- `flutter test test/ui` — 36 tests passed;
-- focused coordinator/navigation lifecycle tests — 11 tests passed;
+- `flutter test test/schedule` — 155 tests passed;
+- `flutter test test/ui` — 38 tests passed;
+- focused coordinator/navigation lifecycle and cache-only preparation tests passed;
 - Pixel 8 Pro profile mode at 120 Hz / 1.0x animations, using three current-`v2`
   control runs and three final branch runs.
 
@@ -132,3 +132,10 @@ by the separate Dates lazy-rendering PR. All navigation final states completed.
 - no performance-harness thresholds or fixture data were changed;
 - no production data source is replaced with fixture behavior;
 - network refresh remains available after the relevant page is active.
+
+# Stacking
+
+This change is based on the approved Canteen rendering branch so the navigation
+preparation hook extends the stable Canteen shell instead of replacing its
+initialization lifecycle. Merge PR #97 before this branch, then retarget this PR
+to `v2`.

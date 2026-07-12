@@ -26,7 +26,7 @@ class ScheduleNavigationEntry extends NavigationEntry<ScheduleViewModel> {
 
   @override
   Future<void> prepareSection() async {
-    viewModel().initialize();
+    viewModel();
     await SchedulePage.prepareForActivation();
   }
 

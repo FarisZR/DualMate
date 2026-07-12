@@ -126,6 +126,25 @@ void main() {
     expect(events, <String>['first', 'second']);
   });
 
+  testWidgets('initial quiet period elapses without an interaction lease', (
+    tester,
+  ) async {
+    final coordinator = InteractionIdleCoordinator(
+      taskQuietPeriod: const Duration(milliseconds: 180),
+    );
+    addTearDown(coordinator.dispose);
+    var ran = false;
+    final task = coordinator.schedule('initial-quiet', () => ran = true);
+
+    await tester.pump(const Duration(milliseconds: 179));
+    expect(ran, isFalse);
+
+    await tester.pump(const Duration(milliseconds: 1));
+    await _pumpIdleCycle(tester);
+    await task.future;
+    expect(ran, isTrue);
+  });
+
   testWidgets('background tasks wait for the post-interaction quiet period', (
     tester,
   ) async {

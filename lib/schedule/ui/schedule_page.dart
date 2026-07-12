@@ -30,7 +30,7 @@ class SchedulePage extends StatefulWidget {
       KiwiContainer().resolve(),
       KiwiContainer().resolve(),
     );
-    return SchedulePage._sharedWeeklyScheduleViewModel!.initialize();
+    return SchedulePage._sharedWeeklyScheduleViewModel!.prepareCachedSchedule();
   }
 
   @override

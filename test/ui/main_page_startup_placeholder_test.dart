@@ -80,6 +80,8 @@ void main() {
         .first
         .viewModel()
         .dispose();
+    await tester.pump(const Duration(milliseconds: 180));
+    await tester.pump();
     await tester.pump();
   });
 }

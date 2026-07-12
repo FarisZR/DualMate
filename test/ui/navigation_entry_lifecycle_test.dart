@@ -29,6 +29,24 @@ void main() {
     expect(entry.lifecycle, NavigationEntryLifecycle.active);
   });
 
+  testWidgets('late preparation never regresses an active entry lifecycle', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final entry = _FakeNavigationEntry(preparationGate: gate);
+
+    await tester.pumpWidget(
+      MaterialApp(home: Builder(builder: (context) => entry.activate(context))),
+    );
+    expect(entry.lifecycle, NavigationEntryLifecycle.active);
+
+    final preparation = entry.prepare();
+    expect(entry.lifecycle, NavigationEntryLifecycle.active);
+    gate.complete();
+    await preparation;
+    expect(entry.lifecycle, NavigationEntryLifecycle.active);
+  });
+
   testWidgets('activation stays active while preparation finishes later', (
     tester,
   ) async {

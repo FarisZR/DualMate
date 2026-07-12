@@ -22,7 +22,9 @@ abstract class NavigationEntry<T extends BaseViewModel> {
       return existingPreparation;
     }
 
-    _lifecycle = NavigationEntryLifecycle.preparing;
+    if (_lifecycle != NavigationEntryLifecycle.active) {
+      _lifecycle = NavigationEntryLifecycle.preparing;
+    }
     final preparation = _prepare();
     _preparation = preparation;
     return preparation;
