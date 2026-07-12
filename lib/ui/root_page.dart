@@ -6,6 +6,7 @@ import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/logging/perf_overlay_controller.dart';
 import 'package:dualmate/common/logging/sentry_scrubber.dart';
+import 'package:dualmate/common/appstart/interaction_idle_coordinator.dart';
 import 'package:dualmate/common/ui/colors.dart';
 import 'package:dualmate/common/ui/viewmodels/root_view_model.dart';
 import 'package:dualmate/common/appstart/app_initializer.dart';
@@ -14,8 +15,6 @@ import 'package:dualmate/common/appstart/locale_preference_sync.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/util/launch_intent.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
-import 'package:dualmate/schedule/business/schedule_provider.dart';
-import 'package:dualmate/common/util/date_utils.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:flutter/services.dart';
 import 'package:dualmate/ui/navigation/main_section_controller.dart';
@@ -24,7 +23,6 @@ import 'package:dualmate/ui/navigation/router.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -70,6 +68,12 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   bool _onboardingDeferredInitListenerAttached = false;
   Stopwatch? _deferredInitStopwatch;
   LocalePreferenceSync? _localePreferenceSync;
+  final InteractionIdleCoordinator _interactionCoordinator =
+      InteractionIdleCoordinator.instance;
+  late final InteractionAwareNavigatorObserver _interactionNavigatorObserver;
+  InteractionIdleTask? _backgroundInitializationTask;
+  InteractionIdleTask? _foregroundHeavyInitializationTask;
+  InteractionIdleTask? _canteenPreparationTask;
   static const MethodChannel _navigationChannel = MethodChannel(
     'com.fariszr.dualmate/navigation',
   );
@@ -80,6 +84,9 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _interactionNavigatorObserver = InteractionAwareNavigatorObserver(
+      _interactionCoordinator,
+    );
     WidgetsBinding.instance.addObserver(this);
     _navigationChannel.setMethodCallHandler(_handleNavigationCall);
     _fetchLaunchRoute();
@@ -100,6 +107,10 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     unawaited(_setAppAttended(false));
     _localePreferenceSync?.detach();
     _detachOnboardingDeferredInitListener();
+    _backgroundInitializationTask?.cancel();
+    _foregroundHeavyInitializationTask?.cancel();
+    _canteenPreparationTask?.cancel();
+    _interactionNavigatorObserver.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -292,7 +303,11 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       await overrides.apply(KiwiContainer().resolve<PreferencesProvider>());
       _debugRootLog("Root init: applied debug startup overrides");
     } catch (error, trace) {
-      _debugRootError("Root init: debug startup overrides failed", error, trace);
+      _debugRootError(
+        "Root init: debug startup overrides failed",
+        error,
+        trace,
+      );
       unawaited(
         AppDiagnostics.instance.reportCaughtException(
           error,
@@ -415,6 +430,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
                       additionalInfoProvider: (_, __) =>
                           const <String, dynamic>{'source': 'navigator'},
                     ),
+                    _interactionNavigatorObserver,
                     rootNavigationObserver,
                   ],
                   localizationsDelegates: [
@@ -458,37 +474,39 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
 
   Future<void> _runDeferredInitialization(Stopwatch stopwatch) async {
     try {
-      // Allow first-frame interaction and navigation transitions to settle.
-      await Future.delayed(_deferredBackgroundInitDelay);
-      if (!mounted) return;
-      await SchedulerBinding.instance.scheduleTask<void>(
+      _backgroundInitializationTask = _interactionCoordinator.schedule(
+        'startup.backgroundInit',
         () async {
           if (!mounted) return;
           await initializeAppBackground(false);
         },
-        Priority.idle,
-        debugLabel: 'startup.backgroundInit',
+        delay: _deferredBackgroundInitDelay,
       );
+      await _backgroundInitializationTask!.future;
+      if (!mounted) return;
       _debugRootLog(
         "Root init: deferred background ${stopwatch.elapsedMilliseconds}ms",
       );
-      SchedulerBinding.instance.scheduleTask<void>(
+      // Keep the old delays, but make their deadlines minimums. Interaction
+      // and route/content animations can postpone the work safely.
+      _foregroundHeavyInitializationTask = _interactionCoordinator.schedule(
+        'startup.foregroundHeavyInit',
         () {
-          unawaited(_prewarmScheduleCache());
+          if (!mounted) return Future<void>.value();
+          return _runForegroundHeavyInitialization();
         },
-        Priority.idle,
-        debugLabel: 'startup.scheduleCachePrewarm',
+        delay: _foregroundHeavyInitDelay,
       );
-      // Delay foreground-heavy tasks to keep startup animations responsive.
-      Future.delayed(_foregroundHeavyInitDelay, () {
-        if (!mounted) return;
-        _runForegroundHeavyInitialization();
-      });
-      // Defer canteen prewarm further and run at idle priority.
-      Future.delayed(_foregroundCanteenPrewarmDelay, () {
-        if (!mounted) return;
-        _scheduleIdleCanteenPrewarm();
-      });
+      // Canteen's page-level preparation owns its cache read. Reusing the
+      // navigation entry here avoids a second startup refresh path.
+      _canteenPreparationTask = _interactionCoordinator.schedule(
+        'startup.canteenPreparation',
+        () {
+          if (!mounted) return Future<void>.value();
+          return _runCanteenPrewarm();
+        },
+        delay: _foregroundCanteenPrewarmDelay,
+      );
     } catch (error, trace) {
       _debugRootError("Root init: deferred background failed", error, trace);
       unawaited(
@@ -524,19 +542,12 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     }
   }
 
-  void _scheduleIdleCanteenPrewarm() {
-    SchedulerBinding.instance.scheduleTask<void>(
-      () {
-        unawaited(_runCanteenPrewarm());
-      },
-      Priority.idle,
-      debugLabel: 'startup.canteenPrewarm',
-    );
-  }
-
   Future<void> _runCanteenPrewarm() async {
     try {
-      await prewarmCanteenIfStale();
+      final canteenEntry = navigationEntries.firstWhere(
+        (entry) => entry.route == 'canteen',
+      );
+      await canteenEntry.prepare();
     } catch (error, trace) {
       _debugRootError("Root init: canteen prewarm failed", error, trace);
       unawaited(
@@ -547,28 +558,6 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
           tags: {'feature': 'canteen'},
           contexts: {
             'canteen': {'phase': 'startup_prewarm'},
-          },
-        ),
-      );
-    }
-  }
-
-  Future<void> _prewarmScheduleCache() async {
-    try {
-      final scheduleProvider = KiwiContainer().resolve<ScheduleProvider>();
-      final start = toStartOfDay(toDayOfWeek(DateTime.now(), DateTime.monday));
-      final end = toNextWeek(start);
-      await scheduleProvider.warmScheduleCache(start, end);
-    } catch (error, trace) {
-      _debugRootError("Root init: schedule cache warm failed", error, trace);
-      unawaited(
-        AppDiagnostics.instance.reportCaughtException(
-          error,
-          trace,
-          message: 'Root init: schedule cache warm failed',
-          tags: {'feature': 'schedule'},
-          contexts: {
-            'schedule': {'phase': 'startup_cache_warm'},
           },
         ),
       );

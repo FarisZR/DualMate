@@ -14,8 +14,6 @@ import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 
 class ScheduleNavigationEntry extends NavigationEntry<ScheduleViewModel> {
-  late ScheduleViewModel _viewModel;
-
   @override
   Widget icon(BuildContext context) {
     return Icon(Icons.calendar_today);
@@ -23,10 +21,13 @@ class ScheduleNavigationEntry extends NavigationEntry<ScheduleViewModel> {
 
   @override
   ScheduleViewModel initViewModel() {
-    _viewModel = ScheduleViewModel(
-      KiwiContainer().resolve(),
-    );
-    return _viewModel;
+    return ScheduleViewModel(KiwiContainer().resolve());
+  }
+
+  @override
+  Future<void> prepareSection() async {
+    viewModel();
+    await SchedulePage.prepareForActivation();
   }
 
   @override
@@ -47,84 +48,81 @@ class ScheduleNavigationEntry extends NavigationEntry<ScheduleViewModel> {
         value: viewModel,
         child: PropertyChangeConsumer<ScheduleViewModel, String>(
           properties: const ["didSetupProperly"],
-          builder: (
-            BuildContext _,
-            ScheduleViewModel? __,
-            Set<String>? ___,
-          ) =>
+          builder: (BuildContext _, ScheduleViewModel? __, Set<String>? ___) =>
               viewModel.didSetupProperly
-                  ? Container()
-                  : IconButton(
-                      icon: Icon(Icons.help_outline),
-                      onPressed: () async {
-                        await ScheduleHelpDialog().show(context);
-                      },
-                      tooltip: L.of(context).helpButtonTooltip,
-                    ),
+              ? Container()
+              : IconButton(
+                  icon: Icon(Icons.help_outline),
+                  onPressed: () async {
+                    await ScheduleHelpDialog().show(context);
+                  },
+                  tooltip: L.of(context).helpButtonTooltip,
+                ),
         ),
       ),
       PropertyChangeProvider<ScheduleViewModel, String>(
         value: viewModel,
         child: PropertyChangeConsumer<ScheduleViewModel, String>(
           properties: const ["didSetupProperly"],
-          builder: (
-            BuildContext _,
-            ScheduleViewModel? __,
-            Set<String>? ___,
-          ) =>
+          builder: (BuildContext _, ScheduleViewModel? __, Set<String>? ___) =>
               viewModel.didSetupProperly
-                  ? IconButton(
-                      icon: Icon(Icons.filter_alt),
-                      onPressed: () async {
-                        final scheduleEntryRepository =
-                            KiwiContainer().resolve<ScheduleEntryRepository>();
-                        final scheduleFilterRepository =
-                            KiwiContainer().resolve<ScheduleFilterRepository>();
-                        final preloadFuture = FilterViewModel.preloadStates(
-                          scheduleEntryRepository,
-                          scheduleFilterRepository,
-                        );
-                        final didChangeFilters =
-                            await Navigator.of(context).push<bool>(
+              ? IconButton(
+                  icon: Icon(Icons.filter_alt),
+                  onPressed: () async {
+                    final scheduleEntryRepository = KiwiContainer()
+                        .resolve<ScheduleEntryRepository>();
+                    final scheduleFilterRepository = KiwiContainer()
+                        .resolve<ScheduleFilterRepository>();
+                    final preloadFuture = FilterViewModel.preloadStates(
+                      scheduleEntryRepository,
+                      scheduleFilterRepository,
+                    );
+                    final didChangeFilters = await Navigator.of(context)
+                        .push<bool>(
                           PageRouteBuilder<bool>(
-                            transitionDuration:
-                                const Duration(milliseconds: 180),
-                            reverseTransitionDuration:
-                                const Duration(milliseconds: 160),
+                            transitionDuration: const Duration(
+                              milliseconds: 180,
+                            ),
+                            reverseTransitionDuration: const Duration(
+                              milliseconds: 160,
+                            ),
                             pageBuilder:
                                 (context, animation, secondaryAnimation) =>
                                     ScheduleFilterPage(
-                              preloadFuture: preloadFuture,
-                            ),
-                            transitionsBuilder: (context, animation,
-                                secondaryAnimation, child) {
-                              final opacityTween = Tween<double>(
-                                begin: 0,
-                                end: 1,
-                              ).chain(
-                                CurveTween(curve: Curves.easeOutCubic),
-                              );
+                                      preloadFuture: preloadFuture,
+                                    ),
+                            transitionsBuilder:
+                                (
+                                  context,
+                                  animation,
+                                  secondaryAnimation,
+                                  child,
+                                ) {
+                                  final opacityTween =
+                                      Tween<double>(begin: 0, end: 1).chain(
+                                        CurveTween(curve: Curves.easeOutCubic),
+                                      );
 
-                              return FadeTransition(
-                                opacity: animation.drive(opacityTween),
-                                child: child,
-                              );
-                            },
+                                  return FadeTransition(
+                                    opacity: animation.drive(opacityTween),
+                                    child: child,
+                                  );
+                                },
                           ),
                         );
-                        if (didChangeFilters == true) {
-                          final scheduleProvider =
-                              KiwiContainer().resolve<ScheduleProvider>();
-                          final scheduleSourceProvider =
-                              KiwiContainer().resolve<ScheduleSourceProvider>();
-                          scheduleProvider.invalidateScheduleCache();
-                          scheduleSourceProvider.fireScheduleSourceChanged();
-                        }
-                      },
-                    )
-                  : Container(),
+                    if (didChangeFilters == true) {
+                      final scheduleProvider = KiwiContainer()
+                          .resolve<ScheduleProvider>();
+                      final scheduleSourceProvider = KiwiContainer()
+                          .resolve<ScheduleSourceProvider>();
+                      scheduleProvider.invalidateScheduleCache();
+                      scheduleSourceProvider.fireScheduleSourceChanged();
+                    }
+                  },
+                )
+              : Container(),
         ),
-      )
+      ),
     ];
   }
 

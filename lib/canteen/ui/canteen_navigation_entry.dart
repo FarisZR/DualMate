@@ -8,8 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 
 class CanteenNavigationEntry extends NavigationEntry<CanteenViewModel> {
-  late CanteenViewModel _viewModel;
-
   @override
   Widget icon(BuildContext context) {
     return Icon(Icons.restaurant_menu);
@@ -17,11 +15,15 @@ class CanteenNavigationEntry extends NavigationEntry<CanteenViewModel> {
 
   @override
   CanteenViewModel initViewModel() {
-    _viewModel = CanteenViewModel(
+    return CanteenViewModel(
       KiwiContainer().resolve(),
       KiwiContainer().resolve(),
     );
-    return _viewModel;
+  }
+
+  @override
+  Future<void> prepareSection() async {
+    await viewModel().prepareForNavigation();
   }
 
   @override
@@ -36,6 +38,7 @@ class CanteenNavigationEntry extends NavigationEntry<CanteenViewModel> {
 
   @override
   List<Widget> appBarActions(BuildContext context) {
+    final model = viewModel();
     return [
       MenuAnchor(
         menuChildren: [
@@ -43,16 +46,16 @@ class CanteenNavigationEntry extends NavigationEntry<CanteenViewModel> {
             leadingIcon: const Icon(Icons.restaurant_outlined),
             onPressed: () async {
               await SelectCanteenLocationDialog(
-                _viewModel.locationService,
+                model.locationService,
               ).show(context);
-              await _viewModel.reloadSelectedLocation();
+              await model.reloadSelectedLocation();
             },
             child: Text(L.of(context).settingsSetupCanteenLocation),
           ),
           MenuItemButton(
             leadingIcon: const Icon(Icons.help_outline),
             onPressed: () async {
-              await CanteenHelpDialog(_viewModel).show(context);
+              await CanteenHelpDialog(model).show(context);
             },
             child: Text(L.of(context).helpButtonTooltip),
           ),

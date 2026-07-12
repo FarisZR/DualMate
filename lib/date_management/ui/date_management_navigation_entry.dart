@@ -12,8 +12,6 @@ import 'package:property_change_notifier/property_change_notifier.dart';
 
 class DateManagementNavigationEntry
     extends NavigationEntry<DateManagementViewModel> {
-  DateManagementViewModel? _viewModel;
-
   @override
   Widget icon(BuildContext context) {
     return Icon(Icons.date_range);
@@ -26,12 +24,16 @@ class DateManagementNavigationEntry
 
   @override
   DateManagementViewModel initViewModel() {
-    _viewModel ??= DateManagementViewModel(
+    return DateManagementViewModel(
       KiwiContainer().resolve(),
       KiwiContainer().resolve(),
       KiwiContainer().resolve(),
     );
-    return _viewModel!;
+  }
+
+  @override
+  Future<void> prepareSection() async {
+    await viewModel().prepare();
   }
 
   @override

@@ -17,6 +17,19 @@ import '../../test_canteen_location_service.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('prepare warms the current cache without a network refresh', () async {
+    final weekStart = toStartOfDay(toMonday(DateTime.now()));
+    final provider = _TrackingCanteenProvider();
+    final model = CanteenViewModel(provider, TestCanteenLocationService());
+    addTearDown(model.dispose);
+
+    await model.prepareForNavigation();
+
+    expect(provider.cachedWeekRequests, <DateTime>[weekStart]);
+    expect(provider.refreshWeekRequests, isEmpty);
+    expect(provider.refreshWeekIfStaleRequests, isEmpty);
+  });
+
   test('primeVisibleWeek loads only the requested week immediately', () async {
     final monday = DateTime(2026, 2, 9);
     final weekStart = toStartOfDay(toMonday(monday));

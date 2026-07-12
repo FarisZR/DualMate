@@ -13,6 +13,27 @@ import 'package:dualmate/schedule/ui/viewmodels/weekly_schedule_view_model.dart'
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('cache-only preparation never starts a network refresh', () async {
+    final provider = _CountingScheduleProvider(<ScheduleEntry>[
+      _entry(DateTime(2026, 2, 9), 'CACHED'),
+    ]);
+    final sourceProvider = _FakeScheduleSourceProvider();
+    final viewModel = WeeklyScheduleViewModel(
+      provider,
+      sourceProvider,
+      nowProvider: () => DateTime(2026, 2, 10),
+    );
+    addTearDown(viewModel.dispose);
+
+    await viewModel.prepareCachedSchedule();
+
+    expect(provider.updatedScheduleRequests, 0);
+    expect(
+      viewModel.weekSchedule?.entries.map((entry) => entry.title),
+      contains('Course_CACHED'),
+    );
+  });
+
   test(
     'background range refresh keeps the currently visible week anchored',
     () async {

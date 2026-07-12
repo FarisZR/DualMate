@@ -134,6 +134,21 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     return toStartOfDay(toDayOfWeek(now, DateTime.monday));
   }
 
+  Future<void> prepareCachedSchedule() async {
+    if (_isDisposed) return;
+    final start = toStartOfDay(toDayOfWeek(now, DateTime.monday));
+    final end = toNextWeek(start);
+    currentDateStart = start;
+    currentDateEnd = end;
+
+    final cachedSchedule =
+        _lastCachedSchedule ??
+        await scheduleProvider.getCachedSchedule(start, end);
+    if (_isDisposed) return;
+    _applyVisibleSchedule(cachedSchedule, start, end);
+    _lastCachedSchedule = cachedSchedule;
+  }
+
   Future<void> initialize() async {
     if (_initialized) return;
     _initialized = true;

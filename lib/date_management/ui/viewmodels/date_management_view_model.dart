@@ -116,7 +116,8 @@ class DateManagementViewModel extends BaseViewModel {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  bool _initialized = false;
+  Future<void>? _preparationFuture;
+  Future<void>? _pageInitializationFuture;
 
   bool _isReloadingPreferences = false;
 
@@ -172,12 +173,39 @@ class DateManagementViewModel extends BaseViewModel {
   }
 
   void initialize() {
-    if (_initialized) return;
-    _initialized = true;
-    _loadDefaultSelection().catchError((error, trace) {
+    unawaited(_initializeForPage());
+  }
+
+  Future<void> prepare() {
+    final existingPreparation = _preparationFuture;
+    if (existingPreparation != null) {
+      return existingPreparation;
+    }
+
+    final preparation = _loadDefaultSelection(loadData: false).catchError((
+      error,
+      trace,
+    ) {
       print("Failed to load default selection: $error");
       print(trace);
     });
+    _preparationFuture = preparation;
+    return preparation;
+  }
+
+  Future<void> _initializeForPage() {
+    final existingInitialization = _pageInitializationFuture;
+    if (existingInitialization != null) {
+      return existingInitialization;
+    }
+
+    final initialization = () async {
+      await prepare();
+      if (_isDisposed) return;
+      await updateDates();
+    }();
+    _pageInitializationFuture = initialization;
+    return initialization;
   }
 
   void _buildYearsArray() {
@@ -505,7 +533,7 @@ class DateManagementViewModel extends BaseViewModel {
     _preferencesProvider.setLastViewedDateEntryYear(year);
   }
 
-  Future<void> _loadDefaultSelection() async {
+  Future<void> _loadDefaultSelection({required bool loadData}) async {
     _useDhMineForDates = await _preferencesProvider.getUseDhMineForDates();
     if (_isDisposed) return;
     _notifySafely("useDhMineForDates");
@@ -534,7 +562,9 @@ class DateManagementViewModel extends BaseViewModel {
       setCurrentSelectedYear(_currentSelectedYear);
     }
 
-    await updateDates();
+    if (loadData) {
+      await updateDates();
+    }
   }
 
   DateRange _buildInitialRaplaWindow() {
