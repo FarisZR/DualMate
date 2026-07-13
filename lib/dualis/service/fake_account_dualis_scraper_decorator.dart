@@ -13,18 +13,25 @@ import 'package:dualmate/schedule/model/schedule.dart';
 /// Background: The Google Play review process needs login credentials to every
 /// restricted area of the app.
 ///
-class FakeAccountDualisScraperDecorator implements DualisScraper {
+class FakeAccountDualisScraperDecorator
+    implements DualisScraper, DualisScraperOperationSnapshot {
   static const String demoUsername = "review@dualmate.app";
   static const String demoPassword = "DualisDemo2026!";
 
-  final DualisScraper _fakeDualisScraper = FakeDataDualisScraper();
+  final DualisScraper _fakeDualisScraper;
   final DualisScraper _originalDualisScraper;
 
   late DualisScraper _currentDualisScraper;
 
-  FakeAccountDualisScraperDecorator(this._originalDualisScraper) {
+  FakeAccountDualisScraperDecorator(
+    this._originalDualisScraper, {
+    DualisScraper? fakeDualisScraper,
+  }) : _fakeDualisScraper = fakeDualisScraper ?? FakeDataDualisScraper() {
     _currentDualisScraper = _originalDualisScraper;
   }
+
+  @override
+  DualisScraper scraperForOperation() => _currentDualisScraper;
 
   @override
   bool isLoggedIn() {

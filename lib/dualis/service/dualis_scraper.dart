@@ -11,6 +11,34 @@ import 'package:dualmate/dualis/service/parsing/semesters_from_course_result_pag
 import 'package:dualmate/dualis/service/parsing/study_grades_from_student_results_page_extract.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
 
+/// Implemented by scraper decorators whose delegate can change over time.
+///
+/// High-level operations capture this value once so every request belonging to
+/// that operation uses the same authenticated scraper and session.
+abstract interface class DualisScraperOperationSnapshot {
+  DualisScraper scraperForOperation();
+}
+
+DualisScraper captureDualisScraperForOperation(DualisScraper scraper) {
+  var captured = scraper;
+
+  while (true) {
+    final snapshotProvider = captured;
+    if (snapshotProvider is! DualisScraperOperationSnapshot) {
+      break;
+    }
+
+    final next = (snapshotProvider as DualisScraperOperationSnapshot)
+        .scraperForOperation();
+    if (identical(next, captured)) {
+      break;
+    }
+    captured = next;
+  }
+
+  return captured;
+}
+
 ///
 /// Provides one single class to access the dualis api.
 ///
