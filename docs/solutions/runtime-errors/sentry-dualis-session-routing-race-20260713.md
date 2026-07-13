@@ -1,5 +1,5 @@
 ---
-title: Pin Dualis sessions across multi-request operations
+title: Harden Dualis session routing across multi-request operations
 date: 2026-07-13
 type: fix
 ---
@@ -8,31 +8,35 @@ type: fix
 
 Sentry issue DUALMATE-10 (`133984052`) reported a fatal
 `LateInitializationError` from `DualisAuthentication.authenticatedGet` while a
-semester was loading. The failure was caused by a mutable demo-account scraper
-delegate changing between the semester module request and its follow-up exam
-requests.
+semester was loading.
 
-# Root cause
+The stack includes `FakeAccountDualisScraperDecorator` because every production
+Dualis scraper is wrapped by that decorator. The next frames are
+`DualisScraper` and `DualisAuthentication`, which show that the failing request
+was routed to the real network scraper at the time of the crash. The event does
+not include the credentials or enough lifecycle state to prove that the user
+had selected the demo account.
 
-`FakeAccountDualisScraperDecorator` selected either the local demo scraper or
-the real network scraper through a mutable delegate. `DualisServiceImpl` made a
-semester query through several independent decorator calls:
+# Confirmed risk
 
-1. load the semester's modules;
-2. load the exams for every module.
+The schedule source and grade service shared one mutable scraper instance. That
+instance owns both the selected decorator delegate and the real authentication
+session. Independent schedule, onboarding, session-restoration, logout, and
+grade-loading flows could therefore alter routing or authentication state used
+by another in-flight operation.
 
-If onboarding or schedule-source setup changed the decorator selection between
-those calls, the remaining exam requests were sent to the real scraper. That
-scraper had not logged in, so its `late Session` field was uninitialized and the
-request crashed.
+A semester query also consists of several requests: one request loads modules,
+then follow-up requests load each module's exams. Resolving the mutable
+decorator for every request allowed one logical operation to cross scraper or
+session boundaries if another flow changed that shared state.
 
-The schedule source and grade service also shared one scraper singleton, which
-allowed otherwise independent workflows to change the same authentication
-state.
+The exact interleaving that produced the single Sentry event cannot be recovered
+from the redacted event. The fix therefore targets the confirmed unsafe state
+ownership rather than attributing the event to a specific account type.
 
 # Fix
 
-- Capture the selected scraper once at the start of each high-level Dualis read
+- Capture the active scraper once at the start of each high-level Dualis read
   operation and reuse it for every request in that operation.
 - Apply the same operation snapshot to multi-month Dualis schedule queries.
 - Give the schedule source and grade service separate scraper/session instances.
@@ -43,14 +47,14 @@ state.
 
 # Regression coverage
 
-- A deterministic test switches the decorator from demo to real credentials
-  while `querySemester` is between module and exam requests. All requests remain
-  on the captured demo scraper.
+- A deterministic test changes the decorator selection between a semester's
+  module request and its exam request. The logical query remains on the scraper
+  captured when the operation began.
 - Authentication tests cover unauthenticated requests, logout-before-login, and
   missing previous credentials.
 - A view-model test verifies the three refresh branches still reach a maximum
   concurrency of three.
-- All Dualis tests and `flutter analyze` pass.
+- The full Flutter test suite and `flutter analyze` pass.
 
 # Galaxy S21+ performance validation
 
@@ -76,7 +80,6 @@ batches, while the frame-budget counts, longest missed-frame sequence, and
 final-state validity remained unchanged. The final-tree batch improved p99 and
 showed a 2.442 ms higher worst frame, still below the 33 ms budget; a preceding
 fixed batch instead showed an improved worst frame. This is consistent with
-normal device-run variance rather than a systematic regression. No
-performance thresholds, fixtures, animation durations, refresh concurrency, or
-measurement windows
-were changed.
+normal device-run variance rather than a systematic regression. No performance
+thresholds, fixtures, animation durations, refresh concurrency, or measurement
+windows were changed.

@@ -11,21 +11,18 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test(
-    'semester query keeps the demo scraper when the decorator switches mid-query',
+    'semester query pins one scraper when decorator selection changes mid-query',
     () async {
       final originalScraper = _RecordingOriginalScraper();
       late FakeAccountDualisScraperDecorator decorator;
-      final demoScraper = _SwitchingDemoScraper(
+      final selectedScraper = _SwitchingSelectedScraper(
         onSemesterModulesLoaded: () {
-          decorator.setLoginCredentials(
-            'student@example.com',
-            'real-password',
-          );
+          decorator.setLoginCredentials('student@example.com', 'real-password');
         },
       );
       decorator = FakeAccountDualisScraperDecorator(
         originalScraper,
-        fakeDualisScraper: demoScraper,
+        fakeDualisScraper: selectedScraper,
       );
       final service = DualisServiceImpl(decorator);
 
@@ -42,18 +39,18 @@ void main() {
       final semester = await semesterFuture;
 
       expect(semester.modules, isNotEmpty);
-      expect(demoScraper.loadModuleExamsCalls, 1);
+      expect(selectedScraper.loadModuleExamsCalls, 1);
       expect(originalScraper.loadModuleExamsCalls, 0);
     },
   );
 }
 
-class _SwitchingDemoScraper implements DualisScraper {
+class _SwitchingSelectedScraper implements DualisScraper {
   final void Function() onSemesterModulesLoaded;
   int loadModuleExamsCalls = 0;
   bool _isLoggedIn = false;
 
-  _SwitchingDemoScraper({required this.onSemesterModulesLoaded});
+  _SwitchingSelectedScraper({required this.onSemesterModulesLoaded});
 
   @override
   bool isLoggedIn() => _isLoggedIn;
