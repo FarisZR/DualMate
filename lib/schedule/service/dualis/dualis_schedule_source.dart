@@ -16,18 +16,19 @@ class DualisScheduleSource extends ScheduleSource {
   Future<ScheduleQueryResult> querySchedule(DateTime from, DateTime to,
       [CancellationToken? cancellationToken]) async {
     var token = cancellationToken ?? CancellationToken();
+    final scraper = captureDualisScraperForOperation(_dualisScraper);
     DateTime current = toStartOfMonth(from);
 
     var schedule = Schedule();
     var allErrors = <ParseError>[];
 
-    if (!_dualisScraper.isLoggedIn()) {
-      await _dualisScraper.loginWithPreviousCredentials(token);
+    if (!scraper.isLoggedIn()) {
+      await scraper.loginWithPreviousCredentials(token);
     }
 
     while (to.isAfter(current) && !token.isCancelled()) {
       try {
-        var monthSchedule = await _dualisScraper.loadMonthlySchedule(
+        var monthSchedule = await scraper.loadMonthlySchedule(
             current, token);
 
         schedule.merge(monthSchedule);

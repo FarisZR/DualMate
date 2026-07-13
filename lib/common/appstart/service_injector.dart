@@ -65,7 +65,9 @@ void injectServices(bool isBackground) {
     FakeAccountDualisScraperDecorator(DualisScraper()),
   );
   c.registerInstance<DualisService>(
-    CacheDualisServiceDecorator(DualisServiceImpl(c.resolve())),
+    CacheDualisServiceDecorator(
+      DualisServiceImpl(FakeAccountDualisScraperDecorator(DualisScraper())),
+    ),
   );
   c.registerInstance(
     DateEntryProvider(

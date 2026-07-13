@@ -94,6 +94,28 @@ void main() {
     expect(service.queryAllModulesCalls, 1);
     expect(service.querySemesterNamesCalls, 1);
   });
+
+  test('login refresh keeps the three Dualis branches concurrent', () async {
+    final preferences = _buildPreferences();
+    final service = _ParallelRefreshService();
+    final viewModel = StudyGradesViewModel(preferences, service);
+    addTearDown(viewModel.dispose);
+
+    expect(await viewModel.login(Credentials('u', 'p')), isTrue);
+
+    await Future.wait<void>([
+      service.studyGradesStarted.future,
+      service.allModulesStarted.future,
+      service.semesterNamesStarted.future,
+    ]).timeout(const Duration(seconds: 2));
+
+    expect(service.maximumConcurrentQueries, 3);
+
+    service.releaseQueries();
+    while (await preferences.getDualisLastRefreshAt() == null) {
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+    }
+  });
 }
 
 PreferencesProvider _buildPreferences() {
@@ -212,6 +234,82 @@ class _StudyGradesTestService extends DualisService {
     querySemesterNamesCalls = 0;
     querySemesterCalls = 0;
   }
+}
+
+class _ParallelRefreshService extends DualisService {
+  final Completer<void> studyGradesStarted = Completer<void>();
+  final Completer<void> allModulesStarted = Completer<void>();
+  final Completer<void> semesterNamesStarted = Completer<void>();
+  final Completer<void> _release = Completer<void>();
+
+  int _activeQueries = 0;
+  int maximumConcurrentQueries = 0;
+
+  @override
+  Future<LoginResult> login(
+    String username,
+    String password, [
+    CancellationToken? cancellationToken,
+  ]) async => LoginResult.LoggedIn;
+
+  @override
+  Future<StudyGrades> queryStudyGrades([
+    CancellationToken? cancellationToken,
+  ]) async {
+    studyGradesStarted.complete();
+    await _waitForRelease();
+    return StudyGrades(0, 0, 0, 0);
+  }
+
+  @override
+  Future<List<Module>> queryAllModules([
+    CancellationToken? cancellationToken,
+  ]) async {
+    allModulesStarted.complete();
+    await _waitForRelease();
+    return const <Module>[];
+  }
+
+  @override
+  Future<List<String>> querySemesterNames([
+    CancellationToken? cancellationToken,
+  ]) async {
+    semesterNamesStarted.complete();
+    await _waitForRelease();
+    return const <String>[];
+  }
+
+  Future<void> _waitForRelease() async {
+    _activeQueries += 1;
+    if (_activeQueries > maximumConcurrentQueries) {
+      maximumConcurrentQueries = _activeQueries;
+    }
+    try {
+      await _release.future;
+    } finally {
+      _activeQueries -= 1;
+    }
+  }
+
+  void releaseQueries() {
+    if (!_release.isCompleted) {
+      _release.complete();
+    }
+  }
+
+  @override
+  Future<Semester> querySemester(
+    String name, [
+    CancellationToken? cancellationToken,
+  ]) async => Semester(name, const <Module>[]);
+
+  @override
+  Future<void> logout([
+    CancellationToken? cancellationToken,
+  ]) async {}
+
+  @override
+  void clearCache() {}
 }
 
 class _FakePreferencesAccess extends PreferencesAccess {

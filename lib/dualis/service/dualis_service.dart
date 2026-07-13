@@ -65,7 +65,8 @@ class DualisServiceImpl extends DualisService {
   Future<StudyGrades> queryStudyGrades([
     CancellationToken? cancellationToken,
   ]) async {
-    return await _dualisScraper.loadStudyGrades(
+    final scraper = captureDualisScraperForOperation(_dualisScraper);
+    return await scraper.loadStudyGrades(
       cancellationToken ?? CancellationToken(),
     );
   }
@@ -74,7 +75,8 @@ class DualisServiceImpl extends DualisService {
   Future<List<String>> querySemesterNames([
     CancellationToken? cancellationToken,
   ]) async {
-    var semesters = await _dualisScraper.loadSemesters(
+    final scraper = captureDualisScraperForOperation(_dualisScraper);
+    var semesters = await scraper.loadSemesters(
       cancellationToken ?? CancellationToken(),
     );
 
@@ -91,7 +93,8 @@ class DualisServiceImpl extends DualisService {
   Future<List<Module>> queryAllModules([
     CancellationToken? cancellationToken,
   ]) async {
-    var dualisModules = await _dualisScraper.loadAllModules(
+    final scraper = captureDualisScraperForOperation(_dualisScraper);
+    var dualisModules = await scraper.loadAllModules(
       cancellationToken ?? CancellationToken(),
     );
 
@@ -114,7 +117,8 @@ class DualisServiceImpl extends DualisService {
     String name, [
     CancellationToken? cancellationToken,
   ]) async {
-    var semesterModules = await _dualisScraper.loadSemesterModules(
+    final scraper = captureDualisScraperForOperation(_dualisScraper);
+    var semesterModules = await scraper.loadSemesterModules(
       name,
       cancellationToken ?? CancellationToken(),
     );
@@ -122,7 +126,7 @@ class DualisServiceImpl extends DualisService {
     var modules = <Module>[];
 
     for (var dualisModule in semesterModules) {
-      var moduleExams = await _dualisScraper.loadModuleExams(
+      var moduleExams = await scraper.loadModuleExams(
         dualisModule.detailsUrl,
         cancellationToken ?? CancellationToken(),
       );
