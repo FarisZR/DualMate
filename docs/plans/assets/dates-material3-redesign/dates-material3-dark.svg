@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="2160" viewBox="0 0 1080 2160">
+<rect width="1080" height="2160" fill="#101116"/>
+<rect x="0" y="0" width="1080" height="255" fill="#15161D"/>
+<text x="70" y="65" font-family="Roboto, Arial, sans-serif" font-size="30" font-weight="600" fill="#F2F0F4" text-anchor="start" letter-spacing="0">9:30</text>
+<text x="980" y="65" font-family="Roboto, Arial, sans-serif" font-size="28" font-weight="500" fill="#F2F0F4" text-anchor="end" letter-spacing="0">▮  ◉  ▰</text>
+<text x="70" y="176" font-family="Roboto, Arial, sans-serif" font-size="52" font-weight="400" fill="#F2F0F4" text-anchor="start" letter-spacing="0">☰</text>
+<text x="170" y="174" font-family="Roboto, Arial, sans-serif" font-size="48" font-weight="600" fill="#F2F0F4" text-anchor="start" letter-spacing="0">Termine</text>
+<text x="1000" y="174" font-family="Roboto, Arial, sans-serif" font-size="46" font-weight="500" fill="#F2F0F4" text-anchor="end" letter-spacing="0">?</text>
+<line x1="0" y1="255" x2="1080" y2="255" stroke="#34343B" stroke-width="2"/>
+<circle cx="105" cy="330" r="32" fill="#FF8A8F" opacity="0.17"/>
+<text x="105" y="342" font-family="Roboto, Arial, sans-serif" font-size="30" font-weight="600" fill="#FF8A8F" text-anchor="middle" letter-spacing="0">▣</text>
+<text x="165" y="342" font-family="Roboto, Arial, sans-serif" font-size="29" font-weight="700" fill="#FF8A8F" text-anchor="start" letter-spacing="1.6">KLAUSURWOCHE · 2. SEMESTER</text>
+<line x1="220" y1="390" x2="220" y2="615" stroke="#34343B" stroke-width="2"/>
+<line x1="220" y1="650" x2="220" y2="875" stroke="#34343B" stroke-width="2"/>
+<line x1="220" y1="910" x2="220" y2="1135" stroke="#34343B" stroke-width="2"/>
+<text x="120" y="432" font-family="Roboto, Arial, sans-serif" font-size="28" font-weight="500" fill="#C9C5CE" text-anchor="middle" letter-spacing="0">Mo</text>
+<text x="120" y="493" font-family="Roboto, Arial, sans-serif" font-size="58" font-weight="600" fill="#FF8A8F" text-anchor="middle" letter-spacing="0">27</text>
+<text x="120" y="540" font-family="Roboto, Arial, sans-serif" font-size="24" font-weight="500" fill="#C9C5CE" text-anchor="middle" letter-spacing="0">JUL</text>
+<text x="120" y="692" font-family="Roboto, Arial, sans-serif" font-size="28" font-weight="500" fill="#C9C5CE" text-anchor="middle" letter-spacing="0">Di</text>
+<text x="120" y="753" font-family="Roboto, Arial, sans-serif" font-size="58" font-weight="600" fill="#FF8A8F" text-anchor="middle" letter-spacing="0">28</text>
+<text x="120" y="800" font-family="Roboto, Arial, sans-serif" font-size="24" font-weight="500" fill="#C9C5CE" text-anchor="middle" letter-spacing="0">JUL</text>
+<text x="120" y="952" font-family="Roboto, Arial, sans-serif" font-size="28" font-weight="500" fill="#C9C5CE" text-anchor="middle" letter-spacing="0">Fr</text>
+<text x="120" y="1013" font-family="Roboto, Arial, sans-serif" font-size="58" font-weight="600" fill="#FF8A8F" text-anchor="middle" letter-spacing="0">31</text>
+<text x="120" y="1060" font-family="Roboto, Arial, sans-serif" font-size="24" font-weight="500" fill="#C9C5CE" text-anchor="middle" letter-spacing="0">JUL</text>
+<rect x="250" y="380" width="770" height="225" rx="28" fill="#3C2023" stroke="#5A2B30" stroke-width="2"/>
+<circle cx="310" cy="438" r="34" fill="#FF8A8F" opacity="0.18"/>
+<rect x="297" y="422" width="24" height="31" rx="3" fill="none" stroke="#FF8A8F" stroke-width="4"/>
+<line x1="302" y1="434" x2="316" y2="434" stroke="#FF8A8F" stroke-width="3"/>
+<line x1="302" y1="442" x2="316" y2="442" stroke="#FF8A8F" stroke-width="3"/>
+<text x="365" y="439" font-family="Roboto, Arial, sans-serif" font-size="32" font-weight="600" fill="#F2F0F4" text-anchor="start" letter-spacing="0">Klausur Analysis</text>
+<circle cx="380" cy="484" r="14" fill="none" stroke="#C9C5CE" stroke-width="3"/>
+<line x1="380" y1="484" x2="380" y2="474" stroke="#C9C5CE" stroke-width="3"/>
+<line x1="380" y1="484" x2="389" y2="489" stroke="#C9C5CE" stroke-width="3"/>
+<text x="410" y="493" font-family="Roboto, Arial, sans-serif" font-size="27" font-weight="500" fill="#FF8A8F" text-anchor="start" letter-spacing="0">09:00</text>
+<circle cx="380" cy="532" r="10" fill="none" stroke="#C9C5CE" stroke-width="3"/>
+<path d="M362 560 Q380 538 398 560" fill="none" stroke="#C9C5CE" stroke-width="3"/>
+<text x="410" y="556" font-family="Roboto, Arial, sans-serif" font-size="24" font-weight="400" fill="#C9C5CE" text-anchor="start" letter-spacing="0">Schaufelberger, Matthias</text>
+<rect x="250" y="640" width="770" height="225" rx="28" fill="#3C2023" stroke="#5A2B30" stroke-width="2"/>
+<circle cx="310" cy="698" r="34" fill="#FF8A8F" opacity="0.18"/>
+<rect x="297" y="682" width="24" height="31" rx="3" fill="none" stroke="#FF8A8F" stroke-width="4"/>
+<line x1="302" y1="694" x2="316" y2="694" stroke="#FF8A8F" stroke-width="3"/>
+<line x1="302" y1="702" x2="316" y2="702" stroke="#FF8A8F" stroke-width="3"/>
+<text x="365" y="699" font-family="Roboto, Arial, sans-serif" font-size="32" font-weight="600" fill="#F2F0F4" text-anchor="start" letter-spacing="0">Klausur Marketing</text>
+<circle cx="380" cy="744" r="14" fill="none" stroke="#C9C5CE" stroke-width="3"/>
+<line x1="380" y1="744" x2="380" y2="734" stroke="#C9C5CE" stroke-width="3"/>
+<line x1="380" y1="744" x2="389" y2="749" stroke="#C9C5CE" stroke-width="3"/>
+<text x="410" y="753" font-family="Roboto, Arial, sans-serif" font-size="27" font-weight="500" fill="#FF8A8F" text-anchor="start" letter-spacing="0">09:00</text>
+<circle cx="380" cy="792" r="10" fill="none" stroke="#C9C5CE" stroke-width="3"/>
+<path d="M362 820 Q380 798 398 820" fill="none" stroke="#C9C5CE" stroke-width="3"/>
+<text x="410" y="816" font-family="Roboto, Arial, sans-serif" font-size="24" font-weight="400" fill="#C9C5CE" text-anchor="start" letter-spacing="0">Kleinknecht, Rüdiger · Kaufmann, Monika</text>
+<rect x="250" y="900" width="770" height="225" rx="28" fill="#3C2023" stroke="#5A2B30" stroke-width="2"/>
+<circle cx="310" cy="958" r="34" fill="#FF8A8F" opacity="0.18"/>
+<rect x="297" y="942" width="24" height="31" rx="3" fill="none" stroke="#FF8A8F" stroke-width="4"/>
+<line x1="302" y1="954" x2="316" y2="954" stroke="#FF8A8F" stroke-width="3"/>
+<line x1="302" y1="962" x2="316" y2="962" stroke="#FF8A8F" stroke-width="3"/>
+<text x="365" y="959" font-family="Roboto, Arial, sans-serif" font-size="32" font-weight="600" fill="#F2F0F4" text-anchor="start" letter-spacing="0">Klausur Theoretische Informatik</text>
+<circle cx="380" cy="1004" r="14" fill="none" stroke="#C9C5CE" stroke-width="3"/>
+<line x1="380" y1="1004" x2="380" y2="994" stroke="#C9C5CE" stroke-width="3"/>
+<line x1="380" y1="1004" x2="389" y2="1009" stroke="#C9C5CE" stroke-width="3"/>
+<text x="410" y="1013" font-family="Roboto, Arial, sans-serif" font-size="27" font-weight="500" fill="#FF8A8F" text-anchor="start" letter-spacing="0">08:30</text>
+<circle cx="380" cy="1052" r="10" fill="none" stroke="#C9C5CE" stroke-width="3"/>
+<path d="M362 1080 Q380 1058 398 1080" fill="none" stroke="#C9C5CE" stroke-width="3"/>
+<text x="410" y="1076" font-family="Roboto, Arial, sans-serif" font-size="24" font-weight="400" fill="#C9C5CE" text-anchor="start" letter-spacing="0">Schulz, Matthias · +3 weitere</text>
+<line x1="45" y1="1185" x2="1035" y2="1185" stroke="#34343B" stroke-width="2"/>
+<line x1="220" y1="1245" x2="220" y2="1460" stroke="#34343B" stroke-width="2"/>
+<text x="120" y="1287" font-family="Roboto, Arial, sans-serif" font-size="28" font-weight="500" fill="#8FC7FF" text-anchor="middle" letter-spacing="0">Mo</text>
+<text x="120" y="1348" font-family="Roboto, Arial, sans-serif" font-size="58" font-weight="600" fill="#8FC7FF" text-anchor="middle" letter-spacing="0">28</text>
+<text x="120" y="1395" font-family="Roboto, Arial, sans-serif" font-size="24" font-weight="500" fill="#C9C5CE" text-anchor="middle" letter-spacing="0">SEP</text>
+<rect x="250" y="1235" width="770" height="205" rx="28" fill="#1D2B3B" stroke="#31465E" stroke-width="2"/>
+<circle cx="310" cy="1293" r="34" fill="#8FC7FF" opacity="0.18"/>
+<path d="M288 1288 L310 1275 L332 1288 L310 1301 Z" fill="none" stroke="#8FC7FF" stroke-width="4"/>
+<path d="M296 1293 V1306 Q310 1316 324 1306 V1293" fill="none" stroke="#8FC7FF" stroke-width="4"/>
+<text x="365" y="1294" font-family="Roboto, Arial, sans-serif" font-size="32" font-weight="600" fill="#F2F0F4" text-anchor="start" letter-spacing="0">Beginn Theoriephase 3.+5. Semester</text>
+<circle cx="380" cy="1339" r="14" fill="none" stroke="#C9C5CE" stroke-width="3"/>
+<line x1="380" y1="1339" x2="380" y2="1329" stroke="#C9C5CE" stroke-width="3"/>
+<line x1="380" y1="1339" x2="389" y2="1344" stroke="#C9C5CE" stroke-width="3"/>
+<text x="410" y="1348" font-family="Roboto, Arial, sans-serif" font-size="27" font-weight="500" fill="#8FC7FF" text-anchor="start" letter-spacing="0">08:00</text>
+<line x1="220" y1="1515" x2="220" y2="1845" stroke="#34343B" stroke-width="2"/>
+<text x="120" y="1572" font-family="Roboto, Arial, sans-serif" font-size="48" font-weight="600" fill="#8FC7FF" text-anchor="middle" letter-spacing="0">28</text>
+<text x="120" y="1610" font-family="Roboto, Arial, sans-serif" font-size="22" font-weight="500" fill="#C9C5CE" text-anchor="middle" letter-spacing="0">SEP</text>
+<text x="120" y="1660" font-family="Roboto, Arial, sans-serif" font-size="30" font-weight="500" fill="#C9C5CE" text-anchor="middle" letter-spacing="0">–</text>
+<text x="120" y="1722" font-family="Roboto, Arial, sans-serif" font-size="48" font-weight="600" fill="#8FC7FF" text-anchor="middle" letter-spacing="0">02</text>
+<text x="120" y="1760" font-family="Roboto, Arial, sans-serif" font-size="22" font-weight="500" fill="#C9C5CE" text-anchor="middle" letter-spacing="0">OKT</text>
+<rect x="250" y="1505" width="770" height="310" rx="28" fill="#1D2B3B" stroke="#31465E" stroke-width="2"/>
+<circle cx="310" cy="1568" r="34" fill="#8FC7FF" opacity="0.18"/>
+<text x="310" y="1581" font-family="Roboto, Arial, sans-serif" font-size="34" font-weight="600" fill="#8FC7FF" text-anchor="middle" letter-spacing="0">♧</text>
+<text x="365" y="1586" font-family="Roboto, Arial, sans-serif" font-size="32" font-weight="600" fill="#F2F0F4" text-anchor="start" letter-spacing="0">Neue Version von RaPla verwenden</text>
+<text x="365" y="1650" font-family="Roboto, Arial, sans-serif" font-size="27" font-weight="500" fill="#8FC7FF" text-anchor="start" letter-spacing="0">Täglich · 08:00</text>
+<text x="365" y="1710" font-family="Roboto, Arial, sans-serif" font-size="22" font-weight="400" fill="#C9C5CE" text-anchor="start" letter-spacing="0">Nur als visuelle Referenz – keine neue</text>
+<text x="365" y="1744" font-family="Roboto, Arial, sans-serif" font-size="22" font-weight="400" fill="#C9C5CE" text-anchor="start" letter-spacing="0">Recurrence- oder Zusammenfassungslogik ableiten.</text>
+<text x="540" y="2050" font-family="Roboto, Arial, sans-serif" font-size="22" font-weight="500" fill="#C9C5CE" text-anchor="middle" letter-spacing="0">Material 3 design reference · DualMate</text>
+</svg>
