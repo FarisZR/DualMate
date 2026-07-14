@@ -3,6 +3,7 @@ title: "feat: Redesign Termine as a Material 3 academic agenda"
 type: feat
 date: 2026-07-13
 updated: 2026-07-14
+performance_audited: 2026-07-14
 priority: medium
 estimated_effort: 3-5 days
 tags: [ui, material-design-3, dates, rapla, accessibility, performance]
@@ -48,6 +49,9 @@ This plan follows the current Flutter guidance available for the project SDK gen
 - Preserve large text scaling, screen-reader semantics, sufficient contrast, and 48x48 targets for any future interactive controls: [Flutter accessibility guidance](https://docs.flutter.dev/ui/accessibility).
 - Use a custom row composition where `ListTile` does not fit the required layout: [ListTile API](https://api.flutter.dev/flutter/material/ListTile-class.html).
 - Use the filled Material 3 card treatment for non-elevated grouped content: [Card API](https://api.flutter.dev/flutter/material/Card-class.html).
+- Keep build work small, use lazy lists, avoid intrinsic layout, and minimize clipping/opacity: [Flutter performance best practices](https://docs.flutter.dev/perf/best-practices).
+- Measure rendering in profile mode rather than debug mode: [Flutter rendering performance](https://docs.flutter.dev/perf/rendering-performance).
+- Preserve child/render-object identity when builder order changes through an `O(1)` `findChildIndexCallback`: [ListView.builder API](https://api.flutter.dev/flutter/widgets/ListView/ListView.builder.html).
 
 ## Current behavior confirmed in the codebase
 
@@ -88,6 +92,83 @@ The page already uses:
 - deferred initialization to protect drawer and startup responsiveness.
 
 Retain these behaviors. At the time this plan was prepared, the relevant Dates suite passed 33 tests.
+
+## Performance audit and mandatory guardrails
+
+The redesign is safe to implement without a performance regression only if the following constraints are treated as requirements. They address the main risks introduced by a more structured row layout: extra list children, repeated formatting/sorting, per-row layout measurement, key remapping, and additional paint layers.
+
+### Preserve the current rebuild boundary
+
+Keep the existing `DatesRenderData` snapshot cache in `DateManagementPage`. Preparing structured rail and semantics strings must happen only when the underlying section/entry list identity, locale, or scheduled past-state version changes. Loading flags, footer state, scrolling, and ordinary ancestor rebuilds must reuse the existing snapshot.
+
+Do not put available width, theme colors, or responsive icon visibility into `DatesRenderData`; those inputs would invalidate the complete data snapshot during layout/theme changes. Keep them in a small immutable layout specification passed to visible row widgets.
+
+### Keep preparation linear and outside `build`
+
+- Create each required `DateFormat` once per `DatesRenderData.prepare()` call and reuse it for every item.
+- Do not sort again in `DatesRenderData`; it consumes the deterministic order produced by the organizer.
+- Do not run regular expressions, title normalization, date formatting, semantics-label construction, or list scans inside row `build()` methods.
+- Where normalized titles are needed for sorting/grouping, compute them once per event within that transformation pass and reuse the cached value. Never call `_normalizeTitle` from every comparator invocation.
+- The flattened-item pass and key-to-index-map construction must each be `O(n)`.
+- `findChildIndexCallback` must perform one map lookup. `indexWhere`, `indexOf`, or any scan of the rendered item list inside the callback is prohibited.
+
+### One responsive calculation, not one per row
+
+Use one `LayoutBuilder` around the Rapla list area. Read `MediaQuery.textScalerOf(context)` once at that same boundary. Resolve a const-like immutable `DatesAgendaLayoutSpec` from the available list width and text scale, including list padding, content width, rail width, gap, and whether category icons fit. Pass that specification to visible rows.
+
+Do not add a `LayoutBuilder`, `MediaQuery` lookup, width calculation, or breakpoint decision to every row. If the 200% text-scale tests require a wider rail, derive that bounded adjustment in the page-level layout specification; do not use `FittedBox`, intrinsic measurement, or post-frame size probing per row.
+
+### Single-pass row layout
+
+The agenda row must use normal constraint-based `Row`, `Expanded`, `Padding`, and fixed-width rail primitives. Do not use:
+
+- `IntrinsicHeight` or `IntrinsicWidth`;
+- baseline measurement across the row;
+- nested scrolling widgets or `shrinkWrap`;
+- `GlobalKey` for measuring row sizes;
+- post-frame size measurement followed by `setState`;
+- `itemExtent`, `prototypeItem`, or `itemExtentBuilder`, because rows legitimately vary with content and text scaling.
+
+To render the vertical rail divider without an intrinsic-height pass, place the divider/border on the event-column wrapper, whose height is already determined by the event surface. Do not wrap the row in `IntrinsicHeight`.
+
+### Paint and layer budget
+
+- Keep `ListView.builder`'s automatic repaint boundaries enabled. Do not add a manual `RepaintBoundary` around every row; this would duplicate layers.
+- Set `addAutomaticKeepAlives: false`; the rows and headings are immutable and hold no state that should survive disposal.
+- Preserve the existing `_importantEventsCacheExtent` / `scrollCacheExtent` value initially. Do not increase it to compensate for the new row design without profile evidence.
+- `Card.filled` must use zero elevation, zero external margin, and `clipBehavior: Clip.none`. Rounded color is painted by the shape; do not wrap each row in `ClipRRect`.
+- Do not introduce `Opacity`, blur, gradients requiring offscreen layers, `ShaderMask`, `ColorFilter`, `ClipPath`, or `Clip.antiAliasWithSaveLayer`. Use resolved colors with alpha directly.
+- Do not add per-row animations, controllers, timers, hover effects, or autonomous scrolling text.
+
+### List identity and pagination stability
+
+- Preserve the existing list/controller identity and the keys `rapla_dates_list` and `dates_rapla_first_item`; the integration/performance harness depends on them.
+- Store stable item keys and the immutable key-to-index map in the prepared snapshot. Do not recreate random, timestamp-based, or index-only identities after pagination.
+- Appending/replacing a Rapla window must not replace the `ScrollController`, change the list key, jump the scroll offset, or invalidate existing item identities because unrelated footer/loading state changed.
+- Keep the loading/retry/end footer outside the prepared Rapla item map, as it is transient page state.
+
+### Scope control
+
+Do not modify deferred initialization, refresh scheduling, paging-window size, provider I/O, cache reads, loading-indicator timing, or property-notification boundaries as part of this visual redesign. Any necessary change to those paths requires separate evidence and explicit PR justification.
+
+Flutter's official performance guidance specifically recommends lazy builders, avoiding intrinsic layout passes, controlling `build()` cost, minimizing opacity/clipping, and measuring in profile mode. The implementation must follow those constraints and verify them on the connected Android device.
+
+### Audited pre-implementation baseline
+
+A three-run profile baseline was captured from commit `3129c50` on the connected Samsung SM-G996B with all Android animation scales at `1.0` and deterministic offline fixtures. The code under test is the current Dates implementation; the only subsequent working-tree changes are this documentation audit.
+
+| Scenario | Combined p95 | p99 | Worst | >16.67 ms | >33 ms | Consecutive >8.33 ms | Validity |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `dates_cold_launch_to_populated` | 9.010 ms | 13.459 ms | 13.920 ms | 0 | 0 | 2 | 3/3 final state |
+| `drawer_close_to_dates_and_populated_content` | 4.196 ms | 8.892 ms | 8.892 ms | 0 | 0 | 1 | 3/3 progression, no drops |
+| `dates_cold_loaded_list_scroll` | 1.938 ms | 3.488 ms | 3.862 ms | 0 | 0 | 0 | 3/3 scroll progression |
+
+Local machine-readable outputs:
+
+- `build/perf-dates-redesign-baseline/summary.json`
+- `build/perf-dates-redesign-diagnostic-baseline/summary.json`
+
+These numbers are the current audit reference, not a reason to skip the required same-device baseline/candidate comparison in Phase 5. Environmental drift or a different device still requires a fresh baseline from the implementation branch's base commit.
 
 ## Intended data behavior
 
@@ -147,7 +228,7 @@ Ignore time-of-day in the identity. Two duplicate markers for the same title and
 
 ### 3. Deterministic ordering
 
-Use one shared event comparator for provider output, organizer children, and presentation preparation where applicable:
+Use one shared event comparator wherever a deterministic sort is required:
 
 1. start instant ascending;
 2. end instant ascending;
@@ -162,7 +243,9 @@ Final sections are ordered by:
 3. anchor end;
 4. normalized title.
 
-Exams inside an exam-week section use the shared event comparator.
+Sort only at explicit boundaries: merged provider output once, organizer input once when it cannot rely on provider order, and final sections once. Filtering exams from an already sorted event list must preserve that order and must not sort each section again. `DatesRenderData` must not sort.
+
+Exams inside an exam-week section therefore inherit the shared event order.
 
 A multi-day row appears once at its start position. Events starting during that range still appear later according to their own start time.
 
@@ -285,7 +368,7 @@ Formatting and display-policy calculation remain in render preparation, not widg
 
 ### Overall list width and responsive behavior
 
-Use `LayoutBuilder` around the Rapla list area and base decisions on its available width.
+Use exactly one `LayoutBuilder` around the Rapla list area and base decisions on its available width. Resolve a `DatesAgendaLayoutSpec` there and pass it down; do not repeat responsive calculations in individual rows.
 
 - Width below 600 logical pixels:
   - list horizontal padding: 16;
@@ -334,9 +417,8 @@ Date rail:
 
 Event surface:
 
-- use `Card.filled` with `semanticContainer: false`; the outer row semantics node owns accessibility output;
+- use `Card.filled` with `semanticContainer: false`, `margin: EdgeInsets.zero`, `elevation: 0`, and `clipBehavior: Clip.none`; the outer row semantics node owns accessibility output;
 - corner radius: 12;
-- elevation: 0;
 - no shadow;
 - no outline in the normal state;
 - horizontal padding: 16;
@@ -525,16 +607,49 @@ Widget-test:
 
 ### Phase 5: Page regression and performance
 
-Run:
+Before implementation, capture a same-device profile baseline from the unmodified base commit. After implementation, repeat the exact command with the same phone, refresh rate, animation scales, fixture mode, and run count:
+
+```bash
+PERF_RUNS=3 \
+PERF_TARGETS='dates diagnostic' \
+PERF_PROFILE_MODE=ranking \
+PERF_OUTPUT_ROOT=build/perf-dates-agenda-<baseline-or-candidate> \
+scripts/run_cold_navigation_perf_suite.sh
+```
+
+Also run:
 
 - all `test/date_management/**` tests;
 - `flutter analyze`;
-- the Dates startup and cold-navigation integration tests;
-- a profile-mode Android run on the connected device.
+- `integration_test/date_management_startup_responsiveness_test.dart`;
+- the existing cold-navigation profile harness in profile mode on the connected device.
 
-Check:
+The before/after comparison uses three-run medians, not a single run. For `dates_cold_loaded_list_scroll`:
 
-- no drawer or first-open jank regression;
+- final state and scroll-position progression must succeed in every run;
+- no frame may exceed 33 ms;
+- the number of frames over 16.67 ms may not exceed the baseline median by more than one;
+- combined p95 may not exceed the larger of baseline + 1.5 ms or baseline x 1.15;
+- the longest sequence over the 8.33 ms 120 Hz budget may not exceed the larger of baseline or two frames.
+
+For Dates cold navigation/population:
+
+- no frame may exceed 50 ms;
+- combined p95 and worst-frame time may not exceed the larger of baseline + 3 ms or baseline x 1.20;
+- no new failed animation/progression check is allowed; preserve the existing harness keys so this result is meaningful.
+
+If a threshold fails, do not explain it away as normal variance. Run one additional three-run batch. If the second candidate batch still fails, collect a trace with `PERF_PROFILE_MODE=diagnostic`, inspect it, and fix or revert the responsible design choice before opening the PR.
+
+Inspect at least one diagnostic trace or DevTools profile session for:
+
+- unexpected intrinsic layout events;
+- repeated date formatting or normalization in visible row builds;
+- excessive widget rebuilds while scrolling;
+- `saveLayer`/offscreen-layer events caused by the new surfaces;
+- an unexpected increase in retained row/layer count.
+
+Functional checks remain:
+
 - stable scroll position while additional Rapla windows load;
 - no overflow at large text scales;
 - correct colors and contrast in both themes;
@@ -553,12 +668,13 @@ Check:
 - The repeated RaPla notice remains separate unless its actual parsed type permits existing safe merging.
 - Same-day and intervening events remain independently visible and correctly ordered.
 - Multi-day rows show literal ranges only and do not invent recurrence labels.
-- The list is fully flattened and lazily constructed at every section size.
+- The list is fully flattened and lazily constructed at every section size, with no per-row intrinsic measurement or responsive `LayoutBuilder`.
 - Loading, caching, refresh, pagination, export, and scroll behavior do not regress.
 - Light/dark theme tokens come from `DatesAgendaTheme`, not widget hardcoding.
 - The UI remains usable at 320 logical pixels and 200% text scaling.
 - TalkBack semantics are intelligible and contain complete, untruncated event information.
 - All Dates tests, analyzer checks, integration tests, and profile-device verification pass.
+- The before/after three-run profile comparison satisfies every quantitative performance gate in Phase 5.
 
 ## Pull-request evidence required
 
@@ -571,7 +687,8 @@ The implementation pull request must include:
 - a screenshot showing repeated RaPla notice rows remaining separate;
 - test command results;
 - `flutter analyze` result;
-- profile/device verification notes, including whether any frame-jank regression was observed;
+- baseline and candidate profile output paths plus the Dates scenario median comparison;
+- profile/device verification notes, including the quantitative performance gates and any inspected trace findings;
 - a short list of any deliberate deviations from this plan.
 
 ## Relationship to the older plan
