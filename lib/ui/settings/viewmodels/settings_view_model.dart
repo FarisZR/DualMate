@@ -16,8 +16,8 @@ class SettingsViewModel extends BaseViewModel {
 
   final PreferencesProvider _preferencesProvider;
   final CanteenLocationService _canteenLocationService;
-  final TaskCallback _nextDayInformationNotification;
-  final NotificationApi _notificationApi;
+  TaskCallback? _nextDayInformationNotification;
+  NotificationApi? _notificationApi;
 
   bool _notifyAboutNextDay = false;
 
@@ -26,6 +26,9 @@ class SettingsViewModel extends BaseViewModel {
   bool _notifyAboutScheduleChanges = false;
 
   bool get notifyAboutScheduleChanges => _notifyAboutScheduleChanges;
+
+  bool get notificationControlsReady =>
+      _nextDayInformationNotification != null && _notificationApi != null;
 
   bool _prettifySchedule = false;
 
@@ -55,6 +58,23 @@ class SettingsViewModel extends BaseViewModel {
     _loadPreferences();
   }
 
+  void attachNotificationDependencies({
+    required TaskCallback nextDayInformationNotification,
+    required NotificationApi notificationApi,
+  }) {
+    if (identical(
+          _nextDayInformationNotification,
+          nextDayInformationNotification,
+        ) &&
+        identical(_notificationApi, notificationApi)) {
+      return;
+    }
+
+    _nextDayInformationNotification = nextDayInformationNotification;
+    _notificationApi = notificationApi;
+    notifyIfMounted("notificationControlsReady");
+  }
+
   void incrementDeveloperTapCount() {
     if (_isDeveloperOptionsEnabled) return;
     _developerTapCount += 1;
@@ -65,8 +85,11 @@ class SettingsViewModel extends BaseViewModel {
   }
 
   Future<void> setNotifyAboutScheduleChanges(bool value) async {
+    final notificationApi = _notificationApi;
+    if (notificationApi == null) return;
+
     if (value) {
-      final granted = await _notificationApi.requestRuntimePermission();
+      final granted = await notificationApi.requestRuntimePermission();
       if (granted != true) {
         _notifyAboutScheduleChanges = false;
         notifyIfMounted("notifyAboutScheduleChanges");
@@ -91,13 +114,19 @@ class SettingsViewModel extends BaseViewModel {
   }
 
   Future<void> setNotifyAboutNextDay(bool value) async {
+    final notificationApi = _notificationApi;
+    final nextDayInformationNotification = _nextDayInformationNotification;
+    if (notificationApi == null || nextDayInformationNotification == null) {
+      return;
+    }
+
     if (value) {
-      final granted = await _notificationApi.requestRuntimePermission();
+      final granted = await notificationApi.requestRuntimePermission();
       if (granted != true) {
         _notifyAboutNextDay = false;
         notifyIfMounted("notifyAboutNextDay");
         await _preferencesProvider.setNotifyAboutNextDay(false);
-        await _nextDayInformationNotification.cancel();
+        await nextDayInformationNotification.cancel();
         return;
       }
     }
@@ -109,9 +138,9 @@ class SettingsViewModel extends BaseViewModel {
     await _preferencesProvider.setNotifyAboutNextDay(value);
 
     if (value)
-      await _nextDayInformationNotification.schedule();
+      await nextDayInformationNotification.schedule();
     else
-      await _nextDayInformationNotification.cancel();
+      await nextDayInformationNotification.cancel();
   }
 
   Future<void> setUseDhMineForDates(bool value) async {

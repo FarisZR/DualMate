@@ -3,6 +3,7 @@ import 'package:dualmate/canteen/business/canteen_provider.dart';
 import 'package:dualmate/canteen/data/canteen_meal_repository.dart';
 import 'package:dualmate/canteen/service/canteen_scraper.dart';
 import 'package:dualmate/canteen/service/dhbw_app_canteen_source.dart';
+import 'package:dualmate/common/appstart/notification_settings_state.dart';
 import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/common/data/preferences/preferences_access.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
@@ -35,6 +36,7 @@ void injectServices(bool isBackground) {
   if (_isInjected) return;
 
   KiwiContainer c = KiwiContainer();
+  c.registerInstance(NotificationSettingsState());
   c.registerInstance(
     PreferencesProvider(PreferencesAccess(), SecureStorageAccess()),
   );

@@ -1,5 +1,6 @@
 import 'package:dualmate/canteen/business/canteen_location_service.dart';
 import 'package:dualmate/common/application_constants.dart';
+import 'package:dualmate/common/appstart/notification_settings_state.dart';
 import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/background/void_background_work_scheduler.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
@@ -27,13 +28,18 @@ void main() {
       CanteenLocationService(preferencesProvider),
     );
     KiwiContainer().registerInstance<WorkSchedulerService>(
-      VoidBackgroundWorkScheduler(),
+      _AvailableWorkScheduler(),
     );
     KiwiContainer().registerInstance<TaskCallback>(
       _FakeTaskCallback(),
       name: NextDayInformationNotification.name,
     );
     KiwiContainer().registerInstance<NotificationApi>(VoidNotificationApi());
+    KiwiContainer().registerInstance(
+      NotificationSettingsState(
+        initialStatus: NotificationSettingsStatus.ready,
+      ),
+    );
   });
 
   tearDown(() {
@@ -59,78 +65,140 @@ void main() {
     },
   );
 
-  testWidgets('settings page opens when next-day task is not registered', (
+  testWidgets(
+    'notification controls stay visible while next-day task is unavailable',
+    (tester) async {
+      KiwiContainer().clear();
+      final preferencesProvider = _FakePreferencesProvider();
+      KiwiContainer().registerInstance<PreferencesProvider>(
+        preferencesProvider,
+      );
+      KiwiContainer().registerInstance<CanteenLocationService>(
+        CanteenLocationService(preferencesProvider),
+      );
+      KiwiContainer().registerInstance<WorkSchedulerService>(
+        VoidBackgroundWorkScheduler(),
+      );
+      KiwiContainer().registerInstance<NotificationApi>(VoidNotificationApi());
+      final notificationState = NotificationSettingsState();
+      notificationState.markUnavailable();
+      KiwiContainer().registerInstance(notificationState);
+
+      final rootViewModel = RootViewModel(KiwiContainer().resolve());
+      await rootViewModel.loadFromPreferences();
+
+      await tester.pumpWidget(_wrapWithApp(rootViewModel, SettingsPage()));
+      await tester.pump();
+      await tester.scrollUntilVisible(
+        find.text('Notifications'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pump();
+
+      expect(find.text('Notifications'), findsOneWidget);
+      expect(find.text('Notify in the evening'), findsOneWidget);
+      expect(
+        tester
+            .widget<SwitchListTile>(
+              find.widgetWithText(SwitchListTile, 'Notify in the evening'),
+            )
+            .onChanged,
+        isNull,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'notification controls enable when deferred services become ready',
+    (tester) async {
+      KiwiContainer().clear();
+      final preferencesProvider = _FakePreferencesProvider();
+      final notificationState = NotificationSettingsState();
+      KiwiContainer().registerInstance<PreferencesProvider>(
+        preferencesProvider,
+      );
+      KiwiContainer().registerInstance<CanteenLocationService>(
+        CanteenLocationService(preferencesProvider),
+      );
+      KiwiContainer().registerInstance(notificationState);
+
+      final rootViewModel = RootViewModel(KiwiContainer().resolve());
+      await rootViewModel.loadFromPreferences();
+
+      await tester.pumpWidget(_wrapWithApp(rootViewModel, SettingsPage()));
+      await tester.pump();
+      await tester.scrollUntilVisible(
+        find.text('Notifications'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pump();
+
+      final loadingSwitch = tester.widget<SwitchListTile>(
+        find.widgetWithText(SwitchListTile, 'Notify in the evening'),
+      );
+      expect(loadingSwitch.onChanged, isNull);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      KiwiContainer().registerInstance<WorkSchedulerService>(
+        _AvailableWorkScheduler(),
+      );
+      KiwiContainer().registerInstance<TaskCallback>(
+        _FakeTaskCallback(),
+        name: NextDayInformationNotification.name,
+      );
+      KiwiContainer().registerInstance<NotificationApi>(VoidNotificationApi());
+      notificationState.markReady();
+      await tester.pump();
+
+      final readySwitch = tester.widget<SwitchListTile>(
+        find.widgetWithText(SwitchListTile, 'Notify in the evening'),
+      );
+      expect(readySwitch.onChanged, isNotNull);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('notification controls stay disabled when initialization fails', (
     tester,
   ) async {
     KiwiContainer().clear();
     final preferencesProvider = _FakePreferencesProvider();
+    final notificationState = NotificationSettingsState();
     KiwiContainer().registerInstance<PreferencesProvider>(preferencesProvider);
     KiwiContainer().registerInstance<CanteenLocationService>(
       CanteenLocationService(preferencesProvider),
     );
-    KiwiContainer().registerInstance<WorkSchedulerService>(
-      VoidBackgroundWorkScheduler(),
-    );
-    KiwiContainer().registerInstance<NotificationApi>(VoidNotificationApi());
+    KiwiContainer().registerInstance(notificationState);
 
     final rootViewModel = RootViewModel(KiwiContainer().resolve());
     await rootViewModel.loadFromPreferences();
 
     await tester.pumpWidget(_wrapWithApp(rootViewModel, SettingsPage()));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Settings'), findsOneWidget);
-    expect(find.text('Next day schedule'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('settings page opens before notification services are registered', (
-    tester,
-  ) async {
-    KiwiContainer().clear();
-    final preferencesProvider = _FakePreferencesProvider();
-    KiwiContainer().registerInstance<PreferencesProvider>(preferencesProvider);
-    KiwiContainer().registerInstance<CanteenLocationService>(
-      CanteenLocationService(preferencesProvider),
+    await tester.pump();
+    await tester.scrollUntilVisible(
+      find.text('Notifications'),
+      300,
+      scrollable: find.byType(Scrollable).first,
     );
+    await tester.pump();
 
-    final rootViewModel = RootViewModel(KiwiContainer().resolve());
-    await rootViewModel.loadFromPreferences();
+    notificationState.markFailed(StateError('notification init failed'));
+    await tester.pump();
 
-    await tester.pumpWidget(_wrapWithApp(rootViewModel, SettingsPage()));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Settings'), findsOneWidget);
-    expect(find.text('Next day schedule'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('settings page opens when next-day task resolve races startup', (
-    tester,
-  ) async {
-    KiwiContainer().clear();
-    final preferencesProvider = _FakePreferencesProvider();
-    KiwiContainer().registerInstance<PreferencesProvider>(preferencesProvider);
-    KiwiContainer().registerInstance<CanteenLocationService>(
-      CanteenLocationService(preferencesProvider),
+    expect(find.text('Notifications'), findsOneWidget);
+    expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    expect(
+      tester
+          .widget<SwitchListTile>(
+            find.widgetWithText(SwitchListTile, 'Notify in the evening'),
+          )
+          .onChanged,
+      isNull,
     );
-    KiwiContainer().registerInstance<WorkSchedulerService>(
-      VoidBackgroundWorkScheduler(),
-    );
-    KiwiContainer().registerInstance<NotificationApi>(VoidNotificationApi());
-    KiwiContainer().registerFactory<TaskCallback>(
-      (_) => throw NotRegisteredKiwiError('startup race'),
-      name: NextDayInformationNotification.name,
-    );
-
-    final rootViewModel = RootViewModel(KiwiContainer().resolve());
-    await rootViewModel.loadFromPreferences();
-
-    await tester.pumpWidget(_wrapWithApp(rootViewModel, SettingsPage()));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Settings'), findsOneWidget);
-    expect(find.text('Next day schedule'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -195,6 +263,41 @@ class _FakeTaskCallback implements TaskCallback {
 
   @override
   Future<void> schedule() async {}
+}
+
+class _AvailableWorkScheduler implements WorkSchedulerService {
+  @override
+  Future<void> cancelTask(String id) async {}
+
+  @override
+  Future<void> executeTask(String id) async {}
+
+  @override
+  bool isSchedulingAvailable() => true;
+
+  @override
+  void registerTask(TaskCallback task) {}
+
+  @override
+  Future<void> scheduleOneShotTaskAt(
+    DateTime date,
+    String id,
+    String name,
+  ) async {}
+
+  @override
+  Future<void> scheduleOneShotTaskIn(
+    Duration delay,
+    String id,
+    String name,
+  ) async {}
+
+  @override
+  Future<void> schedulePeriodic(
+    Duration delay,
+    String id, [
+    bool needsNetwork = false,
+  ]) async {}
 }
 
 class _FakePreferencesProvider implements PreferencesProvider {
