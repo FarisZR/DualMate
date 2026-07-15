@@ -129,6 +129,8 @@ final en = {
   "dateManagementEmptyStateBannerMessage":
       "No schedule source configured for dates. Configure one to see Rapla events.",
   "dateManagementRaplaEmpty": "No Rapla events found for this period.",
+  "dateManagementAgendaRangeConnector": "to",
+  "dateManagementAgendaPast": "past",
   "scheduleQueryFailedMessage":
       "Oops, something went wrong. It is possible that the schedule is incomplete. To ensure that you do not miss something, view the schedule in the browser.",
   "scheduleLoadingLatest": "Loading latest schedule...",

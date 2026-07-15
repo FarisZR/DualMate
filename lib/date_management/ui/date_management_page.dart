@@ -7,11 +7,12 @@ import 'package:dualmate/date_management/model/important_event_section.dart';
 import 'package:dualmate/date_management/ui/viewmodels/date_management_view_model.dart';
 import 'package:dualmate/date_management/ui/widgets/date_detail_bottom_sheet.dart';
 import 'package:dualmate/date_management/ui/widgets/date_filter_options.dart';
+import 'package:dualmate/date_management/ui/widgets/dates_agenda_layout.dart';
+import 'package:dualmate/date_management/ui/widgets/dates_agenda_row.dart';
 import 'package:dualmate/date_management/ui/widgets/dates_empty_state.dart';
 import 'package:dualmate/date_management/ui/widgets/dates_render_data.dart';
 import 'package:dualmate/date_management/ui/widgets/dh_mine_dates_table.dart';
-import 'package:dualmate/date_management/ui/widgets/important_event_section_card.dart';
-import 'package:dualmate/date_management/ui/widgets/important_event_section_row.dart';
+import 'package:dualmate/date_management/ui/widgets/important_event_section_heading.dart';
 import 'package:dualmate/schedule/ui/widgets/select_source_dialog.dart';
 import 'package:dualmate/ui/banner_widget.dart';
 import 'package:flutter/material.dart';
@@ -126,7 +127,9 @@ class _DatesLoadingIndicatorTransitionState
 
 class _DateManagementPageState extends State<DateManagementPage> {
   static const Duration _initialLoadDelay = Duration(milliseconds: 320);
-  static const double _importantEventsCacheExtent = 560;
+  // Agenda rows are immutable prepared snapshots and inexpensive to build.
+  // Avoid laying out offscreen rows during the first populated-page reveal.
+  static const double _importantEventsCacheExtent = 0;
 
   final ScrollController _raplaScrollController = ScrollController();
   Timer? _initializeTimer;
@@ -360,64 +363,91 @@ class _DateManagementPageState extends State<DateManagementPage> {
     BuildContext context,
     DatesRenderData renderData,
   ) {
-    if (renderData.raplaItems.isEmpty) {
-      _scheduleRaplaAutoload(model);
-      return ListView(
-        controller: _raplaScrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (!model.isLoading && !model.isLoadingNextRaplaPage)
-            Center(child: Text(L.of(context).dateManagementRaplaEmpty)),
-          _buildRaplaFooter(model, context),
-        ],
-      );
-    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textScaler = MediaQuery.textScalerOf(context);
+        final theme = Theme.of(context);
+        final layoutSpec = DatesAgendaLayoutSpec.resolve(
+          availableWidth: constraints.maxWidth,
+          textScaler: textScaler,
+        );
 
-    _scheduleRaplaAutoload(model);
-    return NotificationListener<ScrollNotification>(
-      onNotification: (notification) {
-        if (notification.metrics.pixels >=
-            notification.metrics.maxScrollExtent - 200) {
-          model.loadNextRaplaPage();
-        }
-        return false;
-      },
-      child: ListView.builder(
-        key: const Key('rapla_dates_list'),
-        controller: _raplaScrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        scrollCacheExtent: ScrollCacheExtent.pixels(
-          _importantEventsCacheExtent,
-        ),
-        itemBuilder: (context, index) {
-          if (index < renderData.raplaItems.length) {
-            final item = renderData.raplaItems[index];
-            Widget child;
-            if (item.isSection) {
-              child = Padding(
-                padding: EdgeInsets.only(top: item.sectionIndex > 0 ? 12 : 0),
-                child: ImportantEventSectionCard(renderData: item.section!),
-              );
-            } else {
-              child = ImportantEventSectionRow(item: item);
-            }
-            if (index == 0) {
-              return KeyedSubtree(
-                key: const Key('dates_rapla_first_item'),
-                child: child,
-              );
-            }
-            return child;
-          }
-          return Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: _buildRaplaFooter(model, context),
+        if (renderData.raplaItems.isEmpty) {
+          _scheduleRaplaAutoload(model);
+          return ListView(
+            controller: _raplaScrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.symmetric(
+              horizontal: layoutSpec.listHorizontalInset,
+              vertical: layoutSpec.listVerticalPadding,
+            ),
+            children: [
+              if (!model.isLoading && !model.isLoadingNextRaplaPage)
+                Center(child: Text(L.of(context).dateManagementRaplaEmpty)),
+              _buildRaplaFooter(model, context),
+            ],
           );
-        },
-        itemCount: renderData.raplaItems.length + 1,
-      ),
+        }
+
+        _scheduleRaplaAutoload(model);
+        return NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification.metrics.pixels >=
+                notification.metrics.maxScrollExtent - 200) {
+              model.loadNextRaplaPage();
+            }
+            return false;
+          },
+          child: ListView.builder(
+            key: const Key('rapla_dates_list'),
+            controller: _raplaScrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.symmetric(
+              horizontal: layoutSpec.listHorizontalInset,
+              vertical: layoutSpec.listVerticalPadding,
+            ),
+            scrollCacheExtent: ScrollCacheExtent.pixels(
+              _importantEventsCacheExtent,
+            ),
+            addAutomaticKeepAlives: false,
+            addSemanticIndexes: false,
+            findChildIndexCallback: renderData.indexForKey,
+            itemBuilder: (context, index) {
+              if (index < renderData.raplaItems.length) {
+                final item = renderData.raplaItems[index];
+                final child = switch (item.kind) {
+                  RaplaListItemKind.sectionHeading =>
+                    ImportantEventSectionHeading(
+                      data: item.heading!,
+                      layoutSpec: layoutSpec,
+                      isFirst: index == 0,
+                      resolvedTheme: theme,
+                    ),
+                  RaplaListItemKind.eventRow => ImportantEventAgendaRow(
+                    data: item.row!,
+                    layoutSpec: layoutSpec,
+                    resolvedTheme: theme,
+                  ),
+                };
+                return KeyedSubtree(
+                  key: ValueKey<String>(item.stableKey),
+                  child: index == 0
+                      ? KeyedSubtree(
+                          key: const Key('dates_rapla_first_item'),
+                          child: child,
+                        )
+                      : child,
+                );
+              }
+              return Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: _buildRaplaFooter(model, context),
+              );
+            },
+            itemCount: renderData.raplaItems.length + 1,
+          ),
+        );
+      },
     );
   }
 

@@ -12,7 +12,8 @@ import 'package:dualmate/date_management/model/date_search_parameters.dart';
 import 'package:dualmate/date_management/ui/date_management_page.dart';
 import 'package:dualmate/date_management/ui/viewmodels/date_management_view_model.dart';
 import 'package:dualmate/date_management/ui/widgets/dates_empty_state.dart';
-import 'package:dualmate/date_management/ui/widgets/important_event_tile.dart';
+import 'package:dualmate/date_management/ui/widgets/dates_agenda_row.dart';
+import 'package:dualmate/date_management/ui/widgets/important_event_section_heading.dart';
 import 'package:dualmate/date_management/service/date_management_service.dart';
 import 'package:dualmate/date_management/data/date_entry_repository.dart';
 import 'package:dualmate/common/data/database_access.dart';
@@ -68,6 +69,13 @@ void main() {
 
     expect(find.byType(GridView), findsNothing);
     expect(find.byType(ListView), findsWidgets);
+    final raplaList = tester.widget<ListView>(
+      find.byKey(const Key('rapla_dates_list')),
+    );
+    expect(
+      raplaList.padding,
+      const EdgeInsets.symmetric(horizontal: 180, vertical: 12),
+    );
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -180,7 +188,7 @@ void main() {
     expect(find.text('Rapla event 0'), findsOneWidget);
     expect(find.text('Rapla event 79'), findsNothing);
     expect(
-      find.byType(ImportantEventTile).evaluate().length,
+      find.byType(ImportantEventAgendaRow).evaluate().length,
       lessThan(events.length),
     );
 
@@ -190,7 +198,7 @@ void main() {
   });
 
   testWidgets(
-    'preserves flattened section top, middle, and bottom decoration',
+    'renders exam weeks as a heading followed by independent agenda rows',
     (WidgetTester tester) async {
       final viewModel = _buildViewModel(
         useDhMineForDates: false,
@@ -233,34 +241,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 420));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('rapla_section_0_row_0')), findsOneWidget);
-      expect(find.byKey(const Key('rapla_section_0_row_1')), findsOneWidget);
-      expect(find.byKey(const Key('rapla_section_0_row_2')), findsOneWidget);
-      expect(find.byKey(const Key('rapla_section_0_row_4')), findsOneWidget);
-
-      final top = tester.widget<DecoratedBox>(
-        find.byKey(const Key('rapla_section_0_row_0')),
-      );
-      final middle = tester.widget<DecoratedBox>(
-        find.byKey(const Key('rapla_section_0_row_1')),
-      );
-      final bottom = tester.widget<DecoratedBox>(
-        find.byKey(const Key('rapla_section_0_row_4')),
-      );
-
-      expect(top.decoration, isA<BoxDecoration>());
-      expect(
-        (top.decoration as BoxDecoration).borderRadius,
-        isA<BorderRadius>(),
-      );
-      expect(
-        (middle.decoration as BoxDecoration).borderRadius,
-        BorderRadius.zero,
-      );
-      expect(
-        (bottom.decoration as BoxDecoration).borderRadius,
-        isA<BorderRadius>(),
-      );
+      expect(find.byType(ImportantEventSectionHeading), findsOneWidget);
+      expect(find.byType(ImportantEventAgendaRow), findsNWidgets(4));
+      expect(find.text('Klausurwoche'), findsOneWidget);
+      expect(find.text('Exam 1'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();

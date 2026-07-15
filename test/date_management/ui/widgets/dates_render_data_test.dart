@@ -7,16 +7,207 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() {
-  setUpAll(() async {
-    await initializeDateFormatting();
+  setUpAll(initializeDateFormatting);
+
+  test('fully flattens sections with stable keys and an O(1) index map', () {
+    final examWeek = _examWeek(
+      _event('Klausurwoche', DateTime(2026, 7, 27), DateTime(2026, 7, 31)),
+      <ImportantEvent>[
+        _event(
+          'Analysis',
+          DateTime(2026, 7, 28, 9),
+          DateTime(2026, 7, 28, 11),
+          type: ScheduleEntryType.Exam,
+        ),
+      ],
+    );
+    final emptyExamWeek = _examWeek(
+      _event('Klausurwoche 2', DateTime(2026, 9, 21), DateTime(2026, 9, 25)),
+      const <ImportantEvent>[],
+    );
+    final renderData = _prepare([
+      _standalone(
+        _event('Holiday', DateTime(2026, 7, 1), DateTime(2026, 7, 1)),
+      ),
+      examWeek,
+      emptyExamWeek,
+    ]);
+
+    expect(renderData.raplaItems.map((item) => item.kind), [
+      RaplaListItemKind.eventRow,
+      RaplaListItemKind.sectionHeading,
+      RaplaListItemKind.eventRow,
+      RaplaListItemKind.sectionHeading,
+    ]);
+    expect(
+      renderData.raplaItems[1].sectionKind,
+      ImportantEventSectionKind.examWeek,
+    );
+    expect(renderData.raplaItems[3].heading!.title, 'Klausurwoche 2');
+    expect(
+      renderData.raplaItems.map((item) => item.stableKey).toSet(),
+      hasLength(renderData.raplaItems.length),
+    );
+    for (var index = 0; index < renderData.raplaItems.length; index++) {
+      expect(
+        renderData.raplaIndexByKey[renderData.raplaItems[index].stableKey],
+        index,
+      );
+    }
   });
 
-  test('preformats dates and past state in one render snapshot', () {
-    final event = ImportantEvent(
-      title: 'Exam',
-      start: DateTime(2026, 1, 2, 8),
-      end: DateTime(2026, 1, 2, 10),
+  test('prepares localized weekday month year and time fields', () {
+    final event = _event(
+      'Exam',
+      DateTime(2026, 10, 7, 8, 5),
+      DateTime(2026, 10, 7, 10),
       type: ScheduleEntryType.Exam,
+    );
+
+    final de = _prepare([
+      _standalone(event),
+    ], locale: 'de').raplaItems.single.row!;
+    final en = _prepare([
+      _standalone(event),
+    ], locale: 'en').raplaItems.single.row!;
+
+    expect(de.event.weekday, 'Mi');
+    expect(de.event.startDay, '7');
+    expect(de.event.startMonth, 'OKT');
+    expect(de.event.startYear, isNull);
+    expect(de.event.timeText, '08:05');
+    expect(en.event.weekday, 'Wed');
+    expect(en.event.startMonth, 'OCT');
+  });
+
+  test('shows a year outside the current calendar year', () {
+    final row = _prepare([
+      _standalone(_event('Future', DateTime(2027, 1, 2), DateTime(2027, 1, 2))),
+    ]).raplaItems.single.row!;
+
+    expect(row.event.startYear, '2027');
+  });
+
+  test('prepares literal same-month cross-month and cross-year ranges', () {
+    final renderData = _prepare([
+      _standalone(
+        _event('Same month', DateTime(2026, 7, 27), DateTime(2026, 7, 31)),
+      ),
+      _standalone(
+        _event('Cross month', DateTime(2026, 9, 28), DateTime(2026, 10, 2)),
+      ),
+      _standalone(
+        _event('Cross year', DateTime(2026, 12, 30), DateTime(2027, 1, 2)),
+      ),
+    ]);
+    final rows = renderData.raplaItems.map((item) => item.row!.event).toList();
+
+    expect(rows[0].rangeStyle, ImportantEventRangeStyle.sameMonth);
+    expect(rows[0].startDay, '27');
+    expect(rows[0].endDay, '31');
+    expect(rows[0].startMonth, 'JUL');
+    expect(rows[0].endMonth, isNull);
+    expect(rows[1].rangeStyle, ImportantEventRangeStyle.crossMonth);
+    expect(rows[1].startDay, '28');
+    expect(rows[1].endDay, '02');
+    expect(rows[1].startMonth, 'SEP');
+    expect(rows[1].endMonth, 'OCT');
+    expect(rows[2].rangeStyle, ImportantEventRangeStyle.crossYear);
+    expect(rows[2].startYear, '2026');
+    expect(rows[2].endYear, '2027');
+    expect(rows.every((row) => row.timeText == null), isTrue);
+  });
+
+  test('suppresses only immediately repeated single-day rails', () {
+    final day = DateTime(2026, 7, 7);
+    final renderData = _prepare([
+      _standalone(_event('First', day, day.add(const Duration(hours: 1)))),
+      _standalone(
+        _event(
+          'Second',
+          day.add(const Duration(hours: 2)),
+          day.add(const Duration(hours: 3)),
+        ),
+      ),
+      _standalone(_event('Range', day, day.add(const Duration(days: 1)))),
+      _standalone(
+        _event(
+          'After range',
+          day.add(const Duration(hours: 4)),
+          day.add(const Duration(hours: 5)),
+        ),
+      ),
+      _examWeek(
+        _event('Klausurwoche', day, day.add(const Duration(days: 4))),
+        <ImportantEvent>[
+          _event(
+            'After heading',
+            day.add(const Duration(hours: 6)),
+            day.add(const Duration(hours: 7)),
+            type: ScheduleEntryType.Exam,
+          ),
+        ],
+      ),
+    ]);
+    final rows = renderData.raplaItems
+        .where((item) => item.kind == RaplaListItemKind.eventRow)
+        .map((item) => item.row!)
+        .toList();
+
+    expect(rows.map((row) => row.suppressDateRail), [
+      false,
+      true,
+      false,
+      false,
+      false,
+    ]);
+    expect(rows.map((row) => row.spacingRole), [
+      AgendaRowSpacingRole.first,
+      AgendaRowSpacingRole.sameDayContinuation,
+      AgendaRowSpacingRole.normalDateChange,
+      AgendaRowSpacingRole.normalDateChange,
+      AgendaRowSpacingRole.afterSectionHeading,
+    ]);
+  });
+
+  test('preserves full content in localized semantics labels', () {
+    const title = 'A very long exam title that must remain complete';
+    const professor = 'Prof. Ada Lovelace and Prof. Grace Hopper';
+    final event = _event(
+      title,
+      DateTime(2025, 7, 7, 8, 15),
+      DateTime(2025, 7, 7, 10),
+      type: ScheduleEntryType.Exam,
+      professor: professor,
+    );
+
+    final row = _prepare([_standalone(event)]).raplaItems.single.row!;
+
+    expect(row.event.semanticsLabel, contains(title));
+    expect(row.event.semanticsLabel, contains(professor));
+    expect(row.event.semanticsLabel, contains('08:15'));
+    expect(row.event.semanticsLabel, contains('past'));
+  });
+
+  test('prepares exam-week range subtitle and heading semantics', () {
+    final renderData = _prepare([
+      _examWeek(
+        _event('Klausurwoche', DateTime(2026, 7, 27), DateTime(2026, 7, 31)),
+        const <ImportantEvent>[],
+      ),
+    ]);
+    final heading = renderData.raplaItems.single.heading!;
+
+    expect(heading.rangeSubtitle, '27–31 JUL');
+    expect(heading.semanticsLabel, contains('Klausurwoche'));
+    expect(heading.semanticsLabel, contains('July'));
+  });
+
+  test('keeps past-state scheduling and DH-Mine preparation intact', () {
+    final event = _event(
+      'Future',
+      DateTime(2026, 2, 1, 8),
+      DateTime(2026, 2, 1, 9),
     );
     final entry = DateEntry(
       description: 'Past date',
@@ -27,186 +218,63 @@ void main() {
       end: DateTime(2025, 12, 1, 10),
       room: '',
     );
-
     final renderData = DatesRenderData.prepare(
-      sections: [
-        ImportantEventSection(header: null, events: [event]),
-      ],
+      sections: [_standalone(event)],
       entries: [entry],
-      locale: 'en',
-      now: DateTime(2026, 1, 1),
-    );
-
-    final compactSection = renderData.raplaItems.single.section!;
-    expect(compactSection.events.single.dateText, '02/01/2026 · 08:00');
-    expect(compactSection.events.single.isPast, isFalse);
-    expect(renderData.dateEntries.single.dateText, '01/12/2025');
-    expect(renderData.dateEntries.single.timeText, isNull);
-    expect(renderData.dateEntries.single.isPast, isTrue);
-  });
-
-  test('computes next past-state change from earliest future end', () {
-    final pastEvent = ImportantEvent(
-      title: 'Past',
-      start: DateTime(2026, 1, 1, 8),
-      end: DateTime(2026, 1, 1, 10),
-      type: ScheduleEntryType.Exam,
-    );
-    final laterFutureEvent = ImportantEvent(
-      title: 'Later future',
-      start: DateTime(2026, 3, 1, 8),
-      end: DateTime(2026, 3, 1, 10),
-      type: ScheduleEntryType.Exam,
-    );
-    final earlierFutureEvent = ImportantEvent(
-      title: 'Earlier future',
-      start: DateTime(2026, 2, 1, 8),
-      end: DateTime(2026, 2, 1, 9),
-      type: ScheduleEntryType.Exam,
-    );
-
-    final renderData = DatesRenderData.prepare(
-      sections: [
-        ImportantEventSection(
-          header: null,
-          events: [pastEvent, laterFutureEvent, earlierFutureEvent],
-        ),
-      ],
-      entries: const [],
       locale: 'en',
       now: DateTime(2026, 1, 15),
     );
 
     expect(renderData.nextPastStateChange, DateTime(2026, 2, 1, 9));
+    expect(renderData.dateEntries.single.dateText, '01/12/2025');
+    expect(renderData.dateEntries.single.isPast, isTrue);
+    expect(DateTableColumnWidths.forAvailableWidth(360).description, 136);
   });
+}
 
-  test('flattens grouped sections with row positions', () {
-    final section = ImportantEventSection(
-      header: ImportantEvent(
-        title: 'Klausurwoche',
-        start: DateTime(2026, 2, 1),
-        end: DateTime(2026, 2, 5),
-        type: ScheduleEntryType.SpecialEvent,
-      ),
-      events: [
-        ImportantEvent(
-          title: 'Exam 1',
-          start: DateTime(2026, 2, 2, 8),
-          end: DateTime(2026, 2, 2, 10),
-          type: ScheduleEntryType.Exam,
-        ),
-        ImportantEvent(
-          title: 'Exam 2',
-          start: DateTime(2026, 2, 3, 8),
-          end: DateTime(2026, 2, 3, 10),
-          type: ScheduleEntryType.Exam,
-        ),
-        ImportantEvent(
-          title: 'Exam 3',
-          start: DateTime(2026, 2, 4, 8),
-          end: DateTime(2026, 2, 4, 10),
-          type: ScheduleEntryType.Exam,
-        ),
-        ImportantEvent(
-          title: 'Exam 4',
-          start: DateTime(2026, 2, 5, 8),
-          end: DateTime(2026, 2, 5, 10),
-          type: ScheduleEntryType.Exam,
-        ),
-      ],
-    );
+DatesRenderData _prepare(
+  List<ImportantEventSection> sections, {
+  String locale = 'en',
+}) {
+  return DatesRenderData.prepare(
+    sections: sections,
+    entries: const <DateEntry>[],
+    locale: locale,
+    now: DateTime(2026, 1, 1),
+  );
+}
 
-    final renderData = DatesRenderData.prepare(
-      sections: [section],
-      entries: const [],
-      locale: 'en',
-      now: DateTime(2026, 1, 1),
-    );
+ImportantEventSection _standalone(ImportantEvent event) {
+  return ImportantEventSection(
+    kind: ImportantEventSectionKind.standalone,
+    header: null,
+    events: <ImportantEvent>[event],
+  );
+}
 
-    expect(renderData.raplaItems, hasLength(5));
-    expect(renderData.raplaItems.map((item) => item.position), [
-      ImportantEventRowPosition.top,
-      ImportantEventRowPosition.middle,
-      ImportantEventRowPosition.middle,
-      ImportantEventRowPosition.middle,
-      ImportantEventRowPosition.bottom,
-    ]);
-    expect(renderData.raplaItems.first.isHeader, isTrue);
-    expect(renderData.raplaItems.first.showDividerAfter, isTrue);
-    expect(renderData.raplaItems.every((item) => item.isExamSection), isTrue);
-    expect(renderData.raplaItems.every((item) => !item.isSection), isTrue);
-  });
+ImportantEventSection _examWeek(
+  ImportantEvent header,
+  List<ImportantEvent> events,
+) {
+  return ImportantEventSection(
+    kind: ImportantEventSectionKind.examWeek,
+    header: header,
+    events: events,
+  );
+}
 
-  test('keeps small sections as one card item', () {
-    final event = ImportantEvent(
-      title: 'Holiday',
-      start: DateTime(2026, 2, 2),
-      end: DateTime(2026, 2, 2),
-      type: ScheduleEntryType.PublicHoliday,
-    );
-
-    final renderData = DatesRenderData.prepare(
-      sections: [
-        ImportantEventSection(header: null, events: [event]),
-      ],
-      entries: const [],
-      locale: 'en',
-      now: DateTime(2026, 1, 1),
-    );
-
-    expect(renderData.raplaItems, hasLength(1));
-    expect(renderData.raplaItems.single.isSection, isTrue);
-    expect(renderData.raplaItems.single.section!.events.single.event, event);
-  });
-
-  test('keeps the eager-row boundary as one card item', () {
-    final events = List<ImportantEvent>.generate(
-      DatesRenderData.maxEagerRowsPerSection,
-      (index) => ImportantEvent(
-        title: 'Event $index',
-        start: DateTime(2026, 2, index + 1),
-        end: DateTime(2026, 2, index + 1),
-        type: ScheduleEntryType.SpecialEvent,
-      ),
-    );
-
-    final renderData = DatesRenderData.prepare(
-      sections: [ImportantEventSection(header: null, events: events)],
-      entries: const [],
-      locale: 'en',
-      now: DateTime(2026, 1, 1),
-    );
-
-    expect(renderData.raplaItems, hasLength(1));
-    expect(renderData.raplaItems.single.isSection, isTrue);
-    expect(renderData.raplaItems.single.isExamSection, isFalse);
-  });
-
-  test('section items preserve exam-section metadata', () {
-    final event = ImportantEvent(
-      title: 'Exam',
-      start: DateTime(2026, 2, 2),
-      end: DateTime(2026, 2, 2),
-      type: ScheduleEntryType.Exam,
-    );
-
-    final renderData = DatesRenderData.prepare(
-      sections: [
-        ImportantEventSection(header: null, events: [event]),
-      ],
-      entries: const [],
-      locale: 'en',
-      now: DateTime(2026, 1, 1),
-    );
-
-    expect(renderData.raplaItems.single.isSection, isTrue);
-    expect(renderData.raplaItems.single.isExamSection, isTrue);
-  });
-
-  test('computes fixed table widths once for the viewport', () {
-    final widths = DateTableColumnWidths.forAvailableWidth(360);
-
-    expect(widths.date, DateTableColumnWidths.dateColumnWidth);
-    expect(widths.description, 136);
-  });
+ImportantEvent _event(
+  String title,
+  DateTime start,
+  DateTime end, {
+  ScheduleEntryType type = ScheduleEntryType.SpecialEvent,
+  String professor = '',
+}) {
+  return ImportantEvent(
+    title: title,
+    start: start,
+    end: end,
+    professor: professor,
+    type: type,
+  );
 }
