@@ -470,7 +470,18 @@ NotificationSettingsState _resolveNotificationSettingsState() {
   final existing = _resolveOptional<NotificationSettingsState>();
   if (existing != null) return existing;
 
-  final state = NotificationSettingsState();
+  final notificationApi = _resolveNotificationApiOrNull();
+  final nextDayTask = _resolveNextDayInformationNotificationOrNull();
+  final scheduler = _resolveWorkSchedulerServiceOrNull();
+
+  var initialStatus = NotificationSettingsStatus.loading;
+  if (notificationApi != null && nextDayTask != null && scheduler != null) {
+    initialStatus = scheduler.isSchedulingAvailable()
+        ? NotificationSettingsStatus.ready
+        : NotificationSettingsStatus.unavailable;
+  }
+
+  final state = NotificationSettingsState(initialStatus: initialStatus);
   KiwiContainer().registerInstance(state);
   return state;
 }
