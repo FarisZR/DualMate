@@ -166,6 +166,51 @@ void main() {
     expect(find.byKey(const Key('dates_agenda_category_icon')), findsOneWidget);
   });
 
+  testWidgets('exam-week inset participates in the category icon cutoff', (
+    tester,
+  ) async {
+    final row = _eventRow();
+    final spec = DatesAgendaLayoutSpec.resolve(
+      availableWidth: 368,
+      textScaler: TextScaler.noScaling,
+    );
+
+    await tester.pumpWidget(
+      _app(
+        Column(
+          children: [
+            ImportantEventAgendaRow(
+              key: const Key('standalone_icon_row'),
+              data: row,
+              layoutSpec: spec,
+            ),
+            ImportantEventAgendaRow(
+              key: const Key('exam_week_icon_row'),
+              data: row,
+              layoutSpec: spec,
+              isInExamWeek: true,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('standalone_icon_row')),
+        matching: find.byKey(const Key('dates_agenda_category_icon')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('exam_week_icon_row')),
+        matching: find.byKey(const Key('dates_agenda_category_icon')),
+      ),
+      findsNothing,
+    );
+  });
+
   testWidgets('supports 320 logical pixels and 200 percent text scaling', (
     tester,
   ) async {
@@ -173,6 +218,15 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    const viewportWidth = 320.0;
+    const contentWidth = 288.0;
+    final layoutSpec = DatesAgendaLayoutSpec.resolve(
+      // The resolver receives the viewport; ListView then removes its two
+      // 16-pixel horizontal insets before laying out the row.
+      availableWidth: viewportWidth,
+      textScaler: const TextScaler.linear(2),
+    );
+    expect(layoutSpec.contentWidth, contentWidth);
     final row = _eventRow(
       title: 'A deliberately long examination title that wraps safely',
       professor: 'Prof. Ada Lovelace and Prof. Grace Hopper',
@@ -182,11 +236,11 @@ void main() {
       _app(
         MediaQuery(
           data: const MediaQueryData(textScaler: TextScaler.linear(2)),
-          child: ImportantEventAgendaRow(
-            data: row,
-            layoutSpec: DatesAgendaLayoutSpec.resolve(
-              availableWidth: 320,
-              textScaler: const TextScaler.linear(2),
+          child: SizedBox(
+            width: contentWidth,
+            child: ImportantEventAgendaRow(
+              data: row,
+              layoutSpec: layoutSpec,
             ),
           ),
         ),

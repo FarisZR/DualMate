@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 @immutable
 class DatesAgendaLayoutSpec {
   static const double maxContentWidth = 840;
+  static const double categoryIconMinimumSurfaceWidth = 260;
 
   final double listHorizontalInset;
   final double listVerticalPadding;
@@ -47,7 +48,7 @@ class DatesAgendaLayoutSpec {
       contentWidth: contentWidth.toDouble(),
       railWidth: railWidth,
       gap: gap,
-      showCategoryIcon: eventSurfaceWidth >= 260,
+      showCategoryIcon: eventSurfaceWidth >= categoryIconMinimumSurfaceWidth,
     );
   }
 }

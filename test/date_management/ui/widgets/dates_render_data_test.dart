@@ -205,6 +205,22 @@ void main() {
     expect(rows[2].spacingRole, AgendaRowSpacingRole.distantDateChange);
   });
 
+  test('keeps a seven-day calendar gap across daylight-saving changes', () {
+    final renderData = _prepare([
+      _standalone(
+        _event('Before DST', DateTime(2026, 3, 23), DateTime(2026, 3, 23)),
+      ),
+      _standalone(
+        _event('After DST', DateTime(2026, 3, 30), DateTime(2026, 3, 30)),
+      ),
+    ]);
+
+    expect(
+      renderData.raplaItems.last.row!.spacingRole,
+      AgendaRowSpacingRole.distantDateChange,
+    );
+  });
+
   test('preserves full content in localized semantics labels', () {
     const title = 'A very long exam title that must remain complete';
     const professor = 'Prof. Ada Lovelace and Prof. Grace Hopper';

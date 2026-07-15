@@ -9,6 +9,9 @@ import 'package:dualmate/date_management/model/important_event_section.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 
+DateTime _toUtcCalendarDay(DateTime date) =>
+    DateTime.utc(date.year, date.month, date.day);
+
 class DatesRenderData {
   static const int _noticeableGapDays = 7;
 
@@ -83,8 +86,10 @@ class DatesRenderData {
         final eventData = renderEvent(event);
         final hasNoticeableGap =
             previousVisibleEvent != null &&
-            toStartOfDay(event.start)
-                    .difference(toStartOfDay(previousVisibleEvent.event.end))
+            _toUtcCalendarDay(event.start)
+                    .difference(
+                      _toUtcCalendarDay(previousVisibleEvent.event.end),
+                    )
                     .inDays >=
                 _noticeableGapDays;
         final suppressDateRail =

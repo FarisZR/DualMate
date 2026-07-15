@@ -46,6 +46,26 @@ void main() {
     expect(event1, event2);
   });
 
+  test('ImportantEvent hashCode preserves field order', () {
+    final first = ImportantEvent(
+      title: 'Title A',
+      start: DateTime(2026, 1, 6),
+      end: DateTime(2026, 1, 6),
+      professor: 'Professor B',
+      type: ScheduleEntryType.PublicHoliday,
+    );
+    final swapped = ImportantEvent(
+      title: 'Professor B',
+      start: DateTime(2026, 1, 6),
+      end: DateTime(2026, 1, 6),
+      professor: 'Title A',
+      type: ScheduleEntryType.PublicHoliday,
+    );
+
+    expect(first, isNot(swapped));
+    expect(first.hashCode, isNot(swapped.hashCode));
+  });
+
   test('ImportantEvent serializes all schedule detail fields', () {
     var event = ImportantEvent(
       title: 'Klausur',

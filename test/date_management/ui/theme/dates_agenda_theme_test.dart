@@ -51,6 +51,14 @@ void main() {
         0.5,
       ),
     );
+    expect(
+      midpoint.divider,
+      Color.lerp(
+        DatesAgendaTheme.light.divider,
+        DatesAgendaTheme.dark.divider,
+        0.5,
+      ),
+    );
   });
 
   test('maps domain categories to agenda or neutral Material tokens', () {

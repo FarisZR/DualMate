@@ -91,6 +91,9 @@ class ColorPalettes {
     var darkSurface = const Color(0xFF1E1E1E);
     var lightBackground = const Color(0xFFFFFFFF);
     var darkBackground = const Color(0xFF121212);
+    var dividerColor = isDark
+        ? const Color(0xFF3A3A3A)
+        : const Color(0xFFD8D8D8);
 
     var colorScheme =
         ColorScheme.fromSwatch(
@@ -110,6 +113,8 @@ class ColorPalettes {
       scaffoldBackgroundColor: isDark ? darkBackground : lightBackground,
       canvasColor: isDark ? darkBackground : lightBackground,
       cardColor: isDark ? darkSurface : lightSurface,
+      dividerColor: dividerColor,
+      dividerTheme: DividerThemeData(color: dividerColor),
       appBarTheme: baseTheme.appBarTheme.copyWith(
         backgroundColor: isDark
             ? const Color(0xFF1B1B1B)

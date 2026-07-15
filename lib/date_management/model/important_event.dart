@@ -101,13 +101,6 @@ class ImportantEvent {
   }
 
   @override
-  int get hashCode {
-    return title.hashCode ^
-        start.hashCode ^
-        end.hashCode ^
-        professor.hashCode ^
-        details.hashCode ^
-        room.hashCode ^
-        type.hashCode;
-  }
+  int get hashCode =>
+      Object.hash(title, start, end, professor, details, room, type);
 }

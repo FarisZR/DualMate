@@ -5,6 +5,8 @@ import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:flutter/material.dart';
 
 class ImportantEventAgendaRow extends StatelessWidget {
+  static const double _examWeekInset = 12;
+
   final ImportantEventAgendaRowRenderData data;
   final DatesAgendaLayoutSpec layoutSpec;
   final VoidCallback? onTap;
@@ -32,6 +34,14 @@ class ImportantEventAgendaRow extends StatelessWidget {
       data.event.event.type,
       theme.colorScheme,
     );
+    final showCategoryIcon = !isInExamWeek
+        ? layoutSpec.showCategoryIcon
+        : layoutSpec.showCategoryIcon &&
+              layoutSpec.contentWidth -
+                      layoutSpec.railWidth -
+                      layoutSpec.gap -
+                      _examWeekInset >=
+                  DatesAgendaLayoutSpec.categoryIconMinimumSurfaceWidth;
 
     return Semantics(
       container: true,
@@ -64,12 +74,12 @@ class ImportantEventAgendaRow extends StatelessWidget {
                 ),
                 child: Padding(
                   padding: EdgeInsets.only(
-                    left: layoutSpec.gap + (isInExamWeek ? 12 : 0),
+                    left: layoutSpec.gap + (isInExamWeek ? _examWeekInset : 0),
                   ),
                   child: _buildEventSurface(
                     event: data.event,
                     colors: categoryColors,
-                    showCategoryIcon: layoutSpec.showCategoryIcon,
+                    showCategoryIcon: showCategoryIcon,
                     textTheme: theme.textTheme,
                     onTap: onTap,
                   ),
