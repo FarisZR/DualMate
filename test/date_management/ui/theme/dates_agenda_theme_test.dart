@@ -18,17 +18,23 @@ void main() {
     expect(light.examForeground, const Color(0xFF3B0A0A));
     expect(light.examAccent, const Color(0xFFB3261E));
     expect(light.specialEventContainer, const Color(0xFFE9F2FF));
+    expect(light.divider, const Color(0xFFD8D8D8));
     expect(dark.examContainer, const Color(0xFF3A1B1D));
     expect(dark.examAccent, const Color(0xFFFFB4AB));
     expect(dark.specialEventAccent, const Color(0xFFA9C7FF));
+    expect(dark.divider, const Color(0xFF3A3A3A));
   });
 
   test('copyWith and lerp preserve all theme fields', () {
-    final changed = DatesAgendaTheme.light.copyWith(examAccent: Colors.purple);
+    final changed = DatesAgendaTheme.light.copyWith(
+      examAccent: Colors.purple,
+      divider: Colors.orange,
+    );
     final midpoint = DatesAgendaTheme.light.lerp(DatesAgendaTheme.dark, 0.5);
 
     expect(changed.examAccent, Colors.purple);
     expect(changed.examContainer, DatesAgendaTheme.light.examContainer);
+    expect(changed.divider, Colors.orange);
     expect(
       midpoint.examContainer,
       Color.lerp(

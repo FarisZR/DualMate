@@ -253,6 +253,23 @@ void main() {
     expect(merged[1].professor, 'Prof. Becker');
   });
 
+  test('preserves schedule details and room for the event details sheet', () {
+    final merged = RaplaImportantEventsProvider.mergeImportantEntries([
+      ScheduleEntry(
+        start: DateTime(2026, 7, 27, 7),
+        end: DateTime(2026, 7, 27, 8),
+        title: 'Klausur',
+        details: 'Bring a calculator',
+        professor: 'Prof. Schmidt',
+        room: 'A 101',
+        type: ScheduleEntryType.Exam,
+      ),
+    ]);
+
+    expect(merged.single.details, 'Bring a calculator');
+    expect(merged.single.room, 'A 101');
+  });
+
   test('Preserves both professors for same-slot exam collisions', () {
     var entries = [
       ScheduleEntry(

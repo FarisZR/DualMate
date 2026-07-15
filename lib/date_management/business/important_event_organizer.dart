@@ -99,9 +99,7 @@ class ImportantEventOrganizer {
               ? -1
               : 1;
         }
-        comparison = first.anchorEnd.compareTo(second.anchorEnd);
-        if (comparison != 0) return comparison;
-        return first.normalizedTitle.compareTo(second.normalizedTitle);
+        return first.anchorOrdering.compareTo(second.anchorOrdering);
       });
     return keyed.map((key) => key.section).toList(growable: false);
   }
@@ -110,13 +108,11 @@ class ImportantEventOrganizer {
 class _SectionSortKey {
   final ImportantEventSection section;
   final DateTime anchorStart;
-  final DateTime anchorEnd;
-  final String normalizedTitle;
+  final ImportantEventOrderingKey anchorOrdering;
 
   _SectionSortKey(this.section)
     : anchorStart = section.header?.start ?? section.events.single.start,
-      anchorEnd = section.header?.end ?? section.events.single.end,
-      normalizedTitle = normalizeImportantEventTitle(
-        section.header?.title ?? section.events.single.title,
+      anchorOrdering = ImportantEventOrderingKey(
+        section.header ?? section.events.single,
       );
 }

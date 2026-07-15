@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/widgets/error_display.dart';
 import 'package:dualmate/date_management/model/date_entry.dart';
+import 'package:dualmate/date_management/model/important_event.dart';
 import 'package:dualmate/date_management/model/important_event_section.dart';
 import 'package:dualmate/date_management/ui/viewmodels/date_management_view_model.dart';
 import 'package:dualmate/date_management/ui/widgets/date_detail_bottom_sheet.dart';
@@ -14,6 +15,7 @@ import 'package:dualmate/date_management/ui/widgets/dates_render_data.dart';
 import 'package:dualmate/date_management/ui/widgets/dh_mine_dates_table.dart';
 import 'package:dualmate/date_management/ui/widgets/important_event_section_heading.dart';
 import 'package:dualmate/schedule/ui/widgets/select_source_dialog.dart';
+import 'package:dualmate/schedule/ui/weeklyschedule/schedule_entry_detail_bottom_sheet.dart';
 import 'package:dualmate/ui/banner_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -127,9 +129,9 @@ class _DatesLoadingIndicatorTransitionState
 
 class _DateManagementPageState extends State<DateManagementPage> {
   static const Duration _initialLoadDelay = Duration(milliseconds: 320);
-  // Agenda rows are immutable prepared snapshots and inexpensive to build.
-  // Avoid laying out offscreen rows during the first populated-page reveal.
-  static const double _importantEventsCacheExtent = 0;
+  // Keep one row prepared so 120 Hz scrolling does not build every row at the
+  // viewport edge without restoring the old 560 px cold-load layout cost.
+  static const double _importantEventsCacheExtent = 140;
 
   final ScrollController _raplaScrollController = ScrollController();
   Timer? _initializeTimer;
@@ -426,6 +428,12 @@ class _DateManagementPageState extends State<DateManagementPage> {
                   RaplaListItemKind.eventRow => ImportantEventAgendaRow(
                     data: item.row!,
                     layoutSpec: layoutSpec,
+                    isInExamWeek:
+                        item.sectionKind == ImportantEventSectionKind.examWeek,
+                    onTap: () => _showImportantEventDetailBottomSheet(
+                      context,
+                      item.row!.event.event,
+                    ),
                     resolvedTheme: theme,
                   ),
                 };
@@ -528,6 +536,23 @@ class _DateManagementPageState extends State<DateManagementPage> {
             DateManagementViewModel? model,
             Set<String>? properties,
           ) => ErrorDisplay(show: model?.updateFailed ?? false),
+    );
+  }
+
+  void _showImportantEventDetailBottomSheet(
+    BuildContext context,
+    ImportantEvent event,
+  ) {
+    showModalBottomSheet(
+      useRootNavigator: true,
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => ScheduleEntryDetailBottomSheet(
+        scheduleEntry: event.toScheduleEntry(),
+      ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
+      ),
     );
   }
 }

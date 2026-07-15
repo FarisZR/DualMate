@@ -7,12 +7,16 @@ import 'package:flutter/material.dart';
 class ImportantEventAgendaRow extends StatelessWidget {
   final ImportantEventAgendaRowRenderData data;
   final DatesAgendaLayoutSpec layoutSpec;
+  final VoidCallback? onTap;
+  final bool isInExamWeek;
   final ThemeData? resolvedTheme;
 
   const ImportantEventAgendaRow({
     super.key,
     required this.data,
     required this.layoutSpec,
+    this.onTap,
+    this.isInExamWeek = false,
     this.resolvedTheme,
   });
 
@@ -32,6 +36,8 @@ class ImportantEventAgendaRow extends StatelessWidget {
     return Semantics(
       container: true,
       label: data.event.semanticsLabel,
+      button: onTap != null,
+      onTap: onTap,
       excludeSemantics: true,
       child: Padding(
         padding: EdgeInsets.only(top: _topSpacing),
@@ -50,21 +56,22 @@ class ImportantEventAgendaRow extends StatelessWidget {
             ),
             Expanded(
               child: DecoratedBox(
+                key: const Key('dates_agenda_rail_divider'),
                 decoration: BoxDecoration(
                   border: Border(
-                    left: BorderSide(
-                      color: theme.colorScheme.outlineVariant,
-                      width: 1,
-                    ),
+                    left: BorderSide(color: agendaTheme.divider, width: 1),
                   ),
                 ),
                 child: Padding(
-                  padding: EdgeInsets.only(left: layoutSpec.gap),
+                  padding: EdgeInsets.only(
+                    left: layoutSpec.gap + (isInExamWeek ? 12 : 0),
+                  ),
                   child: _buildEventSurface(
                     event: data.event,
                     colors: categoryColors,
                     showCategoryIcon: layoutSpec.showCategoryIcon,
                     textTheme: theme.textTheme,
+                    onTap: onTap,
                   ),
                 ),
               ),
@@ -84,6 +91,8 @@ class ImportantEventAgendaRow extends StatelessWidget {
         return 8;
       case AgendaRowSpacingRole.normalDateChange:
         return 12;
+      case AgendaRowSpacingRole.distantDateChange:
+        return 28;
     }
   }
 }
@@ -182,68 +191,76 @@ Widget _buildEventSurface({
   required DatesAgendaCategoryColors colors,
   required bool showCategoryIcon,
   required TextTheme textTheme,
+  required VoidCallback? onTap,
 }) {
-  return Card.filled(
-    semanticContainer: false,
-    margin: EdgeInsets.zero,
+  return Material(
+    key: const Key('dates_agenda_event_surface'),
+    type: MaterialType.card,
     elevation: 0,
     clipBehavior: Clip.none,
     color: colors.container,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          if (showCategoryIcon) ...<Widget>[
-            _buildCategoryIcon(
-              key: const Key('dates_agenda_category_icon'),
-              category: event.event.type,
-              colors: colors,
-            ),
-            const SizedBox(width: 12),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Text(
-                  event.event.title,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.titleMedium?.copyWith(
-                    color: colors.foreground,
-                    fontWeight: FontWeight.w600,
-                    decoration: event.isPast
-                        ? TextDecoration.lineThrough
-                        : null,
-                  ),
-                ),
-                if (event.timeText != null) ...<Widget>[
-                  const SizedBox(height: 4),
+    child: InkWell(
+      onTap: onTap,
+      excludeFromSemantics: true,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            if (showCategoryIcon) ...<Widget>[
+              _buildCategoryIcon(
+                key: const Key('dates_agenda_category_icon'),
+                category: event.event.type,
+                colors: colors,
+              ),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
                   Text(
-                    event.timeText!,
-                    style: textTheme.bodyMedium?.copyWith(
+                    event.event.title,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.titleMedium?.copyWith(
                       color: colors.foreground,
+                      fontWeight: FontWeight.w600,
+                      decoration: event.isPast
+                          ? TextDecoration.lineThrough
+                          : null,
                     ),
                   ),
+                  if (event.timeText != null) ...<Widget>[
+                    const SizedBox(height: 4),
+                    Text(
+                      event.timeText!,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colors.foreground,
+                      ),
+                    ),
+                  ],
+                  if (event.event.professor.trim().isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 2),
+                    Text(
+                      event.event.professor,
+                      key: const Key('important_event_professor_text'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colors.accent,
+                      ),
+                    ),
+                  ],
                 ],
-                if (event.event.professor.trim().isNotEmpty) ...<Widget>[
-                  const SizedBox(height: 2),
-                  Text(
-                    event.event.professor,
-                    key: const Key('important_event_professor_text'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: false,
-                    style: textTheme.bodySmall?.copyWith(color: colors.accent),
-                  ),
-                ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     ),
   );

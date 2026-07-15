@@ -122,6 +122,8 @@ class RaplaImportantEventsProvider {
               start: entry.start,
               end: entry.end,
               professor: entry.professor,
+              details: entry.details,
+              room: entry.room,
               type: entry.type,
             ),
           );
@@ -134,6 +136,9 @@ class RaplaImportantEventsProvider {
       var currentType = groupEntries.first.type;
       var currentEventStart = groupEntries.first.start;
       var currentEventEnd = groupEntries.first.end;
+      var currentProfessor = groupEntries.first.professor;
+      var currentDetails = groupEntries.first.details;
+      var currentRoom = groupEntries.first.room;
 
       void flushCurrent() {
         mergedEntries.add(
@@ -141,6 +146,9 @@ class RaplaImportantEventsProvider {
             title: currentTitle,
             start: currentEventStart,
             end: currentEventEnd,
+            professor: currentProfessor,
+            details: currentDetails,
+            room: currentRoom,
             type: currentType,
           ),
         );
@@ -164,6 +172,9 @@ class RaplaImportantEventsProvider {
         currentEnd = entryDate;
         currentEventStart = entry.start;
         currentEventEnd = entry.end;
+        currentProfessor = entry.professor;
+        currentDetails = entry.details;
+        currentRoom = entry.room;
       }
 
       flushCurrent();

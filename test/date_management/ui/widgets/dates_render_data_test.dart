@@ -170,6 +170,41 @@ void main() {
     ]);
   });
 
+  test('resets section spacing after an empty exam week', () {
+    final renderData = _prepare([
+      _examWeek(
+        _event(
+          'Empty Klausurwoche',
+          DateTime(2026, 7, 1),
+          DateTime(2026, 7, 5),
+        ),
+        const <ImportantEvent>[],
+      ),
+      _standalone(
+        _event('Later event', DateTime(2026, 7, 14), DateTime(2026, 7, 14)),
+      ),
+    ]);
+
+    expect(
+      renderData.raplaItems.last.row!.spacingRole,
+      AgendaRowSpacingRole.normalDateChange,
+    );
+  });
+
+  test('adds a larger spacing role only for noticeable calendar gaps', () {
+    final renderData = _prepare([
+      _standalone(_event('First', DateTime(2026, 7, 1), DateTime(2026, 7, 1))),
+      _standalone(_event('Nearby', DateTime(2026, 7, 4), DateTime(2026, 7, 4))),
+      _standalone(
+        _event('Distant', DateTime(2026, 7, 14), DateTime(2026, 7, 14)),
+      ),
+    ]);
+    final rows = renderData.raplaItems.map((item) => item.row!).toList();
+
+    expect(rows[1].spacingRole, AgendaRowSpacingRole.normalDateChange);
+    expect(rows[2].spacingRole, AgendaRowSpacingRole.distantDateChange);
+  });
+
   test('preserves full content in localized semantics labels', () {
     const title = 'A very long exam title that must remain complete';
     const professor = 'Prof. Ada Lovelace and Prof. Grace Hopper';

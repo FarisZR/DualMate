@@ -10,6 +10,8 @@ import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 
 class DatesRenderData {
+  static const int _noticeableGapDays = 7;
+
   final List<RaplaListItem> raplaItems;
   final Map<String, int> raplaIndexByKey;
   final List<DateEntryRenderData> dateEntries;
@@ -79,6 +81,12 @@ class DatesRenderData {
 
       for (final event in section.events) {
         final eventData = renderEvent(event);
+        final hasNoticeableGap =
+            previousVisibleEvent != null &&
+            toStartOfDay(event.start)
+                    .difference(toStartOfDay(previousVisibleEvent.event.end))
+                    .inDays >=
+                _noticeableGapDays;
         final suppressDateRail =
             !afterSectionHeading &&
             previousVisibleEvent != null &&
@@ -91,6 +99,8 @@ class DatesRenderData {
             ? AgendaRowSpacingRole.first
             : suppressDateRail
             ? AgendaRowSpacingRole.sameDayContinuation
+            : hasNoticeableGap
+            ? AgendaRowSpacingRole.distantDateChange
             : AgendaRowSpacingRole.normalDateChange;
         raplaItems.add(
           RaplaListItem.eventRow(
@@ -108,6 +118,7 @@ class DatesRenderData {
         previousVisibleEvent = eventData;
         afterSectionHeading = false;
       }
+      if (section.events.isEmpty) afterSectionHeading = false;
     }
 
     final indexByKey = <String, int>{};
@@ -345,6 +356,7 @@ enum AgendaRowSpacingRole {
   first,
   sameDayContinuation,
   normalDateChange,
+  distantDateChange,
   afterSectionHeading,
 }
 

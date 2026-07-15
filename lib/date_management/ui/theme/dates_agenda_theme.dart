@@ -22,6 +22,7 @@ class DatesAgendaTheme extends ThemeExtension<DatesAgendaTheme> {
   final Color specialEventContainer;
   final Color specialEventForeground;
   final Color specialEventAccent;
+  final Color divider;
 
   const DatesAgendaTheme({
     required this.examContainer,
@@ -30,6 +31,7 @@ class DatesAgendaTheme extends ThemeExtension<DatesAgendaTheme> {
     required this.specialEventContainer,
     required this.specialEventForeground,
     required this.specialEventAccent,
+    required this.divider,
   });
 
   static const light = DatesAgendaTheme(
@@ -39,6 +41,7 @@ class DatesAgendaTheme extends ThemeExtension<DatesAgendaTheme> {
     specialEventContainer: Color(0xFFE9F2FF),
     specialEventForeground: Color(0xFF0B1F3A),
     specialEventAccent: Color(0xFF2E5FA8),
+    divider: Color(0xFFD8D8D8),
   );
 
   static const dark = DatesAgendaTheme(
@@ -48,6 +51,7 @@ class DatesAgendaTheme extends ThemeExtension<DatesAgendaTheme> {
     specialEventContainer: Color(0xFF172A45),
     specialEventForeground: Color(0xFFD7E3FF),
     specialEventAccent: Color(0xFFA9C7FF),
+    divider: Color(0xFF3A3A3A),
   );
 
   DatesAgendaCategoryColors colorsFor(
@@ -87,6 +91,7 @@ class DatesAgendaTheme extends ThemeExtension<DatesAgendaTheme> {
     Color? specialEventContainer,
     Color? specialEventForeground,
     Color? specialEventAccent,
+    Color? divider,
   }) {
     return DatesAgendaTheme(
       examContainer: examContainer ?? this.examContainer,
@@ -97,6 +102,7 @@ class DatesAgendaTheme extends ThemeExtension<DatesAgendaTheme> {
       specialEventForeground:
           specialEventForeground ?? this.specialEventForeground,
       specialEventAccent: specialEventAccent ?? this.specialEventAccent,
+      divider: divider ?? this.divider,
     );
   }
 
@@ -122,6 +128,7 @@ class DatesAgendaTheme extends ThemeExtension<DatesAgendaTheme> {
         other.specialEventAccent,
         t,
       )!,
+      divider: Color.lerp(divider, other.divider, t)!,
     );
   }
 }

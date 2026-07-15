@@ -313,6 +313,23 @@ void main() {
     },
   );
 
+  test('orders normalized-title ties by the remaining event identity', () {
+    final organizer = ImportantEventOrganizer();
+    final start = DateTime(2026, 8, 3, 9);
+    final end = DateTime(2026, 8, 3, 10);
+    final upper = _event('Alpha', start, end, professor: 'Ada');
+    final lower = _event('alpha', start, end, professor: 'Ada');
+
+    List<String> titles(List<ImportantEvent> events) => organizer
+        .buildSections(events)
+        .expand((section) => section.events)
+        .map((event) => event.title)
+        .toList(growable: false);
+
+    expect(titles([lower, upper]), ['Alpha', 'alpha']);
+    expect(titles([upper, lower]), ['Alpha', 'alpha']);
+  });
+
   test('enforces standalone and exam-week section invariants', () {
     final event = _event('Event', DateTime(2026, 1, 1), DateTime(2026, 1, 1));
 

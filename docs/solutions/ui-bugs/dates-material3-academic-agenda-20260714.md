@@ -33,15 +33,26 @@ The Rapla Dates view needed a Material 3 agenda treatment with a fixed date rail
 - Exposed one non-interactive semantics container per event and a level-two semantics header per exam week.
 - Flattened private row helpers into one widget build and avoided offscreen prebuild work during the first reveal after trace-guided tuning.
 
+## Follow-up corrections (2026-07-15)
+
+- Indented exam-week event surfaces by 12 px beneath their structural heading so the rows read as children of that week while retaining the shared date rail.
+- Added a distinct 28 px top-spacing role when the next event starts at least seven calendar days after the previous event ends; ordinary adjacent events retain 12 px spacing.
+- Made every Rapla event row an accessible button and opened the same `ScheduleEntryDetailBottomSheet` used by Schedule. Important events now preserve details and room fields when converted to schedule entries.
+- Replaced the bright generic outline token with dedicated agenda-divider colors (`#D8D8D8` light and `#3A3A3A` dark).
+- Restored a small 140 px list cache extent and used an equivalent zero-elevation `MaterialType.card` surface instead of the redundant `Card` wrapper, reducing cold layout work without sacrificing Material ink feedback.
+- Completed the important-event ordering key with the event's remaining stable identity and reused it for section anchors. Empty sections now clear the pending after-heading spacing state.
+
 ## Verification
 
-- `flutter test test/date_management --reporter compact` — 55 tests passed.
+- `flutter test test/date_management --reporter compact` — 61 tests passed.
 - `flutter analyze` — no issues found.
 - `integration_test/date_management_startup_responsiveness_test.dart` — passed on the connected Galaxy S21+.
 - Same-device profile baseline/candidate comparison used three-run medians with deterministic fixtures; Dates cold launch, drawer navigation, and loaded-list scrolling reached their expected final states in every run.
 - Awake baseline to candidate frame medians (p95/worst): cold launch `9.388/19.484 ms` to `8.486/20.807 ms`, drawer navigation `4.775/14.682 ms` to `5.494/13.199 ms`, and loaded-list scrolling `2.618/7.489 ms` to `3.033/6.672 ms`; all plan gates passed.
 - Inspected diagnostic timelines for cold population, drawer navigation, and scrolling: no intrinsic passes, repeated formatting/normalization, `saveLayer`, or unexpected per-row layout probes were present.
 - Android CLI layout inspection plus a device screen-recording frame confirmed the agenda on the physical Galaxy S21+ without overflow or Android runtime errors.
+- Follow-up 120 Hz baseline/candidate medians on the same device (combined p95/worst): cold Dates launch `7.876/15.796 ms` to `9.073/17.045 ms`; loaded-list scrolling `1.906/6.463 ms` to `2.324/4.149 ms`. The scroll run had zero frames over 8.33 ms in all three candidate runs, no animation drops, and passed the baseline-derived regression gates.
+- With Android Extra dim disabled, Android CLI screenshots confirmed the softened dividers. A profile-mode integration gesture opened the details sheet on-device, and Android CLI layout/screenshot inspection confirmed its title, time range, type, room, and details.
 
 ## Prevention
 

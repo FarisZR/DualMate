@@ -26,6 +26,8 @@ import 'package:dualmate/schedule/data/schedule_query_information_repository.dar
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
+import 'package:dualmate/schedule/ui/weeklyschedule/schedule_entry_detail_bottom_sheet.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -191,6 +193,10 @@ void main() {
       find.byType(ImportantEventAgendaRow).evaluate().length,
       lessThan(events.length),
     );
+    final raplaList = tester.widget<ListView>(
+      find.byKey(const Key('rapla_dates_list')),
+    );
+    expect(raplaList.scrollCacheExtent, const ScrollCacheExtent.pixels(140));
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -251,6 +257,47 @@ void main() {
       viewModel.dispose();
     },
   );
+
+  testWidgets('opens the schedule details sheet when a Rapla event is tapped', (
+    WidgetTester tester,
+  ) async {
+    final now = DateTime.now();
+    final event = ImportantEvent(
+      title: 'Exam with details',
+      start: now.add(const Duration(days: 1)),
+      end: now.add(const Duration(days: 1, hours: 2)),
+      professor: 'Prof. Ada',
+      details: 'Bring a calculator',
+      room: 'A 101',
+      type: ScheduleEntryType.Exam,
+    );
+    final viewModel = _buildViewModel(
+      useDhMineForDates: false,
+      raplaUrl: 'https://rapla.dhbw-stuttgart.de/rapla?key=abc',
+      importantEvents: [event],
+    );
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await tester.pump(const Duration(milliseconds: 420));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(ImportantEventAgendaRow));
+    await tester.pumpAndSettle();
+
+    final sheet = tester.widget<ScheduleEntryDetailBottomSheet>(
+      find.byType(ScheduleEntryDetailBottomSheet),
+    );
+    expect(sheet.scheduleEntry.title, event.title);
+    expect(sheet.scheduleEntry.start, event.start);
+    expect(sheet.scheduleEntry.end, event.end);
+    expect(sheet.scheduleEntry.professor, event.professor);
+    expect(sheet.scheduleEntry.details, event.details);
+    expect(sheet.scheduleEntry.room, event.room);
+    expect(sheet.scheduleEntry.type, event.type);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    viewModel.dispose();
+  });
 
   testWidgets('uses lazy fixed-width DH-Mine rows for long data', (
     WidgetTester tester,

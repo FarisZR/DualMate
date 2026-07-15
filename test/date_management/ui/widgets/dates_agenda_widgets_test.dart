@@ -53,9 +53,10 @@ void main() {
   );
 
   testWidgets(
-    'renders a non-interactive filled agenda row with one semantics node',
+    'renders a tappable filled agenda row with one button semantics node',
     (tester) async {
       final row = _eventRow();
+      var tapped = false;
       final semantics = tester.ensureSemantics();
 
       await tester.pumpWidget(
@@ -63,6 +64,7 @@ void main() {
           ImportantEventAgendaRow(
             key: const Key('agenda_row'),
             data: row,
+            onTap: () => tapped = true,
             layoutSpec: DatesAgendaLayoutSpec.resolve(
               availableWidth: 360,
               textScaler: TextScaler.noScaling,
@@ -71,19 +73,79 @@ void main() {
         ),
       );
 
-      expect(find.byType(Card), findsOneWidget);
+      final surface = tester.widget<Material>(
+        find.byKey(const Key('dates_agenda_event_surface')),
+      );
+      expect(surface.type, MaterialType.card);
       expect(find.byType(ListTile), findsNothing);
       expect(find.byType(IntrinsicHeight), findsNothing);
       expect(find.byType(IntrinsicWidth), findsNothing);
-      expect(find.byType(InkWell), findsNothing);
+      expect(find.byType(InkWell), findsOneWidget);
       expect(find.byKey(const Key('dates_agenda_category_icon')), findsNothing);
       expect(
         tester.getSemantics(find.byKey(const Key('agenda_row'))),
-        matchesSemantics(label: row.event.semanticsLabel),
+        matchesSemantics(
+          label: row.event.semanticsLabel,
+          isButton: true,
+          hasTapAction: true,
+        ),
       );
+      await tester.tap(find.byKey(const Key('agenda_row')));
+      expect(tapped, isTrue);
       semantics.dispose();
     },
   );
+
+  testWidgets('indents exam-week events from standalone events', (
+    tester,
+  ) async {
+    final row = _eventRow();
+    final spec = DatesAgendaLayoutSpec.resolve(
+      availableWidth: 600,
+      textScaler: TextScaler.noScaling,
+    );
+
+    await tester.pumpWidget(
+      _app(
+        Column(
+          children: [
+            ImportantEventAgendaRow(
+              key: const Key('standalone_row'),
+              data: row,
+              layoutSpec: spec,
+              onTap: () {},
+            ),
+            ImportantEventAgendaRow(
+              key: const Key('exam_week_row'),
+              data: row,
+              layoutSpec: spec,
+              isInExamWeek: true,
+              onTap: () {},
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final standaloneLeft = tester
+        .getTopLeft(
+          find.descendant(
+            of: find.byKey(const Key('standalone_row')),
+            matching: find.byKey(const Key('dates_agenda_event_surface')),
+          ),
+        )
+        .dx;
+    final examWeekLeft = tester
+        .getTopLeft(
+          find.descendant(
+            of: find.byKey(const Key('exam_week_row')),
+            matching: find.byKey(const Key('dates_agenda_event_surface')),
+          ),
+        )
+        .dx;
+
+    expect(examWeekLeft - standaloneLeft, 12);
+  });
 
   testWidgets('shows the category icon only when the event surface fits it', (
     tester,
@@ -178,11 +240,19 @@ void main() {
       ),
     );
 
-    final card = tester.widget<Card>(find.byType(Card));
+    final card = tester.widget<Material>(
+      find.byKey(const Key('dates_agenda_event_surface')),
+    );
     expect(card.color, const Color(0xFF3A1B1D));
     expect(card.elevation, 0);
-    expect(card.margin, EdgeInsets.zero);
+    expect(card.type, MaterialType.card);
     expect(card.clipBehavior, Clip.none);
+
+    final divider = tester.widget<DecoratedBox>(
+      find.byKey(const Key('dates_agenda_rail_divider')),
+    );
+    final border = divider.decoration as BoxDecoration;
+    expect((border.border! as Border).left.color, const Color(0xFF3A3A3A));
   });
 }
 
