@@ -34,6 +34,8 @@ final en = {
   "notificationScheduleChangedClass": "%0 (%1) changed",
   "notificationScheduleChangedClassTitle": "Class changed",
   "settingsNotificationsTitle": "Notifications",
+  "settingsNotificationsLoading": "Loading notification settings",
+  "settingsNotificationsUnavailable": "Notification settings are unavailable",
   "settingsNotificationsNextDay": "Notify in the evening",
   "settingsNotificationsScheduleChange": "Notify when the schedule changed",
   "screenScheduleTitle": "Schedule",

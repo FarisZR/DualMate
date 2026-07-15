@@ -40,6 +40,10 @@ final de = {
   "notificationScheduleChangedClass": "%0 (%1) hat sich geändert.",
   "notificationScheduleChangedClassTitle": "Vorlesung geändert",
   "settingsNotificationsTitle": "Benachrichtigungen",
+  "settingsNotificationsLoading":
+      "Benachrichtigungseinstellungen werden geladen",
+  "settingsNotificationsUnavailable":
+      "Benachrichtigungseinstellungen sind nicht verfügbar",
   "settingsNotificationsNextDay": "Benachrichtigung am Abend",
   "settingsNotificationsScheduleChange":
       "Benachrichtigung bei einer Planänderung",

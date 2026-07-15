@@ -1,6 +1,7 @@
 import 'package:dualmate/canteen/business/canteen_location_service.dart';
 import 'package:dualmate/canteen/ui/widgets/select_canteen_location_dialog.dart';
 import 'package:dualmate/common/application_constants.dart';
+import 'package:dualmate/common/appstart/notification_settings_state.dart';
 import 'package:dualmate/common/background/task_callback.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
 import 'package:dualmate/common/data/preferences/app_theme_enum.dart';
@@ -32,10 +33,44 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  late final _SettingsPageDependencies _dependencies =
-      _resolveSettingsPageDependencies();
+  late final NotificationSettingsState _notificationSettingsState;
+  late final SettingsViewModel settingsViewModel;
 
-  SettingsViewModel get settingsViewModel => _dependencies.settingsViewModel;
+  @override
+  void initState() {
+    super.initState();
+    _notificationSettingsState = _resolveNotificationSettingsState();
+    settingsViewModel = SettingsViewModel(
+      KiwiContainer().resolve(),
+      KiwiContainer().resolve(),
+      _resolveNextDayInformationNotificationOrNull(),
+      _resolveNotificationApiOrNull(),
+    );
+    _syncNotificationDependencies();
+    _notificationSettingsState.addListener(
+      _handleNotificationSettingsStateChanged,
+    );
+  }
+
+  void _handleNotificationSettingsStateChanged() {
+    _syncNotificationDependencies();
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _syncNotificationDependencies() {
+    if (!_notificationSettingsState.isReady) return;
+
+    final nextDayTask = _resolveNextDayInformationNotificationOrNull();
+    final notificationApi = _resolveNotificationApiOrNull();
+    if (nextDayTask == null || notificationApi == null) return;
+
+    settingsViewModel.attachNotificationDependencies(
+      nextDayInformationNotification: nextDayTask,
+      notificationApi: notificationApi,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -256,54 +291,76 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   List<Widget> buildNotificationSettings(BuildContext context) {
-    final service = _dependencies.workSchedulerService;
-    if (service == null) {
-      return [];
+    final service = _resolveWorkSchedulerServiceOrNull();
+    final controlsReady =
+        _notificationSettingsState.isReady &&
+        settingsViewModel.notificationControlsReady &&
+        service?.isSchedulingAvailable() == true;
+
+    Widget? statusIndicator;
+    switch (_notificationSettingsState.status) {
+      case NotificationSettingsStatus.loading:
+        statusIndicator = Semantics(
+          label: L.of(context).settingsNotificationsLoading,
+          child: const SizedBox.square(
+            dimension: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        );
+      case NotificationSettingsStatus.failed:
+      case NotificationSettingsStatus.unavailable:
+        statusIndicator = Tooltip(
+          message: L.of(context).settingsNotificationsUnavailable,
+          child: const Icon(Icons.error_outline, size: 18),
+        );
+      case NotificationSettingsStatus.ready:
+        statusIndicator = null;
     }
 
-    if (_dependencies.canShowNotificationSettings &&
-        service.isSchedulingAvailable()) {
-      return [
-        TitleListTile(title: L.of(context).settingsNotificationsTitle),
-        PropertyChangeConsumer<SettingsViewModel, String>(
-          properties: const ["notifyAboutNextDay"],
-          builder:
-              (
-                BuildContext context,
-                SettingsViewModel? model,
-                Set<String>? properties,
-              ) {
-                if (model == null) return Container();
-                return SwitchListTile(
-                  title: Text(L.of(context).settingsNotificationsNextDay),
-                  onChanged: model.setNotifyAboutNextDay,
-                  value: model.notifyAboutNextDay,
-                );
-              },
-        ),
-        PropertyChangeConsumer<SettingsViewModel, String>(
-          properties: const ["notifyAboutScheduleChanges"],
-          builder:
-              (
-                BuildContext context,
-                SettingsViewModel? model,
-                Set<String>? properties,
-              ) {
-                if (model == null) return Container();
-                return SwitchListTile(
-                  title: Text(
-                    L.of(context).settingsNotificationsScheduleChange,
-                  ),
-                  onChanged: model.setNotifyAboutScheduleChanges,
-                  value: model.notifyAboutScheduleChanges,
-                );
-              },
-        ),
-        const Divider(),
-      ];
-    } else {
-      return [];
-    }
+    return [
+      TitleListTile(
+        title: L.of(context).settingsNotificationsTitle,
+        trailing: statusIndicator,
+      ),
+      PropertyChangeConsumer<SettingsViewModel, String>(
+        properties: const ["notifyAboutNextDay", "notificationControlsReady"],
+        builder:
+            (
+              BuildContext context,
+              SettingsViewModel? model,
+              Set<String>? properties,
+            ) {
+              if (model == null) return Container();
+              return SwitchListTile(
+                title: Text(L.of(context).settingsNotificationsNextDay),
+                onChanged: controlsReady ? model.setNotifyAboutNextDay : null,
+                value: model.notifyAboutNextDay,
+              );
+            },
+      ),
+      PropertyChangeConsumer<SettingsViewModel, String>(
+        properties: const [
+          "notifyAboutScheduleChanges",
+          "notificationControlsReady",
+        ],
+        builder:
+            (
+              BuildContext context,
+              SettingsViewModel? model,
+              Set<String>? properties,
+            ) {
+              if (model == null) return Container();
+              return SwitchListTile(
+                title: Text(L.of(context).settingsNotificationsScheduleChange),
+                onChanged: controlsReady
+                    ? model.setNotifyAboutScheduleChanges
+                    : null,
+                value: model.notifyAboutScheduleChanges,
+              );
+            },
+      ),
+      const Divider(),
+    ];
   }
 
   List<Widget> buildDesignSettings(BuildContext context) {
@@ -367,7 +424,9 @@ class _SettingsPageState extends State<SettingsPage> {
                     value: model.showPerformanceOverlay,
                   ),
                   ListTile(
-                    title: Text(L.of(context).settingsDeveloperReplayOnboarding),
+                    title: Text(
+                      L.of(context).settingsDeveloperReplayOnboarding,
+                    ),
                     onTap: () async {
                       final scheduleSourceProvider =
                           _resolveOptional<ScheduleSourceProvider>();
@@ -380,14 +439,13 @@ class _SettingsPageState extends State<SettingsPage> {
                       _resolveOptional<ScheduleProvider>()
                           ?.invalidateScheduleCache();
                       SchedulePage.resetSharedState();
-                      final preferencesProvider =
-                          KiwiContainer().resolve<PreferencesProvider>();
+                      final preferencesProvider = KiwiContainer()
+                          .resolve<PreferencesProvider>();
                       await preferencesProvider.setIsFirstStart(true);
                       if (!mounted) return;
-                      Navigator.of(context).pushNamedAndRemoveUntil(
-                        "onboarding",
-                        (route) => false,
-                      );
+                      Navigator.of(
+                        context,
+                      ).pushNamedAndRemoveUntil("onboarding", (route) => false);
                     },
                   ),
                 ],
@@ -400,29 +458,21 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void dispose() {
+    _notificationSettingsState.removeListener(
+      _handleNotificationSettingsStateChanged,
+    );
     settingsViewModel.dispose();
     super.dispose();
   }
 }
 
-_SettingsPageDependencies _resolveSettingsPageDependencies() {
-  final notificationApi = _resolveNotificationApiOrNull();
-  final nextDayTask = _resolveNextDayInformationNotificationOrNull();
-  final workSchedulerService = _resolveWorkSchedulerServiceOrNull();
+NotificationSettingsState _resolveNotificationSettingsState() {
+  final existing = _resolveOptional<NotificationSettingsState>();
+  if (existing != null) return existing;
 
-  return _SettingsPageDependencies(
-    settingsViewModel: SettingsViewModel(
-      KiwiContainer().resolve(),
-      KiwiContainer().resolve(),
-      nextDayTask ?? _NoopTaskCallback(NextDayInformationNotification.name),
-      notificationApi ?? VoidNotificationApi(),
-    ),
-    workSchedulerService: workSchedulerService,
-    canShowNotificationSettings:
-        notificationApi != null &&
-        nextDayTask != null &&
-        workSchedulerService != null,
-  );
+  final state = NotificationSettingsState();
+  KiwiContainer().registerInstance(state);
+  return state;
 }
 
 TaskCallback? _resolveNextDayInformationNotificationOrNull() {
@@ -447,34 +497,4 @@ T? _resolveOptional<T>([String? name]) {
   } on NotRegisteredKiwiError {
     return null;
   }
-}
-
-class _SettingsPageDependencies {
-  final SettingsViewModel settingsViewModel;
-  final WorkSchedulerService? workSchedulerService;
-  final bool canShowNotificationSettings;
-
-  const _SettingsPageDependencies({
-    required this.settingsViewModel,
-    required this.workSchedulerService,
-    required this.canShowNotificationSettings,
-  });
-}
-
-class _NoopTaskCallback implements TaskCallback {
-  final String _name;
-
-  const _NoopTaskCallback(this._name);
-
-  @override
-  Future<void> cancel() async {}
-
-  @override
-  String getName() => _name;
-
-  @override
-  Future<void> run() async {}
-
-  @override
-  Future<void> schedule() async {}
 }

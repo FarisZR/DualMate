@@ -9,14 +9,19 @@ import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/appstart/localization_initialize.dart';
 import 'package:dualmate/common/appstart/notification_schedule_changed_initialize.dart';
 import 'package:dualmate/common/appstart/notifications_initialize.dart';
+import 'package:dualmate/common/appstart/notification_settings_state.dart';
 import 'package:dualmate/common/appstart/service_injector.dart';
+import 'package:dualmate/common/background/task_callback.dart';
+import 'package:dualmate/common/background/work_scheduler_service.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/features/local_calendar_feature.dart';
+import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/common/util/rapla_tls_override.dart';
 import 'package:dualmate/native/widget/widget_update_callback.dart';
 import 'package:dualmate/schedule/background/calendar_synchronizer.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
+import 'package:dualmate/schedule/ui/notification/next_day_information_notification.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
@@ -50,6 +55,40 @@ Future<void> _reportNonFatalInitException(
     print(reportError);
     print(reportTrace);
   }
+}
+
+void _updateNotificationSettingsState(
+  NotificationSettingsState state, {
+  required Object? notificationInitializationError,
+  required Object? backgroundInitializationError,
+}) {
+  if (notificationInitializationError != null) {
+    state.markFailed(notificationInitializationError);
+    return;
+  }
+
+  final container = KiwiContainer();
+  final hasNotificationApi = container.isRegistered<NotificationApi>();
+  final hasScheduler = container.isRegistered<WorkSchedulerService>();
+  final hasNextDayTask = container.isRegistered<TaskCallback>(
+    name: NextDayInformationNotification.name,
+  );
+
+  if (!hasNotificationApi || !hasScheduler || !hasNextDayTask) {
+    state.markFailed(
+      backgroundInitializationError ??
+          StateError('Notification settings dependencies were not registered.'),
+    );
+    return;
+  }
+
+  final scheduler = container.resolve<WorkSchedulerService>();
+  if (!scheduler.isSchedulingAvailable()) {
+    state.markUnavailable();
+    return;
+  }
+
+  state.markReady();
 }
 
 Future<void> initializeAppBase(bool isBackground) async {
@@ -118,30 +157,41 @@ Future<void> initializeAppBackground(bool isBackground) async {
   widgetUpdateCallback.registerCanteenCallback(KiwiContainer().resolve());
   print("Background init: widgets ${stopwatch.elapsedMilliseconds}ms");
 
+  final notificationSettingsState = KiwiContainer()
+      .resolve<NotificationSettingsState>();
+  notificationSettingsState.markLoading();
+
+  Object? notificationInitializationError;
   final shouldRequestNotificationPermission =
       shouldAutoRequestNotificationPermissionAtStartup();
-  await NotificationsInitialize().setupNotifications(
-    requestRuntimePermission: shouldRequestNotificationPermission,
-  );
-  print("Background init: notifications ${stopwatch.elapsedMilliseconds}ms");
+  try {
+    await NotificationsInitialize().setupNotifications(
+      requestRuntimePermission: shouldRequestNotificationPermission,
+    );
+    print("Background init: notifications ${stopwatch.elapsedMilliseconds}ms");
+  } catch (error, trace) {
+    notificationInitializationError = error;
+    print("Background init: notifications failed (${error.runtimeType})");
+    print(error);
+    print(trace);
+    await _reportNonFatalInitException(
+      error,
+      trace,
+      message: 'Background init: notifications failed',
+      tags: {'feature': 'notifications'},
+      contexts: {
+        'notifications': {'phase': 'plugin.initialize'},
+      },
+    );
+  }
+
+  Object? backgroundInitializationError;
   try {
     await BackgroundInitialize().setupBackgroundScheduling();
     print("Background init: workmanager ${stopwatch.elapsedMilliseconds}ms");
-  } on Exception catch (exception, trace) {
-    print("Background init: workmanager failed (${exception.runtimeType})");
-    print(exception);
-    print(trace);
-    await _reportNonFatalInitException(
-      exception,
-      trace,
-      message: 'Background init: workmanager failed',
-      tags: {'feature': 'background'},
-      contexts: {
-        'background': {'phase': 'workmanager.setup'},
-      },
-    );
   } catch (error, trace) {
-    print("Background init: workmanager failed");
+    backgroundInitializationError = error;
+    print("Background init: workmanager failed (${error.runtimeType})");
     print(error);
     print(trace);
     await _reportNonFatalInitException(
@@ -155,37 +205,34 @@ Future<void> initializeAppBackground(bool isBackground) async {
     );
   }
 
-  try {
-    NotificationScheduleChangedInitialize().setupNotification();
-    print(
-      "Background init: schedule notify ${stopwatch.elapsedMilliseconds}ms",
-    );
-  } on Exception catch (exception, trace) {
-    print("Background init: schedule notify failed (${exception.runtimeType})");
-    print(exception);
-    print(trace);
-    await _reportNonFatalInitException(
-      exception,
-      trace,
-      message: 'Background init: schedule notify failed',
-      tags: {'feature': 'notifications'},
-      contexts: {
-        'notifications': {'phase': 'schedule_changed.setup'},
-      },
-    );
-  } catch (error, trace) {
-    print("Background init: schedule notify failed");
-    print(error);
-    print(trace);
-    await _reportNonFatalInitException(
-      error,
-      trace,
-      message: 'Background init: schedule notify failed',
-      tags: {'feature': 'notifications'},
-      contexts: {
-        'notifications': {'phase': 'schedule_changed.setup'},
-      },
-    );
+  _updateNotificationSettingsState(
+    notificationSettingsState,
+    notificationInitializationError: notificationInitializationError,
+    backgroundInitializationError: backgroundInitializationError,
+  );
+
+  if (notificationInitializationError == null) {
+    try {
+      NotificationScheduleChangedInitialize().setupNotification();
+      print(
+        "Background init: schedule notify ${stopwatch.elapsedMilliseconds}ms",
+      );
+    } catch (error, trace) {
+      print("Background init: schedule notify failed (${error.runtimeType})");
+      print(error);
+      print(trace);
+      await _reportNonFatalInitException(
+        error,
+        trace,
+        message: 'Background init: schedule notify failed',
+        tags: {'feature': 'notifications'},
+        contexts: {
+          'notifications': {'phase': 'schedule_changed.setup'},
+        },
+      );
+    }
+  } else {
+    print("Background init: schedule notify skipped");
   }
 
   tz.initializeTimeZones();

@@ -109,6 +109,12 @@ class L {
   String get settingsNotificationsTitle =>
       _getValue("settingsNotificationsTitle");
 
+  String get settingsNotificationsLoading =>
+      _getValue("settingsNotificationsLoading");
+
+  String get settingsNotificationsUnavailable =>
+      _getValue("settingsNotificationsUnavailable");
+
   String get settingsNotificationsNextDay =>
       _getValue("settingsNotificationsNextDay");
 
