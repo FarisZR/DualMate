@@ -314,6 +314,11 @@ class L {
 
   String get dateManagementRaplaEmpty => _getValue("dateManagementRaplaEmpty");
 
+  String get dateManagementAgendaRangeConnector =>
+      _getValue("dateManagementAgendaRangeConnector");
+
+  String get dateManagementAgendaPast => _getValue("dateManagementAgendaPast");
+
   String get scheduleQueryFailedMessage =>
       _getValue("scheduleQueryFailedMessage");
 

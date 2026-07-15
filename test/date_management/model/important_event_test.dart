@@ -46,12 +46,34 @@ void main() {
     expect(event1, event2);
   });
 
-  test('ImportantEvent serializes and deserializes professor', () {
+  test('ImportantEvent hashCode preserves field order', () {
+    final first = ImportantEvent(
+      title: 'Title A',
+      start: DateTime(2026, 1, 6),
+      end: DateTime(2026, 1, 6),
+      professor: 'Professor B',
+      type: ScheduleEntryType.PublicHoliday,
+    );
+    final swapped = ImportantEvent(
+      title: 'Professor B',
+      start: DateTime(2026, 1, 6),
+      end: DateTime(2026, 1, 6),
+      professor: 'Title A',
+      type: ScheduleEntryType.PublicHoliday,
+    );
+
+    expect(first, isNot(swapped));
+    expect(first.hashCode, isNot(swapped.hashCode));
+  });
+
+  test('ImportantEvent serializes all schedule detail fields', () {
     var event = ImportantEvent(
       title: 'Klausur',
       start: DateTime(2026, 7, 31, 8),
       end: DateTime(2026, 7, 31, 10),
       professor: 'Prof. Mueller, Prof. Fischer',
+      details: 'Bring a calculator',
+      room: 'A 101',
       type: ScheduleEntryType.Exam,
     );
 
@@ -59,5 +81,7 @@ void main() {
 
     expect(restored, event);
     expect(restored.professor, 'Prof. Mueller, Prof. Fischer');
+    expect(restored.details, 'Bring a calculator');
+    expect(restored.room, 'A 101');
   });
 }

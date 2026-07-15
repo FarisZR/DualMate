@@ -5,6 +5,8 @@ class ImportantEvent {
   final DateTime start;
   final DateTime end;
   final String professor;
+  final String details;
+  final String room;
   final ScheduleEntryType type;
 
   ImportantEvent({
@@ -12,6 +14,8 @@ class ImportantEvent {
     required this.start,
     required this.end,
     this.professor = '',
+    this.details = '',
+    this.room = '',
     required this.type,
   });
 
@@ -52,6 +56,8 @@ class ImportantEvent {
       start: start,
       end: end,
       professor: json['professor'] as String? ?? '',
+      details: json['details'] as String? ?? '',
+      room: json['room'] as String? ?? '',
       type: type,
     );
   }
@@ -62,8 +68,22 @@ class ImportantEvent {
       'start': start.toIso8601String(),
       'end': end.toIso8601String(),
       'professor': professor,
+      'details': details,
+      'room': room,
       'type': type.index,
     };
+  }
+
+  ScheduleEntry toScheduleEntry() {
+    return ScheduleEntry(
+      start: start,
+      end: end,
+      title: title,
+      details: details,
+      professor: professor,
+      room: room,
+      type: type,
+    );
   }
 
   @override
@@ -75,15 +95,12 @@ class ImportantEvent {
         other.start == start &&
         other.end == end &&
         other.professor == professor &&
+        other.details == details &&
+        other.room == room &&
         other.type == type;
   }
 
   @override
-  int get hashCode {
-    return title.hashCode ^
-        start.hashCode ^
-        end.hashCode ^
-        professor.hashCode ^
-        type.hashCode;
-  }
+  int get hashCode =>
+      Object.hash(title, start, end, professor, details, room, type);
 }

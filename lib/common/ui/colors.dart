@@ -1,65 +1,66 @@
 import 'package:dualmate/common/data/preferences/app_theme_enum.dart';
 import 'package:dualmate/common/util/platform_util.dart';
+import 'package:dualmate/date_management/ui/theme/dates_agenda_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 Color colorScheduleEntryPublicHoliday(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
-        ? const Color(0xffcbcbcb)
-        : const Color(0xff515151);
+    ? const Color(0xffcbcbcb)
+    : const Color(0xff515151);
 
 Color colorScheduleEntryClass(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
-        ? const Color(0xffe63f3b)
-        : const Color(0xffa52632);
+    ? const Color(0xffe63f3b)
+    : const Color(0xffa52632);
 
 Color colorScheduleEntryExam(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
-        ? const Color(0xfffdb531)
-        : const Color(0xffb17f22);
+    ? const Color(0xfffdb531)
+    : const Color(0xffb17f22);
 
 Color colorScheduleEntryOnline(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
-        ? const Color(0xffAFC7EA)
-        : const Color(0xff2659A6);
+    ? const Color(0xffAFC7EA)
+    : const Color(0xff2659A6);
 
 Color colorScheduleEntrySpecialEvent(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
-        ? const Color(0xffc0e2ff)
-        : const Color(0xff3d7fd6);
+    ? const Color(0xffc0e2ff)
+    : const Color(0xff3d7fd6);
 
 Color colorScheduleEntryUnknown(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
-        ? const Color(0xffcbcbcb)
-        : const Color(0xff515151);
+    ? const Color(0xffcbcbcb)
+    : const Color(0xff515151);
 
 Color colorScheduleGridGridLines(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
-        ? const Color(0xffd8d8d8)
-        : const Color(0xff3c3c3c);
+    ? const Color(0xffd8d8d8)
+    : const Color(0xff3c3c3c);
 
 Color colorScheduleInPastOverlay(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
-        ? const Color(0x14000000)
-        : const Color(0x2B000000);
+    ? const Color(0x14000000)
+    : const Color(0x2B000000);
 
 Color colorCurrentTimeIndicator(BuildContext context) =>
     Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88);
 
 Color colorOnboardingDecorationForeground(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
-        ? const Color(0xFFA62828)
-        : const Color(0xFFA62828);
+    ? const Color(0xFFA62828)
+    : const Color(0xFFA62828);
 
 Color colorOnboardingDecorationBackground(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
-        ? const Color(0xFFC91A1A)
-        : const Color(0xFFC91A1A);
+    ? const Color(0xFFC91A1A)
+    : const Color(0xFFC91A1A);
 
 Color colorSuccess(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
-        ? const Color(0xFFC91A1A)
-        : const Color(0xFFC91A1A);
+    ? const Color(0xFFC91A1A)
+    : const Color(0xFFC91A1A);
 
 Color colorDailyScheduleTimeVerticalConnector() => Colors.grey;
 
@@ -90,16 +91,20 @@ class ColorPalettes {
     var darkSurface = const Color(0xFF1E1E1E);
     var lightBackground = const Color(0xFFFFFFFF);
     var darkBackground = const Color(0xFF121212);
+    var dividerColor = isDark
+        ? const Color(0xFF3A3A3A)
+        : const Color(0xFFD8D8D8);
 
-    var colorScheme = ColorScheme.fromSwatch(
-      primarySwatch: ColorPalettes.main,
-      brightness: brightness,
-    ).copyWith(
-      secondary: ColorPalettes.main[500],
-      surface: isDark ? darkBackground : lightBackground,
-      surfaceContainerHighest: isDark ? darkSurface : lightSurface,
-      surfaceTint: Colors.transparent,
-    );
+    var colorScheme =
+        ColorScheme.fromSwatch(
+          primarySwatch: ColorPalettes.main,
+          brightness: brightness,
+        ).copyWith(
+          secondary: ColorPalettes.main[500],
+          surface: isDark ? darkBackground : lightBackground,
+          surfaceContainerHighest: isDark ? darkSurface : lightSurface,
+          surfaceTint: Colors.transparent,
+        );
 
     var themeData = baseTheme.copyWith(
       brightness: brightness,
@@ -108,15 +113,19 @@ class ColorPalettes {
       scaffoldBackgroundColor: isDark ? darkBackground : lightBackground,
       canvasColor: isDark ? darkBackground : lightBackground,
       cardColor: isDark ? darkSurface : lightSurface,
+      dividerColor: dividerColor,
+      dividerTheme: DividerThemeData(color: dividerColor),
       appBarTheme: baseTheme.appBarTheme.copyWith(
         backgroundColor: isDark
             ? const Color(0xFF1B1B1B)
             : baseTheme.appBarTheme.backgroundColor,
-        foregroundColor:
-            isDark ? Colors.white : baseTheme.appBarTheme.foregroundColor,
+        foregroundColor: isDark
+            ? Colors.white
+            : baseTheme.appBarTheme.foregroundColor,
         surfaceTintColor: Colors.transparent,
-        systemOverlayStyle:
-            isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        systemOverlayStyle: isDark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         scrolledUnderElevation: 0,
       ),
       inputDecorationTheme: baseTheme.inputDecorationTheme.copyWith(
@@ -124,71 +133,62 @@ class ColorPalettes {
         fillColor: isDark
             ? const Color(0xFF1E1E1E)
             : baseTheme.inputDecorationTheme.fillColor,
-        hintStyle: TextStyle(
-          color: isDark ? Colors.white70 : Colors.black54,
-        ),
-        labelStyle: TextStyle(
-          color: isDark ? Colors.white70 : Colors.black87,
-        ),
+        hintStyle: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+        labelStyle: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
         floatingLabelStyle: TextStyle(
           color: isDark ? Colors.white : colorScheme.primary,
         ),
-        helperStyle: TextStyle(
-          color: isDark ? Colors.white60 : Colors.black54,
-        ),
+        helperStyle: TextStyle(color: isDark ? Colors.white60 : Colors.black54),
         enabledBorder: UnderlineInputBorder(
           borderSide: BorderSide(
             color: isDark ? Colors.white30 : Colors.black26,
           ),
         ),
         focusedBorder: UnderlineInputBorder(
-          borderSide: BorderSide(
-            color: colorScheme.primary,
-            width: 2,
-          ),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
       ),
       checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith<Color?>(
-          (Set<WidgetState> states) {
-            if (states.contains(WidgetState.disabled)) return null;
-            if (states.contains(WidgetState.selected)) {
-              return isDark ? ColorPalettes.main[700] : ColorPalettes.main[600];
-            }
-            return null;
-          },
-        ),
+        fillColor: WidgetStateProperty.resolveWith<Color?>((
+          Set<WidgetState> states,
+        ) {
+          if (states.contains(WidgetState.disabled)) return null;
+          if (states.contains(WidgetState.selected)) {
+            return isDark ? ColorPalettes.main[700] : ColorPalettes.main[600];
+          }
+          return null;
+        }),
       ),
       radioTheme: RadioThemeData(
-        fillColor: WidgetStateProperty.resolveWith<Color?>(
-          (Set<WidgetState> states) {
-            if (states.contains(WidgetState.disabled)) return null;
-            if (states.contains(WidgetState.selected)) {
-              return isDark ? ColorPalettes.main[700] : ColorPalettes.main[600];
-            }
-            return null;
-          },
-        ),
+        fillColor: WidgetStateProperty.resolveWith<Color?>((
+          Set<WidgetState> states,
+        ) {
+          if (states.contains(WidgetState.disabled)) return null;
+          if (states.contains(WidgetState.selected)) {
+            return isDark ? ColorPalettes.main[700] : ColorPalettes.main[600];
+          }
+          return null;
+        }),
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith<Color?>(
-          (Set<WidgetState> states) {
-            if (states.contains(WidgetState.disabled)) return null;
-            if (states.contains(WidgetState.selected)) {
-              return isDark ? ColorPalettes.main[600] : ColorPalettes.main[500];
-            }
-            return isDark ? Colors.grey.shade400 : Colors.white;
-          },
-        ),
-        trackColor: WidgetStateProperty.resolveWith<Color?>(
-          (Set<WidgetState> states) {
-            if (states.contains(WidgetState.disabled)) return null;
-            if (states.contains(WidgetState.selected)) {
-              return isDark ? const Color(0xFF3A3A3A) : const Color(0xFFBDBDBD);
-            }
-            return isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
-          },
-        ),
+        thumbColor: WidgetStateProperty.resolveWith<Color?>((
+          Set<WidgetState> states,
+        ) {
+          if (states.contains(WidgetState.disabled)) return null;
+          if (states.contains(WidgetState.selected)) {
+            return isDark ? ColorPalettes.main[600] : ColorPalettes.main[500];
+          }
+          return isDark ? Colors.grey.shade400 : Colors.white;
+        }),
+        trackColor: WidgetStateProperty.resolveWith<Color?>((
+          Set<WidgetState> states,
+        ) {
+          if (states.contains(WidgetState.disabled)) return null;
+          if (states.contains(WidgetState.selected)) {
+            return isDark ? const Color(0xFF3A3A3A) : const Color(0xFFBDBDBD);
+          }
+          return isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
+        }),
       ),
       cardTheme: CardThemeData(
         color: isDark ? darkSurface : lightSurface,
@@ -197,6 +197,9 @@ class ColorPalettes {
       dialogTheme: DialogThemeData(
         backgroundColor: isDark ? darkSurface : lightSurface,
       ),
+      extensions: <ThemeExtension<dynamic>>[
+        isDark ? DatesAgendaTheme.dark : DatesAgendaTheme.light,
+      ],
     );
 
     return themeData.copyWith(
@@ -208,12 +211,12 @@ class ColorPalettes {
       ),
       snackBarTheme: themeData.snackBarTheme.copyWith(
         backgroundColor: isDark ? Color(0xff363635) : Color(0xfffafafa),
-        contentTextStyle:
-            (themeData.textTheme.bodyLarge ?? const TextStyle()).copyWith(
-          color: isDark
-              ? const Color(0xffe4e4e4)
-              : themeData.textTheme.bodyLarge?.color,
-        ),
+        contentTextStyle: (themeData.textTheme.bodyLarge ?? const TextStyle())
+            .copyWith(
+              color: isDark
+                  ? const Color(0xffe4e4e4)
+                  : themeData.textTheme.bodyLarge?.color,
+            ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
@@ -255,9 +258,9 @@ class ColorPalettes {
 
   static const MaterialColor secondaryAccent =
       MaterialColor(0xFFFFFFFF, <int, Color>{
-    100: Color(0xFFFFFFFF),
-    200: Color(0xFFFFFFFF),
-    400: Color(0xFFFFFFFF),
-    700: Color(0xFFEAEAFF),
-  });
+        100: Color(0xFFFFFFFF),
+        200: Color(0xFFFFFFFF),
+        400: Color(0xFFFFFFFF),
+        700: Color(0xFFEAEAFF),
+      });
 }

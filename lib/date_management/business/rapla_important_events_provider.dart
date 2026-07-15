@@ -1,6 +1,7 @@
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
+import 'package:dualmate/date_management/business/important_event_ordering.dart';
 import 'package:dualmate/date_management/model/important_event.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
@@ -94,7 +95,8 @@ class RaplaImportantEventsProvider {
   }
 
   static List<ImportantEvent> mergeImportantEntries(
-      List<ScheduleEntry> entries) {
+    List<ScheduleEntry> entries,
+  ) {
     if (entries.isEmpty) return [];
 
     var grouped = <String, List<ScheduleEntry>>{};
@@ -114,13 +116,17 @@ class RaplaImportantEventsProvider {
       });
       if (groupEntries.first.type == ScheduleEntryType.Exam) {
         for (var entry in groupEntries) {
-          mergedEntries.add(ImportantEvent(
-            title: entry.title,
-            start: entry.start,
-            end: entry.end,
-            professor: entry.professor,
-            type: entry.type,
-          ));
+          mergedEntries.add(
+            ImportantEvent(
+              title: entry.title,
+              start: entry.start,
+              end: entry.end,
+              professor: entry.professor,
+              details: entry.details,
+              room: entry.room,
+              type: entry.type,
+            ),
+          );
         }
         return;
       }
@@ -130,14 +136,22 @@ class RaplaImportantEventsProvider {
       var currentType = groupEntries.first.type;
       var currentEventStart = groupEntries.first.start;
       var currentEventEnd = groupEntries.first.end;
+      var currentProfessor = groupEntries.first.professor;
+      var currentDetails = groupEntries.first.details;
+      var currentRoom = groupEntries.first.room;
 
       void flushCurrent() {
-        mergedEntries.add(ImportantEvent(
-          title: currentTitle,
-          start: currentEventStart,
-          end: currentEventEnd,
-          type: currentType,
-        ));
+        mergedEntries.add(
+          ImportantEvent(
+            title: currentTitle,
+            start: currentEventStart,
+            end: currentEventEnd,
+            professor: currentProfessor,
+            details: currentDetails,
+            room: currentRoom,
+            type: currentType,
+          ),
+        );
       }
 
       for (var i = 1; i < groupEntries.length; i++) {
@@ -158,19 +172,15 @@ class RaplaImportantEventsProvider {
         currentEnd = entryDate;
         currentEventStart = entry.start;
         currentEventEnd = entry.end;
+        currentProfessor = entry.professor;
+        currentDetails = entry.details;
+        currentRoom = entry.room;
       }
 
       flushCurrent();
     });
 
-    mergedEntries.sort((a, b) {
-      var c = a.start.compareTo(b.start);
-      if (c != 0) return c;
-      c = a.end.compareTo(b.end);
-      if (c != 0) return c;
-      return a.professor.compareTo(b.professor);
-    });
-    return mergedEntries;
+    return sortImportantEvents(mergedEntries);
   }
 
   static bool _shouldMerge(

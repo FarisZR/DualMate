@@ -137,6 +137,8 @@ final de = {
       "Keine Terminquelle konfiguriert. Richte eine Quelle ein, um Rapla-Termine zu sehen.",
   "dateManagementRaplaEmpty":
       "Keine Rapla-Termine für diesen Zeitraum gefunden.",
+  "dateManagementAgendaRangeConnector": "bis",
+  "dateManagementAgendaPast": "vergangen",
   "scheduleQueryFailedMessage":
       "Ups, da ist etwas schief gelaufen. Möglicherweise wird nicht der gesamte Plan angezeigt. Schaue Dir daher den Plan im Browser an um sicher zu gehen, dass Du nichts verpasst.",
   "scheduleLoadingLatest": "Lade aktuellen Vorlesungsplan...",

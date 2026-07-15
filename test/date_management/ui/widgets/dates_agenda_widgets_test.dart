@@ -1,0 +1,373 @@
+import 'package:dualmate/common/data/preferences/app_theme_enum.dart';
+import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/ui/colors.dart';
+import 'package:dualmate/date_management/model/important_event.dart';
+import 'package:dualmate/date_management/model/important_event_section.dart';
+import 'package:dualmate/date_management/ui/widgets/dates_agenda_layout.dart';
+import 'package:dualmate/date_management/ui/widgets/dates_agenda_row.dart';
+import 'package:dualmate/date_management/ui/widgets/dates_render_data.dart';
+import 'package:dualmate/date_management/ui/widgets/important_event_section_heading.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
+
+void main() {
+  setUpAll(initializeDateFormatting);
+
+  test(
+    'resolves compact wide and scaled layout once from list constraints',
+    () {
+      final compact = DatesAgendaLayoutSpec.resolve(
+        availableWidth: 320,
+        textScaler: TextScaler.noScaling,
+      );
+      final wide = DatesAgendaLayoutSpec.resolve(
+        availableWidth: 1200,
+        textScaler: TextScaler.noScaling,
+      );
+      final scaled = DatesAgendaLayoutSpec.resolve(
+        availableWidth: 360,
+        textScaler: const TextScaler.linear(2),
+      );
+      final scaled150 = DatesAgendaLayoutSpec.resolve(
+        availableWidth: 360,
+        textScaler: const TextScaler.linear(1.5),
+      );
+
+      expect(compact.listHorizontalInset, 16);
+      expect(compact.listVerticalPadding, 8);
+      expect(compact.contentWidth, 288);
+      expect(compact.railWidth, 64);
+      expect(compact.gap, 12);
+      expect(compact.showCategoryIcon, isFalse);
+      expect(wide.listHorizontalInset, 180);
+      expect(wide.contentWidth, 840);
+      expect(wide.railWidth, 72);
+      expect(wide.gap, 16);
+      expect(wide.showCategoryIcon, isTrue);
+      expect(scaled.railWidth, greaterThan(64));
+      expect(scaled150.railWidth, inExclusiveRange(64, scaled.railWidth));
+    },
+  );
+
+  testWidgets(
+    'renders a tappable filled agenda row with one button semantics node',
+    (tester) async {
+      final row = _eventRow();
+      var tapped = false;
+      final semantics = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        _app(
+          ImportantEventAgendaRow(
+            key: const Key('agenda_row'),
+            data: row,
+            onTap: () => tapped = true,
+            layoutSpec: DatesAgendaLayoutSpec.resolve(
+              availableWidth: 360,
+              textScaler: TextScaler.noScaling,
+            ),
+          ),
+        ),
+      );
+
+      final surface = tester.widget<Material>(
+        find.byKey(const Key('dates_agenda_event_surface')),
+      );
+      expect(surface.type, MaterialType.card);
+      expect(find.byType(ListTile), findsNothing);
+      expect(find.byType(IntrinsicHeight), findsNothing);
+      expect(find.byType(IntrinsicWidth), findsNothing);
+      expect(find.byType(InkWell), findsOneWidget);
+      expect(find.byKey(const Key('dates_agenda_category_icon')), findsNothing);
+      expect(
+        tester.getSemantics(find.byKey(const Key('agenda_row'))),
+        matchesSemantics(
+          label: row.event.semanticsLabel,
+          isButton: true,
+          hasTapAction: true,
+        ),
+      );
+      await tester.tap(find.byKey(const Key('agenda_row')));
+      expect(tapped, isTrue);
+      semantics.dispose();
+    },
+  );
+
+  testWidgets('indents exam-week events from standalone events', (
+    tester,
+  ) async {
+    final row = _eventRow();
+    final spec = DatesAgendaLayoutSpec.resolve(
+      availableWidth: 600,
+      textScaler: TextScaler.noScaling,
+    );
+
+    await tester.pumpWidget(
+      _app(
+        Column(
+          children: [
+            ImportantEventAgendaRow(
+              key: const Key('standalone_row'),
+              data: row,
+              layoutSpec: spec,
+              onTap: () {},
+            ),
+            ImportantEventAgendaRow(
+              key: const Key('exam_week_row'),
+              data: row,
+              layoutSpec: spec,
+              isInExamWeek: true,
+              onTap: () {},
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final standaloneLeft = tester
+        .getTopLeft(
+          find.descendant(
+            of: find.byKey(const Key('standalone_row')),
+            matching: find.byKey(const Key('dates_agenda_event_surface')),
+          ),
+        )
+        .dx;
+    final examWeekLeft = tester
+        .getTopLeft(
+          find.descendant(
+            of: find.byKey(const Key('exam_week_row')),
+            matching: find.byKey(const Key('dates_agenda_event_surface')),
+          ),
+        )
+        .dx;
+
+    expect(examWeekLeft - standaloneLeft, 12);
+  });
+
+  testWidgets('shows the category icon only when the event surface fits it', (
+    tester,
+  ) async {
+    final row = _eventRow();
+    await tester.pumpWidget(
+      _app(
+        ImportantEventAgendaRow(
+          data: row,
+          layoutSpec: DatesAgendaLayoutSpec.resolve(
+            availableWidth: 600,
+            textScaler: TextScaler.noScaling,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('dates_agenda_category_icon')), findsOneWidget);
+  });
+
+  testWidgets('exam-week inset participates in the category icon cutoff', (
+    tester,
+  ) async {
+    final row = _eventRow();
+    final spec = DatesAgendaLayoutSpec.resolve(
+      availableWidth: 368,
+      textScaler: TextScaler.noScaling,
+    );
+
+    await tester.pumpWidget(
+      _app(
+        Column(
+          children: [
+            ImportantEventAgendaRow(
+              key: const Key('standalone_icon_row'),
+              data: row,
+              layoutSpec: spec,
+            ),
+            ImportantEventAgendaRow(
+              key: const Key('exam_week_icon_row'),
+              data: row,
+              layoutSpec: spec,
+              isInExamWeek: true,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('standalone_icon_row')),
+        matching: find.byKey(const Key('dates_agenda_category_icon')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('exam_week_icon_row')),
+        matching: find.byKey(const Key('dates_agenda_category_icon')),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('supports 320 logical pixels and 200 percent text scaling', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    const viewportWidth = 320.0;
+    const contentWidth = 288.0;
+    final layoutSpec = DatesAgendaLayoutSpec.resolve(
+      // The resolver receives the viewport; ListView then removes its two
+      // 16-pixel horizontal insets before laying out the row.
+      availableWidth: viewportWidth,
+      textScaler: const TextScaler.linear(2),
+    );
+    expect(layoutSpec.contentWidth, contentWidth);
+    final row = _eventRow(
+      title: 'A deliberately long examination title that wraps safely',
+      professor: 'Prof. Ada Lovelace and Prof. Grace Hopper',
+    );
+
+    await tester.pumpWidget(
+      _app(
+        MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+          child: SizedBox(
+            width: contentWidth,
+            child: ImportantEventAgendaRow(
+              data: row,
+              layoutSpec: layoutSpec,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.text(row.event.event.title), findsOneWidget);
+  });
+
+  testWidgets('marks exam-week headings as level-two semantic headers', (
+    tester,
+  ) async {
+    final heading = _examWeekHeading();
+    final semantics = tester.ensureSemantics();
+
+    await tester.pumpWidget(
+      _app(
+        ImportantEventSectionHeading(
+          key: const Key('agenda_heading'),
+          data: heading,
+          layoutSpec: DatesAgendaLayoutSpec.resolve(
+            availableWidth: 600,
+            textScaler: TextScaler.noScaling,
+          ),
+          isFirst: true,
+        ),
+      ),
+    );
+
+    expect(find.byType(Card), findsNothing);
+    expect(
+      tester.getSemantics(find.byKey(const Key('agenda_heading'))),
+      matchesSemantics(label: heading.semanticsLabel, isHeader: true),
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('uses approved dark exam surface tokens', (tester) async {
+    final row = _eventRow();
+    await tester.pumpWidget(
+      _app(
+        ImportantEventAgendaRow(
+          data: row,
+          layoutSpec: DatesAgendaLayoutSpec.resolve(
+            availableWidth: 600,
+            textScaler: TextScaler.noScaling,
+          ),
+        ),
+        theme: AppTheme.Dark,
+      ),
+    );
+
+    final card = tester.widget<Material>(
+      find.byKey(const Key('dates_agenda_event_surface')),
+    );
+    expect(card.color, const Color(0xFF3A1B1D));
+    expect(card.elevation, 0);
+    expect(card.type, MaterialType.card);
+    expect(card.clipBehavior, Clip.none);
+
+    final divider = tester.widget<DecoratedBox>(
+      find.byKey(const Key('dates_agenda_rail_divider')),
+    );
+    final border = divider.decoration as BoxDecoration;
+    expect((border.border! as Border).left.color, const Color(0xFF3A3A3A));
+  });
+}
+
+ImportantEventAgendaRowRenderData _eventRow({
+  String title = 'Algorithms exam',
+  String professor = 'Prof. Ada Lovelace',
+}) {
+  final event = ImportantEvent(
+    title: title,
+    start: DateTime(2026, 7, 7, 8),
+    end: DateTime(2026, 7, 7, 10),
+    professor: professor,
+    type: ScheduleEntryType.Exam,
+  );
+  final renderData = DatesRenderData.prepare(
+    sections: [
+      ImportantEventSection(
+        kind: ImportantEventSectionKind.standalone,
+        header: null,
+        events: [event],
+      ),
+    ],
+    entries: const [],
+    locale: 'en',
+    now: DateTime(2026, 1, 1),
+  );
+  return renderData.raplaItems.single.row!;
+}
+
+ImportantEventSectionHeadingRenderData _examWeekHeading() {
+  final header = ImportantEvent(
+    title: 'Klausurwoche',
+    start: DateTime(2026, 7, 27),
+    end: DateTime(2026, 7, 31),
+    type: ScheduleEntryType.SpecialEvent,
+  );
+  final renderData = DatesRenderData.prepare(
+    sections: [
+      ImportantEventSection(
+        kind: ImportantEventSectionKind.examWeek,
+        header: header,
+        events: const [],
+      ),
+    ],
+    entries: const [],
+    locale: 'en',
+    now: DateTime(2026, 1, 1),
+  );
+  return renderData.raplaItems.single.heading!;
+}
+
+Widget _app(Widget child, {AppTheme theme = AppTheme.Light}) {
+  return MaterialApp(
+    theme: ColorPalettes.buildTheme(theme),
+    localizationsDelegates: const [
+      LocalizationDelegate(),
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: const [Locale('en'), Locale('de')],
+    home: Scaffold(body: child),
+  );
+}

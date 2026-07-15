@@ -1,131 +1,118 @@
 import 'package:dualmate/common/util/date_utils.dart';
+import 'package:dualmate/date_management/business/important_event_ordering.dart';
 import 'package:dualmate/date_management/model/important_event.dart';
 import 'package:dualmate/date_management/model/important_event_section.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 
 class ImportantEventOrganizer {
-  static const String _klausurwocheKeyword = 'klausurwoche';
+  static const String _examWeekKeyword = 'klausurwoche';
 
   List<ImportantEventSection> buildSections(List<ImportantEvent> events) {
-    if (events.isEmpty) return [];
+    if (events.isEmpty) return const [];
 
-    var sortedEvents = List<ImportantEvent>.from(events)
-      ..sort((a, b) => a.start.compareTo(b.start));
+    final sortedEvents = sortImportantEvents(events);
+    final examWeekHeaders = _deduplicateExamWeekHeaders(sortedEvents);
+    final examEventIdentities = <String>{};
+    final sections = <ImportantEventSection>[];
 
-    var examWeekGroups = _buildExamWeekGroups(sortedEvents);
-    var sectionByKey = <String, ImportantEventSection>{};
-    var examKeys = <String>{};
-
-    for (var group in examWeekGroups) {
-      var exams =
-          sortedEvents
-              .where(
-                (entry) =>
-                    entry.type == ScheduleEntryType.Exam &&
-                    _eventWithinRange(entry, group.start, group.end),
-              )
-              .toList(growable: false)
-            ..sort((a, b) => a.start.compareTo(b.start));
-
-      for (var exam in exams) {
-        examKeys.add(_eventKey(exam));
+    for (final header in examWeekHeaders) {
+      final exams = sortedEvents
+          .where(
+            (event) =>
+                event.type == ScheduleEntryType.Exam &&
+                _eventWithinRange(event, header.start, header.end),
+          )
+          .toList(growable: false);
+      for (final exam in exams) {
+        examEventIdentities.add(importantEventStableIdentity(exam));
       }
-
-      sectionByKey[_examWeekGroupKey(group)] = ImportantEventSection(
-        header: group,
-        events: exams,
+      sections.add(
+        ImportantEventSection(
+          kind: ImportantEventSectionKind.examWeek,
+          header: header,
+          events: exams,
+        ),
       );
     }
 
-    var sections = <ImportantEventSection>[];
-    var addedExamWeeks = <String>{};
-
-    for (var event in sortedEvents) {
-      if (_isExamWeek(event)) {
-        var key = _examWeekGroupKey(event);
-        if (addedExamWeeks.add(key)) {
-          var section = sectionByKey[key];
-          if (section != null) {
-            sections.add(section);
-          }
-        }
-        continue;
-      }
-
+    for (final event in sortedEvents) {
+      if (_isExamWeek(event)) continue;
       if (event.type == ScheduleEntryType.Exam &&
-          examKeys.contains(_eventKey(event))) {
+          examEventIdentities.contains(importantEventStableIdentity(event))) {
         continue;
       }
-
-      sections.add(ImportantEventSection(header: null, events: [event]));
+      sections.add(
+        ImportantEventSection(
+          kind: ImportantEventSectionKind.standalone,
+          header: null,
+          events: <ImportantEvent>[event],
+        ),
+      );
     }
 
-    sections.sort((a, b) => _sectionDate(a).compareTo(_sectionDate(b)));
-
-    return sections;
+    return _sortSections(sections);
   }
 
   bool _isExamWeek(ImportantEvent event) {
-    if (event.type != ScheduleEntryType.SpecialEvent) return false;
-    var normalized = _normalizeTitle(event.title);
-    return normalized.contains(_klausurwocheKeyword);
+    return event.type == ScheduleEntryType.SpecialEvent &&
+        normalizeImportantEventTitle(event.title).contains(_examWeekKeyword);
   }
 
   bool _eventWithinRange(ImportantEvent event, DateTime start, DateTime end) {
-    var eventDay = toStartOfDay(event.start);
+    final eventDay = toStartOfDay(event.start);
     return !eventDay.isBefore(toStartOfDay(start)) &&
         !eventDay.isAfter(toStartOfDay(end));
   }
 
-  List<ImportantEvent> _buildExamWeekGroups(List<ImportantEvent> events) {
-    var examWeeks = events.where(_isExamWeek).toList();
-    if (examWeeks.isEmpty) return [];
-
-    var grouped = <String, List<ImportantEvent>>{};
-    for (var event in examWeeks) {
-      var key = _examWeekGroupKey(event);
-      grouped.putIfAbsent(key, () => []).add(event);
+  List<ImportantEvent> _deduplicateExamWeekHeaders(
+    List<ImportantEvent> sortedEvents,
+  ) {
+    final byIdentity = <String, ImportantEvent>{};
+    for (final event in sortedEvents) {
+      if (!_isExamWeek(event)) continue;
+      byIdentity.putIfAbsent(_examWeekIdentity(event), () => event);
     }
+    return byIdentity.values.toList(growable: false);
+  }
 
-    var merged = <ImportantEvent>[];
-    grouped.forEach((_, groupEvents) {
-      groupEvents.sort((a, b) => a.start.compareTo(b.start));
-      var start = groupEvents.first.start;
-      var end = groupEvents.first.end;
-      for (var entry in groupEvents.skip(1)) {
-        if (entry.end.isAfter(end)) {
-          end = entry.end;
+  String _examWeekIdentity(ImportantEvent event) {
+    return '${normalizeImportantEventTitle(event.title)}|'
+        '${_calendarDayIdentity(event.start)}|'
+        '${_calendarDayIdentity(event.end)}';
+  }
+
+  String _calendarDayIdentity(DateTime date) {
+    return '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+  }
+
+  List<ImportantEventSection> _sortSections(
+    List<ImportantEventSection> sections,
+  ) {
+    final keyed = sections.map(_SectionSortKey.new).toList(growable: false)
+      ..sort((first, second) {
+        var comparison = first.anchorStart.compareTo(second.anchorStart);
+        if (comparison != 0) return comparison;
+        if (first.section.kind != second.section.kind) {
+          return first.section.kind == ImportantEventSectionKind.examWeek
+              ? -1
+              : 1;
         }
-      }
+        return first.anchorOrdering.compareTo(second.anchorOrdering);
+      });
+    return keyed.map((key) => key.section).toList(growable: false);
+  }
+}
 
-      merged.add(
-        ImportantEvent(
-          title: groupEvents.first.title,
-          start: start,
-          end: end,
-          type: groupEvents.first.type,
-        ),
+class _SectionSortKey {
+  final ImportantEventSection section;
+  final DateTime anchorStart;
+  final ImportantEventOrderingKey anchorOrdering;
+
+  _SectionSortKey(this.section)
+    : anchorStart = section.header?.start ?? section.events.single.start,
+      anchorOrdering = ImportantEventOrderingKey(
+        section.header ?? section.events.single,
       );
-    });
-
-    merged.sort((a, b) => a.start.compareTo(b.start));
-    return merged;
-  }
-
-  DateTime _sectionDate(ImportantEventSection section) {
-    return section.header?.start ?? section.events.first.start;
-  }
-
-  String _normalizeTitle(String title) {
-    return title.toLowerCase().replaceAll(RegExp(r'[\s\.-]'), '');
-  }
-
-  String _eventKey(ImportantEvent event) {
-    return '${event.title}-${event.type}-${event.start.toIso8601String()}-${event.end.toIso8601String()}';
-  }
-
-  String _examWeekGroupKey(ImportantEvent event) {
-    var half = event.start.month <= 6 ? 'H1' : 'H2';
-    return '${_normalizeTitle(event.title)}-${event.start.year}-$half';
-  }
 }

@@ -1,26 +1,28 @@
 import 'dart:math' as math;
 
+import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/util/date_utils.dart';
+import 'package:dualmate/date_management/business/important_event_ordering.dart';
 import 'package:dualmate/date_management/model/date_entry.dart';
 import 'package:dualmate/date_management/model/important_event.dart';
 import 'package:dualmate/date_management/model/important_event_section.dart';
-import 'package:dualmate/schedule/model/schedule_entry.dart';
+import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 
-/// Immutable, preformatted data consumed by the Dates list item builders.
-///
-/// Dates are often rebuilt because loading and pagination state changes. Keeping
-/// formatting and past-state checks in this snapshot means visible rows only
-/// construct text widgets and do not repeat the work for every build.
+DateTime _toUtcCalendarDay(DateTime date) =>
+    DateTime.utc(date.year, date.month, date.day);
+
 class DatesRenderData {
-  static const int maxEagerRowsPerSection = 4;
+  static const int _noticeableGapDays = 7;
 
   final List<RaplaListItem> raplaItems;
+  final Map<String, int> raplaIndexByKey;
   final List<DateEntryRenderData> dateEntries;
   final DateTime? nextPastStateChange;
 
-  DatesRenderData._({
+  const DatesRenderData._({
     required this.raplaItems,
+    required this.raplaIndexByKey,
     required this.dateEntries,
     required this.nextPastStateChange,
   });
@@ -33,75 +35,100 @@ class DatesRenderData {
   }) {
     final dateFormat = DateFormat('dd/MM/yyyy', locale);
     final timeFormat = DateFormat.Hm(locale);
+    final weekdayFormat = DateFormat.E(locale);
+    final monthFormat = DateFormat.MMM(locale);
+    final semanticDateFormat = DateFormat.yMMMMEEEEd(locale);
+    final strings = L(Locale(locale));
     final eventDataByEvent = <ImportantEvent, ImportantEventRenderData>{};
-    final renderedSections = <ImportantEventSectionRenderData>[];
 
     ImportantEventRenderData renderEvent(ImportantEvent event) {
       return eventDataByEvent.putIfAbsent(
         event,
         () => ImportantEventRenderData.prepare(
           event: event,
-          dateFormat: dateFormat,
-          timeFormat: timeFormat,
           now: now,
-        ),
-      );
-    }
-
-    for (final section in sections) {
-      renderedSections.add(
-        ImportantEventSectionRenderData(
-          section: section,
-          header: section.header == null ? null : renderEvent(section.header!),
-          events: List<ImportantEventRenderData>.unmodifiable(
-            section.events.map(renderEvent),
-          ),
-          isExamSection: _isExamSection(section),
+          timeFormat: timeFormat,
+          weekdayFormat: weekdayFormat,
+          monthFormat: monthFormat,
+          semanticDateFormat: semanticDateFormat,
+          rangeConnector: strings.dateManagementAgendaRangeConnector,
+          pastLabel: strings.dateManagementAgendaPast,
         ),
       );
     }
 
     final raplaItems = <RaplaListItem>[];
-    for (
-      var sectionIndex = 0;
-      sectionIndex < renderedSections.length;
-      sectionIndex++
-    ) {
-      final section = renderedSections[sectionIndex];
-      final sectionRows = <_SectionRow>[];
+    ImportantEventRenderData? previousVisibleEvent;
+    var afterSectionHeading = false;
 
-      if (section.header != null) {
-        sectionRows.add(_SectionRow(data: section.header!, isHeader: true));
-      }
-      sectionRows.addAll(
-        section.events.map(
-          (event) => _SectionRow(data: event, isHeader: false),
-        ),
-      );
-
-      if (sectionRows.length <= maxEagerRowsPerSection) {
+    for (final section in sections) {
+      final sectionKey = _stableSectionKey(section);
+      if (section.kind == ImportantEventSectionKind.examWeek) {
+        final headerData = renderEvent(section.header!);
         raplaItems.add(
-          RaplaListItem.section(section: section, sectionIndex: sectionIndex),
-        );
-        continue;
-      }
-
-      for (var rowIndex = 0; rowIndex < sectionRows.length; rowIndex++) {
-        final row = sectionRows[rowIndex];
-        final isFirst = rowIndex == 0;
-        final isLast = rowIndex == sectionRows.length - 1;
-        raplaItems.add(
-          RaplaListItem.row(
-            data: row.data,
-            sectionIndex: sectionIndex,
-            rowIndex: rowIndex,
-            position: _positionFor(isFirst, isLast),
-            isHeader: row.isHeader,
-            showDividerAfter: row.isHeader && !isLast,
-            isExamSection: section.isExamSection,
+          RaplaListItem.sectionHeading(
+            stableKey: 'heading:$sectionKey',
+            sectionKey: sectionKey,
+            sectionKind: section.kind,
+            heading: ImportantEventSectionHeadingRenderData(
+              title: section.header!.title,
+              rangeSubtitle: headerData.compactRangeText,
+              semanticsLabel:
+                  '${section.header!.title}, ${headerData.semanticDateText}',
+            ),
           ),
         );
+        previousVisibleEvent = null;
+        afterSectionHeading = true;
       }
+
+      for (final event in section.events) {
+        final eventData = renderEvent(event);
+        final hasNoticeableGap =
+            previousVisibleEvent != null &&
+            _toUtcCalendarDay(event.start)
+                    .difference(
+                      _toUtcCalendarDay(previousVisibleEvent.event.end),
+                    )
+                    .inDays >=
+                _noticeableGapDays;
+        final suppressDateRail =
+            !afterSectionHeading &&
+            previousVisibleEvent != null &&
+            previousVisibleEvent.event.isSingleDay &&
+            event.isSingleDay &&
+            isAtSameDay(previousVisibleEvent.event.start, event.start);
+        final spacingRole = afterSectionHeading
+            ? AgendaRowSpacingRole.afterSectionHeading
+            : previousVisibleEvent == null && raplaItems.isEmpty
+            ? AgendaRowSpacingRole.first
+            : suppressDateRail
+            ? AgendaRowSpacingRole.sameDayContinuation
+            : hasNoticeableGap
+            ? AgendaRowSpacingRole.distantDateChange
+            : AgendaRowSpacingRole.normalDateChange;
+        raplaItems.add(
+          RaplaListItem.eventRow(
+            stableKey:
+                'event:$sectionKey:${importantEventStableIdentity(event)}',
+            sectionKey: sectionKey,
+            sectionKind: section.kind,
+            row: ImportantEventAgendaRowRenderData(
+              event: eventData,
+              suppressDateRail: suppressDateRail,
+              spacingRole: spacingRole,
+            ),
+          ),
+        );
+        previousVisibleEvent = eventData;
+        afterSectionHeading = false;
+      }
+      if (section.events.isEmpty) afterSectionHeading = false;
+    }
+
+    final indexByKey = <String, int>{};
+    for (var index = 0; index < raplaItems.length; index++) {
+      indexByKey[raplaItems[index].stableKey] = index;
     }
 
     final dateEntries = List<DateEntryRenderData>.unmodifiable(
@@ -132,60 +159,251 @@ class DatesRenderData {
 
     return DatesRenderData._(
       raplaItems: List<RaplaListItem>.unmodifiable(raplaItems),
+      raplaIndexByKey: Map<String, int>.unmodifiable(indexByKey),
       dateEntries: dateEntries,
       nextPastStateChange: nextPastStateChange,
     );
   }
 
-  static ImportantEventRowPosition _positionFor(bool isFirst, bool isLast) {
-    if (isFirst && isLast) return ImportantEventRowPosition.single;
-    if (isFirst) return ImportantEventRowPosition.top;
-    if (isLast) return ImportantEventRowPosition.bottom;
-    return ImportantEventRowPosition.middle;
+  int? indexForKey(Key key) {
+    return key is ValueKey<String> ? raplaIndexByKey[key.value] : null;
   }
 
-  static bool _isExamSection(ImportantEventSection section) {
-    if (section.events.any((event) => event.type == ScheduleEntryType.Exam)) {
-      return true;
+  static String _stableSectionKey(ImportantEventSection section) {
+    if (section.kind == ImportantEventSectionKind.standalone) {
+      return 'standalone:${importantEventStableIdentity(section.events.single)}';
     }
+    final header = section.header!;
+    return 'exam-week:${normalizeImportantEventTitle(header.title)}:'
+        '${_calendarDayKey(header.start)}:${_calendarDayKey(header.end)}';
+  }
 
-    final title = section.header?.title.toLowerCase() ?? '';
-    return title.contains('klausur');
+  static String _calendarDayKey(DateTime date) {
+    return '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
   }
 }
 
+enum ImportantEventRangeStyle { singleDay, sameMonth, crossMonth, crossYear }
+
 class ImportantEventRenderData {
   final ImportantEvent event;
-  final String dateText;
+  final String stableKey;
+  final String weekday;
+  final String startDay;
+  final String startMonth;
+  final String? startYear;
+  final String? endDay;
+  final String? endMonth;
+  final String? endYear;
+  final ImportantEventRangeStyle rangeStyle;
+  final String? timeText;
+  final String semanticDateText;
+  final String semanticsLabel;
+  final String compactRangeText;
   final bool isPast;
 
   const ImportantEventRenderData({
     required this.event,
-    required this.dateText,
+    required this.stableKey,
+    required this.weekday,
+    required this.startDay,
+    required this.startMonth,
+    required this.startYear,
+    required this.endDay,
+    required this.endMonth,
+    required this.endYear,
+    required this.rangeStyle,
+    required this.timeText,
+    required this.semanticDateText,
+    required this.semanticsLabel,
+    required this.compactRangeText,
     required this.isPast,
   });
 
   factory ImportantEventRenderData.prepare({
     required ImportantEvent event,
-    required DateFormat dateFormat,
-    required DateFormat timeFormat,
     required DateTime now,
+    required DateFormat timeFormat,
+    required DateFormat weekdayFormat,
+    required DateFormat monthFormat,
+    required DateFormat semanticDateFormat,
+    required String rangeConnector,
+    required String pastLabel,
   }) {
-    var dateText = dateFormat.format(event.start);
-    if (event.isSingleDay) {
-      if (event.hasTime) {
-        dateText = '$dateText · ${timeFormat.format(event.start)}';
-      }
-    } else {
-      dateText = '$dateText - ${dateFormat.format(event.end)}';
-    }
+    final isPast = event.end.isBefore(now);
+    final rangeStyle = _rangeStyle(event);
+    final startMonth = _monthText(monthFormat, event.start);
+    final endMonthText = _monthText(monthFormat, event.end);
+    final isCurrentYear = event.start.year == now.year;
+    final startYear = switch (rangeStyle) {
+      ImportantEventRangeStyle.singleDay =>
+        isCurrentYear ? null : event.start.year.toString(),
+      ImportantEventRangeStyle.sameMonth =>
+        isCurrentYear ? null : event.start.year.toString(),
+      ImportantEventRangeStyle.crossMonth => null,
+      ImportantEventRangeStyle.crossYear => event.start.year.toString(),
+    };
+    final endYear = switch (rangeStyle) {
+      ImportantEventRangeStyle.singleDay ||
+      ImportantEventRangeStyle.sameMonth => null,
+      ImportantEventRangeStyle.crossMonth =>
+        isCurrentYear ? null : event.end.year.toString(),
+      ImportantEventRangeStyle.crossYear => event.end.year.toString(),
+    };
+    final endDay = event.isSingleDay
+        ? null
+        : event.end.day.toString().padLeft(2, '0');
+    final visibleEndMonth = switch (rangeStyle) {
+      ImportantEventRangeStyle.singleDay ||
+      ImportantEventRangeStyle.sameMonth => null,
+      ImportantEventRangeStyle.crossMonth ||
+      ImportantEventRangeStyle.crossYear => endMonthText,
+    };
+    final semanticStart = semanticDateFormat.format(event.start);
+    final semanticDateText = event.isSingleDay
+        ? semanticStart
+        : '$semanticStart $rangeConnector ${semanticDateFormat.format(event.end)}';
+    final timeText = event.isSingleDay && event.hasTime
+        ? timeFormat.format(event.start)
+        : null;
+    final semanticsParts = <String>[
+      semanticDateText,
+      event.title,
+      if (timeText != null) timeText,
+      if (event.professor.trim().isNotEmpty) event.professor,
+      if (isPast) pastLabel,
+    ];
+    final compactRangeText = _compactRangeText(
+      style: rangeStyle,
+      startDay: event.start.day.toString().padLeft(2, '0'),
+      endDay: endDay,
+      startMonth: startMonth,
+      endMonth: visibleEndMonth,
+      startYear: startYear,
+      endYear: endYear,
+    );
 
     return ImportantEventRenderData(
       event: event,
-      dateText: dateText,
-      isPast: event.end.isBefore(now),
+      stableKey: importantEventStableIdentity(event),
+      weekday: weekdayFormat.format(event.start).replaceAll('.', ''),
+      startDay: event.start.day.toString(),
+      startMonth: startMonth,
+      startYear: startYear,
+      endDay: endDay,
+      endMonth: visibleEndMonth,
+      endYear: endYear,
+      rangeStyle: rangeStyle,
+      timeText: timeText,
+      semanticDateText: semanticDateText,
+      semanticsLabel: semanticsParts.join(', '),
+      compactRangeText: compactRangeText,
+      isPast: isPast,
     );
   }
+
+  static ImportantEventRangeStyle _rangeStyle(ImportantEvent event) {
+    if (event.isSingleDay) return ImportantEventRangeStyle.singleDay;
+    if (event.start.year != event.end.year) {
+      return ImportantEventRangeStyle.crossYear;
+    }
+    if (event.start.month != event.end.month) {
+      return ImportantEventRangeStyle.crossMonth;
+    }
+    return ImportantEventRangeStyle.sameMonth;
+  }
+
+  static String _monthText(DateFormat format, DateTime date) {
+    return format.format(date).replaceAll('.', '').toUpperCase();
+  }
+
+  static String _compactRangeText({
+    required ImportantEventRangeStyle style,
+    required String startDay,
+    required String? endDay,
+    required String startMonth,
+    required String? endMonth,
+    required String? startYear,
+    required String? endYear,
+  }) {
+    switch (style) {
+      case ImportantEventRangeStyle.singleDay:
+        return '$startDay $startMonth${_yearSuffix(startYear)}';
+      case ImportantEventRangeStyle.sameMonth:
+        return '$startDay–$endDay $startMonth${_yearSuffix(startYear)}';
+      case ImportantEventRangeStyle.crossMonth:
+        return '$startDay $startMonth – $endDay $endMonth'
+            '${_yearSuffix(endYear)}';
+      case ImportantEventRangeStyle.crossYear:
+        return '$startDay $startMonth $startYear – '
+            '$endDay $endMonth $endYear';
+    }
+  }
+
+  static String _yearSuffix(String? year) => year == null ? '' : ' $year';
+}
+
+class ImportantEventAgendaRowRenderData {
+  final ImportantEventRenderData event;
+  final bool suppressDateRail;
+  final AgendaRowSpacingRole spacingRole;
+
+  const ImportantEventAgendaRowRenderData({
+    required this.event,
+    required this.suppressDateRail,
+    required this.spacingRole,
+  });
+}
+
+enum AgendaRowSpacingRole {
+  first,
+  sameDayContinuation,
+  normalDateChange,
+  distantDateChange,
+  afterSectionHeading,
+}
+
+class ImportantEventSectionHeadingRenderData {
+  final String title;
+  final String rangeSubtitle;
+  final String semanticsLabel;
+
+  const ImportantEventSectionHeadingRenderData({
+    required this.title,
+    required this.rangeSubtitle,
+    required this.semanticsLabel,
+  });
+}
+
+enum RaplaListItemKind { sectionHeading, eventRow }
+
+class RaplaListItem {
+  final String stableKey;
+  final String sectionKey;
+  final ImportantEventSectionKind sectionKind;
+  final RaplaListItemKind kind;
+  final ImportantEventSectionHeadingRenderData? heading;
+  final ImportantEventAgendaRowRenderData? row;
+
+  const RaplaListItem.sectionHeading({
+    required this.stableKey,
+    required this.sectionKey,
+    required this.sectionKind,
+    required ImportantEventSectionHeadingRenderData heading,
+  }) : kind = RaplaListItemKind.sectionHeading,
+       heading = heading,
+       row = null;
+
+  const RaplaListItem.eventRow({
+    required this.stableKey,
+    required this.sectionKey,
+    required this.sectionKind,
+    required ImportantEventAgendaRowRenderData row,
+  }) : kind = RaplaListItemKind.eventRow,
+       heading = null,
+       row = row;
 }
 
 class DateEntryRenderData {
@@ -216,64 +434,6 @@ class DateEntryRenderData {
       isPast: entry.end.isBefore(now),
     );
   }
-}
-
-class ImportantEventSectionRenderData {
-  final ImportantEventSection section;
-  final ImportantEventRenderData? header;
-  final List<ImportantEventRenderData> events;
-  final bool isExamSection;
-
-  const ImportantEventSectionRenderData({
-    required this.section,
-    required this.header,
-    required this.events,
-    required this.isExamSection,
-  });
-}
-
-enum ImportantEventRowPosition { single, top, middle, bottom }
-
-class RaplaListItem {
-  final ImportantEventSectionRenderData? section;
-  final ImportantEventRenderData? data;
-  final int sectionIndex;
-  final int rowIndex;
-  final ImportantEventRowPosition position;
-  final bool isHeader;
-  final bool showDividerAfter;
-  final bool isExamSection;
-
-  RaplaListItem.section({
-    required ImportantEventSectionRenderData section,
-    required this.sectionIndex,
-  }) : section = section,
-       data = null,
-       rowIndex = 0,
-       position = ImportantEventRowPosition.single,
-       isHeader = false,
-       showDividerAfter = false,
-       isExamSection = section.isExamSection;
-
-  const RaplaListItem.row({
-    required ImportantEventRenderData data,
-    required this.sectionIndex,
-    required this.rowIndex,
-    required this.position,
-    required this.isHeader,
-    required this.showDividerAfter,
-    required this.isExamSection,
-  }) : section = null,
-       data = data;
-
-  bool get isSection => section != null;
-}
-
-class _SectionRow {
-  final ImportantEventRenderData data;
-  final bool isHeader;
-
-  const _SectionRow({required this.data, required this.isHeader});
 }
 
 class DateTableColumnWidths {
