@@ -2,6 +2,7 @@ import 'package:dualmate/canteen/business/canteen_location_service.dart';
 import 'package:dualmate/common/application_constants.dart';
 import 'package:dualmate/common/appstart/notification_settings_state.dart';
 import 'package:dualmate/common/background/task_callback.dart';
+import 'package:dualmate/common/background/void_background_work_scheduler.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
 import 'package:dualmate/common/data/preferences/app_theme_enum.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
@@ -76,10 +77,12 @@ void main() {
         CanteenLocationService(preferencesProvider),
       );
       KiwiContainer().registerInstance<WorkSchedulerService>(
-        _AvailableWorkScheduler(),
+        VoidBackgroundWorkScheduler(),
       );
       KiwiContainer().registerInstance<NotificationApi>(VoidNotificationApi());
-      KiwiContainer().registerInstance(NotificationSettingsState());
+      final notificationState = NotificationSettingsState();
+      notificationState.markUnavailable();
+      KiwiContainer().registerInstance(notificationState);
 
       final rootViewModel = RootViewModel(KiwiContainer().resolve());
       await rootViewModel.loadFromPreferences();

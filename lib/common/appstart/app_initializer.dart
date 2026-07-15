@@ -67,6 +67,11 @@ void _updateNotificationSettingsState(
     return;
   }
 
+  if (backgroundInitializationError != null) {
+    state.markFailed(backgroundInitializationError);
+    return;
+  }
+
   final container = KiwiContainer();
   final hasNotificationApi = container.isRegistered<NotificationApi>();
   final hasScheduler = container.isRegistered<WorkSchedulerService>();
@@ -76,8 +81,7 @@ void _updateNotificationSettingsState(
 
   if (!hasNotificationApi || !hasScheduler || !hasNextDayTask) {
     state.markFailed(
-      backgroundInitializationError ??
-          StateError('Notification settings dependencies were not registered.'),
+      StateError('Notification settings dependencies were not registered.'),
     );
     return;
   }
