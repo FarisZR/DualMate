@@ -136,32 +136,48 @@ class _ReminderConfigurationSheetState
             ),
             if (_scope == ClassReminderScope.recurring) ...[
               const SizedBox(height: 16),
-              Card(
-                color: Theme.of(context).colorScheme.secondaryContainer,
-                elevation: 0,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.info_outline),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              strings.classReminderMatchingTitle,
-                              style: Theme.of(context).textTheme.titleSmall,
+              Builder(
+                builder: (context) {
+                  final colors = Theme.of(context).colorScheme;
+                  return Card(
+                    color: colors.secondaryContainer,
+                    elevation: 0,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: colors.onSecondaryContainer,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  strings.classReminderMatchingTitle,
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(
+                                        color: colors.onSecondaryContainer,
+                                      ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  strings.classReminderMatchingDescription,
+                                  style: TextStyle(
+                                    color: colors.onSecondaryContainer,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(strings.classReminderMatchingDescription),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
             ],
             const SizedBox(height: 20),

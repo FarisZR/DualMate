@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/reminders/class_reminder.dart';

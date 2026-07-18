@@ -100,79 +100,90 @@ class ScheduleEntryWidget extends StatelessWidget {
     if (container.isRegistered<ClassReminderController>()) {
       reminderController = container.resolve<ClassReminderController>();
     }
-    final reminderRule = reminderController?.ruleFor(scheduleEntry);
-    final hasReminder = reminderActive ?? reminderRule != null;
-    final isReminderPaused = reminderActive != null
-        ? reminderPaused
-        : reminderRule != null &&
-              !(reminderController?.permissionsGranted ?? false);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: borderRadius,
-        boxShadow: shadowOpacity == 0
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: shadowOpacity),
-                  blurRadius: 3,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-      ),
-      child: Material(
-        type: MaterialType.transparency,
-        child: Ink(
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: borderRadius,
-            border: Border.all(
-              color: Colors.black.withValues(alpha: 0.08),
-              width: borderWidth,
-            ),
-          ),
-          child: InkWell(
-            borderRadius: borderRadius,
-            onTap: () {
-              onScheduleEntryTap(scheduleEntry);
-            },
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: horizontalPadding,
-                vertical: verticalPadding,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      scheduleEntry.title,
-                      maxLines: maxLines,
-                      softWrap: true,
-                      overflow: overflow,
-                      textAlign: TextAlign.left,
-                      style: textStyle,
-                    ),
+    Widget buildEntry() {
+      final reminderRule = reminderController?.ruleFor(scheduleEntry);
+      final hasReminder = reminderActive ?? reminderRule != null;
+      final isReminderPaused = reminderActive != null
+          ? reminderPaused
+          : reminderRule != null &&
+                !(reminderController?.permissionsGranted ?? false);
+
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: borderRadius,
+          boxShadow: shadowOpacity == 0
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: shadowOpacity),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
                   ),
-                  if (hasReminder && width >= 44)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 1, top: 1),
-                      child: Icon(
-                        isReminderPaused
-                            ? Icons.notifications_off_outlined
-                            : Icons.notifications,
-                        size: isDense ? 11 : 13,
-                        color: textColor.withValues(
-                          alpha: isReminderPaused ? 0.7 : 0.95,
-                        ),
+                ],
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Ink(
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: borderRadius,
+              border: Border.all(
+                color: Colors.black.withValues(alpha: 0.08),
+                width: borderWidth,
+              ),
+            ),
+            child: InkWell(
+              borderRadius: borderRadius,
+              onTap: () {
+                onScheduleEntryTap(scheduleEntry);
+              },
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: verticalPadding,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        scheduleEntry.title,
+                        maxLines: maxLines,
+                        softWrap: true,
+                        overflow: overflow,
+                        textAlign: TextAlign.left,
+                        style: textStyle,
                       ),
                     ),
-                ],
+                    if (hasReminder && width >= 44)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 1, top: 1),
+                        child: Icon(
+                          isReminderPaused
+                              ? Icons.notifications_off_outlined
+                              : Icons.notifications,
+                          size: isDense ? 11 : 13,
+                          color: textColor.withValues(
+                            alpha: isReminderPaused ? 0.7 : 0.95,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
+      );
+    }
+
+    if (reminderController == null || reminderActive != null) {
+      return buildEntry();
+    }
+    return AnimatedBuilder(
+      animation: reminderController,
+      builder: (context, child) => buildEntry(),
     );
   }
 }

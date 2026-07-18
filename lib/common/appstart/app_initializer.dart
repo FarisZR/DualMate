@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dualmate/canteen/business/canteen_provider.dart';
 import 'package:dualmate/common/appstart/background_initialize.dart';
 import 'package:dualmate/common/appstart/performance_fixture_mode.dart';
+import 'package:dualmate/common/appstart/debug_startup_overrides.dart';
 import 'package:dualmate/common/appstart/performance_fixture_schedule_source.dart';
 import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/appstart/localization_initialize.dart';
@@ -111,6 +112,15 @@ Future<void> initializeAppBase(bool isBackground) async {
   print("Base init: services ${stopwatch.elapsedMilliseconds}ms");
 
   if (isPerformanceFixtureMode) {
+    // A fresh fixture installation has no persisted schedule source yet. Apply
+    // debug launch overrides before validating and replacing that source so
+    // device/profile runs can start deterministically on their first launch.
+    if (!isBackground) {
+      final overrides = DebugStartupOverrides.fromEnvironment();
+      if (overrides.isActive) {
+        await overrides.apply(KiwiContainer().resolve<PreferencesProvider>());
+      }
+    }
     final scheduleSourceProvider = KiwiContainer()
         .resolve<ScheduleSourceProvider>();
     final didConfigureScheduleSource = await scheduleSourceProvider

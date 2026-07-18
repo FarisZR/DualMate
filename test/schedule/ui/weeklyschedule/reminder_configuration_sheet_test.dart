@@ -18,6 +18,34 @@ void main() {
     expect(find.textContaining('same displayed class name'), findsOneWidget);
   });
 
+  testWidgets('recurring disclaimer uses its container foreground color', (
+    tester,
+  ) async {
+    const foreground = Color(0xff102030);
+    await tester.pumpWidget(
+      _app(
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.teal,
+            brightness: Brightness.dark,
+          ).copyWith(onSecondaryContainer: foreground),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Every occurrence'));
+    await tester.pumpAndSettle();
+
+    final title = tester.widget<Text>(find.text('Matches by class name'));
+    final description = tester.widget<Text>(
+      find.textContaining('same displayed class name'),
+    );
+    final icon = tester.widget<Icon>(find.byIcon(Icons.info_outline));
+    expect(title.style?.color, foreground);
+    expect(description.style?.color, foreground);
+    expect(icon.color, foreground);
+  });
+
   testWidgets('saves the selected offset and scope', (tester) async {
     Duration? savedOffset;
     ClassReminderScope? savedScope;
@@ -40,20 +68,23 @@ void main() {
   });
 }
 
-Widget _app({Future<void> Function(Duration, ClassReminderScope)? onSave}) =>
-    MaterialApp(
-      locale: const Locale('en'),
-      localizationsDelegates: const [
-        LocalizationDelegate(),
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('en'), Locale('de')],
-      home: Scaffold(
-        body: ReminderConfigurationSheet(
-          existingRule: null,
-          onSave: onSave ?? (_, _) async {},
-        ),
-      ),
-    );
+Widget _app({
+  Future<void> Function(Duration, ClassReminderScope)? onSave,
+  ThemeData? theme,
+}) => MaterialApp(
+  theme: theme,
+  locale: const Locale('en'),
+  localizationsDelegates: const [
+    LocalizationDelegate(),
+    GlobalMaterialLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+  ],
+  supportedLocales: const [Locale('en'), Locale('de')],
+  home: Scaffold(
+    body: ReminderConfigurationSheet(
+      existingRule: null,
+      onSave: onSave ?? (_, _) async {},
+    ),
+  ),
+);
