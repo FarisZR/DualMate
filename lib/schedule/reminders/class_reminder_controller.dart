@@ -137,8 +137,9 @@ class ClassReminderController extends ChangeNotifier {
       ]);
       _permissionsGranted = results.every((granted) => granted);
     } catch (error, trace) {
+      _permissionsGranted = false;
+      _permissionStateKnown = true;
       await _reportQueueFailure(error, trace);
-      return;
     }
     _permissionStateKnown = true;
     if (!wasKnown || previous != _permissionsGranted) notifyListeners();

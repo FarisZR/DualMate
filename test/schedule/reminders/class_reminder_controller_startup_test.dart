@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/data/database_access.dart';
+import 'package:dualmate/common/logging/diagnostic_exception_filter.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
@@ -254,6 +255,48 @@ void main() {
     },
   );
 
+  test(
+    'permission check throws after granted: state becomes denied and pause path cancels alarms',
+    () async {
+      final scheduler = _RecordingScheduler();
+      final repository = _ManifestReminderRepository();
+      final source = _FakeScheduleSourceProvider();
+      // Start with granted; switch to throwing after initialization.
+      var throwOnCheck = false;
+      NotificationApi? apiFactory() {
+        if (throwOnCheck) return _ThrowingNotificationApi();
+        return _GrantedNotificationApi();
+      }
+
+      final controller = ClassReminderController(
+        repository: repository,
+        scheduleProvider: _FakeScheduleProvider(source),
+        sourceProvider: source,
+        scheduler: scheduler,
+        notificationApi: apiFactory,
+        now: () => DateTime(2026, 7, 20, 8),
+      );
+      addTearDown(controller.dispose);
+
+      // Initialize with granted permissions.
+      await controller.initialize();
+      expect(controller.permissionsGranted, isTrue);
+      expect(controller.permissionStateKnown, isTrue);
+
+      // Second check throws: state must flip to known/denied and pause path runs.
+      throwOnCheck = true;
+      await controller.refreshPermissionState();
+
+      expect(controller.permissionStateKnown, isTrue);
+      expect(controller.permissionsGranted, isFalse);
+      expect(controller.remindersPaused, isTrue);
+      expect(
+        scheduler.cancelledIds,
+        contains(_ManifestReminderRepository.manifestNotificationId),
+      );
+    },
+  );
+
   test('failed initialization can be retried', () async {
     final repository = _FailOnceReminderRepository();
     final source = _FakeScheduleSourceProvider();
@@ -475,3 +518,57 @@ class _FakeScheduleFilterRepository extends Fake
     implements ScheduleFilterRepository {}
 
 class _UnusedDatabaseAccess extends DatabaseAccess {}
+
+class _ThrowingNotificationApi extends VoidNotificationApi {
+  @override
+  Future<bool> areNotificationsEnabled() =>
+      Future.error(_PermissionCheckFailure());
+}
+
+/// An [ExpectedExternalFailure] so AppDiagnostics suppresses it without
+/// calling Sentry (which requires path_provider in tests).
+class _PermissionCheckFailure implements ExpectedExternalFailure, Exception {
+  @override
+  String toString() => 'Simulated permission check failure';
+}
+
+class _RecordingScheduler implements ClassReminderScheduler {
+  final List<int> cancelledIds = [];
+
+  @override
+  Future<void> cancel(int notificationId) async {
+    cancelledIds.add(notificationId);
+  }
+
+  @override
+  Future<void> schedule(ClassReminderNotificationRequest request) async {}
+}
+
+/// Repository that exposes a single manifest row so _pauseSource has something
+/// to cancel.
+class _ManifestReminderRepository extends _MemoryReminderRepository {
+  static const int manifestNotificationId = 42;
+
+  @override
+  Future<List<ScheduledClassNotification>> loadManifestForSource(
+    String sourceIdentity,
+  ) async => [
+    ScheduledClassNotification(
+      ruleId: 'recht',
+      occurrenceIdentity: 'occ1',
+      sourceIdentity: 'rapla:a',
+      notificationId: manifestNotificationId,
+      scheduledTime: DateTime.utc(2026, 7, 20, 10),
+      classStart: DateTime.utc(2026, 7, 20, 10),
+      contentFingerprint: 'fp',
+    ),
+  ];
+
+  @override
+  Future<void> applyManifestChanges({
+    required List<ScheduledClassNotification> upserts,
+    required List<ScheduledClassNotification> removals,
+  }) async {
+    // No-op: no real database in tests.
+  }
+}

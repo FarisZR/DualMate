@@ -38,4 +38,47 @@ void main() {
       isNot(ScheduleSourceIdentity.create(ScheduleSourceType.Rapla, second)),
     );
   });
+
+  test('Rapla identity with repeated key differs from either single-value URL', () {
+    const repeated =
+        'https://rapla.dhbw-karlsruhe.de/rapla?page=calendar&user=eisenbiegler&file=TINF25B4&file=TINF25B5';
+    const singleFirst =
+        'https://rapla.dhbw-karlsruhe.de/rapla?page=calendar&user=eisenbiegler&file=TINF25B4';
+    // Old Map.fromEntries collapsed repeated keys to the last sorted value
+    // (TINF25B5). The repeated identity must differ from that value too.
+    const singleLast =
+        'https://rapla.dhbw-karlsruhe.de/rapla?page=calendar&user=eisenbiegler&file=TINF25B5';
+
+    final repeatedId = ScheduleSourceIdentity.create(
+      ScheduleSourceType.Rapla,
+      repeated,
+    );
+    expect(
+      repeatedId,
+      isNot(
+        ScheduleSourceIdentity.create(ScheduleSourceType.Rapla, singleFirst),
+      ),
+    );
+    expect(
+      repeatedId,
+      isNot(
+        ScheduleSourceIdentity.create(ScheduleSourceType.Rapla, singleLast),
+      ),
+    );
+  });
+
+  test(
+    'Rapla identity with repeated key is the same regardless of value order',
+    () {
+      const orderA =
+          'https://rapla.dhbw-karlsruhe.de/rapla?page=calendar&user=eisenbiegler&file=TINF25B4&file=TINF25B5';
+      const orderB =
+          'https://rapla.dhbw-karlsruhe.de/rapla?page=calendar&user=eisenbiegler&file=TINF25B5&file=TINF25B4';
+
+      expect(
+        ScheduleSourceIdentity.create(ScheduleSourceType.Rapla, orderA),
+        ScheduleSourceIdentity.create(ScheduleSourceType.Rapla, orderB),
+      );
+    },
+  );
 }

@@ -173,7 +173,12 @@ class ScheduleSourceProvider {
   }
 
   bool wouldChangeTo(ScheduleSourceType type, String configuredValue) {
-    final nextIdentity = ScheduleSourceIdentity.create(type, configuredValue);
+    final String nextIdentity;
+    if (type == ScheduleSourceType.None || configuredValue.trim().isEmpty) {
+      nextIdentity = 'none';
+    } else {
+      nextIdentity = ScheduleSourceIdentity.create(type, configuredValue);
+    }
     return nextIdentity != _currentSourceIdentity;
   }
 

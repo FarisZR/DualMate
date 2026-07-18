@@ -42,14 +42,28 @@ abstract final class ScheduleSourceIdentity {
       }
     }
 
+    if (entries.isEmpty) {
+      return uri
+          .replace(
+            scheme: uri.scheme.toLowerCase(),
+            host: uri.host.toLowerCase(),
+            fragment: '',
+            queryParameters: const <String, String>{},
+          )
+          .toString();
+    }
+
+    final encodedPairs = entries.map(
+      (e) =>
+          '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}',
+    );
+    final query = encodedPairs.join('&');
     return uri
         .replace(
           scheme: uri.scheme.toLowerCase(),
           host: uri.host.toLowerCase(),
           fragment: '',
-          queryParameters: entries.isEmpty
-              ? const <String, String>{}
-              : Map<String, String>.fromEntries(entries),
+          query: query,
         )
         .toString();
   }

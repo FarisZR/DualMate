@@ -32,6 +32,7 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
   bool _isHandlingPop = false;
   bool _didInitializeViewModel = false;
   ClassReminderController? _reminderController;
+  Future<void>? _pendingDisplayChange;
 
   @override
   void initState() {
@@ -237,6 +238,7 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
       if (!_didInitializeViewModel || _hasInitError) {
         return;
       }
+      await _pendingDisplayChange;
       didChangeFilters = await _viewModel.applyFilter();
       applySucceeded = true;
     } on FilterValidationException catch (e, trace) {
@@ -266,6 +268,17 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
   }
 
   Future<bool> _handleDisplayChange(
+    ScheduleEntryFilterState state,
+    bool displayed,
+  ) {
+    final future = _doDisplayChange(state, displayed);
+    if (!displayed) {
+      _pendingDisplayChange = future.then((_) {}).catchError((_) {});
+    }
+    return future;
+  }
+
+  Future<bool> _doDisplayChange(
     ScheduleEntryFilterState state,
     bool displayed,
   ) async {
@@ -310,6 +323,8 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
     if (choice == _HiddenReminderChoice.remove) {
       try {
         await reminders.removeRemindersForTitle(state.entryName);
+        // Update the model even if the row widget is already disposed.
+        state.isDisplayed = false;
       } catch (error, trace) {
         debugPrint('Failed to remove reminders for hidden class: $error');
         debugPrint('$trace');
