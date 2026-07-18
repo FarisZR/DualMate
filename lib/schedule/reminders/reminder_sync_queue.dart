@@ -30,7 +30,7 @@ class ReminderSyncQueue {
   final ReminderReconcileCallback _reconcile;
   final int Function() _currentGeneration;
   final Future<void> Function(Object error, StackTrace trace)? _onError;
-  final List<ReminderSyncRequest> _pending = [];
+  final List<Object> _pending = [];
   bool _processing = false;
   Completer<void>? _idleCompleter;
 
@@ -45,17 +45,26 @@ class ReminderSyncQueue {
   bool get isIdle => !_processing && _pending.isEmpty;
 
   void enqueue(ReminderSyncRequest request) {
-    final mergeIndex = _pending.indexWhere(
-      (pending) =>
-          pending.sourceGeneration == request.sourceGeneration &&
-          pending.sourceIdentity == request.sourceIdentity &&
-          _overlaps(pending, request),
-    );
+    final mergeIndex = _mergeIndex(request);
     if (mergeIndex >= 0) {
-      _pending[mergeIndex] = _merge(_pending[mergeIndex], request);
+      _pending[mergeIndex] = _merge(
+        _pending[mergeIndex] as ReminderSyncRequest,
+        request,
+      );
     } else {
       _pending.add(request);
     }
+    _startProcessing();
+  }
+
+  Future<void> runSerialized(Future<void> Function() operation) {
+    final completer = Completer<void>();
+    _pending.add(_SerializedReminderWork(operation, completer));
+    _startProcessing();
+    return completer.future;
+  }
+
+  void _startProcessing() {
     _idleCompleter ??= Completer<void>();
     if (!_processing) {
       _processing = true;
@@ -71,7 +80,17 @@ class ReminderSyncQueue {
   Future<void> _process() async {
     try {
       while (_pending.isNotEmpty) {
-        final request = _pending.removeAt(0);
+        final work = _pending.removeAt(0);
+        if (work is _SerializedReminderWork) {
+          try {
+            await work.operation();
+            work.completer.complete();
+          } catch (error, trace) {
+            work.completer.completeError(error, trace);
+          }
+          continue;
+        }
+        final request = work as ReminderSyncRequest;
         if (request.sourceGeneration != _currentGeneration()) continue;
         try {
           await _reconcile(request);
@@ -88,6 +107,20 @@ class ReminderSyncQueue {
       _idleCompleter?.complete();
       _idleCompleter = null;
     }
+  }
+
+  int _mergeIndex(ReminderSyncRequest request) {
+    for (var index = _pending.length - 1; index >= 0; index--) {
+      final pending = _pending[index];
+      if (pending is _SerializedReminderWork) break;
+      final pendingRequest = pending as ReminderSyncRequest;
+      if (pendingRequest.sourceGeneration == request.sourceGeneration &&
+          pendingRequest.sourceIdentity == request.sourceIdentity &&
+          _overlaps(pendingRequest, request)) {
+        return index;
+      }
+    }
+    return -1;
   }
 
   bool _overlaps(ReminderSyncRequest a, ReminderSyncRequest b) =>
@@ -118,4 +151,11 @@ class ReminderSyncQueue {
           : b.enqueuedAt,
     );
   }
+}
+
+class _SerializedReminderWork {
+  final Future<void> Function() operation;
+  final Completer<void> completer;
+
+  const _SerializedReminderWork(this.operation, this.completer);
 }

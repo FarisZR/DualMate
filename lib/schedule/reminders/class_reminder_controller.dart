@@ -198,12 +198,14 @@ class ClassReminderController extends ChangeNotifier {
 
   Future<void> clearForSourceChange({String? sourceIdentity}) async {
     final identity = sourceIdentity ?? _activeSourceIdentity;
-    await _pauseSource(identity);
-    await _repository.clearSource(identity);
-    _reloadRevision += 1;
-    _rules = const [];
-    _activeSourceIdentity = 'none';
-    notifyListeners();
+    await _queue.runSerialized(() async {
+      await _pauseSource(identity);
+      await _repository.clearSource(identity);
+      _reloadRevision += 1;
+      _rules = const [];
+      _activeSourceIdentity = 'none';
+      notifyListeners();
+    });
   }
 
   Future<void> waitForSourceChange() => _sourceChangeFuture;
@@ -231,8 +233,10 @@ class ClassReminderController extends ChangeNotifier {
       final previousIdentity = _activeSourceIdentity;
       final currentIdentity = _sourceProvider.currentSourceIdentity;
       if (previousIdentity != 'none' && previousIdentity != currentIdentity) {
-        await _pauseSource(previousIdentity);
-        await _repository.clearSource(previousIdentity);
+        await _queue.runSerialized(() async {
+          await _pauseSource(previousIdentity);
+          await _repository.clearSource(previousIdentity);
+        });
       }
       await _reloadRules();
       if (hasReminders && permissionsGranted) {

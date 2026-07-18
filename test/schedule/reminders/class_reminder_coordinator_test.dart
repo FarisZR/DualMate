@@ -214,6 +214,42 @@ void main() {
     },
   );
 
+  test('ambiguous one-time rematch removes the obsolete reminder', () async {
+    final original = DateTime(2026, 7, 20, 10);
+    final rule = ClassReminderRule(
+      id: 'one',
+      scope: ClassReminderScope.oneTime,
+      canonicalTitle: 'Recht',
+      offset: const Duration(minutes: 15),
+      sourceIdentity: 'rapla:a',
+      occurrenceStart: original,
+      occurrenceEnd: original.add(const Duration(hours: 2)),
+    );
+    final repository = _MemoryRepository([rule]);
+    final oldManifest = _manifest(rule, original);
+    repository.manifest.add(oldManifest);
+    final scheduler = _RecordingScheduler();
+    final coordinator = ClassReminderCoordinator(
+      repository: repository,
+      scheduler: scheduler,
+      now: () => now,
+    );
+
+    await coordinator.reconcile(
+      schedule: Schedule.fromList([
+        _entry(DateTime(2026, 7, 20, 11), 'Recht'),
+        _entry(DateTime(2026, 7, 20, 12), 'Recht'),
+      ]),
+      start: windowStart,
+      end: windowEnd,
+      sourceIdentity: 'rapla:a',
+    );
+
+    expect(scheduler.scheduled, isEmpty);
+    expect(scheduler.cancelled, [oldManifest.notificationId]);
+    expect(repository.rules, isEmpty);
+  });
+
   test('pausing reminders cancels and removes manifest rows', () async {
     final rule = ClassReminderRule(
       id: 'recht',

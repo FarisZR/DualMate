@@ -255,15 +255,8 @@ class ClassReminderCoordinator {
       (entry) => entry.start == rule.occurrenceStart,
     );
     if (sameTime.isNotEmpty) return [sameTime.first];
-    if (candidates.isNotEmpty) {
-      candidates.sort(
-        (a, b) => a.start
-            .difference(rule.occurrenceStart!)
-            .abs()
-            .compareTo(b.start.difference(rule.occurrenceStart!).abs()),
-      );
-      return [candidates.first];
-    }
+    if (candidates.length == 1) return candidates;
+    if (candidates.isNotEmpty) return const [];
     final renamedAtSameTime = entries
         .where((entry) => entry.start == rule.occurrenceStart)
         .toList(growable: false);

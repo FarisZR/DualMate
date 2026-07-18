@@ -114,6 +114,51 @@ void main() {
 
     expect(queue.isIdle, isTrue);
   });
+
+  test(
+    'serialized work waits for active reconciliation and blocks newer work',
+    () async {
+      final reconcileBlocker = Completer<void>();
+      final cleanupBlocker = Completer<void>();
+      final events = <String>[];
+      var reconcileCount = 0;
+      final queue = ReminderSyncQueue(
+        currentGeneration: () => 1,
+        reconcile: (_) async {
+          reconcileCount++;
+          events.add('reconcile-$reconcileCount-start');
+          if (reconcileCount == 1) await reconcileBlocker.future;
+          events.add('reconcile-$reconcileCount-end');
+        },
+      );
+
+      queue.enqueue(_request(DateTime(2026, 7, 20), DateTime(2026, 7, 21)));
+      await Future<void>.delayed(Duration.zero);
+      final cleanup = queue.runSerialized(() async {
+        events.add('cleanup-start');
+        await cleanupBlocker.future;
+        events.add('cleanup-end');
+      });
+      queue.enqueue(_request(DateTime(2026, 7, 20), DateTime(2026, 7, 21)));
+
+      expect(events, ['reconcile-1-start']);
+      reconcileBlocker.complete();
+      await Future<void>.delayed(Duration.zero);
+      expect(events, ['reconcile-1-start', 'reconcile-1-end', 'cleanup-start']);
+
+      cleanupBlocker.complete();
+      await cleanup;
+      await queue.drain();
+      expect(events, [
+        'reconcile-1-start',
+        'reconcile-1-end',
+        'cleanup-start',
+        'cleanup-end',
+        'reconcile-2-start',
+        'reconcile-2-end',
+      ]);
+    },
+  );
 }
 
 ReminderSyncRequest _request(
