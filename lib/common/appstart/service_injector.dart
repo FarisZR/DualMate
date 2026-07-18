@@ -70,7 +70,11 @@ void injectServices(bool isBackground) {
   );
   c.registerInstance(ClassReminderRepository(c.resolve()));
   c.registerInstance<ClassReminderScheduler>(
-    PlatformClassReminderScheduler(() => c.resolve<NotificationApi>()),
+    PlatformClassReminderScheduler(
+      () => c.resolve<NotificationApi>(),
+      languageCode: () =>
+          c.resolve<PreferencesProvider>().getLastUsedLanguageCode(),
+    ),
   );
   c.registerInstance(
     ClassReminderController(

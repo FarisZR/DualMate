@@ -91,6 +91,76 @@ void main() {
   );
 
   test(
+    '30-minute reminder is scheduled exactly 30 minutes before class',
+    () async {
+      final classStart = DateTime(2026, 7, 20, 10);
+      final repository = _MemoryRepository([
+        ClassReminderRule(
+          id: 'recht',
+          scope: ClassReminderScope.recurring,
+          canonicalTitle: 'Recht',
+          offset: const Duration(minutes: 30),
+          sourceIdentity: 'rapla:a',
+        ),
+      ]);
+      final scheduler = _RecordingScheduler();
+      final coordinator = ClassReminderCoordinator(
+        repository: repository,
+        scheduler: scheduler,
+        now: () => now,
+      );
+
+      await coordinator.reconcile(
+        schedule: Schedule.fromList([_entry(classStart, 'Recht')]),
+        start: windowStart,
+        end: windowEnd,
+        sourceIdentity: 'rapla:a',
+      );
+
+      expect(scheduler.scheduled, hasLength(1));
+      expect(
+        scheduler.scheduled.single.scheduledTime,
+        classStart.subtract(const Duration(minutes: 30)),
+      );
+      expect(scheduler.scheduled.single.classStart, classStart);
+      expect(scheduler.scheduled.single.offset, const Duration(minutes: 30));
+    },
+  );
+
+  test(
+    'does not schedule a reminder whose notification time has passed',
+    () async {
+      final repository = _MemoryRepository([
+        ClassReminderRule(
+          id: 'recht',
+          scope: ClassReminderScope.recurring,
+          canonicalTitle: 'Recht',
+          offset: const Duration(minutes: 30),
+          sourceIdentity: 'rapla:a',
+        ),
+      ]);
+      final scheduler = _RecordingScheduler();
+      final coordinator = ClassReminderCoordinator(
+        repository: repository,
+        scheduler: scheduler,
+        now: () => now,
+      );
+
+      await coordinator.reconcile(
+        schedule: Schedule.fromList([
+          _entry(now.add(const Duration(minutes: 15)), 'Recht'),
+        ]),
+        start: windowStart,
+        end: windowEnd,
+        sourceIdentity: 'rapla:a',
+      );
+
+      expect(scheduler.scheduled, isEmpty);
+      expect(repository.manifest, isEmpty);
+    },
+  );
+
+  test(
     'no rules treat the notification manifest as an empty desired set',
     () async {
       final repository = _MemoryRepository([]);

@@ -159,12 +159,60 @@ void main() {
       ]);
     },
   );
+
+  test(
+    'serialized work reports its error without wedging later work',
+    () async {
+      var reconciliations = 0;
+      final queue = ReminderSyncQueue(
+        currentGeneration: () => 1,
+        reconcile: (_) async => reconciliations++,
+      );
+
+      final failed = queue.runSerialized(
+        () => Future<void>.error(StateError('cleanup failed')),
+      );
+      queue.enqueue(_request(DateTime(2026, 7, 20), DateTime(2026, 7, 21)));
+
+      await expectLater(failed, throwsStateError);
+      await queue.drain();
+      expect(reconciliations, 1);
+      expect(queue.isIdle, isTrue);
+    },
+  );
+
+  test('coalescing retains the earliest enqueue timestamp', () async {
+    final requests = <ReminderSyncRequest>[];
+    final queue = ReminderSyncQueue(
+      currentGeneration: () => 1,
+      reconcile: (request) async => requests.add(request),
+    );
+    final later = DateTime(2026, 7, 20, 12);
+    final earlier = DateTime(2026, 7, 20, 11);
+    final blocker = Completer<void>();
+    queue.runSerialized(() => blocker.future);
+    queue.enqueue(
+      _request(DateTime(2026, 7, 20), DateTime(2026, 7, 22), enqueuedAt: later),
+    );
+    queue.enqueue(
+      _request(
+        DateTime(2026, 7, 21),
+        DateTime(2026, 7, 23),
+        enqueuedAt: earlier,
+      ),
+    );
+
+    blocker.complete();
+    await queue.drain();
+    expect(requests.single.enqueuedAt, earlier);
+  });
 }
 
 ReminderSyncRequest _request(
   DateTime start,
   DateTime end, {
   int generation = 1,
+  DateTime? enqueuedAt,
 }) => ReminderSyncRequest(
   schedule: Schedule.fromList([
     ScheduleEntry(
@@ -181,4 +229,5 @@ ReminderSyncRequest _request(
   end: end,
   sourceIdentity: 'rapla:a',
   sourceGeneration: generation,
+  enqueuedAt: enqueuedAt,
 );

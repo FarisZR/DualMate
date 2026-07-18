@@ -2,8 +2,34 @@ import 'package:dualmate/schedule/reminders/class_reminder.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('rule identifiers are deterministic and scope-specific', () {
+    final start = DateTime(2026, 7, 20, 9);
+    final recurring = ClassReminderIdentity.ruleId(
+      scope: ClassReminderScope.recurring,
+      canonicalTitle: 'Recht',
+      sourceIdentity: 'rapla:a',
+    );
+    final oneTime = ClassReminderIdentity.ruleId(
+      scope: ClassReminderScope.oneTime,
+      canonicalTitle: 'Recht',
+      sourceIdentity: 'rapla:a',
+      occurrenceStart: start,
+    );
+
+    expect(
+      ClassReminderIdentity.ruleId(
+        scope: ClassReminderScope.recurring,
+        canonicalTitle: 'Recht',
+        sourceIdentity: 'rapla:a',
+      ),
+      recurring,
+    );
+    expect(recurring, startsWith('class-reminder-'));
+    expect(oneTime, isNot(recurring));
+  });
+
   test(
-    'notification identifiers are deterministic, positive and source scoped',
+    'notification identifiers are deterministic, negative and source scoped',
     () {
       final occurrence = DateTime(2026, 7, 20, 9);
       final first = ClassReminderIdentity.notificationId(
@@ -23,8 +49,8 @@ void main() {
       );
 
       expect(first, repeat);
-      expect(first, greaterThan(0));
-      expect(first, lessThan(1 << 31));
+      expect(first, lessThan(0));
+      expect(first, greaterThanOrEqualTo(-(1 << 31)));
       expect(otherSource, isNot(first));
     },
   );

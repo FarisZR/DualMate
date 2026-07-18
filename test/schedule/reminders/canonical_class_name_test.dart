@@ -21,6 +21,20 @@ void main() {
       expect(CanonicalClassName.fromTitle('ABC12 - Seminar'), 'Seminar');
     });
 
+    test('exposes and removes strict course-code prefixes', () {
+      const title = 'WWIA23B2 - Recht';
+
+      expect(CanonicalClassName.courseCodePrefix(title), 'WWIA23B2 -');
+      expect(CanonicalClassName.removeCourseCodePrefix(title), 'Recht');
+    });
+
+    test('recognizes fallback uppercase course-code prefixes', () {
+      const title = 'AB-12 Recht';
+
+      expect(CanonicalClassName.courseCodePrefix(title), 'AB-12');
+      expect(CanonicalClassName.fromTitle(title), 'Recht');
+    });
+
     test('preserves meaningful title distinctions', () {
       expect(CanonicalClassName.fromTitle('Recht II'), 'Recht II');
       expect(CanonicalClassName.fromTitle('Recht'), isNot('Recht II'));

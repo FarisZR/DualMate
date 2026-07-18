@@ -69,7 +69,10 @@ abstract final class ClassReminderIdentity {
   }) {
     final input =
         '$sourceIdentity|$ruleId|${occurrenceStart.toUtc().millisecondsSinceEpoch}';
-    return _hash(input);
+    // Legacy immediate notifications use non-negative random identifiers.
+    // Keep class alarms in a disjoint namespace so neither family can replace
+    // or cancel a notification belonging to the other.
+    return -_hash(input);
   }
 
   static int _hash(String input) {
