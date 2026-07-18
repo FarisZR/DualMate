@@ -186,6 +186,35 @@ void main() {
       expect(repository.savedRules.single.canonicalTitle, 'Wirtschaftsrecht');
     },
   );
+
+  test('pausing reminders cancels and removes manifest rows', () async {
+    final rule = ClassReminderRule(
+      id: 'recht',
+      scope: ClassReminderScope.recurring,
+      canonicalTitle: 'Recht',
+      offset: const Duration(minutes: 15),
+      sourceIdentity: 'rapla:a',
+    );
+    final repository = _MemoryRepository([rule]);
+    final row = _manifest(rule, DateTime(2026, 7, 20, 10));
+    repository.manifest.add(row);
+    final scheduler = _RecordingScheduler();
+    final coordinator = ClassReminderCoordinator(
+      repository: repository,
+      scheduler: scheduler,
+      now: () => now,
+    );
+
+    final cancelled = await coordinator.pauseWindow(
+      start: windowStart,
+      end: windowEnd,
+      sourceIdentity: 'rapla:a',
+    );
+
+    expect(cancelled, 1);
+    expect(scheduler.cancelled, [row.notificationId]);
+    expect(repository.manifest, isEmpty);
+  });
 }
 
 ScheduleEntry _entry(DateTime start, String title) => ScheduleEntry(

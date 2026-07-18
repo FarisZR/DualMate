@@ -35,6 +35,7 @@ class ClassReminderController extends ChangeNotifier {
   bool _permissionsGranted = false;
   bool _initialized = false;
   DateTime? _lastCleanup;
+  String _activeSourceIdentity = 'none';
 
   ClassReminderController({
     required ClassReminderRepository repository,
@@ -76,6 +77,8 @@ class ClassReminderController extends ChangeNotifier {
     await refreshPermissionState(scheduleWhenRestored: false);
     if (hasReminders && permissionsGranted) {
       await reconcileUpcoming(waitForCompletion: true);
+    } else if (hasReminders) {
+      await _pauseSource(_activeSourceIdentity);
     }
   }
 
@@ -100,6 +103,9 @@ class ClassReminderController extends ChangeNotifier {
       _permissionsGranted = false;
     }
     if (previous != _permissionsGranted) notifyListeners();
+    if (previous && !_permissionsGranted && hasReminders) {
+      await _pauseSource(_activeSourceIdentity);
+    }
     if (scheduleWhenRestored &&
         !previous &&
         _permissionsGranted &&
@@ -183,12 +189,10 @@ class ClassReminderController extends ChangeNotifier {
 
   Future<void> clearForSourceChange() async {
     final sourceIdentity = _sourceProvider.currentSourceIdentity;
-    final manifest = await _repository.loadManifestForSource(sourceIdentity);
-    for (final row in manifest) {
-      await _scheduler.cancel(row.notificationId);
-    }
+    await _pauseSource(sourceIdentity);
     await _repository.clearSource(sourceIdentity);
     _rules = const [];
+    _activeSourceIdentity = 'none';
     notifyListeners();
   }
 
@@ -211,6 +215,12 @@ class ClassReminderController extends ChangeNotifier {
   void _sourceChanged(ScheduleSource _, bool setupSuccess) {
     if (!setupSuccess) return;
     unawaited(() async {
+      final previousIdentity = _activeSourceIdentity;
+      final currentIdentity = _sourceProvider.currentSourceIdentity;
+      if (previousIdentity != 'none' && previousIdentity != currentIdentity) {
+        await _pauseSource(previousIdentity);
+        await _repository.clearSource(previousIdentity);
+      }
       await _reloadRules();
       if (hasReminders && permissionsGranted) {
         await reconcileUpcoming(waitForCompletion: false);
@@ -285,6 +295,7 @@ class ClassReminderController extends ChangeNotifier {
 
   Future<void> _reloadRules() async {
     final sourceIdentity = _sourceProvider.currentSourceIdentity;
+    _activeSourceIdentity = sourceIdentity;
     _rules = sourceIdentity == 'none'
         ? const []
         : await _repository.loadRelevantRules(
@@ -292,6 +303,22 @@ class ClassReminderController extends ChangeNotifier {
             now: _now(),
           );
     notifyListeners();
+  }
+
+  Future<void> _pauseSource(String sourceIdentity) async {
+    if (sourceIdentity == 'none') return;
+    final manifest = await _repository.loadManifestForSource(sourceIdentity);
+    for (final row in manifest) {
+      await _scheduler.cancel(row.notificationId);
+    }
+    if (manifest.isNotEmpty) {
+      await _repository.applyManifestChanges(
+        upserts: const [],
+        removedOccurrenceIdentities: manifest
+            .map((row) => row.occurrenceIdentity)
+            .toList(growable: false),
+      );
+    }
   }
 
   Future<void> _cleanupIfNeeded({bool force = false}) async {
