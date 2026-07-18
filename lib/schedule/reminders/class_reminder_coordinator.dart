@@ -135,7 +135,9 @@ class ClassReminderCoordinator {
           ),
         );
 
-        if (rule.isOneTime && rule.occurrenceStart != entry.start) {
+        if (rule.isOneTime &&
+            (rule.occurrenceStart != entry.start ||
+                rule.canonicalTitle != canonicalTitle)) {
           movedOneTimeRules.add(
             ClassReminderRule(
               id: rule.id,
@@ -256,7 +258,12 @@ class ClassReminderCoordinator {
     final candidates = entries
         .where((entry) => canonicalByEntry[entry] == rule.canonicalTitle)
         .toList(growable: false);
-    if (candidates.isEmpty || rule.occurrenceStart == null) return const [];
+    if (rule.occurrenceStart == null) return const [];
+    final sameTime = entries.where(
+      (entry) => entry.start == rule.occurrenceStart,
+    );
+    if (sameTime.isNotEmpty) return [sameTime.first];
+    if (candidates.isEmpty) return const [];
 
     candidates.sort(
       (a, b) => a.start

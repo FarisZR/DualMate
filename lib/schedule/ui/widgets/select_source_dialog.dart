@@ -6,6 +6,7 @@ import 'package:dualmate/schedule/ui/widgets/enter_dualis_credentials_dialog.dar
 import 'package:dualmate/schedule/ui/widgets/enter_ical_url.dart';
 import 'package:dualmate/schedule/ui/widgets/enter_rapla_url_dialog.dart';
 import 'package:dualmate/schedule/ui/widgets/select_mannheim_course_dialog.dart';
+import 'package:dualmate/schedule/ui/widgets/schedule_source_change_confirmation.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 
@@ -90,6 +91,14 @@ class SelectSourceDialog {
   ) async {
     switch (type) {
       case ScheduleSourceType.None:
+        if (!await ScheduleSourceChangeConfirmation.confirmIfNeeded(
+          context: context,
+          sourceProvider: _scheduleSourceProvider,
+          nextType: ScheduleSourceType.None,
+          nextIdentityValue: '',
+        )) {
+          return;
+        }
         await _preferencesProvider.setScheduleSourceType(type.index);
         await _scheduleSourceProvider.setupScheduleSource();
         break;

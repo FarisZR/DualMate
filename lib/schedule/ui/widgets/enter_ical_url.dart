@@ -4,6 +4,8 @@ import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/service/ical/ical_schedule_source.dart';
 import 'package:dualmate/schedule/ui/widgets/enter_url_dialog.dart';
 import 'package:flutter/widgets.dart';
+import 'package:dualmate/schedule/model/schedule_source_type.dart';
+import 'package:dualmate/schedule/ui/widgets/schedule_source_change_confirmation.dart';
 
 class EnterIcalDialog extends EnterUrlDialog {
   final PreferencesProvider _preferencesProvider;
@@ -19,6 +21,16 @@ class EnterIcalDialog extends EnterUrlDialog {
   @override
   Future saveUrl(String url) async {
     await _scheduleSource.setupForIcal(url);
+  }
+
+  @override
+  Future<bool> confirmSave(BuildContext context, String url) {
+    return ScheduleSourceChangeConfirmation.confirmIfNeeded(
+      context: context,
+      sourceProvider: _scheduleSource,
+      nextType: ScheduleSourceType.Ical,
+      nextIdentityValue: url,
+    );
   }
 
   @override

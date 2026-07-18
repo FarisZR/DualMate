@@ -3,9 +3,13 @@ import 'package:dualmate/common/ui/colors.dart';
 import 'package:dualmate/common/ui/schedule_entry_type_mappings.dart';
 import 'package:dualmate/common/ui/text_styles.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
+import 'package:dualmate/schedule/reminders/class_reminder.dart';
+import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
+import 'package:dualmate/schedule/ui/weeklyschedule/reminder_configuration_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:kiwi/kiwi.dart';
 
 /// Expandable detail sheet for a schedule entry.
 ///
@@ -20,9 +24,13 @@ import 'package:intl/intl.dart';
 /// https://m3.material.io/styles/motion/transitions/transition-patterns
 class ScheduleEntryDetailBottomSheet extends StatefulWidget {
   final ScheduleEntry scheduleEntry;
+  final ClassReminderController? reminderController;
 
-  const ScheduleEntryDetailBottomSheet({Key? key, required this.scheduleEntry})
-    : super(key: key);
+  const ScheduleEntryDetailBottomSheet({
+    Key? key,
+    required this.scheduleEntry,
+    this.reminderController,
+  }) : super(key: key);
 
   @override
   State<ScheduleEntryDetailBottomSheet> createState() =>
@@ -49,6 +57,7 @@ class _ScheduleEntryDetailBottomSheetState
   final DraggableScrollableController _controller =
       DraggableScrollableController();
   bool _isSnapping = false;
+  ClassReminderController? _reminderController;
 
   // The state the sheet currently sits within tolerance of, so a haptic fires
   // exactly once each time it *arrives* at a state — by snap or by manual drag.
@@ -59,13 +68,25 @@ class _ScheduleEntryDetailBottomSheetState
   void initState() {
     super.initState();
     _controller.addListener(_onSizeChanged);
+    _reminderController = widget.reminderController;
+    final container = KiwiContainer();
+    if (_reminderController == null &&
+        container.isRegistered<ClassReminderController>()) {
+      _reminderController = container.resolve<ClassReminderController>();
+    }
+    _reminderController?.addListener(_onReminderStateChanged);
   }
 
   @override
   void dispose() {
+    _reminderController?.removeListener(_onReminderStateChanged);
     _controller.removeListener(_onSizeChanged);
     _controller.dispose();
     super.dispose();
+  }
+
+  void _onReminderStateChanged() {
+    if (mounted) setState(() {});
   }
 
   /// Fires a selection haptic whenever the sheet arrives at a settle state and
@@ -251,6 +272,7 @@ class _ScheduleEntryDetailBottomSheetState
                   ),
                 ),
               ),
+              if (_reminderController != null) _buildReminderButton(context),
             ],
           ),
         ),
@@ -283,6 +305,86 @@ class _ScheduleEntryDetailBottomSheetState
             ? Container()
             : Text(widget.scheduleEntry.details),
       ],
+    );
+  }
+
+  Widget _buildReminderButton(BuildContext context) {
+    final controller = _reminderController!;
+    final rule = controller.ruleFor(widget.scheduleEntry);
+    final paused = rule != null && !controller.permissionsGranted;
+    final icon = paused
+        ? Icons.notifications_off_outlined
+        : rule == null
+        ? Icons.notifications_none_outlined
+        : Icons.notifications;
+    return IconButton(
+      key: const ValueKey('class-reminder-button'),
+      onPressed: () => _openReminderConfiguration(context, rule),
+      icon: Icon(icon),
+      color: paused ? Theme.of(context).colorScheme.tertiary : null,
+      tooltip: rule == null
+          ? L.of(context).classReminderTooltipAdd
+          : L.of(context).classReminderTooltipEdit,
+    );
+  }
+
+  Future<void> _openReminderConfiguration(
+    BuildContext context,
+    ClassReminderRule? existingRule,
+  ) async {
+    final controller = _reminderController!;
+    await showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: false,
+      builder: (sheetContext) => ReminderConfigurationSheet(
+        existingRule: existingRule,
+        onSave: (offset, scope) async {
+          var result = await controller.saveReminder(
+            entry: widget.scheduleEntry,
+            offset: offset,
+            scope: scope,
+          );
+          if (result != ReminderActivationResult.permissionsRequired ||
+              !sheetContext.mounted) {
+            return;
+          }
+          final openSettings = await showDialog<bool>(
+            context: sheetContext,
+            builder: (dialogContext) => AlertDialog(
+              title: Text(L.of(dialogContext).classReminderPermissionTitle),
+              content: Text(L.of(dialogContext).classReminderPermissionMessage),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: Text(
+                    L.of(dialogContext).classReminderPermissionCancel,
+                  ),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: Text(
+                    L.of(dialogContext).classReminderPermissionOpenSettings,
+                  ),
+                ),
+              ],
+            ),
+          );
+          if (openSettings != true) return;
+          await controller.openReliablePermissionSettings();
+          if (controller.permissionsGranted) {
+            result = await controller.saveReminder(
+              entry: widget.scheduleEntry,
+              offset: offset,
+              scope: scope,
+            );
+          }
+        },
+        onRemove: existingRule == null
+            ? null
+            : () => controller.removeReminder(widget.scheduleEntry),
+      ),
     );
   }
 }

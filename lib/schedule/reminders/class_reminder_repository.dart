@@ -56,6 +56,17 @@ class ClassReminderRepository implements ClassReminderRepositoryApi {
     return rows.isNotEmpty;
   }
 
+  Future<List<ScheduledClassNotification>> loadManifestForSource(
+    String sourceIdentity,
+  ) async {
+    final rows = await _database.queryRows(
+      manifestTable,
+      where: 'sourceIdentity=?',
+      whereArgs: [sourceIdentity],
+    );
+    return rows.map(_manifestFromMap).toList(growable: false);
+  }
+
   Future<List<ClassReminderRule>> loadRelevantRules({
     required String sourceIdentity,
     required DateTime now,

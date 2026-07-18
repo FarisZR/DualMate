@@ -153,6 +153,39 @@ void main() {
       expect(repository.savedRules.single.occurrenceStart, moved);
     },
   );
+
+  test(
+    'one-time reminder survives a title edit at the same occurrence time',
+    () async {
+      final start = DateTime(2026, 7, 20, 10);
+      final rule = ClassReminderRule(
+        id: 'one',
+        scope: ClassReminderScope.oneTime,
+        canonicalTitle: 'Recht',
+        offset: const Duration(minutes: 15),
+        sourceIdentity: 'rapla:a',
+        occurrenceStart: start,
+        occurrenceEnd: start.add(const Duration(hours: 2)),
+      );
+      final repository = _MemoryRepository([rule]);
+      final scheduler = _RecordingScheduler();
+      final coordinator = ClassReminderCoordinator(
+        repository: repository,
+        scheduler: scheduler,
+        now: () => now,
+      );
+
+      await coordinator.reconcile(
+        schedule: Schedule.fromList([_entry(start, 'Wirtschaftsrecht')]),
+        start: windowStart,
+        end: windowEnd,
+        sourceIdentity: 'rapla:a',
+      );
+
+      expect(scheduler.scheduled, hasLength(1));
+      expect(repository.savedRules.single.canonicalTitle, 'Wirtschaftsrecht');
+    },
+  );
 }
 
 ScheduleEntry _entry(DateTime start, String title) => ScheduleEntry(

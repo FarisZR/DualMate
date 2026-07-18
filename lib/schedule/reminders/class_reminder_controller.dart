@@ -26,6 +26,7 @@ class ClassReminderController extends ChangeNotifier {
   final ScheduleProvider _scheduleProvider;
   final ScheduleSourceProvider _sourceProvider;
   final ClassReminderCoordinator _coordinator;
+  final ClassReminderScheduler _scheduler;
   final NotificationApi Function() _notificationApi;
   final DateTime Function() _now;
   late final ReminderSyncQueue _queue;
@@ -45,6 +46,7 @@ class ClassReminderController extends ChangeNotifier {
   }) : _repository = repository,
        _scheduleProvider = scheduleProvider,
        _sourceProvider = sourceProvider,
+       _scheduler = scheduler,
        _coordinator = ClassReminderCoordinator(
          repository: repository,
          scheduler: scheduler,
@@ -79,6 +81,7 @@ class ClassReminderController extends ChangeNotifier {
 
   Future<void> onAppResumed() async {
     await _cleanupIfNeeded();
+    await _reloadRules();
     await refreshPermissionState();
   }
 
@@ -176,6 +179,17 @@ class ClassReminderController extends ChangeNotifier {
     );
     await _reloadRules();
     await reconcileUpcoming(waitForCompletion: false);
+  }
+
+  Future<void> clearForSourceChange() async {
+    final sourceIdentity = _sourceProvider.currentSourceIdentity;
+    final manifest = await _repository.loadManifestForSource(sourceIdentity);
+    for (final row in manifest) {
+      await _scheduler.cancel(row.notificationId);
+    }
+    await _repository.clearSource(sourceIdentity);
+    _rules = const [];
+    notifyListeners();
   }
 
   Future<void> reconcileUpcoming({required bool waitForCompletion}) async {

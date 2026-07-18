@@ -180,6 +180,12 @@ class ScheduleSourceProvider {
     return hash.toRadixString(16).padLeft(8, '0');
   }
 
+  bool wouldChangeTo(ScheduleSourceType type, String configuredValue) {
+    final nextIdentity =
+        '${type.name.toLowerCase()}:${_stableHash(configuredValue)}';
+    return nextIdentity != _currentSourceIdentity;
+  }
+
   /// Onboarding stores the Rapla URL first and defers full source setup plus
   /// cache clearing to post-onboarding initialization. Other setup flows run
   /// after onboarding and therefore keep the default immediate setup behavior.

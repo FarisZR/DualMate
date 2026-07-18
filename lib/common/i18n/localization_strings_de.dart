@@ -178,11 +178,41 @@ final de = {
   "widgetHelpDialogMessage":
       "Platziere ein Widget auf deinen Startbildschirm um einen schnellen Blick auf deinen täglichen Vorlesungsplan zu bekommen.",
   "widgetHelpDialogTitle": "Schon gewusst?",
-  "exactAlarmPermissionTitle": "Genaue Alarme erlauben",
+  "exactAlarmPermissionTitle": "Zuverlässige Erinnerungen und Widgets erlauben",
   "exactAlarmPermissionMessage":
-      "Damit die Vorlesungs-Widgets aktuell bleiben, erlaube bitte genaue Alarme für diese App.",
+      "Damit Klassenerinnerungen und Stundenplan-Widgets pünktlich funktionieren, erlaube genaue Alarme für DualMate.",
   "exactAlarmPermissionAllow": "Erlauben",
   "exactAlarmPermissionLater": "Später",
+  "classReminderTooltipAdd": "Erinnerung hinzufügen",
+  "classReminderTooltipEdit": "Erinnerung bearbeiten",
+  "classReminderSheetTitle": "Klassenerinnerung",
+  "classReminderFiveMinutes": "5 Minuten vorher",
+  "classReminderFifteenMinutes": "15 Minuten vorher",
+  "classReminderThirtyMinutes": "30 Minuten vorher",
+  "classReminderOneHour": "1 Stunde vorher",
+  "classReminderCustom": "Benutzerdefiniert",
+  "classReminderCustomMinutes": "Minuten vorher",
+  "classReminderThisOccurrence": "Dieser Termin",
+  "classReminderEveryOccurrence": "Jeder Termin",
+  "classReminderMatchingTitle": "Abgleich nach Klassenname",
+  "classReminderMatchingDescription":
+      "DualMate wendet diese Erinnerung auf zukünftige Klassen mit demselben angezeigten Klassennamen an. Wenn sich der Klassenname ändert, gilt die Erinnerung nicht mehr.",
+  "classReminderSave": "Erinnerung speichern",
+  "classReminderRemove": "Erinnerung entfernen",
+  "classReminderPermissionTitle": "Zuverlässige Erinnerungen aktivieren",
+  "classReminderPermissionMessage":
+      "DualMate benötigt die Benachrichtigungs- und die Berechtigung für genaue Alarme, um Klassenerinnerungen pünktlich zuzustellen.",
+  "classReminderPermissionCancel": "Abbrechen",
+  "classReminderPermissionOpenSettings": "Einstellungen öffnen",
+  "classReminderPausedTitle": "Klassenerinnerungen sind pausiert",
+  "classReminderPausedMessage":
+      "DualMate kann Erinnerungen nicht zuverlässig zustellen, weil eine erforderliche Berechtigung deaktiviert ist.",
+  "classReminderFixPermissions": "Berechtigungen korrigieren",
+  "classReminderSourceChangeTitle": "Stundenplanquelle ändern?",
+  "classReminderSourceChangeMessage":
+      "Wenn du deinen Stundenplan änderst, werden alle mit dem aktuellen Stundenplan verknüpften Klassenerinnerungen entfernt.",
+  "classReminderSourceChangeCancel": "Abbrechen",
+  "classReminderSourceChangeConfirm": "Ändern und Erinnerungen entfernen",
   "donateButtonTitle": "Spendiere dem Entwickler einen Kaffee",
   "donateButtonSubtitle": "Hier kannst du die Entwicklung der App unterstützen",
   "donateDialogMessage":

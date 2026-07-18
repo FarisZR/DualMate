@@ -109,8 +109,8 @@ abstract class EnterUrlDialog {
             onPressed: hasUrlError.value
                 ? null
                 : () async {
-                    Navigator.of(context).pop();
-
+                    if (!await confirmSave(context, _url.value)) return;
+                    if (context.mounted) Navigator.of(context).pop();
                     await saveUrl(_url.value);
                   },
           ),
@@ -143,6 +143,7 @@ abstract class EnterUrlDialog {
 
   bool isValidUrl(String url);
   Future saveUrl(String url);
+  Future<bool> confirmSave(BuildContext context, String url) async => true;
   Future<String> loadUrl();
 
   String title(BuildContext context);

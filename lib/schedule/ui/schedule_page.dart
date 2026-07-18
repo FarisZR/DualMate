@@ -11,6 +11,7 @@ import 'package:dualmate/schedule/ui/weeklyschedule/weekly_schedule_page.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_empty_state.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_empty_state_placeholder.dart';
 import 'package:dualmate/schedule/ui/widgets/select_source_dialog.dart';
+import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
 import 'package:dualmate/ui/banner_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -138,9 +139,66 @@ class _SchedulePageState extends State<SchedulePage> {
             );
           }
 
-          return weeklyPage;
+          return _withReminderState(weeklyPage);
         },
       ),
+    );
+  }
+
+  Widget _withReminderState(Widget child) {
+    final container = KiwiContainer();
+    if (!container.isRegistered<ClassReminderController>()) return child;
+    final controller = container.resolve<ClassReminderController>();
+    return AnimatedBuilder(
+      animation: controller,
+      child: child,
+      builder: (context, schedule) {
+        if (!controller.remindersPaused) return schedule!;
+        final colors = Theme.of(context).colorScheme;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Material(
+              color: colors.tertiaryContainer,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.notifications_paused_outlined,
+                      color: colors.onTertiaryContainer,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            L.of(context).classReminderPausedTitle,
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(color: colors.onTertiaryContainer),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            L.of(context).classReminderPausedMessage,
+                            style: TextStyle(color: colors.onTertiaryContainer),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: controller.openReliablePermissionSettings,
+                      child: Text(L.of(context).classReminderFixPermissions),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(child: schedule!),
+          ],
+        );
+      },
     );
   }
 
