@@ -33,6 +33,7 @@ class ClassReminderController extends ChangeNotifier {
 
   List<ClassReminderRule> _rules = const [];
   bool _permissionsGranted = false;
+  bool _permissionStateKnown = false;
   bool _initialized = false;
   int _reloadRevision = 0;
   Future<void> _sourceChangeFuture = Future<void>.value();
@@ -68,7 +69,8 @@ class ClassReminderController extends ChangeNotifier {
 
   bool get hasReminders => _rules.isNotEmpty;
   bool get permissionsGranted => _permissionsGranted;
-  bool get remindersPaused => hasReminders && !_permissionsGranted;
+  bool get remindersPaused =>
+      hasReminders && _permissionStateKnown && !_permissionsGranted;
   ReminderSyncQueue get queue => _queue;
 
   Future<void> initialize() async {
@@ -94,6 +96,7 @@ class ClassReminderController extends ChangeNotifier {
     bool scheduleWhenRestored = true,
   }) async {
     final previous = _permissionsGranted;
+    final wasKnown = _permissionStateKnown;
     try {
       final api = _notificationApi();
       final results = await Future.wait([
@@ -104,7 +107,8 @@ class ClassReminderController extends ChangeNotifier {
     } catch (_) {
       _permissionsGranted = false;
     }
-    if (previous != _permissionsGranted) notifyListeners();
+    _permissionStateKnown = true;
+    if (!wasKnown || previous != _permissionsGranted) notifyListeners();
     if (previous && !_permissionsGranted && hasReminders) {
       await _pauseSource(_activeSourceIdentity);
     }
