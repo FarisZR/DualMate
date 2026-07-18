@@ -201,7 +201,7 @@ final de = {
   "classReminderRemove": "Erinnerung entfernen",
   "classReminderPermissionTitle": "Zuverlässige Erinnerungen aktivieren",
   "classReminderPermissionMessage":
-      "DualMate benötigt die Benachrichtigungs- und die Berechtigung für genaue Alarme, um Klassenerinnerungen pünktlich zuzustellen.",
+      "DualMate benötigt die Benachrichtigungsberechtigung und die Berechtigung für genaue Alarme, um Klassenerinnerungen pünktlich zuzustellen.",
   "classReminderPermissionCancel": "Abbrechen",
   "classReminderPermissionOpenSettings": "Einstellungen öffnen",
   "classReminderPausedTitle": "Klassenerinnerungen sind pausiert",

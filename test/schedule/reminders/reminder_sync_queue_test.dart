@@ -72,6 +72,48 @@ void main() {
 
     expect(calls, 0);
   });
+
+  test('newer overlapping snapshots replace stale entries', () async {
+    final firstBlocker = Completer<void>();
+    final requests = <ReminderSyncRequest>[];
+    final queue = ReminderSyncQueue(
+      currentGeneration: () => 1,
+      reconcile: (request) async {
+        requests.add(request);
+        if (requests.length == 1) await firstBlocker.future;
+      },
+    );
+    final firstStart = DateTime(2026, 7, 20);
+    queue.enqueue(_request(firstStart, DateTime(2026, 7, 21)));
+    await Future<void>.delayed(Duration.zero);
+    queue.enqueue(_request(DateTime(2026, 7, 22), DateTime(2026, 7, 29)));
+    queue.enqueue(
+      ReminderSyncRequest(
+        schedule: Schedule.fromList(const []),
+        start: DateTime(2026, 7, 22),
+        end: DateTime(2026, 7, 29),
+        sourceIdentity: 'rapla:a',
+        sourceGeneration: 1,
+      ),
+    );
+    firstBlocker.complete();
+    await queue.drain();
+
+    expect(requests.last.schedule.entries, isEmpty);
+  });
+
+  test('an error reporter failure cannot wedge the queue', () async {
+    final queue = ReminderSyncQueue(
+      currentGeneration: () => 1,
+      reconcile: (_) => Future<void>.error(StateError('reconcile')),
+      onError: (_, _) => Future<void>.error(StateError('report')),
+    );
+
+    queue.enqueue(_request(DateTime(2026, 7, 20), DateTime(2026, 7, 27)));
+    await queue.drain();
+
+    expect(queue.isIdle, isTrue);
+  });
 }
 
 ReminderSyncRequest _request(

@@ -10,6 +10,7 @@ import 'package:dualmate/schedule/ui/widgets/schedule_source_change_confirmation
 class EnterIcalDialog extends EnterUrlDialog {
   final PreferencesProvider _preferencesProvider;
   final ScheduleSourceProvider _scheduleSource;
+  String _previousSourceIdentity = 'none';
 
   EnterIcalDialog(this._preferencesProvider, this._scheduleSource);
 
@@ -21,10 +22,15 @@ class EnterIcalDialog extends EnterUrlDialog {
   @override
   Future saveUrl(String url) async {
     await _scheduleSource.setupForIcal(url);
+    await ScheduleSourceChangeConfirmation.finishCommittedChange(
+      sourceProvider: _scheduleSource,
+      previousSourceIdentity: _previousSourceIdentity,
+    );
   }
 
   @override
   Future<bool> confirmSave(BuildContext context, String url) {
+    _previousSourceIdentity = _scheduleSource.currentSourceIdentity;
     return ScheduleSourceChangeConfirmation.confirmIfNeeded(
       context: context,
       sourceProvider: _scheduleSource,

@@ -65,6 +65,8 @@ class SelectMannheimCourseDialog {
         onPressed: () async {
           final course = _mannheimViewModel.selectedCourse;
           if (course == null) return;
+          final previousSourceIdentity =
+              _scheduleSourceProvider.currentSourceIdentity;
           if (!await ScheduleSourceChangeConfirmation.confirmIfNeeded(
             context: context,
             sourceProvider: _scheduleSourceProvider,
@@ -74,7 +76,11 @@ class SelectMannheimCourseDialog {
             return;
           }
           await _mannheimViewModel.save();
-          Navigator.of(context).pop();
+          await ScheduleSourceChangeConfirmation.finishCommittedChange(
+            sourceProvider: _scheduleSourceProvider,
+            previousSourceIdentity: previousSourceIdentity,
+          );
+          if (context.mounted) Navigator.of(context).pop();
         },
       ),
     ];

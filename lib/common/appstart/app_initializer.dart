@@ -253,6 +253,14 @@ Future<void> initializeAppBackground(bool isBackground) async {
   tz.initializeTimeZones();
   print("Background init: time zones ${stopwatch.elapsedMilliseconds}ms");
 
+  if (isBackground) {
+    var setup = KiwiContainer().resolve<ScheduleSourceProvider>();
+    await setup.setupScheduleSource();
+    print(
+      "Background init: schedule source ${stopwatch.elapsedMilliseconds}ms",
+    );
+  }
+
   try {
     await KiwiContainer().resolve<ClassReminderController>().initialize();
     print("Background init: reminders ${stopwatch.elapsedMilliseconds}ms");
@@ -262,14 +270,6 @@ Future<void> initializeAppBackground(bool isBackground) async {
       trace,
       message: 'Background init: class reminders failed',
       tags: {'feature': 'class_reminders'},
-    );
-  }
-
-  if (isBackground) {
-    var setup = KiwiContainer().resolve<ScheduleSourceProvider>();
-    await setup.setupScheduleSource();
-    print(
-      "Background init: schedule source ${stopwatch.elapsedMilliseconds}ms",
     );
   }
 

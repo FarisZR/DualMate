@@ -2,6 +2,7 @@ import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/schedule/reminders/class_reminder.dart';
 import 'package:dualmate/schedule/reminders/class_reminder_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite/sqflite.dart';
 
 void main() {
   group('ClassReminderRepository', () {
@@ -75,14 +76,24 @@ void main() {
         contentFingerprint: 'fingerprint',
       );
 
-      await repository.applyManifestChanges(
-        upserts: [row],
-        removedOccurrenceIdentities: ['old-a', 'old-b'],
+      final old = ScheduledClassNotification(
+        ruleId: 'old-rule',
+        occurrenceIdentity: 'old-occurrence',
+        sourceIdentity: 'rapla:a',
+        notificationId: 41,
+        scheduledTime: DateTime(2026, 7, 20, 8, 45),
+        classStart: DateTime(2026, 7, 20, 9),
+        contentFingerprint: 'old',
       );
 
-      expect(database.replaceBatches.single.rows, hasLength(1));
-      expect(database.deletes.single.where, contains('IN (?,?)'));
-      expect(database.deletes.single.whereArgs, ['old-a', 'old-b']);
+      await repository.applyManifestChanges(upserts: [row], removals: [old]);
+
+      expect(database.batch.inserts, hasLength(1));
+      expect(database.batch.deletes.single.where, contains('ruleId=?'));
+      expect(database.batch.deletes.single.whereArgs, [
+        'old-rule',
+        'old-occurrence',
+      ]);
     });
   });
 }
@@ -116,6 +127,12 @@ class _RecordingDatabase extends DatabaseAccess {
   final List<_QueryCall> queries = [];
   final List<_DeleteCall> deletes = [];
   final List<_ReplaceBatchCall> replaceBatches = [];
+  final _RecordingBatch batch = _RecordingBatch();
+
+  @override
+  Future<T> transaction<T>(
+    Future<T> Function(DatabaseExecutor executor) action,
+  ) => action(_RecordingExecutor(batch));
 
   @override
   Future<List<Map<String, dynamic>>> queryRows(
@@ -151,4 +168,46 @@ class _RecordingDatabase extends DatabaseAccess {
   ) async {
     replaceBatches.add(_ReplaceBatchCall(table, rows));
   }
+}
+
+class _RecordingExecutor implements DatabaseExecutor {
+  final _RecordingBatch recordingBatch;
+
+  _RecordingExecutor(this.recordingBatch);
+
+  @override
+  Batch batch() => recordingBatch;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _RecordingBatch implements Batch {
+  final List<_DeleteCall> deletes = [];
+  final List<Map<String, dynamic>> inserts = [];
+
+  @override
+  void delete(String table, {String? where, List<Object?>? whereArgs}) {
+    deletes.add(_DeleteCall(table, where, whereArgs));
+  }
+
+  @override
+  void insert(
+    String table,
+    Map<String, Object?> values, {
+    String? nullColumnHack,
+    ConflictAlgorithm? conflictAlgorithm,
+  }) {
+    inserts.add(values);
+  }
+
+  @override
+  Future<List<Object?>> commit({
+    bool? exclusive,
+    bool? noResult,
+    bool? continueOnError,
+  }) async => [];
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

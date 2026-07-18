@@ -25,9 +25,10 @@ class SchedulePrettifier {
     // begins with "Online - " it implies that it is online
     // In this case remove the online prefix and set the type correctly
 
-    final newTitle = CanonicalClassName.removeOnlineMarker(entry.title).trim();
+    final withoutMarker = CanonicalClassName.removeOnlineMarker(entry.title);
+    final newTitle = withoutMarker.trim();
 
-    if (newTitle == entry.title) {
+    if (withoutMarker == entry.title) {
       return entry;
     }
 
@@ -42,7 +43,10 @@ class SchedulePrettifier {
 
     final prefix = CanonicalClassName.courseCodePrefix(title);
     if (prefix == null) return entry;
-    details = '$prefix - $details';
+    final normalizedPrefix = prefix.replaceFirst(RegExp(r'\s*-\s*$'), '');
+    details = details.trim().isEmpty
+        ? normalizedPrefix
+        : '$normalizedPrefix - $details';
     title = CanonicalClassName.removeCourseCodePrefix(title).trim();
 
     return entry.copyWith(title: title, details: details);

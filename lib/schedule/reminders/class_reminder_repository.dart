@@ -1,5 +1,6 @@
 import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/schedule/reminders/class_reminder.dart';
+import 'package:sqflite/sqflite.dart';
 
 class ExpiredReminderDeletionCount {
   final int oneTimeRules;
@@ -27,7 +28,12 @@ abstract interface class ClassReminderRepositoryApi {
 
   Future<void> applyManifestChanges({
     required List<ScheduledClassNotification> upserts,
-    required List<String> removedOccurrenceIdentities,
+    required List<ScheduledClassNotification> removals,
+  });
+
+  Future<void> applyRuleChanges({
+    required List<ClassReminderRule> upserts,
+    required List<String> removedRuleIds,
   });
 
   Future<ExpiredReminderDeletionCount> deleteExpired(DateTime now);
@@ -129,23 +135,49 @@ class ClassReminderRepository implements ClassReminderRepositoryApi {
 
   Future<void> applyManifestChanges({
     required List<ScheduledClassNotification> upserts,
-    required List<String> removedOccurrenceIdentities,
+    required List<ScheduledClassNotification> removals,
   }) async {
-    if (removedOccurrenceIdentities.isNotEmpty) {
-      final placeholders = List.filled(
-        removedOccurrenceIdentities.length,
-        '?',
-      ).join(',');
-      await _database.deleteWhere(
-        manifestTable,
-        where: 'occurrenceIdentity IN ($placeholders)',
-        whereArgs: removedOccurrenceIdentities,
-      );
-    }
-    await _database.insertOrReplaceBatch(
-      manifestTable,
-      upserts.map(_manifestToMap).toList(growable: false),
-    );
+    if (upserts.isEmpty && removals.isEmpty) return;
+    await _database.transaction((executor) async {
+      final batch = executor.batch();
+      for (final row in removals) {
+        batch.delete(
+          manifestTable,
+          where: 'ruleId=? AND occurrenceIdentity=?',
+          whereArgs: [row.ruleId, row.occurrenceIdentity],
+        );
+      }
+      for (final row in upserts) {
+        batch.insert(
+          manifestTable,
+          _manifestToMap(row),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      await batch.commit(noResult: true);
+    });
+  }
+
+  @override
+  Future<void> applyRuleChanges({
+    required List<ClassReminderRule> upserts,
+    required List<String> removedRuleIds,
+  }) async {
+    if (upserts.isEmpty && removedRuleIds.isEmpty) return;
+    await _database.transaction((executor) async {
+      final batch = executor.batch();
+      for (final ruleId in removedRuleIds) {
+        batch.delete(rulesTable, where: 'id=?', whereArgs: [ruleId]);
+      }
+      for (final rule in upserts) {
+        batch.insert(
+          rulesTable,
+          _ruleToMap(rule),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      await batch.commit(noResult: true);
+    });
   }
 
   Future<ExpiredReminderDeletionCount> deleteExpired(DateTime now) async {

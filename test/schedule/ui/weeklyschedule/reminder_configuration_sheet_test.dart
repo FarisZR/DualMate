@@ -66,11 +66,38 @@ void main() {
     expect(savedOffset, const Duration(minutes: 30));
     expect(savedScope, ClassReminderScope.recurring);
   });
+
+  testWidgets('custom offset cannot be saved until it is positive', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        existingRule: ClassReminderRule(
+          id: 'custom',
+          scope: ClassReminderScope.oneTime,
+          canonicalTitle: 'Recht',
+          offset: const Duration(minutes: 10),
+          sourceIdentity: 'rapla:a',
+        ),
+      ),
+    );
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pump();
+
+    FilledButton saveButton() =>
+        tester.widget(find.widgetWithText(FilledButton, 'Save reminder'));
+    expect(saveButton().onPressed, isNull);
+
+    await tester.enterText(find.byType(TextField), '10');
+    await tester.pump();
+    expect(saveButton().onPressed, isNotNull);
+  });
 }
 
 Widget _app({
   Future<void> Function(Duration, ClassReminderScope)? onSave,
   ThemeData? theme,
+  ClassReminderRule? existingRule,
 }) => MaterialApp(
   theme: theme,
   locale: const Locale('en'),
@@ -83,7 +110,7 @@ Widget _app({
   supportedLocales: const [Locale('en'), Locale('de')],
   home: Scaffold(
     body: ReminderConfigurationSheet(
-      existingRule: null,
+      existingRule: existingRule,
       onSave: onSave ?? (_, _) async {},
     ),
   ),

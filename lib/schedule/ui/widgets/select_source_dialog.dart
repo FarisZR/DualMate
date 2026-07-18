@@ -91,6 +91,8 @@ class SelectSourceDialog {
   ) async {
     switch (type) {
       case ScheduleSourceType.None:
+        final previousSourceIdentity =
+            _scheduleSourceProvider.currentSourceIdentity;
         if (!await ScheduleSourceChangeConfirmation.confirmIfNeeded(
           context: context,
           sourceProvider: _scheduleSourceProvider,
@@ -101,6 +103,10 @@ class SelectSourceDialog {
         }
         await _preferencesProvider.setScheduleSourceType(type.index);
         await _scheduleSourceProvider.setupScheduleSource();
+        await ScheduleSourceChangeConfirmation.finishCommittedChange(
+          sourceProvider: _scheduleSourceProvider,
+          previousSourceIdentity: previousSourceIdentity,
+        );
         break;
       case ScheduleSourceType.Rapla:
         await EnterRaplaUrlDialog(

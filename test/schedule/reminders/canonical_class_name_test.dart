@@ -18,6 +18,7 @@ void main() {
         'Fluidmechanik',
       );
       expect(CanonicalClassName.fromTitle('W3WI_SE411 Recht'), 'Recht');
+      expect(CanonicalClassName.fromTitle('ABC12 - Seminar'), 'Seminar');
     });
 
     test('preserves meaningful title distinctions', () {

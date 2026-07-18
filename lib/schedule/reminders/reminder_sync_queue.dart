@@ -69,18 +69,25 @@ class ReminderSyncQueue {
   }
 
   Future<void> _process() async {
-    while (_pending.isNotEmpty) {
-      final request = _pending.removeAt(0);
-      if (request.sourceGeneration != _currentGeneration()) continue;
-      try {
-        await _reconcile(request);
-      } catch (error, trace) {
-        await _onError?.call(error, trace);
+    try {
+      while (_pending.isNotEmpty) {
+        final request = _pending.removeAt(0);
+        if (request.sourceGeneration != _currentGeneration()) continue;
+        try {
+          await _reconcile(request);
+        } catch (error, trace) {
+          try {
+            await _onError?.call(error, trace);
+          } catch (_) {
+            // Reporting must never wedge the serialized work queue.
+          }
+        }
       }
+    } finally {
+      _processing = false;
+      _idleCompleter?.complete();
+      _idleCompleter = null;
     }
-    _processing = false;
-    _idleCompleter?.complete();
-    _idleCompleter = null;
   }
 
   bool _overlaps(ReminderSyncRequest a, ReminderSyncRequest b) =>
@@ -88,7 +95,13 @@ class ReminderSyncQueue {
 
   ReminderSyncRequest _merge(ReminderSyncRequest a, ReminderSyncRequest b) {
     final entries = <String, ScheduleEntry>{};
-    for (final entry in [...a.schedule.entries, ...b.schedule.entries]) {
+    final overlapStart = a.start.isAfter(b.start) ? a.start : b.start;
+    final overlapEnd = a.end.isBefore(b.end) ? a.end : b.end;
+    final retainedOlderEntries = a.schedule.entries.where(
+      (entry) =>
+          !entry.start.isBefore(overlapEnd) || !entry.end.isAfter(overlapStart),
+    );
+    for (final entry in [...retainedOlderEntries, ...b.schedule.entries]) {
       final key =
           '${entry.start.toUtc().millisecondsSinceEpoch}|${entry.end.toUtc().millisecondsSinceEpoch}|${entry.title}';
       entries[key] = entry;

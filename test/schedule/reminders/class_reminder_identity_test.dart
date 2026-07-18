@@ -29,19 +29,30 @@ void main() {
     },
   );
 
-  test('occurrence identity ignores room, professor and duration', () {
+  test('each occurrence identity input changes the identity', () {
     final start = DateTime(2026, 7, 20, 9);
-    expect(
-      ClassReminderIdentity.occurrence(
-        canonicalTitle: 'Recht',
-        occurrenceStart: start,
-        sourceIdentity: 'rapla:a',
-      ),
-      ClassReminderIdentity.occurrence(
-        canonicalTitle: 'Recht',
-        occurrenceStart: start,
-        sourceIdentity: 'rapla:a',
-      ),
+    final identity = ClassReminderIdentity.occurrence(
+      canonicalTitle: 'Recht',
+      occurrenceStart: start,
+      sourceIdentity: 'rapla:a',
     );
+    expect({
+      identity,
+      ClassReminderIdentity.occurrence(
+        canonicalTitle: 'Mathematik',
+        occurrenceStart: start,
+        sourceIdentity: 'rapla:a',
+      ),
+      ClassReminderIdentity.occurrence(
+        canonicalTitle: 'Recht',
+        occurrenceStart: start.add(const Duration(minutes: 1)),
+        sourceIdentity: 'rapla:a',
+      ),
+      ClassReminderIdentity.occurrence(
+        canonicalTitle: 'Recht',
+        occurrenceStart: start,
+        sourceIdentity: 'rapla:b',
+      ),
+    }, hasLength(4));
   });
 }

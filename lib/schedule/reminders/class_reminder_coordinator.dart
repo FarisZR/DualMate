@@ -54,20 +54,16 @@ class ClassReminderCoordinator {
       sourceIdentity: sourceIdentity,
       now: now,
     );
-    if (rules.isEmpty) {
-      return ReminderReconciliationResult(
-        expiredRowsDeleted: expiredRowsDeleted,
-      );
-    }
-
-    final entries = schedule.entries
-        .where(
-          (entry) =>
-              entry.start.isBefore(end) &&
-              entry.end.isAfter(start) &&
-              entry.start.isAfter(now),
-        )
-        .toList(growable: false);
+    final entries = rules.isEmpty
+        ? const <ScheduleEntry>[]
+        : schedule.entries
+              .where(
+                (entry) =>
+                    entry.start.isBefore(end) &&
+                    entry.end.isAfter(start) &&
+                    entry.start.isAfter(now),
+              )
+              .toList(growable: false);
     final canonicalByEntry = <ScheduleEntry, String>{
       for (final entry in entries)
         entry: CanonicalClassName.fromTitle(entry.title),
@@ -186,16 +182,14 @@ class ClassReminderCoordinator {
     if (upserts.isNotEmpty || removals.isNotEmpty) {
       await _repository.applyManifestChanges(
         upserts: upserts,
-        removedOccurrenceIdentities: removals
-            .map((row) => row.occurrenceIdentity)
-            .toList(growable: false),
+        removals: removals,
       );
     }
-    for (final rule in movedOneTimeRules) {
-      await _repository.saveRule(rule);
-    }
-    for (final ruleId in removedOneTimeRuleIds) {
-      await _repository.deleteRule(ruleId);
+    if (movedOneTimeRules.isNotEmpty || removedOneTimeRuleIds.isNotEmpty) {
+      await _repository.applyRuleChanges(
+        upserts: movedOneTimeRules,
+        removedRuleIds: removedOneTimeRuleIds,
+      );
     }
 
     return ReminderReconciliationResult(
@@ -224,9 +218,7 @@ class ClassReminderCoordinator {
     if (existing.isNotEmpty) {
       await _repository.applyManifestChanges(
         upserts: const [],
-        removedOccurrenceIdentities: existing
-            .map((row) => row.occurrenceIdentity)
-            .toList(growable: false),
+        removals: existing,
       );
     }
     return existing.length;
@@ -259,19 +251,23 @@ class ClassReminderCoordinator {
         .where((entry) => canonicalByEntry[entry] == rule.canonicalTitle)
         .toList(growable: false);
     if (rule.occurrenceStart == null) return const [];
-    final sameTime = entries.where(
+    final sameTime = candidates.where(
       (entry) => entry.start == rule.occurrenceStart,
     );
     if (sameTime.isNotEmpty) return [sameTime.first];
-    if (candidates.isEmpty) return const [];
-
-    candidates.sort(
-      (a, b) => a.start
-          .difference(rule.occurrenceStart!)
-          .abs()
-          .compareTo(b.start.difference(rule.occurrenceStart!).abs()),
-    );
-    return [candidates.first];
+    if (candidates.isNotEmpty) {
+      candidates.sort(
+        (a, b) => a.start
+            .difference(rule.occurrenceStart!)
+            .abs()
+            .compareTo(b.start.difference(rule.occurrenceStart!).abs()),
+      );
+      return [candidates.first];
+    }
+    final renamedAtSameTime = entries
+        .where((entry) => entry.start == rule.occurrenceStart)
+        .toList(growable: false);
+    return renamedAtSameTime.length == 1 ? renamedAtSameTime : const [];
   }
 
   static String _manifestKey(ScheduledClassNotification row) =>

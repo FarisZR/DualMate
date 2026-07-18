@@ -171,4 +171,11 @@ class DatabaseAccess {
     Database db = await _database;
     return await db.delete(table, where: where, whereArgs: whereArgs);
   }
+
+  Future<T> transaction<T>(
+    Future<T> Function(DatabaseExecutor executor) action,
+  ) async {
+    final db = await _database;
+    return db.transaction(action);
+  }
 }

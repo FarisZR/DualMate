@@ -34,6 +34,8 @@ class ClassReminderController extends ChangeNotifier {
   List<ClassReminderRule> _rules = const [];
   bool _permissionsGranted = false;
   bool _initialized = false;
+  int _reloadRevision = 0;
+  Future<void> _sourceChangeFuture = Future<void>.value();
   DateTime? _lastCleanup;
   String _activeSourceIdentity = 'none';
 
@@ -71,7 +73,6 @@ class ClassReminderController extends ChangeNotifier {
 
   Future<void> initialize() async {
     if (_initialized) return;
-    _initialized = true;
     await _cleanupIfNeeded(force: true);
     await _reloadRules();
     await refreshPermissionState(scheduleWhenRestored: false);
@@ -80,6 +81,7 @@ class ClassReminderController extends ChangeNotifier {
     } else if (hasReminders) {
       await _pauseSource(_activeSourceIdentity);
     }
+    _initialized = true;
   }
 
   Future<void> onAppResumed() async {
@@ -155,7 +157,7 @@ class ClassReminderController extends ChangeNotifier {
       return ReminderActivationResult.permissionsRequired;
 
     final canonical = CanonicalClassName.fromTitle(entry.title);
-    await _removeApplicableRules(entry, canonical: canonical);
+    final obsoleteRuleIds = _applicableRuleIds(entry, canonical: canonical);
     final rule = ClassReminderRule(
       id: ClassReminderIdentity.ruleId(
         scope: scope,
@@ -172,29 +174,39 @@ class ClassReminderController extends ChangeNotifier {
       occurrenceStart: scope == ClassReminderScope.oneTime ? entry.start : null,
       occurrenceEnd: scope == ClassReminderScope.oneTime ? entry.end : null,
     );
-    await _repository.saveRule(rule);
+    await _repository.applyRuleChanges(
+      upserts: [rule],
+      removedRuleIds: obsoleteRuleIds.where((id) => id != rule.id).toList(),
+    );
     await _reloadRules();
     await reconcileUpcoming(waitForCompletion: false);
     return ReminderActivationResult.active;
   }
 
   Future<void> removeReminder(ScheduleEntry entry) async {
-    await _removeApplicableRules(
+    final ruleIds = _applicableRuleIds(
       entry,
       canonical: CanonicalClassName.fromTitle(entry.title),
+    );
+    await _repository.applyRuleChanges(
+      upserts: const [],
+      removedRuleIds: ruleIds,
     );
     await _reloadRules();
     await reconcileUpcoming(waitForCompletion: false);
   }
 
-  Future<void> clearForSourceChange() async {
-    final sourceIdentity = _sourceProvider.currentSourceIdentity;
-    await _pauseSource(sourceIdentity);
-    await _repository.clearSource(sourceIdentity);
+  Future<void> clearForSourceChange({String? sourceIdentity}) async {
+    final identity = sourceIdentity ?? _activeSourceIdentity;
+    await _pauseSource(identity);
+    await _repository.clearSource(identity);
+    _reloadRevision += 1;
     _rules = const [];
     _activeSourceIdentity = 'none';
     notifyListeners();
   }
+
+  Future<void> waitForSourceChange() => _sourceChangeFuture;
 
   Future<void> reconcileUpcoming({required bool waitForCompletion}) async {
     final now = _now();
@@ -209,12 +221,13 @@ class ClassReminderController extends ChangeNotifier {
     DateTime start,
     DateTime end,
   ) async {
+    if (!hasReminders) return;
     _enqueue(schedule, start, end);
   }
 
   void _sourceChanged(ScheduleSource _, bool setupSuccess) {
     if (!setupSuccess) return;
-    unawaited(() async {
+    _sourceChangeFuture = () async {
       final previousIdentity = _activeSourceIdentity;
       final currentIdentity = _sourceProvider.currentSourceIdentity;
       if (previousIdentity != 'none' && previousIdentity != currentIdentity) {
@@ -225,7 +238,12 @@ class ClassReminderController extends ChangeNotifier {
       if (hasReminders && permissionsGranted) {
         await reconcileUpcoming(waitForCompletion: false);
       }
-    }());
+    }();
+    unawaited(
+      _sourceChangeFuture.catchError((Object error, StackTrace trace) async {
+        await _reportQueueFailure(error, trace);
+      }),
+    );
   }
 
   void _enqueue(Schedule schedule, DateTime start, DateTime end) {
@@ -278,30 +296,34 @@ class ClassReminderController extends ChangeNotifier {
     await _reloadRules();
   }
 
-  Future<void> _removeApplicableRules(
+  List<String> _applicableRuleIds(
     ScheduleEntry entry, {
     required String canonical,
-  }) async {
+  }) {
     final applicable = _rules.where(
       (rule) =>
           rule.canonicalTitle == canonical &&
           (rule.scope == ClassReminderScope.recurring ||
               rule.occurrenceStart == entry.start),
     );
-    for (final rule in applicable.toList(growable: false)) {
-      await _repository.deleteRule(rule.id);
-    }
+    return applicable.map((rule) => rule.id).toList(growable: false);
   }
 
   Future<void> _reloadRules() async {
+    final revision = ++_reloadRevision;
     final sourceIdentity = _sourceProvider.currentSourceIdentity;
-    _activeSourceIdentity = sourceIdentity;
-    _rules = sourceIdentity == 'none'
-        ? const []
+    final rules = sourceIdentity == 'none'
+        ? const <ClassReminderRule>[]
         : await _repository.loadRelevantRules(
             sourceIdentity: sourceIdentity,
             now: _now(),
           );
+    if (revision != _reloadRevision ||
+        sourceIdentity != _sourceProvider.currentSourceIdentity) {
+      return;
+    }
+    _activeSourceIdentity = sourceIdentity;
+    _rules = rules;
     notifyListeners();
   }
 
@@ -314,9 +336,7 @@ class ClassReminderController extends ChangeNotifier {
     if (manifest.isNotEmpty) {
       await _repository.applyManifestChanges(
         upserts: const [],
-        removedOccurrenceIdentities: manifest
-            .map((row) => row.occurrenceIdentity)
-            .toList(growable: false),
+        removals: manifest,
       );
     }
   }

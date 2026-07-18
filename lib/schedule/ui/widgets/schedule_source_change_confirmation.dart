@@ -18,6 +18,7 @@ abstract final class ScheduleSourceChangeConfirmation {
       return true;
     }
     final reminders = container.resolve<ClassReminderController>();
+    await reminders.initialize();
     if (!reminders.hasReminders) return true;
 
     final confirmed = await showDialog<bool>(
@@ -37,8 +38,23 @@ abstract final class ScheduleSourceChangeConfirmation {
         ],
       ),
     );
-    if (confirmed != true) return false;
-    await reminders.clearForSourceChange();
-    return true;
+    return confirmed == true;
+  }
+
+  static Future<void> finishCommittedChange({
+    required ScheduleSourceProvider sourceProvider,
+    required String previousSourceIdentity,
+  }) async {
+    if (previousSourceIdentity == sourceProvider.currentSourceIdentity) return;
+    final container = KiwiContainer();
+    if (!container.isRegistered<ClassReminderController>()) return;
+    final reminders = container.resolve<ClassReminderController>();
+    if (sourceProvider.currentSourceIdentity == 'none') {
+      await reminders.clearForSourceChange(
+        sourceIdentity: previousSourceIdentity,
+      );
+    } else {
+      await reminders.waitForSourceChange();
+    }
   }
 }

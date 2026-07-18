@@ -109,6 +109,7 @@ class _ReminderConfigurationSheetState
                   autofocus: true,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
                     labelText: strings.classReminderCustomMinutes,
                     suffixText: 'min',
@@ -182,7 +183,7 @@ class _ReminderConfigurationSheetState
             ],
             const SizedBox(height: 20),
             FilledButton.icon(
-              onPressed: _saving ? null : _save,
+              onPressed: _saving || !_canSave ? null : _save,
               icon: const Icon(Icons.notifications_active_outlined),
               label: Text(strings.classReminderSave),
             ),
@@ -204,6 +205,9 @@ class _ReminderConfigurationSheetState
     60 => strings.classReminderOneHour,
     _ => strings.classReminderCustom,
   };
+
+  bool get _canSave =>
+      !_custom || (int.tryParse(_customController.text) ?? 0) > 0;
 
   Future<void> _save() async {
     final customMinutes = int.tryParse(_customController.text);

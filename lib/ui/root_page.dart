@@ -124,7 +124,19 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       _fetchLaunchPayload();
       final container = KiwiContainer();
       if (container.isRegistered<ClassReminderController>()) {
-        unawaited(container.resolve<ClassReminderController>().onAppResumed());
+        unawaited(
+          container
+              .resolve<ClassReminderController>()
+              .onAppResumed()
+              .catchError((Object error, StackTrace trace) async {
+                await AppDiagnostics.instance.reportCaughtException(
+                  error,
+                  trace,
+                  message: 'Class reminder resume handling failed',
+                  tags: {'feature': 'class_reminders'},
+                );
+              }),
+        );
       }
     }
   }

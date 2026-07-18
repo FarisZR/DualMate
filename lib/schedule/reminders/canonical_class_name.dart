@@ -39,7 +39,9 @@ abstract final class CanonicalClassName {
     final isUppercaseCode = first.length >= 3 && first == first.toUpperCase();
     final hasAtLeastTwoDigits = RegExp(r'\d').allMatches(first).length >= 2;
     if (isUppercaseCode && hasAtLeastTwoDigits) {
-      return trimmed.substring(first.length).trimLeft();
+      return trimmed
+          .substring(first.length)
+          .replaceFirst(RegExp(r'^\s*-\s*'), '');
     }
     return title;
   }

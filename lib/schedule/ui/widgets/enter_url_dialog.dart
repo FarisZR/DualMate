@@ -110,8 +110,8 @@ abstract class EnterUrlDialog {
                 ? null
                 : () async {
                     if (!await confirmSave(context, _url.value)) return;
-                    if (context.mounted) Navigator.of(context).pop();
                     await saveUrl(_url.value);
+                    if (context.mounted) Navigator.of(context).pop();
                   },
           ),
         ),

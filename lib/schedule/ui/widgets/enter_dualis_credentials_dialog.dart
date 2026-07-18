@@ -76,6 +76,8 @@ class EnterDualisCredentialsDialog {
         child: Text(L.of(context).dialogOk.toUpperCase()),
         onPressed: () async {
           final nextUsername = _usernameEditingController.text;
+          final previousSourceIdentity =
+              _scheduleSourceProvider.currentSourceIdentity;
           if (!await ScheduleSourceChangeConfirmation.confirmIfNeeded(
             context: context,
             sourceProvider: _scheduleSourceProvider,
@@ -89,8 +91,12 @@ class EnterDualisCredentialsDialog {
           );
           TextInput.finishAutofillContext(shouldSave: true);
           await _scheduleSourceProvider.setupForDualis();
+          await ScheduleSourceChangeConfirmation.finishCommittedChange(
+            sourceProvider: _scheduleSourceProvider,
+            previousSourceIdentity: previousSourceIdentity,
+          );
 
-          Navigator.of(context).pop();
+          if (context.mounted) Navigator.of(context).pop();
         },
       ),
     ];

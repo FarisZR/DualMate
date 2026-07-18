@@ -91,7 +91,7 @@ void main() {
   );
 
   test(
-    'returns before reading schedule or manifest when no rules exist',
+    'no rules treat the notification manifest as an empty desired set',
     () async {
       final repository = _MemoryRepository([]);
       final coordinator = ClassReminderCoordinator(
@@ -111,9 +111,38 @@ void main() {
 
       expect(result.reminderRulesLoaded, 0);
       expect(result.scheduleEntriesExamined, 0);
-      expect(repository.manifestReadCount, 0);
+      expect(repository.manifestReadCount, 1);
     },
   );
+
+  test('removing the final rule cancels its existing alarm', () async {
+    final removedRule = ClassReminderRule(
+      id: 'recht',
+      scope: ClassReminderScope.recurring,
+      canonicalTitle: 'Recht',
+      offset: const Duration(minutes: 15),
+      sourceIdentity: 'rapla:a',
+    );
+    final repository = _MemoryRepository([]);
+    final row = _manifest(removedRule, DateTime(2026, 7, 20, 10));
+    repository.manifest.add(row);
+    final scheduler = _RecordingScheduler();
+    final coordinator = ClassReminderCoordinator(
+      repository: repository,
+      scheduler: scheduler,
+      now: () => now,
+    );
+
+    await coordinator.reconcile(
+      schedule: Schedule.fromList(const []),
+      start: windowStart,
+      end: windowEnd,
+      sourceIdentity: 'rapla:a',
+    );
+
+    expect(scheduler.cancelled, [row.notificationId]);
+    expect(repository.manifest, isEmpty);
+  });
 
   test(
     'moved one-time occurrence replaces alarm and updates stored timing',
@@ -279,11 +308,15 @@ class _MemoryRepository implements ClassReminderRepositoryApi {
   @override
   Future<void> applyManifestChanges({
     required List<ScheduledClassNotification> upserts,
-    required List<String> removedOccurrenceIdentities,
+    required List<ScheduledClassNotification> removals,
   }) async {
     manifestWriteCount++;
     manifest.removeWhere(
-      (row) => removedOccurrenceIdentities.contains(row.occurrenceIdentity),
+      (row) => removals.any(
+        (removed) =>
+            removed.ruleId == row.ruleId &&
+            removed.occurrenceIdentity == row.occurrenceIdentity,
+      ),
     );
     for (final row in upserts) {
       manifest.removeWhere(
@@ -292,6 +325,19 @@ class _MemoryRepository implements ClassReminderRepositoryApi {
             old.occurrenceIdentity == row.occurrenceIdentity,
       );
       manifest.add(row);
+    }
+  }
+
+  @override
+  Future<void> applyRuleChanges({
+    required List<ClassReminderRule> upserts,
+    required List<String> removedRuleIds,
+  }) async {
+    rules.removeWhere((rule) => removedRuleIds.contains(rule.id));
+    for (final rule in upserts) {
+      rules.removeWhere((old) => old.id == rule.id);
+      rules.add(rule);
+      savedRules.add(rule);
     }
   }
 
