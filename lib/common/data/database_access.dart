@@ -73,6 +73,20 @@ class DatabaseAccess {
     await batch.commit(noResult: true);
   }
 
+  Future<void> insertOrReplaceBatch(
+    String table,
+    List<Map<String, dynamic>> rows,
+  ) async {
+    if (rows.isEmpty) return;
+
+    final db = await _database;
+    final batch = db.batch();
+    for (final row in rows) {
+      batch.insert(table, row, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
   Future<List<Map<String, dynamic>>> queryAllRows(String table) async {
     Database db = await _database;
     return await db.query(table);
