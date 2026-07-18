@@ -8,6 +8,7 @@ import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:dualmate/ui/navigation/main_section_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/services.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 ///
@@ -23,20 +24,38 @@ typedef NotificationPluginInitializer =
 typedef NotificationRuntimePermissionRequester =
     Future<bool?> Function(FlutterLocalNotificationsPlugin plugin);
 
+typedef NotificationChannelEnabledChecker =
+    Future<bool> Function(FlutterLocalNotificationsPlugin plugin);
+
+typedef NotificationChannelSettingsOpener = Future<bool> Function();
+
 class NotificationApi {
+  static const String classReminderChannelId = 'class_reminders';
+  static const MethodChannel _settingsChannel = MethodChannel(
+    'com.fariszr.dualmate/notification_settings',
+  );
+
   final FlutterLocalNotificationsPlugin _localNotificationsPlugin;
   final NotificationPluginInitializer _pluginInitializer;
   final NotificationRuntimePermissionRequester _runtimePermissionRequester;
+  final NotificationChannelEnabledChecker _classReminderChannelChecker;
+  final NotificationChannelSettingsOpener _classReminderSettingsOpener;
 
   NotificationApi({
     FlutterLocalNotificationsPlugin? localNotificationsPlugin,
     NotificationPluginInitializer? pluginInitializer,
     NotificationRuntimePermissionRequester? runtimePermissionRequester,
+    NotificationChannelEnabledChecker? classReminderChannelChecker,
+    NotificationChannelSettingsOpener? classReminderSettingsOpener,
   }) : _localNotificationsPlugin =
            localNotificationsPlugin ?? FlutterLocalNotificationsPlugin(),
        _pluginInitializer = pluginInitializer ?? _defaultPluginInitializer,
        _runtimePermissionRequester =
-           runtimePermissionRequester ?? _defaultRuntimePermissionRequester;
+           runtimePermissionRequester ?? _defaultRuntimePermissionRequester,
+       _classReminderChannelChecker =
+           classReminderChannelChecker ?? _defaultClassReminderChannelChecker,
+       _classReminderSettingsOpener =
+           classReminderSettingsOpener ?? _defaultClassReminderSettingsOpener;
 
   ///
   /// Initialize the notifications. You can't show any notifications before you
@@ -122,6 +141,30 @@ class NotificationApi {
     return androidPlugin?.requestNotificationsPermission();
   }
 
+  static Future<bool> _defaultClassReminderChannelChecker(
+    FlutterLocalNotificationsPlugin plugin,
+  ) async {
+    final androidPlugin = plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    final channels = await androidPlugin?.getNotificationChannels();
+    if (channels == null) return false;
+    final matching = channels.where(
+      (channel) => channel.id == classReminderChannelId,
+    );
+    if (matching.isEmpty) return true;
+    return matching.first.importance != Importance.none;
+  }
+
+  static Future<bool> _defaultClassReminderSettingsOpener() async {
+    return await _settingsChannel.invokeMethod<bool>(
+          'openClassReminderNotificationSettings',
+          {'channelId': classReminderChannelId},
+        ) ??
+        false;
+  }
+
   ///
   /// Show a notification with the given title and message
   ///
@@ -167,6 +210,20 @@ class NotificationApi {
     return await androidPlugin?.areNotificationsEnabled() ?? false;
   }
 
+  Future<bool> areClassRemindersEnabled() {
+    return _classReminderChannelChecker(_localNotificationsPlugin);
+  }
+
+  Future<bool> openClassReminderSettings() async {
+    try {
+      return await _classReminderSettingsOpener();
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
   Future<bool> canScheduleExactNotifications() async {
     final androidPlugin = _localNotificationsPlugin
         .resolvePlatformSpecificImplementation<
@@ -191,7 +248,7 @@ class NotificationApi {
     required String payload,
   }) async {
     const androidDetails = AndroidNotificationDetails(
-      'class_reminders',
+      classReminderChannelId,
       'Class reminders',
       channelDescription: 'Reliable reminders before scheduled classes',
       icon: 'outline_event_note_24',
@@ -247,6 +304,12 @@ class VoidNotificationApi extends NotificationApi {
 
   @override
   Future<bool> areNotificationsEnabled() => Future.value(false);
+
+  @override
+  Future<bool> areClassRemindersEnabled() => Future.value(false);
+
+  @override
+  Future<bool> openClassReminderSettings() => Future.value(false);
 
   @override
   Future<bool> canScheduleExactNotifications() => Future.value(false);

@@ -60,6 +60,79 @@ void main() {
     await Future<void>.delayed(Duration.zero);
   });
 
+  test('class reminder channel state is checked independently', () async {
+    final api = NotificationApi(
+      classReminderChannelChecker: (_) async => false,
+    );
+
+    expect(await api.areClassRemindersEnabled(), isFalse);
+  });
+
+  test('default checker detects a disabled Android reminder channel', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    AndroidFlutterLocalNotificationsPlugin.registerWith();
+    const channel = MethodChannel('dexterous.com/flutter/local_notifications');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          if (call.method != 'getNotificationChannels') return null;
+          return [
+            <String, Object?>{
+              'id': NotificationApi.classReminderChannelId,
+              'name': 'Class reminders',
+              'description': '',
+              'groupId': null,
+              'showBadge': true,
+              'importance': Importance.none.value,
+              'playSound': false,
+              'sound': null,
+              'enableVibration': true,
+              'vibrationPattern': null,
+              'enableLights': false,
+              'ledColor': 0,
+              'audioAttributesUsage': AudioAttributesUsage.notification.value,
+            },
+          ];
+        });
+    addTearDown(() {
+      debugDefaultTargetPlatformOverride = null;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    expect(await NotificationApi().areClassRemindersEnabled(), isFalse);
+  });
+
+  test('default checker allows a reminder channel not created yet', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    AndroidFlutterLocalNotificationsPlugin.registerWith();
+    const channel = MethodChannel('dexterous.com/flutter/local_notifications');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          if (call.method == 'getNotificationChannels') return <Object?>[];
+          return null;
+        });
+    addTearDown(() {
+      debugDefaultTargetPlatformOverride = null;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    expect(await NotificationApi().areClassRemindersEnabled(), isTrue);
+  });
+
+  test('class reminder settings use the dedicated channel opener', () async {
+    var opens = 0;
+    final api = NotificationApi(
+      classReminderSettingsOpener: () async {
+        opens++;
+        return true;
+      },
+    );
+
+    expect(await api.openClassReminderSettings(), isTrue);
+    expect(opens, 1);
+  });
+
   test(
     'class reminders use an exact alarm at the requested Berlin time',
     () async {

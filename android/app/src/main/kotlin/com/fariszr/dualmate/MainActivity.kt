@@ -6,12 +6,16 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugins.GeneratedPluginRegistrant
+import android.content.Intent
+import android.os.Build
+import android.provider.Settings
 import android.util.Log
 
 class MainActivity : FlutterActivity() {
     private var pendingRoute: String? = null
     private var pendingPayload: Map<String, Any?>? = null
     private var navigationChannel: MethodChannel? = null
+    private var notificationSettingsChannel: MethodChannel? = null
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         GeneratedPluginRegistrant.registerWith(flutterEngine)
@@ -32,6 +36,20 @@ class MainActivity : FlutterActivity() {
                 "clearLaunchPayload" -> {
                     pendingPayload = null
                     result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        notificationSettingsChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.fariszr.dualmate/notification_settings"
+        )
+        notificationSettingsChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "openClassReminderNotificationSettings" -> {
+                    val channelId = call.argument<String>("channelId")
+                    result.success(openNotificationSettings(channelId))
                 }
                 else -> result.notImplemented()
             }
@@ -119,6 +137,28 @@ class MainActivity : FlutterActivity() {
             navigationChannel?.invokeMethod("openRoute", arguments)
         } else {
             navigationChannel?.invokeMethod("openRoute", route)
+        }
+    }
+
+    private fun openNotificationSettings(channelId: String?): Boolean {
+        return try {
+            val settingsIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                !channelId.isNullOrBlank()
+            ) {
+                Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
+                    putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    putExtra(Settings.EXTRA_CHANNEL_ID, channelId)
+                }
+            } else {
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                    putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                }
+            }
+            startActivity(settingsIntent)
+            true
+        } catch (error: Exception) {
+            Log.w("MainActivity", "Could not open notification settings", error)
+            false
         }
     }
 }

@@ -495,6 +495,11 @@ class L {
   String get filterSaveError => _getValue("filterSaveError");
 
   String get filterLoadError => _getValue("filterLoadError");
+  String get filterReminderHideTitle => _getValue("filterReminderHideTitle");
+  String get filterReminderHideMessage =>
+      _getValue("filterReminderHideMessage");
+  String get filterReminderKeep => _getValue("filterReminderKeep");
+  String get filterReminderRemove => _getValue("filterReminderRemove");
 
   String get canteenFilterAll => _getValue("canteenFilterAll");
   String get canteenFilterNoPork => _getValue("canteenFilterNoPork");

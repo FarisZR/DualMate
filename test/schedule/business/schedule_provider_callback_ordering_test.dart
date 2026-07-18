@@ -103,6 +103,46 @@ void main() {
     expect(capturedOrigin, ScheduleRefreshOrigin.userBrowsing);
   });
 
+  test(
+      'persisted callbacks receive unfiltered entries while UI callbacks are filtered',
+      () async {
+    final schedule = Schedule.fromList([
+      ScheduleEntry(
+        start: DateTime(2026, 2, 24, 9),
+        end: DateTime(2026, 2, 24, 10),
+        title: 'Math',
+        details: 'Lecture',
+        professor: 'Prof',
+        room: 'A1',
+        type: ScheduleEntryType.Class,
+      ),
+    ]);
+    final provider = ScheduleProvider(
+      _FakeScheduleSourceProvider(_FakeScheduleSource(schedule)),
+      _FakeScheduleEntryRepository(),
+      _FakeScheduleQueryInformationRepository(),
+      _FakePreferencesProvider(),
+      _FakeScheduleFilterRepository(['Math']),
+    );
+    Schedule? persisted;
+    Schedule? visible;
+    provider.addSchedulePersistedCallback((schedule, _, __) {
+      persisted = schedule;
+    });
+    provider.addScheduleUpdatedCallback((schedule, _, __) async {
+      visible = schedule;
+    });
+
+    await provider.getUpdatedSchedule(
+      DateTime(2026, 2, 24),
+      DateTime(2026, 2, 25),
+      CancellationToken(),
+    );
+
+    expect(persisted?.entries.map((entry) => entry.title), ['Math']);
+    expect(visible?.entries, isEmpty);
+  });
+
   test('schedule parse errors are reported through crash reporting', () async {
     final reportedErrors = <Object>[];
     final reportedTraces = <StackTrace>[];
@@ -246,8 +286,12 @@ class _FakePreferencesProvider implements PreferencesProvider {
 }
 
 class _FakeScheduleFilterRepository implements ScheduleFilterRepository {
+  final List<String> hiddenNames;
+
+  _FakeScheduleFilterRepository([this.hiddenNames = const []]);
+
   @override
-  Future<List<String>> queryAllHiddenNames() async => [];
+  Future<List<String>> queryAllHiddenNames() async => hiddenNames;
 
   @override
   dynamic noSuchMethod(Invocation invocation) {

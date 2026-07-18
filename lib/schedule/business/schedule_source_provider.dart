@@ -3,6 +3,7 @@ import 'package:dualmate/common/logging/analytics.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_query_information_repository.dart';
 import 'package:dualmate/schedule/model/schedule_source_type.dart';
+import 'package:dualmate/schedule/business/schedule_source_identity.dart';
 import 'package:dualmate/schedule/service/dualis/dualis_schedule_source.dart';
 import 'package:dualmate/schedule/service/error_report_schedule_source_decorator.dart';
 import 'package:dualmate/schedule/service/ical/ical_schedule_source.dart';
@@ -168,21 +169,11 @@ class ScheduleSourceProvider {
         (await _preferencesProvider.loadDualisCredentials()).username,
       ScheduleSourceType.None => '',
     };
-    return '${type.name.toLowerCase()}:${_stableHash(configuredValue)}';
-  }
-
-  String _stableHash(String value) {
-    var hash = 0x811c9dc5;
-    for (final byte in value.codeUnits) {
-      hash ^= byte;
-      hash = (hash * 0x01000193) & 0xffffffff;
-    }
-    return hash.toRadixString(16).padLeft(8, '0');
+    return ScheduleSourceIdentity.create(type, configuredValue);
   }
 
   bool wouldChangeTo(ScheduleSourceType type, String configuredValue) {
-    final nextIdentity =
-        '${type.name.toLowerCase()}:${_stableHash(configuredValue)}';
+    final nextIdentity = ScheduleSourceIdentity.create(type, configuredValue);
     return nextIdentity != _currentSourceIdentity;
   }
 

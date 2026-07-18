@@ -24,6 +24,8 @@ class ReminderReconciliationResult {
 }
 
 class ClassReminderCoordinator {
+  static const Duration _oneTimeMoveWindow = Duration(days: 3);
+
   final ClassReminderRepositoryApi _repository;
   final ClassReminderScheduler _scheduler;
   final DateTime Function() _now;
@@ -73,15 +75,18 @@ class ClassReminderCoordinator {
     final movedOneTimeRules = <ClassReminderRule>[];
     final removedOneTimeRuleIds = <String>[];
     for (final rule in rules) {
+      final oneTimeMatch = rule.isOneTime
+          ? _matchOneTime(rule, entries, canonicalByEntry)
+          : null;
       final matches = rule.scope == ClassReminderScope.recurring
           ? entries
                 .where(
                   (entry) => canonicalByEntry[entry] == rule.canonicalTitle,
                 )
                 .toList(growable: false)
-          : _matchOneTime(rule, entries, canonicalByEntry, start, end);
+          : oneTimeMatch!.entries;
 
-      if (rule.isOneTime && matches.isEmpty) {
+      if (rule.isOneTime && matches.isEmpty && oneTimeMatch!.confirmedMissing) {
         final originalStart = rule.occurrenceStart;
         if (originalStart != null &&
             !originalStart.isBefore(start) &&
@@ -91,9 +96,25 @@ class ClassReminderCoordinator {
       }
 
       for (final entry in matches) {
+        final canonicalTitle = canonicalByEntry[entry]!;
+        if (rule.isOneTime &&
+            (rule.occurrenceStart != entry.start ||
+                rule.canonicalTitle != canonicalTitle)) {
+          movedOneTimeRules.add(
+            ClassReminderRule(
+              id: rule.id,
+              scope: rule.scope,
+              canonicalTitle: canonicalTitle,
+              offset: rule.offset,
+              sourceIdentity: rule.sourceIdentity,
+              occurrenceStart: entry.start,
+              occurrenceEnd: entry.end,
+            ),
+          );
+        }
+
         final scheduledTime = entry.start.subtract(rule.offset);
         if (!scheduledTime.isAfter(now)) continue;
-        final canonicalTitle = canonicalByEntry[entry]!;
         final occurrenceIdentity = ClassReminderIdentity.occurrence(
           canonicalTitle: canonicalTitle,
           occurrenceStart: entry.start,
@@ -112,7 +133,7 @@ class ClassReminderCoordinator {
           scheduledTime: scheduledTime,
           classStart: entry.start,
           contentFingerprint: contentFingerprint(
-            title: canonicalTitle,
+            title: entry.title,
             start: entry.start,
             room: entry.room,
             offset: rule.offset,
@@ -122,7 +143,7 @@ class ClassReminderCoordinator {
           manifest: manifest,
           request: ClassReminderNotificationRequest(
             notificationId: notificationId,
-            className: canonicalTitle,
+            className: entry.title,
             classStart: entry.start,
             scheduledTime: scheduledTime,
             offset: rule.offset,
@@ -130,22 +151,6 @@ class ClassReminderCoordinator {
             occurrenceIdentity: occurrenceIdentity,
           ),
         );
-
-        if (rule.isOneTime &&
-            (rule.occurrenceStart != entry.start ||
-                rule.canonicalTitle != canonicalTitle)) {
-          movedOneTimeRules.add(
-            ClassReminderRule(
-              id: rule.id,
-              scope: rule.scope,
-              canonicalTitle: canonicalTitle,
-              offset: rule.offset,
-              sourceIdentity: rule.sourceIdentity,
-              occurrenceStart: entry.start,
-              occurrenceEnd: entry.end,
-            ),
-          );
-        }
       }
     }
 
@@ -240,27 +245,53 @@ class ClassReminderCoordinator {
     return hash.toRadixString(16).padLeft(8, '0');
   }
 
-  List<ScheduleEntry> _matchOneTime(
+  _OneTimeMatchResult _matchOneTime(
     ClassReminderRule rule,
     List<ScheduleEntry> entries,
     Map<ScheduleEntry, String> canonicalByEntry,
-    DateTime windowStart,
-    DateTime windowEnd,
   ) {
     final candidates = entries
         .where((entry) => canonicalByEntry[entry] == rule.canonicalTitle)
         .toList(growable: false);
-    if (rule.occurrenceStart == null) return const [];
-    final sameTime = candidates.where(
-      (entry) => entry.start == rule.occurrenceStart,
-    );
-    if (sameTime.isNotEmpty) return [sameTime.first];
-    if (candidates.length == 1) return candidates;
-    if (candidates.isNotEmpty) return const [];
+    final originalStart = rule.occurrenceStart;
+    if (originalStart == null) {
+      return const _OneTimeMatchResult(confirmedMissing: true);
+    }
+    final sameTime = candidates.where((entry) => entry.start == originalStart);
+    if (sameTime.isNotEmpty) {
+      return _OneTimeMatchResult(entries: [sameTime.first]);
+    }
+
     final renamedAtSameTime = entries
-        .where((entry) => entry.start == rule.occurrenceStart)
+        .where((entry) => entry.start == originalStart)
         .toList(growable: false);
-    return renamedAtSameTime.length == 1 ? renamedAtSameTime : const [];
+    if (renamedAtSameTime.length == 1) {
+      return _OneTimeMatchResult(entries: renamedAtSameTime);
+    }
+
+    if (candidates.isEmpty) {
+      return const _OneTimeMatchResult(confirmedMissing: true);
+    }
+
+    final sorted = List<ScheduleEntry>.from(candidates)
+      ..sort(
+        (left, right) => left.start
+            .difference(originalStart)
+            .abs()
+            .compareTo(right.start.difference(originalStart).abs()),
+      );
+    final nearestDistance = sorted.first.start.difference(originalStart).abs();
+    final tied =
+        sorted.length > 1 &&
+        sorted[1].start.difference(originalStart).abs() == nearestDistance;
+    if (!tied && nearestDistance <= _oneTimeMoveWindow) {
+      return _OneTimeMatchResult(entries: [sorted.first]);
+    }
+
+    // Preserve the rule when there are plausible same-title occurrences but
+    // no unique safe rematch. A later authoritative refresh may disambiguate
+    // it; silently deleting it would be irreversible.
+    return const _OneTimeMatchResult();
   }
 
   static String _manifestKey(ScheduledClassNotification row) =>
@@ -281,4 +312,14 @@ class _DesiredNotification {
   final ClassReminderNotificationRequest request;
 
   const _DesiredNotification({required this.manifest, required this.request});
+}
+
+class _OneTimeMatchResult {
+  final List<ScheduleEntry> entries;
+  final bool confirmedMissing;
+
+  const _OneTimeMatchResult({
+    this.entries = const [],
+    this.confirmedMissing = false,
+  });
 }

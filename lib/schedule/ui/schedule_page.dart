@@ -150,25 +150,7 @@ class _SchedulePageState extends State<SchedulePage> {
     final container = KiwiContainer();
     if (!container.isRegistered<ClassReminderController>()) return child;
     final controller = container.resolve<ClassReminderController>();
-    return AnimatedBuilder(
-      animation: controller,
-      child: child,
-      builder: (context, schedule) {
-        if (!controller.remindersPaused) return schedule!;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: ClassReminderPausedNotice(
-                onFixPermissions: controller.openReliablePermissionSettings,
-              ),
-            ),
-            Expanded(child: schedule!),
-          ],
-        );
-      },
-    );
+    return ClassReminderPauseAwareContent(controller: controller, child: child);
   }
 
   @override
@@ -300,5 +282,54 @@ class _SchedulePageState extends State<SchedulePage> {
         debugLabel: 'schedule.filterWarmup',
       );
     });
+  }
+}
+
+class ClassReminderPauseAwareContent extends StatelessWidget {
+  final ClassReminderController controller;
+  final Widget child;
+
+  const ClassReminderPauseAwareContent({
+    super.key,
+    required this.controller,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      child: child,
+      builder: (context, schedule) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ClipRect(
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                heightFactor: controller.remindersPaused ? 1 : 0,
+                child: IgnorePointer(
+                  ignoring: !controller.remindersPaused,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 120),
+                    opacity: controller.remindersPaused ? 1 : 0,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: ClassReminderPausedNotice(
+                        onFixPermissions:
+                            controller.openReliablePermissionSettings,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(child: schedule!),
+          ],
+        );
+      },
+    );
   }
 }

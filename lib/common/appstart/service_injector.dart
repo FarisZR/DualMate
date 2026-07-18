@@ -82,7 +82,9 @@ void injectServices(bool isBackground) {
       scheduleProvider: c.resolve(),
       sourceProvider: c.resolve(),
       scheduler: c.resolve<ClassReminderScheduler>(),
-      notificationApi: () => c.resolve<NotificationApi>(),
+      notificationApi: () => c.isRegistered<NotificationApi>()
+          ? c.resolve<NotificationApi>()
+          : null,
     ),
   );
   c.registerInstance<DualisScraper>(

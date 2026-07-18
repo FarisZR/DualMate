@@ -27,14 +27,18 @@ class ClassReminderController extends ChangeNotifier {
   final ScheduleSourceProvider _sourceProvider;
   final ClassReminderCoordinator _coordinator;
   final ClassReminderScheduler _scheduler;
-  final NotificationApi Function() _notificationApi;
+  final NotificationApi? Function() _notificationApi;
   final DateTime Function() _now;
   late final ReminderSyncQueue _queue;
 
   List<ClassReminderRule> _rules = const [];
+  Map<String, ClassReminderRule> _recurringRulesByTitle = const {};
+  Map<String, ClassReminderRule> _oneTimeRulesByOccurrence = const {};
   bool _permissionsGranted = false;
   bool _permissionStateKnown = false;
   bool _initialized = false;
+  Future<void>? _initializationFuture;
+  Future<void>? _permissionRefreshFuture;
   int _reloadRevision = 0;
   Future<void> _sourceChangeFuture = Future<void>.value();
   DateTime? _lastCleanup;
@@ -45,7 +49,7 @@ class ClassReminderController extends ChangeNotifier {
     required ScheduleProvider scheduleProvider,
     required ScheduleSourceProvider sourceProvider,
     required ClassReminderScheduler scheduler,
-    required NotificationApi Function() notificationApi,
+    required NotificationApi? Function() notificationApi,
     DateTime Function()? now,
   }) : _repository = repository,
        _scheduleProvider = scheduleProvider,
@@ -63,53 +67,84 @@ class ClassReminderController extends ChangeNotifier {
       currentGeneration: () => _sourceProvider.sourceGeneration,
       onError: _reportQueueFailure,
     );
-    _scheduleProvider.addScheduleUpdatedCallback(_scheduleUpdated);
+    _scheduleProvider.addSchedulePersistedCallback(_scheduleUpdated);
     _sourceProvider.addDidChangeScheduleSourceCallback(_sourceChanged);
   }
 
   bool get hasReminders => _rules.isNotEmpty;
   bool get permissionsGranted => _permissionsGranted;
+  bool get permissionStateKnown => _permissionStateKnown;
+  bool get isInitialized => _initialized;
   bool get remindersPaused =>
       hasReminders && _permissionStateKnown && !_permissionsGranted;
   ReminderSyncQueue get queue => _queue;
 
-  Future<void> initialize() async {
-    if (_initialized) return;
+  Future<void> initialize() {
+    if (_initialized) return Future<void>.value();
+    return _initializationFuture ??= _initializeWithRetry();
+  }
+
+  Future<void> _initializeWithRetry() async {
+    try {
+      await _initialize();
+    } catch (_) {
+      _initializationFuture = null;
+      rethrow;
+    }
+  }
+
+  Future<void> _initialize() async {
     await _cleanupIfNeeded(force: true);
     await _reloadRules();
     await refreshPermissionState(scheduleWhenRestored: false);
     if (hasReminders && permissionsGranted) {
       await reconcileUpcoming(waitForCompletion: true);
-    } else if (hasReminders) {
+    } else if (remindersPaused) {
       await _pauseSource(_activeSourceIdentity);
     }
     _initialized = true;
+    notifyListeners();
   }
 
   Future<void> onAppResumed() async {
+    if (!_initialized) {
+      await initialize();
+      return;
+    }
     await _cleanupIfNeeded();
     await _reloadRules();
     await refreshPermissionState();
   }
 
-  Future<void> refreshPermissionState({
-    bool scheduleWhenRestored = true,
+  Future<void> refreshPermissionState({bool scheduleWhenRestored = true}) {
+    return _permissionRefreshFuture ??= _refreshPermissionState(
+      scheduleWhenRestored: scheduleWhenRestored,
+    ).whenComplete(() => _permissionRefreshFuture = null);
+  }
+
+  Future<void> _refreshPermissionState({
+    required bool scheduleWhenRestored,
   }) async {
     final previous = _permissionsGranted;
     final wasKnown = _permissionStateKnown;
+    final api = _notificationApi();
+    if (api == null) return;
     try {
-      final api = _notificationApi();
       final results = await Future.wait([
         api.areNotificationsEnabled(),
+        api.areClassRemindersEnabled(),
         api.canScheduleExactNotifications(),
       ]);
       _permissionsGranted = results.every((granted) => granted);
-    } catch (_) {
-      _permissionsGranted = false;
+    } catch (error, trace) {
+      await _reportQueueFailure(error, trace);
+      return;
     }
     _permissionStateKnown = true;
     if (!wasKnown || previous != _permissionsGranted) notifyListeners();
-    if (previous && !_permissionsGranted && hasReminders) {
+    if (_permissionsGranted == false &&
+        hasReminders &&
+        (!wasKnown || previous != _permissionsGranted)) {
       await _pauseSource(_activeSourceIdentity);
     }
     if (scheduleWhenRestored &&
@@ -121,10 +156,16 @@ class ClassReminderController extends ChangeNotifier {
   }
 
   Future<void> openReliablePermissionSettings() async {
+    final api = _notificationApi();
+    if (api == null) return;
     try {
-      final api = _notificationApi();
       if (!await api.areNotificationsEnabled()) {
         await api.requestRuntimePermission();
+        return;
+      }
+      if (!await api.areClassRemindersEnabled()) {
+        await api.openClassReminderSettings();
+        return;
       }
       if (!await api.canScheduleExactNotifications()) {
         await api.requestExactAlarmPermission();
@@ -136,19 +177,31 @@ class ClassReminderController extends ChangeNotifier {
 
   ClassReminderRule? ruleFor(ScheduleEntry entry) {
     final canonical = CanonicalClassName.fromTitle(entry.title);
-    final recurring = _rules.where(
-      (rule) =>
-          rule.scope == ClassReminderScope.recurring &&
-          rule.canonicalTitle == canonical,
+    return _oneTimeRulesByOccurrence[_occurrenceRuleKey(
+          canonical,
+          entry.start,
+        )] ??
+        _recurringRulesByTitle[canonical];
+  }
+
+  bool hasReminderForTitle(String title) {
+    final canonical = CanonicalClassName.fromTitle(title);
+    return _rules.any((rule) => rule.canonicalTitle == canonical);
+  }
+
+  Future<void> removeRemindersForTitle(String title) async {
+    final canonical = CanonicalClassName.fromTitle(title);
+    final ruleIds = _rules
+        .where((rule) => rule.canonicalTitle == canonical)
+        .map((rule) => rule.id)
+        .toList(growable: false);
+    if (ruleIds.isEmpty) return;
+    await _repository.applyRuleChanges(
+      upserts: const [],
+      removedRuleIds: ruleIds,
     );
-    if (recurring.isNotEmpty) return recurring.first;
-    final oneTime = _rules.where(
-      (rule) =>
-          rule.scope == ClassReminderScope.oneTime &&
-          rule.canonicalTitle == canonical &&
-          rule.occurrenceStart == entry.start,
-    );
-    return oneTime.isEmpty ? null : oneTime.first;
+    await _reloadRules();
+    await reconcileUpcoming(waitForCompletion: false);
   }
 
   Future<ReminderActivationResult> saveReminder({
@@ -207,6 +260,7 @@ class ClassReminderController extends ChangeNotifier {
       await _repository.clearSource(identity);
       _reloadRevision += 1;
       _rules = const [];
+      _rebuildRuleIndexes();
       _activeSourceIdentity = 'none';
       notifyListeners();
     });
@@ -217,16 +271,15 @@ class ClassReminderController extends ChangeNotifier {
   Future<void> reconcileUpcoming({required bool waitForCompletion}) async {
     final now = _now();
     final end = now.add(upcomingWindow);
-    final schedule = await _scheduleProvider.getCachedSchedule(now, end);
+    final schedule = await _scheduleProvider.getUnfilteredCachedSchedule(
+      now,
+      end,
+    );
     _enqueue(schedule, now, end);
     if (waitForCompletion) await _queue.drain();
   }
 
-  Future<void> _scheduleUpdated(
-    Schedule schedule,
-    DateTime start,
-    DateTime end,
-  ) async {
+  void _scheduleUpdated(Schedule schedule, DateTime start, DateTime end) {
     if (!hasReminders) return;
     _enqueue(schedule, start, end);
   }
@@ -268,6 +321,7 @@ class ClassReminderController extends ChangeNotifier {
 
   Future<void> _processRequest(ReminderSyncRequest request) async {
     await refreshPermissionState(scheduleWhenRestored: false);
+    if (!_permissionStateKnown) return;
     if (!_permissionsGranted) {
       await _coordinator.pauseWindow(
         start: request.start,
@@ -330,9 +384,53 @@ class ClassReminderController extends ChangeNotifier {
         sourceIdentity != _sourceProvider.currentSourceIdentity) {
       return;
     }
+    final sortedRules = List<ClassReminderRule>.from(rules)
+      ..sort((left, right) => left.id.compareTo(right.id));
+    final didChange =
+        _activeSourceIdentity != sourceIdentity ||
+        !_sameRules(_rules, sortedRules);
     _activeSourceIdentity = sourceIdentity;
-    _rules = rules;
-    notifyListeners();
+    _rules = sortedRules;
+    _rebuildRuleIndexes();
+    if (didChange) notifyListeners();
+  }
+
+  void _rebuildRuleIndexes() {
+    _recurringRulesByTitle = {
+      for (final rule in _rules)
+        if (rule.scope == ClassReminderScope.recurring)
+          rule.canonicalTitle: rule,
+    };
+    _oneTimeRulesByOccurrence = {
+      for (final rule in _rules)
+        if (rule.scope == ClassReminderScope.oneTime &&
+            rule.occurrenceStart != null)
+          _occurrenceRuleKey(rule.canonicalTitle, rule.occurrenceStart!): rule,
+    };
+  }
+
+  String _occurrenceRuleKey(String canonicalTitle, DateTime start) =>
+      '$canonicalTitle|${start.toUtc().millisecondsSinceEpoch}';
+
+  bool _sameRules(
+    List<ClassReminderRule> previous,
+    List<ClassReminderRule> next,
+  ) {
+    if (previous.length != next.length) return false;
+    for (var index = 0; index < previous.length; index++) {
+      final left = previous[index];
+      final right = next[index];
+      if (left.id != right.id ||
+          left.scope != right.scope ||
+          left.canonicalTitle != right.canonicalTitle ||
+          left.offset != right.offset ||
+          left.sourceIdentity != right.sourceIdentity ||
+          left.occurrenceStart != right.occurrenceStart ||
+          left.occurrenceEnd != right.occurrenceEnd) {
+        return false;
+      }
+    }
+    return true;
   }
 
   Future<void> _pauseSource(String sourceIdentity) async {
@@ -378,7 +476,7 @@ class ClassReminderController extends ChangeNotifier {
 
   @override
   void dispose() {
-    _scheduleProvider.removeScheduleUpdatedCallback(_scheduleUpdated);
+    _scheduleProvider.removeSchedulePersistedCallback(_scheduleUpdated);
     _sourceProvider.removeDidChangeScheduleSourceCallback(_sourceChanged);
     super.dispose();
   }

@@ -3,6 +3,7 @@ import 'package:dualmate/common/ui/colors.dart';
 import 'package:dualmate/common/ui/text_styles.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
+import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_render_data.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_entry_widget.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_current_time_indicator.dart';
@@ -34,6 +35,7 @@ class ScheduleWidget extends StatelessWidget {
   final ScheduleRenderData? preparedData;
   final ValueListenable<ScheduleViewport>? viewportListenable;
   final ScheduleViewport? targetViewport;
+  final ClassReminderController? reminderController;
 
   const ScheduleWidget({
     Key? key,
@@ -48,6 +50,7 @@ class ScheduleWidget extends StatelessWidget {
     this.preparedData,
     this.viewportListenable,
     this.targetViewport,
+    this.reminderController,
   }) : super(key: key);
 
   @override
@@ -147,6 +150,7 @@ class ScheduleWidget extends StatelessWidget {
               viewport: viewport,
               targetViewport: target,
               onScheduleEntryTap: onScheduleEntryTap,
+              reminderController: reminderController,
             ),
           ),
         ),
@@ -292,18 +296,6 @@ class ScheduleWidget extends StatelessWidget {
       displayEndHour,
     );
 
-    var entryWidgets = <Widget>[];
-
-    entryWidgets = buildEntryWidgets(
-      renderData,
-      hourHeight,
-      minuteHeight,
-      width - timeLabelsWidth,
-      days,
-      layoutProfile,
-      displayStartHour,
-    );
-
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
@@ -325,7 +317,15 @@ class ScheduleWidget extends StatelessWidget {
               0,
               0,
             ),
-            child: Stack(clipBehavior: Clip.hardEdge, children: entryWidgets),
+            child: _buildReminderAwareEntryStack(
+              renderData,
+              hourHeight,
+              minuteHeight,
+              width - timeLabelsWidth,
+              days,
+              layoutProfile,
+              displayStartHour,
+            ),
           ),
         ),
         RepaintBoundary(
@@ -641,6 +641,7 @@ class ScheduleWidget extends StatelessWidget {
       var entryWidth = (rawEntryWidth - (horizontalInset * 2))
           .clamp(_minimumEventExtent, double.infinity)
           .toDouble();
+      final reminderRule = reminderController?.ruleFor(entry);
 
       var widget = Positioned(
         top: yStart,
@@ -652,6 +653,10 @@ class ScheduleWidget extends StatelessWidget {
           onScheduleEntryTap: onScheduleEntryTap,
           renderedWidth: entryWidth,
           renderedHeight: eventHeight,
+          reminderActive: reminderRule != null,
+          reminderPaused:
+              reminderRule != null &&
+              (reminderController?.remindersPaused ?? false),
         ),
       );
 
@@ -659,6 +664,36 @@ class ScheduleWidget extends StatelessWidget {
     }
 
     return entryWidgets;
+  }
+
+  Widget _buildReminderAwareEntryStack(
+    ScheduleRenderData renderData,
+    double hourHeight,
+    double minuteHeight,
+    double width,
+    int columns,
+    _ScheduleWidgetLayoutProfile layoutProfile,
+    double displayStartHour,
+  ) {
+    Widget buildEntries() => Stack(
+      clipBehavior: Clip.hardEdge,
+      children: buildEntryWidgets(
+        renderData,
+        hourHeight,
+        minuteHeight,
+        width,
+        columns,
+        layoutProfile,
+        displayStartHour,
+      ),
+    );
+
+    final reminders = reminderController;
+    if (reminders == null) return buildEntries();
+    return AnimatedBuilder(
+      animation: reminders,
+      builder: (_, __) => buildEntries(),
+    );
   }
 
   _ScheduleWidgetLayoutProfile _resolveLayoutProfile(double width, int days) {
@@ -698,6 +733,7 @@ class _AnimatedScheduleEntryLayer extends StatelessWidget {
   final ValueListenable<ScheduleViewport> viewport;
   final ScheduleViewport targetViewport;
   final ScheduleEntryTapCallback onScheduleEntryTap;
+  final ClassReminderController? reminderController;
 
   const _AnimatedScheduleEntryLayer({
     required this.renderData,
@@ -705,10 +741,20 @@ class _AnimatedScheduleEntryLayer extends StatelessWidget {
     required this.viewport,
     required this.targetViewport,
     required this.onScheduleEntryTap,
+    this.reminderController,
   });
 
   @override
   Widget build(BuildContext context) {
+    final reminders = reminderController;
+    if (reminders == null) return _buildContent();
+    return AnimatedBuilder(
+      animation: reminders,
+      builder: (_, __) => _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
     final slots = <_PreparedEntrySlot>[];
     for (
       var dayIndex = 0;
@@ -755,11 +801,16 @@ class _AnimatedScheduleEntryLayer extends StatelessWidget {
   }
 
   Widget _buildEntry(_PreparedEntrySlot slot, Rect targetRect) {
+    final reminderRule = reminderController?.ruleFor(slot.entry.entry);
     return ScheduleEntryWidget(
       scheduleEntry: slot.entry.entry,
       onScheduleEntryTap: onScheduleEntryTap,
       renderedWidth: targetRect.width,
       renderedHeight: targetRect.height,
+      reminderActive: reminderRule != null,
+      reminderPaused:
+          reminderRule != null &&
+          (reminderController?.remindersPaused ?? false),
     );
   }
 }

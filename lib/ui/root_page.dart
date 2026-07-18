@@ -123,7 +123,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
       _fetchLaunchRoute();
       _fetchLaunchPayload();
       final container = KiwiContainer();
-      if (container.isRegistered<ClassReminderController>()) {
+      if (isInitialized && container.isRegistered<ClassReminderController>()) {
         unawaited(
           container
               .resolve<ClassReminderController>()

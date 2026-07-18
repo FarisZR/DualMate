@@ -6,6 +6,7 @@ import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
+import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
 import 'package:dualmate/schedule/ui/viewmodels/weekly_schedule_view_model.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/schedule_entry_detail_bottom_sheet.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_render_data.dart';
@@ -14,6 +15,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -38,6 +40,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
 
   late final PageController _weekPageController;
   late WeeklyScheduleViewModel viewModel;
+  ClassReminderController? _reminderController;
 
   bool _isApplyingWidgetPayload = false;
   bool _pagerInitialized = false;
@@ -54,6 +57,10 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
   void initState() {
     super.initState();
     _weekPageController = PageController(initialPage: _initialPageIndex);
+    final container = KiwiContainer();
+    if (container.isRegistered<ClassReminderController>()) {
+      _reminderController = container.resolve<ClassReminderController>();
+    }
     WidgetsBinding.instance.addObserver(this);
     WidgetNavigationPayloadStore.instance.addListener(_handleWidgetPayload);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -396,6 +403,7 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage>
               preparedData: pageData.renderData,
               viewportListenable: animatesViewport ? viewportListenable : null,
               targetViewport: targetViewport,
+              reminderController: _reminderController,
             ),
           );
         },

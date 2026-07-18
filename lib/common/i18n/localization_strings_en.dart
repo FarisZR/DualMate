@@ -227,6 +227,11 @@ final en = {
   "filterTitle": "Filter",
   "filterSaveError": "Could not save filters",
   "filterLoadError": "Could not load filters",
+  "filterReminderHideTitle": "Hide {className}?",
+  "filterReminderHideMessage":
+      "This class has active reminders. Keep them, or remove them when hiding the class?",
+  "filterReminderKeep": "Keep reminders",
+  "filterReminderRemove": "Hide and remove reminders",
   "canteenFilterAll": "All meals",
   "canteenFilterNoPork": "Without pork",
   "canteenFilterVegetarian": "Vegetarian",

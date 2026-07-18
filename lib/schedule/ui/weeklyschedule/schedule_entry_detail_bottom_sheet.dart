@@ -308,7 +308,7 @@ class _ScheduleEntryDetailBottomSheetState
   Widget _buildReminderButton(BuildContext context) {
     final controller = _reminderController!;
     final rule = controller.ruleFor(widget.scheduleEntry);
-    final paused = rule != null && !controller.permissionsGranted;
+    final paused = rule != null && controller.remindersPaused;
     final icon = paused
         ? Icons.notifications_off_outlined
         : rule == null
@@ -316,7 +316,9 @@ class _ScheduleEntryDetailBottomSheetState
         : Icons.notifications;
     return IconButton(
       key: const ValueKey('class-reminder-button'),
-      onPressed: () => _openReminderConfiguration(context, rule),
+      onPressed: controller.isInitialized
+          ? () => _openReminderConfiguration(context, rule)
+          : null,
       icon: Icon(icon),
       color: paused ? Theme.of(context).colorScheme.tertiary : null,
       tooltip: rule == null

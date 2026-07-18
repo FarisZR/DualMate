@@ -238,6 +238,11 @@ final de = {
   "filterTitle": "Filter",
   "filterSaveError": "Filter konnten nicht gespeichert werden",
   "filterLoadError": "Filter konnten nicht geladen werden",
+  "filterReminderHideTitle": "{className} ausblenden?",
+  "filterReminderHideMessage":
+      "Für diese Vorlesung sind Erinnerungen aktiv. Sollen sie erhalten oder beim Ausblenden entfernt werden?",
+  "filterReminderKeep": "Erinnerungen behalten",
+  "filterReminderRemove": "Ausblenden und Erinnerungen entfernen",
   "canteenFilterAll": "Alle Gerichte",
   "canteenFilterNoPork": "Ohne Schwein",
   "canteenFilterVegetarian": "Vegetarisch",

@@ -3,9 +3,7 @@ import 'dart:math' as math;
 import 'package:dualmate/common/ui/schedule_entry_type_mappings.dart';
 import 'package:dualmate/common/ui/text_styles.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
-import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
 import 'package:flutter/material.dart';
-import 'package:kiwi/kiwi.dart';
 
 typedef ScheduleEntryTapCallback = Function(ScheduleEntry entry);
 
@@ -95,95 +93,75 @@ class ScheduleEntryWidget extends StatelessWidget {
     final borderWidth = isDense ? 0.5 : 0.6;
     final overflow = isDense ? TextOverflow.clip : TextOverflow.ellipsis;
 
-    ClassReminderController? reminderController;
-    final container = KiwiContainer();
-    if (container.isRegistered<ClassReminderController>()) {
-      reminderController = container.resolve<ClassReminderController>();
-    }
+    final hasReminder = reminderActive ?? false;
+    final isReminderPaused = hasReminder && reminderPaused;
 
-    Widget buildEntry() {
-      final reminderRule = reminderController?.ruleFor(scheduleEntry);
-      final hasReminder = reminderActive ?? reminderRule != null;
-      final isReminderPaused = reminderActive != null
-          ? reminderPaused
-          : reminderRule != null &&
-                !(reminderController?.permissionsGranted ?? false);
-
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: borderRadius,
-          boxShadow: shadowOpacity == 0
-              ? null
-              : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: shadowOpacity),
-                    blurRadius: 3,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: Ink(
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: borderRadius,
-              border: Border.all(
-                color: Colors.black.withValues(alpha: 0.08),
-                width: borderWidth,
-              ),
-            ),
-            child: InkWell(
-              borderRadius: borderRadius,
-              onTap: () {
-                onScheduleEntryTap(scheduleEntry);
-              },
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: horizontalPadding,
-                  vertical: verticalPadding,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        boxShadow: shadowOpacity == 0
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: shadowOpacity),
+                  blurRadius: 3,
+                  offset: const Offset(0, 1),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        scheduleEntry.title,
-                        maxLines: maxLines,
-                        softWrap: true,
-                        overflow: overflow,
-                        textAlign: TextAlign.left,
-                        style: textStyle,
-                      ),
+              ],
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: borderRadius,
+            border: Border.all(
+              color: Colors.black.withValues(alpha: 0.08),
+              width: borderWidth,
+            ),
+          ),
+          child: InkWell(
+            borderRadius: borderRadius,
+            onTap: () {
+              onScheduleEntryTap(scheduleEntry);
+            },
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: verticalPadding,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      scheduleEntry.title,
+                      maxLines: maxLines,
+                      softWrap: true,
+                      overflow: overflow,
+                      textAlign: TextAlign.left,
+                      style: textStyle,
                     ),
-                    if (hasReminder && width >= 44)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 1, top: 1),
-                        child: Icon(
-                          isReminderPaused
-                              ? Icons.notifications_off_outlined
-                              : Icons.notifications,
-                          size: isDense ? 11 : 13,
-                          color: textColor.withValues(
-                            alpha: isReminderPaused ? 0.7 : 0.95,
-                          ),
+                  ),
+                  if (hasReminder && width >= 44)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 1, top: 1),
+                      child: Icon(
+                        isReminderPaused
+                            ? Icons.notifications_off_outlined
+                            : Icons.notifications,
+                        size: isDense ? 11 : 13,
+                        color: textColor.withValues(
+                          alpha: isReminderPaused ? 0.7 : 0.95,
                         ),
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
             ),
           ),
         ),
-      );
-    }
-
-    if (reminderController == null || reminderActive != null) {
-      return buildEntry();
-    }
-    return AnimatedBuilder(
-      animation: reminderController,
-      builder: (context, child) => buildEntry(),
+      ),
     );
   }
 }
