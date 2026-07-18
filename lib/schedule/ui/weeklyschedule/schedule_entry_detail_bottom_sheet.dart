@@ -222,58 +222,55 @@ class _ScheduleEntryDetailBottomSheetState
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(0, 0, 0, 16.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: <Widget>[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: <Widget>[
-                      Text(
-                        L.of(context).scheduleEntryDetailFrom,
-                        style: textStyleScheduleEntryBottomPageTimeFromTo(
-                          context,
-                        ),
+          child: ScheduleEntryDetailHeaderLayout(
+            leading: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: <Widget>[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: <Widget>[
+                    Text(
+                      L.of(context).scheduleEntryDetailFrom,
+                      style: textStyleScheduleEntryBottomPageTimeFromTo(
+                        context,
                       ),
-                      Text(
-                        timeStart,
-                        style: textStyleScheduleEntryBottomPageTime(context),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: <Widget>[
-                      Text(
-                        L.of(context).scheduleEntryDetailTo,
-                        style: textStyleScheduleEntryBottomPageTimeFromTo(
-                          context,
-                        ),
-                      ),
-                      Text(
-                        timeEnd,
-                        style: textStyleScheduleEntryBottomPageTime(context),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              Flexible(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 0, 0),
-                  child: Text(
-                    widget.scheduleEntry.title,
-                    softWrap: true,
-                    style: textStyleScheduleEntryBottomPageTitle(context),
-                  ),
+                    ),
+                    Text(
+                      timeStart,
+                      style: textStyleScheduleEntryBottomPageTime(context),
+                    ),
+                  ],
                 ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: <Widget>[
+                    Text(
+                      L.of(context).scheduleEntryDetailTo,
+                      style: textStyleScheduleEntryBottomPageTimeFromTo(
+                        context,
+                      ),
+                    ),
+                    Text(
+                      timeEnd,
+                      style: textStyleScheduleEntryBottomPageTime(context),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            title: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 0, 0),
+              child: Text(
+                widget.scheduleEntry.title,
+                softWrap: true,
+                style: textStyleScheduleEntryBottomPageTitle(context),
               ),
-              if (_reminderController != null) _buildReminderButton(context),
-            ],
+            ),
+            trailing: _reminderController == null
+                ? null
+                : _buildReminderButton(context),
           ),
         ),
         Padding(
@@ -385,6 +382,46 @@ class _ScheduleEntryDetailBottomSheetState
             ? null
             : () => controller.removeReminder(widget.scheduleEntry),
       ),
+    );
+  }
+}
+
+/// Keeps the detail action independent from the title's intrinsic width.
+///
+/// The trailing action is overlaid at the header's top-right edge while the
+/// content reserves one Material touch-target width for it.
+class ScheduleEntryDetailHeaderLayout extends StatelessWidget {
+  static const double _trailingExtent = 48;
+
+  final Widget leading;
+  final Widget title;
+  final Widget? trailing;
+
+  const ScheduleEntryDetailHeaderLayout({
+    super.key,
+    required this.leading,
+    required this.title,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Padding(
+          padding: EdgeInsets.only(
+            right: trailing == null ? 0 : _trailingExtent,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              leading,
+              Expanded(child: title),
+            ],
+          ),
+        ),
+        if (trailing != null) Positioned(top: 0, right: 0, child: trailing!),
+      ],
     );
   }
 }

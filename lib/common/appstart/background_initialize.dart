@@ -30,31 +30,32 @@ class BackgroundInitialize {
       scheduler = VoidBackgroundWorkScheduler();
     }
 
-    KiwiContainer().registerInstance<WorkSchedulerService>(scheduler);
+    final container = KiwiContainer();
+    container.registerInstance<WorkSchedulerService>(scheduler);
+    final reminderController = container.isRegistered<ClassReminderController>()
+        ? container.resolve<ClassReminderController>()
+        : null;
 
     var tasks = [
-      BackgroundCanteenUpdate(
-        KiwiContainer().resolve(),
-        KiwiContainer().resolve(),
-      ),
+      BackgroundCanteenUpdate(container.resolve(), container.resolve()),
       BackgroundScheduleUpdate(
-        KiwiContainer().resolve(),
-        KiwiContainer().resolve(),
-        KiwiContainer().resolve(),
-        KiwiContainer().resolve(),
-        reminderController: KiwiContainer().resolve<ClassReminderController>(),
+        container.resolve(),
+        container.resolve(),
+        container.resolve(),
+        container.resolve(),
+        reminderController: reminderController,
       ),
       NextDayInformationNotification(
-        KiwiContainer().resolve(),
-        KiwiContainer().resolve(),
-        KiwiContainer().resolve(),
-        KiwiContainer().resolve(),
+        container.resolve(),
+        container.resolve(),
+        container.resolve(),
+        container.resolve(),
       ),
     ];
 
     for (var task in tasks) {
       scheduler.registerTask(task);
-      KiwiContainer().registerInstance(task, name: task.getName());
+      container.registerInstance(task, name: task.getName());
     }
 
     for (var task in tasks) {
