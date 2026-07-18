@@ -23,8 +23,9 @@ class PlatformClassReminderScheduler implements ClassReminderScheduler {
 
   @override
   Future<void> schedule(ClassReminderNotificationRequest request) async {
-    final isGerman =
-        (await _languageCode())?.split(RegExp('[-_]')).first == 'de';
+    final languageCode = await _languageCode() ??
+        PlatformDispatcher.instance.locale.languageCode;
+    final isGerman = languageCode.split(RegExp('[-_]')).first == 'de';
     final offsetText = switch (request.offset.inMinutes) {
       60 => isGerman ? '1 Stunde' : '1 hour',
       1 => isGerman ? '1 Minute' : '1 minute',

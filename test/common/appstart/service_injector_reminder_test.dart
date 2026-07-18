@@ -17,7 +17,6 @@ void main() {
     addTearDown(KiwiContainer().clear);
 
     injectServices(false);
-    injectServices(false);
     await KiwiContainer()
         .resolve<ClassReminderController>()
         .refreshPermissionState();
