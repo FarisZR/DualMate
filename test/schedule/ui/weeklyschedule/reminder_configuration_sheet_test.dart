@@ -46,6 +46,23 @@ void main() {
     expect(icon.color, foreground);
   });
 
+  testWidgets('German recurring disclaimer is concise and title-specific', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app(locale: const Locale('de')));
+
+    await tester.tap(find.text('Jeder Termin'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Abgleich nach Kursname'), findsOneWidget);
+    expect(
+      find.text(
+        'Gilt für künftige Termine mit demselben Kursnamen. Wird er geändert, greift die Erinnerung nicht mehr.',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('saves the selected offset and scope', (tester) async {
     Duration? savedOffset;
     ClassReminderScope? savedScope;
@@ -98,9 +115,10 @@ Widget _app({
   Future<void> Function(Duration, ClassReminderScope)? onSave,
   ThemeData? theme,
   ClassReminderRule? existingRule,
+  Locale locale = const Locale('en'),
 }) => MaterialApp(
   theme: theme,
-  locale: const Locale('en'),
+  locale: locale,
   localizationsDelegates: const [
     LocalizationDelegate(),
     GlobalMaterialLocalizations.delegate,

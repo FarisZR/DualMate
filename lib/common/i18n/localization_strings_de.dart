@@ -194,9 +194,9 @@ final de = {
   "classReminderCustomMinutes": "Minuten vorher",
   "classReminderThisOccurrence": "Dieser Termin",
   "classReminderEveryOccurrence": "Jeder Termin",
-  "classReminderMatchingTitle": "Abgleich nach Klassenname",
+  "classReminderMatchingTitle": "Abgleich nach Kursname",
   "classReminderMatchingDescription":
-      "DualMate wendet diese Erinnerung auf zukünftige Klassen mit demselben angezeigten Klassennamen an. Wenn sich der Klassenname ändert, gilt die Erinnerung nicht mehr.",
+      "Gilt für künftige Termine mit demselben Kursnamen. Wird er geändert, greift die Erinnerung nicht mehr.",
   "classReminderSave": "Erinnerung speichern",
   "classReminderRemove": "Erinnerung entfernen",
   "classReminderPermissionTitle": "Zuverlässige Erinnerungen aktivieren",
@@ -204,10 +204,10 @@ final de = {
       "DualMate benötigt die Benachrichtigungsberechtigung und die Berechtigung für genaue Alarme, um Klassenerinnerungen pünktlich zuzustellen.",
   "classReminderPermissionCancel": "Abbrechen",
   "classReminderPermissionOpenSettings": "Einstellungen öffnen",
-  "classReminderPausedTitle": "Klassenerinnerungen sind pausiert",
+  "classReminderPausedTitle": "Klassenerinnerungen pausiert",
   "classReminderPausedMessage":
-      "DualMate kann Erinnerungen nicht zuverlässig zustellen, weil eine erforderliche Berechtigung deaktiviert ist.",
-  "classReminderFixPermissions": "Berechtigungen korrigieren",
+      "Aktiviere Benachrichtigungen und genaue Alarme, damit sie wieder funktionieren.",
+  "classReminderFixPermissions": "Berechtigungen prüfen",
   "classReminderSourceChangeTitle": "Stundenplanquelle ändern?",
   "classReminderSourceChangeMessage":
       "Wenn du deinen Stundenplan änderst, werden alle mit dem aktuellen Stundenplan verknüpften Klassenerinnerungen entfernt.",
