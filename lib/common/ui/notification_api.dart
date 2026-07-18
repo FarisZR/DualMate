@@ -1,23 +1,27 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:math';
 
 import 'package:dualmate/common/logging/crash_reporting.dart';
+import 'package:dualmate/common/util/widget_navigation_payload.dart';
+import 'package:dualmate/ui/navigation/main_section_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 ///
 /// Provides methods to display native notifications
 ///
-typedef NotificationPluginInitializer = Future<bool?> Function(
-  FlutterLocalNotificationsPlugin plugin,
-  InitializationSettings settings,
-  DidReceiveNotificationResponseCallback onDidReceiveNotificationResponse,
-);
+typedef NotificationPluginInitializer =
+    Future<bool?> Function(
+      FlutterLocalNotificationsPlugin plugin,
+      InitializationSettings settings,
+      DidReceiveNotificationResponseCallback onDidReceiveNotificationResponse,
+    );
 
-typedef NotificationRuntimePermissionRequester = Future<bool?> Function(
-  FlutterLocalNotificationsPlugin plugin,
-);
+typedef NotificationRuntimePermissionRequester =
+    Future<bool?> Function(FlutterLocalNotificationsPlugin plugin);
 
 class NotificationApi {
   final FlutterLocalNotificationsPlugin _localNotificationsPlugin;
@@ -28,11 +32,11 @@ class NotificationApi {
     FlutterLocalNotificationsPlugin? localNotificationsPlugin,
     NotificationPluginInitializer? pluginInitializer,
     NotificationRuntimePermissionRequester? runtimePermissionRequester,
-  })  : _localNotificationsPlugin =
-            localNotificationsPlugin ?? FlutterLocalNotificationsPlugin(),
-        _pluginInitializer = pluginInitializer ?? _defaultPluginInitializer,
-        _runtimePermissionRequester =
-            runtimePermissionRequester ?? _defaultRuntimePermissionRequester;
+  }) : _localNotificationsPlugin =
+           localNotificationsPlugin ?? FlutterLocalNotificationsPlugin(),
+       _pluginInitializer = pluginInitializer ?? _defaultPluginInitializer,
+       _runtimePermissionRequester =
+           runtimePermissionRequester ?? _defaultRuntimePermissionRequester;
 
   ///
   /// Initialize the notifications. You can't show any notifications before you
@@ -55,6 +59,17 @@ class NotificationApi {
       initializationSettings,
       selectNotification,
     );
+    try {
+      final launchDetails = await _localNotificationsPlugin
+          .getNotificationAppLaunchDetails();
+      final launchResponse = launchDetails?.notificationResponse;
+      if (launchDetails?.didNotificationLaunchApp == true &&
+          launchResponse != null) {
+        selectNotification(launchResponse);
+      }
+    } catch (_) {
+      // Some test and unsupported platform implementations omit launch details.
+    }
     if (requestRuntimePermission) {
       unawaited(this.requestRuntimePermission());
     }
@@ -66,8 +81,9 @@ class NotificationApi {
 
   Future<bool?> _requestRuntimePermissionsBestEffort() async {
     try {
-      final granted =
-          await _runtimePermissionRequester(_localNotificationsPlugin);
+      final granted = await _runtimePermissionRequester(
+        _localNotificationsPlugin,
+      );
       developer.log(
         'Notification runtime permission requested: $granted',
         name: 'notification_api',
@@ -99,8 +115,10 @@ class NotificationApi {
   static Future<bool?> _defaultRuntimePermissionRequester(
     FlutterLocalNotificationsPlugin plugin,
   ) async {
-    final androidPlugin = plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final androidPlugin = plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     return androidPlugin?.requestNotificationsPermission();
   }
 
@@ -141,7 +159,79 @@ class NotificationApi {
     );
   }
 
-  void selectNotification(NotificationResponse notificationResponse) {}
+  Future<bool> areNotificationsEnabled() async {
+    final androidPlugin = _localNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    return await androidPlugin?.areNotificationsEnabled() ?? false;
+  }
+
+  Future<bool> canScheduleExactNotifications() async {
+    final androidPlugin = _localNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    return await androidPlugin?.canScheduleExactNotifications() ?? false;
+  }
+
+  Future<bool> requestExactAlarmPermission() async {
+    final androidPlugin = _localNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    return await androidPlugin?.requestExactAlarmsPermission() ?? false;
+  }
+
+  Future<void> scheduleExactNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledTime,
+    required String payload,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      'class_reminders',
+      'Class reminders',
+      channelDescription: 'Reliable reminders before scheduled classes',
+      icon: 'outline_event_note_24',
+      channelAction: AndroidNotificationChannelAction.createIfNotExists,
+      importance: Importance.high,
+      priority: Priority.high,
+      category: AndroidNotificationCategory.reminder,
+    );
+    const details = NotificationDetails(android: androidDetails);
+    await _localNotificationsPlugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tz.TZDateTime.from(scheduledTime, tz.getLocation('Europe/Berlin')),
+      details,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      payload: payload,
+    );
+  }
+
+  Future<void> cancelNotification(int id) {
+    return _localNotificationsPlugin.cancel(id);
+  }
+
+  void selectNotification(NotificationResponse notificationResponse) {
+    final payload = notificationResponse.payload;
+    if (payload == null || payload.isEmpty) return;
+    try {
+      final decoded = jsonDecode(payload);
+      if (decoded is! Map<String, dynamic>) return;
+      final schedulePayload = WidgetScheduleEntryPayload.fromMap(decoded);
+      if (schedulePayload.isEmpty) return;
+      WidgetNavigationPayloadStore.instance.setSchedulePayload(schedulePayload);
+      MainSectionController.instance.openRoute('schedule');
+    } on FormatException {
+      return;
+    }
+  }
 }
 
 ///
@@ -154,6 +244,27 @@ class VoidNotificationApi extends NotificationApi {
 
   @override
   Future<bool?> requestRuntimePermission() => Future.value(null);
+
+  @override
+  Future<bool> areNotificationsEnabled() => Future.value(false);
+
+  @override
+  Future<bool> canScheduleExactNotifications() => Future.value(false);
+
+  @override
+  Future<bool> requestExactAlarmPermission() => Future.value(false);
+
+  @override
+  Future<void> scheduleExactNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledTime,
+    required String payload,
+  }) => Future.value();
+
+  @override
+  Future<void> cancelNotification(int id) => Future.value();
 
   @override
   void selectNotification(NotificationResponse notificationResponse) {}

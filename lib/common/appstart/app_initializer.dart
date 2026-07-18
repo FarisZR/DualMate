@@ -22,6 +22,7 @@ import 'package:dualmate/schedule/background/calendar_synchronizer.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/ui/notification/next_day_information_notification.dart';
+import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
@@ -242,9 +243,21 @@ Future<void> initializeAppBackground(bool isBackground) async {
   tz.initializeTimeZones();
   print("Background init: time zones ${stopwatch.elapsedMilliseconds}ms");
 
+  try {
+    await KiwiContainer().resolve<ClassReminderController>().initialize();
+    print("Background init: reminders ${stopwatch.elapsedMilliseconds}ms");
+  } catch (error, trace) {
+    await _reportNonFatalInitException(
+      error,
+      trace,
+      message: 'Background init: class reminders failed',
+      tags: {'feature': 'class_reminders'},
+    );
+  }
+
   if (isBackground) {
     var setup = KiwiContainer().resolve<ScheduleSourceProvider>();
-    setup.setupScheduleSource();
+    await setup.setupScheduleSource();
     print(
       "Background init: schedule source ${stopwatch.elapsedMilliseconds}ms",
     );

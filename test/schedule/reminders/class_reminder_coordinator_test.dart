@@ -1,0 +1,266 @@
+import 'dart:async';
+
+import 'package:dualmate/schedule/model/schedule.dart';
+import 'package:dualmate/schedule/model/schedule_entry.dart';
+import 'package:dualmate/schedule/reminders/class_reminder.dart';
+import 'package:dualmate/schedule/reminders/class_reminder_coordinator.dart';
+import 'package:dualmate/schedule/reminders/class_reminder_repository.dart';
+import 'package:dualmate/schedule/reminders/class_reminder_scheduler.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  final now = DateTime(2026, 7, 20, 8);
+  final windowStart = DateTime(2026, 7, 20);
+  final windowEnd = DateTime(2026, 7, 27);
+
+  test(
+    'every canonical Recht occurrence receives a recurring reminder',
+    () async {
+      final repository = _MemoryRepository([
+        ClassReminderRule(
+          id: 'recht',
+          scope: ClassReminderScope.recurring,
+          canonicalTitle: 'Recht',
+          offset: const Duration(minutes: 15),
+          sourceIdentity: 'rapla:a',
+        ),
+      ]);
+      final scheduler = _RecordingScheduler();
+      final coordinator = ClassReminderCoordinator(
+        repository: repository,
+        scheduler: scheduler,
+        now: () => now,
+      );
+      final schedule = Schedule.fromList([
+        _entry(DateTime(2026, 7, 20, 10), 'Online - Recht'),
+        _entry(DateTime(2026, 7, 22, 9), 'Recht online'),
+        _entry(DateTime(2026, 7, 23, 9), 'Recht II'),
+      ]);
+
+      final result = await coordinator.reconcile(
+        schedule: schedule,
+        start: windowStart,
+        end: windowEnd,
+        sourceIdentity: 'rapla:a',
+      );
+
+      expect(result.scheduleEntriesExamined, 3);
+      expect(result.alarmsScheduled, 2);
+      expect(scheduler.scheduled, hasLength(2));
+    },
+  );
+
+  test(
+    'unchanged refresh performs no platform calls or manifest writes',
+    () async {
+      final rule = ClassReminderRule(
+        id: 'recht',
+        scope: ClassReminderScope.recurring,
+        canonicalTitle: 'Recht',
+        offset: const Duration(minutes: 15),
+        sourceIdentity: 'rapla:a',
+      );
+      final entry = _entry(DateTime(2026, 7, 20, 10), 'Recht');
+      final repository = _MemoryRepository([rule]);
+      final scheduler = _RecordingScheduler();
+      final coordinator = ClassReminderCoordinator(
+        repository: repository,
+        scheduler: scheduler,
+        now: () => now,
+      );
+      await coordinator.reconcile(
+        schedule: Schedule.fromList([entry]),
+        start: windowStart,
+        end: windowEnd,
+        sourceIdentity: 'rapla:a',
+      );
+      scheduler.scheduled.clear();
+      repository.manifestWriteCount = 0;
+
+      final result = await coordinator.reconcile(
+        schedule: Schedule.fromList([entry]),
+        start: windowStart,
+        end: windowEnd,
+        sourceIdentity: 'rapla:a',
+      );
+
+      expect(result.alarmsScheduled, 0);
+      expect(result.alarmsCancelled, 0);
+      expect(scheduler.scheduled, isEmpty);
+      expect(scheduler.cancelled, isEmpty);
+      expect(repository.manifestWriteCount, 0);
+    },
+  );
+
+  test(
+    'returns before reading schedule or manifest when no rules exist',
+    () async {
+      final repository = _MemoryRepository([]);
+      final coordinator = ClassReminderCoordinator(
+        repository: repository,
+        scheduler: _RecordingScheduler(),
+        now: () => now,
+      );
+
+      final result = await coordinator.reconcile(
+        schedule: Schedule.fromList([
+          _entry(DateTime(2026, 7, 20, 10), 'Recht'),
+        ]),
+        start: windowStart,
+        end: windowEnd,
+        sourceIdentity: 'rapla:a',
+      );
+
+      expect(result.reminderRulesLoaded, 0);
+      expect(result.scheduleEntriesExamined, 0);
+      expect(repository.manifestReadCount, 0);
+    },
+  );
+
+  test(
+    'moved one-time occurrence replaces alarm and updates stored timing',
+    () async {
+      final original = DateTime(2026, 7, 20, 10);
+      final moved = DateTime(2026, 7, 20, 12);
+      final rule = ClassReminderRule(
+        id: 'one',
+        scope: ClassReminderScope.oneTime,
+        canonicalTitle: 'Recht',
+        offset: const Duration(minutes: 15),
+        sourceIdentity: 'rapla:a',
+        occurrenceStart: original,
+        occurrenceEnd: original.add(const Duration(hours: 2)),
+      );
+      final repository = _MemoryRepository([rule]);
+      final oldManifest = _manifest(rule, original);
+      repository.manifest.add(oldManifest);
+      final scheduler = _RecordingScheduler();
+      final coordinator = ClassReminderCoordinator(
+        repository: repository,
+        scheduler: scheduler,
+        now: () => now,
+      );
+
+      await coordinator.reconcile(
+        schedule: Schedule.fromList([_entry(moved, 'Recht')]),
+        start: windowStart,
+        end: windowEnd,
+        sourceIdentity: 'rapla:a',
+      );
+
+      expect(scheduler.cancelled, [oldManifest.notificationId]);
+      expect(scheduler.scheduled.single.classStart, moved);
+      expect(repository.savedRules.single.occurrenceStart, moved);
+    },
+  );
+}
+
+ScheduleEntry _entry(DateTime start, String title) => ScheduleEntry(
+  start: start,
+  end: start.add(const Duration(hours: 2)),
+  title: title,
+  details: '',
+  professor: 'Professor',
+  room: 'A101',
+  type: ScheduleEntryType.Class,
+);
+
+ScheduledClassNotification _manifest(ClassReminderRule rule, DateTime start) {
+  final occurrence = ClassReminderIdentity.occurrence(
+    canonicalTitle: rule.canonicalTitle,
+    occurrenceStart: start,
+    sourceIdentity: rule.sourceIdentity,
+  );
+  return ScheduledClassNotification(
+    ruleId: rule.id,
+    occurrenceIdentity: occurrence,
+    sourceIdentity: rule.sourceIdentity,
+    notificationId: ClassReminderIdentity.notificationId(
+      ruleId: rule.id,
+      occurrenceStart: start,
+      sourceIdentity: rule.sourceIdentity,
+    ),
+    scheduledTime: start.subtract(rule.offset),
+    classStart: start,
+    contentFingerprint: ClassReminderCoordinator.contentFingerprint(
+      title: rule.canonicalTitle,
+      start: start,
+      room: 'A101',
+      offset: rule.offset,
+    ),
+  );
+}
+
+class _MemoryRepository implements ClassReminderRepositoryApi {
+  final List<ClassReminderRule> rules;
+  final List<ScheduledClassNotification> manifest = [];
+  final List<ClassReminderRule> savedRules = [];
+  int manifestReadCount = 0;
+  int manifestWriteCount = 0;
+
+  _MemoryRepository(this.rules);
+
+  @override
+  Future<List<ClassReminderRule>> loadRelevantRules({
+    required String sourceIdentity,
+    required DateTime now,
+  }) async => List.of(rules);
+
+  @override
+  Future<List<ScheduledClassNotification>> loadManifestForWindow({
+    required String sourceIdentity,
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    manifestReadCount++;
+    return List.of(manifest);
+  }
+
+  @override
+  Future<void> applyManifestChanges({
+    required List<ScheduledClassNotification> upserts,
+    required List<String> removedOccurrenceIdentities,
+  }) async {
+    manifestWriteCount++;
+    manifest.removeWhere(
+      (row) => removedOccurrenceIdentities.contains(row.occurrenceIdentity),
+    );
+    for (final row in upserts) {
+      manifest.removeWhere(
+        (old) =>
+            old.ruleId == row.ruleId &&
+            old.occurrenceIdentity == row.occurrenceIdentity,
+      );
+      manifest.add(row);
+    }
+  }
+
+  @override
+  Future<ExpiredReminderDeletionCount> deleteExpired(DateTime now) async =>
+      const ExpiredReminderDeletionCount(oneTimeRules: 0, manifestRows: 0);
+
+  @override
+  Future<void> saveRule(ClassReminderRule rule) async {
+    savedRules.add(rule);
+  }
+
+  @override
+  Future<void> deleteRule(String ruleId) async {
+    rules.removeWhere((rule) => rule.id == ruleId);
+  }
+}
+
+class _RecordingScheduler implements ClassReminderScheduler {
+  final List<ClassReminderNotificationRequest> scheduled = [];
+  final List<int> cancelled = [];
+
+  @override
+  Future<void> schedule(ClassReminderNotificationRequest request) async {
+    scheduled.add(request);
+  }
+
+  @override
+  Future<void> cancel(int notificationId) async {
+    cancelled.add(notificationId);
+  }
+}

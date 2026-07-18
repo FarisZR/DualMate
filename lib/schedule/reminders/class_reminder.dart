@@ -43,6 +43,18 @@ class ScheduledClassNotification {
 }
 
 abstract final class ClassReminderIdentity {
+  static String ruleId({
+    required ClassReminderScope scope,
+    required String canonicalTitle,
+    required String sourceIdentity,
+    DateTime? occurrenceStart,
+  }) {
+    final identity = scope == ClassReminderScope.recurring
+        ? '$sourceIdentity|recurring|$canonicalTitle'
+        : '$sourceIdentity|one-time|$canonicalTitle|${occurrenceStart?.toUtc().millisecondsSinceEpoch}';
+    return 'class-reminder-${_hash(identity).toRadixString(16)}';
+  }
+
   static String occurrence({
     required String canonicalTitle,
     required DateTime occurrenceStart,
@@ -57,6 +69,10 @@ abstract final class ClassReminderIdentity {
   }) {
     final input =
         '$sourceIdentity|$ruleId|${occurrenceStart.toUtc().millisecondsSinceEpoch}';
+    return _hash(input);
+  }
+
+  static int _hash(String input) {
     var hash = 0x811c9dc5;
     for (final byte in input.codeUnits) {
       hash ^= byte;

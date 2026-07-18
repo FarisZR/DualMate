@@ -30,10 +30,14 @@ class ScheduleSourceProvider {
 
   ScheduleSource _currentScheduleSource = InvalidScheduleSource();
   ScheduleSourceType _currentScheduleSourceType = ScheduleSourceType.None;
+  String _currentSourceIdentity = 'none';
+  int _sourceGeneration = 0;
 
   ScheduleSource get currentScheduleSource => _currentScheduleSource;
   ScheduleSourceType get currentScheduleSourceType =>
       _currentScheduleSourceType;
+  String get currentSourceIdentity => _currentSourceIdentity;
+  int get sourceGeneration => _sourceGeneration;
 
   List<OnDidChangeScheduleSource> _onDidChangeScheduleSourceCallbacks = [];
 
@@ -65,6 +69,13 @@ class ScheduleSourceProvider {
     _currentScheduleSourceType = didSetupCorrectly()
         ? scheduleSourceType
         : ScheduleSourceType.None;
+    final nextIdentity = didSetupCorrectly()
+        ? await _configuredSourceIdentity(scheduleSourceType)
+        : 'none';
+    if (_currentSourceIdentity != nextIdentity) {
+      _currentSourceIdentity = nextIdentity;
+      _sourceGeneration += 1;
+    }
 
     var success = didSetupCorrectly();
 
@@ -145,6 +156,28 @@ class ScheduleSourceProvider {
     }
 
     return InvalidScheduleSource();
+  }
+
+  Future<String> _configuredSourceIdentity(ScheduleSourceType type) async {
+    final configuredValue = switch (type) {
+      ScheduleSourceType.Rapla => await _preferencesProvider.getRaplaUrl(),
+      ScheduleSourceType.Ical => await _preferencesProvider.getIcalUrl(),
+      ScheduleSourceType.Mannheim =>
+        await _preferencesProvider.getMannheimScheduleId(),
+      ScheduleSourceType.Dualis =>
+        (await _preferencesProvider.loadDualisCredentials()).username,
+      ScheduleSourceType.None => '',
+    };
+    return '${type.name.toLowerCase()}:${_stableHash(configuredValue)}';
+  }
+
+  String _stableHash(String value) {
+    var hash = 0x811c9dc5;
+    for (final byte in value.codeUnits) {
+      hash ^= byte;
+      hash = (hash * 0x01000193) & 0xffffffff;
+    }
+    return hash.toRadixString(16).padLeft(8, '0');
   }
 
   /// Onboarding stores the Rapla URL first and defers full source setup plus

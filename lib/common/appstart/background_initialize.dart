@@ -7,6 +7,7 @@ import 'package:dualmate/common/background/void_background_work_scheduler.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
 import 'package:dualmate/schedule/background/background_schedule_update.dart';
 import 'package:dualmate/schedule/ui/notification/next_day_information_notification.dart';
+import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
 import 'package:kiwi/kiwi.dart';
 
 ///
@@ -41,6 +42,7 @@ class BackgroundInitialize {
         KiwiContainer().resolve(),
         KiwiContainer().resolve(),
         KiwiContainer().resolve(),
+        reminderController: KiwiContainer().resolve<ClassReminderController>(),
       ),
       NextDayInformationNotification(
         KiwiContainer().resolve(),

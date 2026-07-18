@@ -13,7 +13,31 @@ class ExpiredReminderDeletionCount {
   int get total => oneTimeRules + manifestRows;
 }
 
-class ClassReminderRepository {
+abstract interface class ClassReminderRepositoryApi {
+  Future<List<ClassReminderRule>> loadRelevantRules({
+    required String sourceIdentity,
+    required DateTime now,
+  });
+
+  Future<List<ScheduledClassNotification>> loadManifestForWindow({
+    required String sourceIdentity,
+    required DateTime start,
+    required DateTime end,
+  });
+
+  Future<void> applyManifestChanges({
+    required List<ScheduledClassNotification> upserts,
+    required List<String> removedOccurrenceIdentities,
+  });
+
+  Future<ExpiredReminderDeletionCount> deleteExpired(DateTime now);
+
+  Future<void> saveRule(ClassReminderRule rule);
+
+  Future<void> deleteRule(String ruleId);
+}
+
+class ClassReminderRepository implements ClassReminderRepositoryApi {
   static const rulesTable = 'ClassReminderRules';
   static const manifestTable = 'ScheduledClassNotifications';
 
