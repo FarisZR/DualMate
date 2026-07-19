@@ -32,7 +32,7 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
   bool _isHandlingPop = false;
   bool _didInitializeViewModel = false;
   ClassReminderController? _reminderController;
-  Future<void>? _pendingDisplayChange;
+  final Set<Future<void>> _pendingDisplayChanges = {};
 
   @override
   void initState() {
@@ -238,7 +238,7 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
       if (!_didInitializeViewModel || _hasInitError) {
         return;
       }
-      await _pendingDisplayChange;
+      await _awaitPendingDisplayChanges();
       didChangeFilters = await _viewModel.applyFilter();
       applySucceeded = true;
     } on FilterValidationException catch (e, trace) {
@@ -272,10 +272,19 @@ class _ScheduleFilterPageState extends State<ScheduleFilterPage> {
     bool displayed,
   ) {
     final future = _doDisplayChange(state, displayed);
-    if (!displayed) {
-      _pendingDisplayChange = future.then((_) {}).catchError((_) {});
-    }
+    late final Future<void> trackedFuture;
+    trackedFuture = future
+        .then<void>((_) {})
+        .catchError((_) {})
+        .whenComplete(() => _pendingDisplayChanges.remove(trackedFuture));
+    _pendingDisplayChanges.add(trackedFuture);
     return future;
+  }
+
+  Future<void> _awaitPendingDisplayChanges() async {
+    while (_pendingDisplayChanges.isNotEmpty) {
+      await Future.wait(List<Future<void>>.of(_pendingDisplayChanges));
+    }
   }
 
   Future<bool> _doDisplayChange(

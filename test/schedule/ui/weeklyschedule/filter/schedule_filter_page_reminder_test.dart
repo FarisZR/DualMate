@@ -105,6 +105,58 @@ void main() {
     expect(find.text('Could not save filters'), findsOneWidget);
   });
 
+  testWidgets('back navigation waits for every in-flight reminder removal', (
+    tester,
+  ) async {
+    final classARemoval = Completer<void>();
+    final classBRemoval = Completer<void>();
+    final filterRepo = _CapturingFilterRepository();
+    KiwiContainer().clear();
+    FilterViewModel.resetCachedStateForTesting();
+    KiwiContainer().registerInstance<ScheduleEntryRepository>(
+      _NamedScheduleEntryRepository(['Class A', 'Class B']),
+    );
+    KiwiContainer().registerInstance<ScheduleFilterRepository>(filterRepo);
+
+    final reminders = _MultiSlowReminderController({
+      'Class A': classARemoval,
+      'Class B': classBRemoval,
+    });
+    await tester.pumpWidget(_app(reminders));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Class A'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hide and remove reminders'));
+    await tester.pump();
+
+    await tester.tap(find.text('Class B'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hide and remove reminders'));
+    await tester.pump();
+
+    final NavigatorState navigator = tester.state(find.byType(Navigator));
+    navigator.maybePop();
+    await tester.pump();
+
+    classBRemoval.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(
+      find.byType(ScheduleFilterPage),
+      findsOneWidget,
+      reason: 'The earlier Class A removal is still in flight.',
+    );
+    expect(filterRepo.savedHiddenNames, isEmpty);
+
+    classARemoval.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ScheduleFilterPage), findsNothing);
+    expect(filterRepo.savedHiddenNames, containsAll(['Class A', 'Class B']));
+  });
+
   testWidgets(
     'back navigation during slow reminder removal waits and persists hidden class',
     (tester) async {
@@ -207,6 +259,39 @@ class _SlowReminderController extends ChangeNotifier
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _MultiSlowReminderController extends ChangeNotifier
+    implements ClassReminderController {
+  final Map<String, Completer<void>> removals;
+
+  _MultiSlowReminderController(this.removals);
+
+  @override
+  bool hasReminderForTitle(String title) => removals.containsKey(title);
+
+  @override
+  Future<void> removeRemindersForTitle(String title) async {
+    await removals[title]!.future;
+    removals.remove(title);
+    notifyListeners();
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _NamedScheduleEntryRepository implements ScheduleEntryRepository {
+  final List<String> names;
+
+  _NamedScheduleEntryRepository(this.names);
+
+  @override
+  Future<List<String>> queryAllNamesOfScheduleEntries() async => names;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError('Unexpected call: $invocation');
 }
 
 class _FakeScheduleEntryRepository implements ScheduleEntryRepository {
