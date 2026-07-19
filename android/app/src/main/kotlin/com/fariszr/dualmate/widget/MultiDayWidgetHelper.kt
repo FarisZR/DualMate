@@ -42,6 +42,14 @@ object MultiDayWidgetHelper {
         return rows.filter { row -> row.isToday || row.items.isNotEmpty() }
     }
 
+    fun <T> rowAt(rows: List<DayRow<T>>, position: Int): DayRow<T>? {
+        return rows.getOrNull(position)
+    }
+
+    fun <T> stableItemIdAt(rows: List<DayRow<T>>, position: Int): Long? {
+        return rowAt(rows, position)?.date?.toEpochDay()
+    }
+
     fun <T> limitItems(items: List<T>, maxItems: Int): VisibleItems<T> {
         val safeMax = max(1, maxItems)
         if (items.size <= safeMax) {
