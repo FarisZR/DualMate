@@ -32,11 +32,8 @@ abstract class MultiDayViewsFactory<T>(
     }
 
     override fun getViewAt(position: Int): RemoteViews? {
-        if (position == AdapterView.INVALID_POSITION || position >= visibleRows.size) {
-            return null
-        }
-
-        val row = visibleRows[position]
+        val rows = visibleRows
+        val row = MultiDayWidgetHelper.rowAt(rows, position) ?: return null
         val views = RemoteViews(context.packageName, getRowLayoutId())
         bindDayHeader(views, row.date, row.isToday)
 
@@ -72,7 +69,9 @@ abstract class MultiDayViewsFactory<T>(
     }
 
     override fun getItemId(position: Int): Long {
-        return visibleRows[position].date.toEpochDay()
+        val rows = visibleRows
+        return MultiDayWidgetHelper.stableItemIdAt(rows, position)
+            ?: AdapterView.INVALID_ROW_ID
     }
 
     override fun hasStableIds(): Boolean {

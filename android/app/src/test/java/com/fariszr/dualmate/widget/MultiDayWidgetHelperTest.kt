@@ -42,6 +42,41 @@ class MultiDayWidgetHelperTest {
     }
 
     @Test
+    fun rowAt_returnsNullForInvalidPositions() {
+        val today = LocalDate.of(2026, 1, 21)
+        val rows = listOf(
+            MultiDayWidgetHelper.DayRow(today, emptyList<String>(), true),
+            MultiDayWidgetHelper.DayRow(today.plusDays(1), listOf("item"), false)
+        )
+
+        assertEquals(null, MultiDayWidgetHelper.rowAt(rows, -1))
+        assertEquals(null, MultiDayWidgetHelper.rowAt(rows, rows.size))
+    }
+
+    @Test
+    fun stableItemIdAt_returnsDateBasedIdForValidPosition() {
+        val today = LocalDate.of(2026, 1, 21)
+        val rows = listOf(
+            MultiDayWidgetHelper.DayRow(today, emptyList<String>(), true)
+        )
+
+        assertEquals(today.toEpochDay(), MultiDayWidgetHelper.stableItemIdAt(rows, 0))
+    }
+
+    @Test
+    fun stableItemIdAt_returnsNullForStalePositionAfterRowsShrink() {
+        val today = LocalDate.of(2026, 1, 21)
+        val originalRows = listOf(
+            MultiDayWidgetHelper.DayRow(today, emptyList<String>(), true),
+            MultiDayWidgetHelper.DayRow(today.plusDays(1), listOf("one"), false),
+            MultiDayWidgetHelper.DayRow(today.plusDays(2), listOf("two"), false)
+        )
+        val refreshedRows = originalRows.take(2)
+
+        assertEquals(null, MultiDayWidgetHelper.stableItemIdAt(refreshedRows, 2))
+    }
+
+    @Test
     fun calculateVisibleDayCount_minHeightShowsOne() {
         val today = LocalDate.of(2026, 1, 21)
         val rows = listOf(
