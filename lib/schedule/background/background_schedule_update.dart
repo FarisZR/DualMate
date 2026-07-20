@@ -7,6 +7,8 @@ import 'package:dualmate/native/widget/widget_helper.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
+import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
+import 'package:kiwi/kiwi.dart';
 
 class BackgroundScheduleUpdate extends TaskCallback {
   static const String name = 'BackgroundScheduleUpdate';
@@ -15,13 +17,15 @@ class BackgroundScheduleUpdate extends TaskCallback {
   final ScheduleSourceProvider scheduleSource;
   final WorkSchedulerService scheduler;
   final WidgetHelper widgetHelper;
+  final ClassReminderController? reminderController;
 
   BackgroundScheduleUpdate(
     this.scheduleProvider,
     this.scheduleSource,
     this.scheduler,
-    this.widgetHelper,
-  );
+    this.widgetHelper, {
+    this.reminderController,
+  });
 
   Future updateSchedule() async {
     if (!scheduleSource.currentScheduleSource.canQuery()) {
@@ -41,6 +45,12 @@ class BackgroundScheduleUpdate extends TaskCallback {
         cancellationToken,
         origin: ScheduleRefreshOrigin.backgroundPeriodic,
       );
+      final controller =
+          reminderController ??
+          (KiwiContainer().isRegistered<ClassReminderController>()
+              ? KiwiContainer().resolve<ClassReminderController>()
+              : null);
+      await controller?.queue.drain();
     } on ScheduleQueryFailedException catch (e, trace) {
       print("Background schedule update failed");
       print(e.innerException.toString());
@@ -59,7 +69,8 @@ class BackgroundScheduleUpdate extends TaskCallback {
       );
       print("Background schedule update status: failure");
       print(
-          "Background schedule update next: retry in ${_updateInterval.inHours}h");
+        "Background schedule update next: retry in ${_updateInterval.inHours}h",
+      );
       return;
     } catch (e, trace) {
       print("Background schedule update unexpected failure");
@@ -79,7 +90,8 @@ class BackgroundScheduleUpdate extends TaskCallback {
       );
       print("Background schedule update status: failure");
       print(
-          "Background schedule update next: retry in ${_updateInterval.inHours}h");
+        "Background schedule update next: retry in ${_updateInterval.inHours}h",
+      );
       return;
     }
 
@@ -129,11 +141,7 @@ class BackgroundScheduleUpdate extends TaskCallback {
 
   @override
   Future<void> schedule() async {
-    await scheduler.schedulePeriodic(
-      _updateInterval,
-      getName(),
-      true,
-    );
+    await scheduler.schedulePeriodic(_updateInterval, getName(), true);
   }
 
   @override

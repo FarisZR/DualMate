@@ -130,11 +130,84 @@ void main() {
       expect(notificationApi.message, isEmpty);
     },
   );
+
+  test(
+    'run keeps its evening schedule but respects the disabled preference',
+    () async {
+      final now = DateTime(2026, 3, 8, 18);
+      final notificationApi = _RecordingNotificationApi();
+      final scheduler = _FakeWorkSchedulerService();
+      final notification = NextDayInformationNotification(
+        notificationApi,
+        _FakeScheduleEntryRepository([
+          _entry(DateTime(2026, 3, 9, 8), 'Recht'),
+        ]),
+        scheduler,
+        _FakePreferencesProvider(enabled: false),
+        now: () => now,
+      );
+
+      await notification.run();
+
+      expect(notificationApi.title, isEmpty);
+      expect(scheduler.scheduledAt, [DateTime(2026, 3, 8, 20)]);
+    },
+  );
+
+  test(
+    'run announces the first upcoming class rather than input order',
+    () async {
+      final now = DateTime(2026, 3, 8, 18);
+      final notificationApi = _RecordingNotificationApi();
+      final notification = NextDayInformationNotification(
+        notificationApi,
+        _FakeScheduleEntryRepository([
+          _entry(DateTime(2026, 3, 9, 8), 'Tomorrow'),
+          _entry(DateTime(2026, 3, 8, 19), 'Recht'),
+          _entry(DateTime(2026, 3, 8, 21), 'Later today'),
+        ]),
+        _FakeWorkSchedulerService(),
+        _FakePreferencesProvider(),
+        now: () => now,
+      );
+
+      await notification.run();
+
+      expect(notificationApi.message, contains('Recht'));
+      expect(notificationApi.message, contains('19:00'));
+      expect(notificationApi.message, isNot(contains('Tomorrow')));
+    },
+  );
+
+  test(
+    'cancel targets the next evening task and exposes the stable name',
+    () async {
+      final now = DateTime(2026, 3, 8, 21);
+      final scheduler = _FakeWorkSchedulerService();
+      final notification = NextDayInformationNotification(
+        _RecordingNotificationApi(),
+        _FakeScheduleEntryRepository(const []),
+        scheduler,
+        _FakePreferencesProvider(),
+        now: () => now,
+      );
+
+      await notification.cancel();
+
+      expect(notification.getName(), NextDayInformationNotification.name);
+      expect(scheduler.cancelledIds, hasLength(1));
+      expect(scheduler.cancelledIds.single, contains('3/9/2026'));
+    },
+  );
 }
 
 class _FakePreferencesProvider implements PreferencesProvider {
+  final bool enabled;
+
+  _FakePreferencesProvider({this.enabled = true});
+
   @override
-  Future<bool> getNotifyAboutNextDay() async => true;
+  Future<bool> getNotifyAboutNextDay() async => enabled;
 
   @override
   Future<String?> getLastUsedLanguageCode() async => 'en';
@@ -169,7 +242,8 @@ class _FakeScheduleEntryRepository implements ScheduleEntryRepository {
     final schedule = Schedule();
     schedule.entries.addAll(
       entries.where(
-          (entry) => entry.end.isAfter(start) && entry.start.isBefore(end)),
+        (entry) => entry.end.isAfter(start) && entry.start.isBefore(end),
+      ),
     );
     return schedule;
   }
@@ -179,8 +253,13 @@ class _FakeScheduleEntryRepository implements ScheduleEntryRepository {
 }
 
 class _FakeWorkSchedulerService implements WorkSchedulerService {
+  final List<DateTime> scheduledAt = [];
+  final List<String> cancelledIds = [];
+
   @override
-  Future<void> cancelTask(String id) async {}
+  Future<void> cancelTask(String id) async {
+    cancelledIds.add(id);
+  }
 
   @override
   Future<void> executeTask(String id) async {}
@@ -196,7 +275,9 @@ class _FakeWorkSchedulerService implements WorkSchedulerService {
     DateTime date,
     String id,
     String name,
-  ) async {}
+  ) async {
+    scheduledAt.add(date);
+  }
 
   @override
   Future<void> scheduleOneShotTaskIn(
@@ -212,3 +293,13 @@ class _FakeWorkSchedulerService implements WorkSchedulerService {
     bool needsNetwork = false,
   ]) async {}
 }
+
+ScheduleEntry _entry(DateTime start, String title) => ScheduleEntry(
+  start: start,
+  end: start.add(const Duration(hours: 1)),
+  title: title,
+  details: '',
+  professor: '',
+  room: '',
+  type: ScheduleEntryType.Class,
+);

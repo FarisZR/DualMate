@@ -7,6 +7,7 @@ import 'package:dualmate/common/background/void_background_work_scheduler.dart';
 import 'package:dualmate/common/background/work_scheduler_service.dart';
 import 'package:dualmate/schedule/background/background_schedule_update.dart';
 import 'package:dualmate/schedule/ui/notification/next_day_information_notification.dart';
+import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
 import 'package:kiwi/kiwi.dart';
 
 ///
@@ -29,30 +30,32 @@ class BackgroundInitialize {
       scheduler = VoidBackgroundWorkScheduler();
     }
 
-    KiwiContainer().registerInstance<WorkSchedulerService>(scheduler);
+    final container = KiwiContainer();
+    container.registerInstance<WorkSchedulerService>(scheduler);
+    final reminderController = container.isRegistered<ClassReminderController>()
+        ? container.resolve<ClassReminderController>()
+        : null;
 
     var tasks = [
-      BackgroundCanteenUpdate(
-        KiwiContainer().resolve(),
-        KiwiContainer().resolve(),
-      ),
+      BackgroundCanteenUpdate(container.resolve(), container.resolve()),
       BackgroundScheduleUpdate(
-        KiwiContainer().resolve(),
-        KiwiContainer().resolve(),
-        KiwiContainer().resolve(),
-        KiwiContainer().resolve(),
+        container.resolve(),
+        container.resolve(),
+        container.resolve(),
+        container.resolve(),
+        reminderController: reminderController,
       ),
       NextDayInformationNotification(
-        KiwiContainer().resolve(),
-        KiwiContainer().resolve(),
-        KiwiContainer().resolve(),
-        KiwiContainer().resolve(),
+        container.resolve(),
+        container.resolve(),
+        container.resolve(),
+        container.resolve(),
       ),
     ];
 
     for (var task in tasks) {
       scheduler.registerTask(task);
-      KiwiContainer().registerInstance(task, name: task.getName());
+      container.registerInstance(task, name: task.getName());
     }
 
     for (var task in tasks) {

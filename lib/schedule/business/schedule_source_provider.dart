@@ -3,6 +3,7 @@ import 'package:dualmate/common/logging/analytics.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_query_information_repository.dart';
 import 'package:dualmate/schedule/model/schedule_source_type.dart';
+import 'package:dualmate/schedule/business/schedule_source_identity.dart';
 import 'package:dualmate/schedule/service/dualis/dualis_schedule_source.dart';
 import 'package:dualmate/schedule/service/error_report_schedule_source_decorator.dart';
 import 'package:dualmate/schedule/service/ical/ical_schedule_source.dart';
@@ -30,10 +31,14 @@ class ScheduleSourceProvider {
 
   ScheduleSource _currentScheduleSource = InvalidScheduleSource();
   ScheduleSourceType _currentScheduleSourceType = ScheduleSourceType.None;
+  String _currentSourceIdentity = 'none';
+  int _sourceGeneration = 0;
 
   ScheduleSource get currentScheduleSource => _currentScheduleSource;
   ScheduleSourceType get currentScheduleSourceType =>
       _currentScheduleSourceType;
+  String get currentSourceIdentity => _currentSourceIdentity;
+  int get sourceGeneration => _sourceGeneration;
 
   List<OnDidChangeScheduleSource> _onDidChangeScheduleSourceCallbacks = [];
 
@@ -65,6 +70,13 @@ class ScheduleSourceProvider {
     _currentScheduleSourceType = didSetupCorrectly()
         ? scheduleSourceType
         : ScheduleSourceType.None;
+    final nextIdentity = didSetupCorrectly()
+        ? await _configuredSourceIdentity(scheduleSourceType)
+        : 'none';
+    if (_currentSourceIdentity != nextIdentity) {
+      _currentSourceIdentity = nextIdentity;
+      _sourceGeneration += 1;
+    }
 
     var success = didSetupCorrectly();
 
@@ -145,6 +157,29 @@ class ScheduleSourceProvider {
     }
 
     return InvalidScheduleSource();
+  }
+
+  Future<String> _configuredSourceIdentity(ScheduleSourceType type) async {
+    final configuredValue = switch (type) {
+      ScheduleSourceType.Rapla => await _preferencesProvider.getRaplaUrl(),
+      ScheduleSourceType.Ical => await _preferencesProvider.getIcalUrl(),
+      ScheduleSourceType.Mannheim =>
+        await _preferencesProvider.getMannheimScheduleId(),
+      ScheduleSourceType.Dualis =>
+        (await _preferencesProvider.loadDualisCredentials()).username,
+      ScheduleSourceType.None => '',
+    };
+    return ScheduleSourceIdentity.create(type, configuredValue);
+  }
+
+  bool wouldChangeTo(ScheduleSourceType type, String configuredValue) {
+    final String nextIdentity;
+    if (type == ScheduleSourceType.None || configuredValue.trim().isEmpty) {
+      nextIdentity = 'none';
+    } else {
+      nextIdentity = ScheduleSourceIdentity.create(type, configuredValue);
+    }
+    return nextIdentity != _currentSourceIdentity;
   }
 
   /// Onboarding stores the Rapla URL first and defers full source setup plus

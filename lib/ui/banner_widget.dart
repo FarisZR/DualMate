@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 class BannerWidget extends StatelessWidget {
+  final String? title;
   final String message;
   final String buttonText;
   final VoidCallback onButtonTap;
 
   const BannerWidget({
     Key? key,
+    this.title,
     required this.message,
     required this.buttonText,
     required this.onButtonTap,
@@ -31,21 +33,28 @@ class BannerWidget extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(
-              message,
-            ),
+            if (title != null) ...[
+              Text(
+                title!,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 4),
+            ],
+            Text(message),
             Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: <Widget>[
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
-                        child: FilledButton(
-                          onPressed: onButtonTap,
-                          child: Text(buttonText),
-                        ),
-                      ),
-                    ],
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
+                  child: FilledButton(
+                    onPressed: onButtonTap,
+                    child: Text(buttonText),
                   ),
+                ),
+              ],
+            ),
           ],
         ),
       ),

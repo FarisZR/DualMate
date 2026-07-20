@@ -24,6 +24,11 @@ import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 import 'package:dualmate/schedule/data/schedule_query_information_repository.dart';
+import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
+import 'package:dualmate/schedule/reminders/class_reminder_repository.dart';
+import 'package:dualmate/schedule/reminders/class_reminder_scheduler.dart';
+import 'package:dualmate/schedule/reminders/platform_class_reminder_scheduler.dart';
+import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:kiwi/kiwi.dart';
 
 bool _isInjected = false;
@@ -61,6 +66,25 @@ void injectServices(bool isBackground) {
       c.resolve(),
       c.resolve(),
       c.resolve(),
+    ),
+  );
+  c.registerInstance(ClassReminderRepository(c.resolve()));
+  c.registerInstance<ClassReminderScheduler>(
+    PlatformClassReminderScheduler(
+      () => c.resolve<NotificationApi>(),
+      languageCode: () =>
+          c.resolve<PreferencesProvider>().getLastUsedLanguageCode(),
+    ),
+  );
+  c.registerInstance(
+    ClassReminderController(
+      repository: c.resolve(),
+      scheduleProvider: c.resolve(),
+      sourceProvider: c.resolve(),
+      scheduler: c.resolve<ClassReminderScheduler>(),
+      notificationApi: () => c.isRegistered<NotificationApi>()
+          ? c.resolve<NotificationApi>()
+          : null,
     ),
   );
   c.registerInstance<DualisScraper>(

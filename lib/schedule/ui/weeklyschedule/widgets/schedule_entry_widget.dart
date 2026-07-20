@@ -12,6 +12,8 @@ class ScheduleEntryWidget extends StatelessWidget {
   final ScheduleEntryTapCallback onScheduleEntryTap;
   final double? renderedWidth;
   final double? renderedHeight;
+  final bool? reminderActive;
+  final bool reminderPaused;
 
   const ScheduleEntryWidget({
     Key? key,
@@ -19,6 +21,8 @@ class ScheduleEntryWidget extends StatelessWidget {
     required this.onScheduleEntryTap,
     this.renderedWidth,
     this.renderedHeight,
+    this.reminderActive,
+    this.reminderPaused = false,
   }) : super(key: key);
 
   @override
@@ -89,6 +93,9 @@ class ScheduleEntryWidget extends StatelessWidget {
     final borderWidth = isDense ? 0.5 : 0.6;
     final overflow = isDense ? TextOverflow.clip : TextOverflow.ellipsis;
 
+    final hasReminder = reminderActive ?? false;
+    final isReminderPaused = hasReminder && reminderPaused;
+
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: borderRadius,
@@ -123,13 +130,33 @@ class ScheduleEntryWidget extends StatelessWidget {
                 horizontal: horizontalPadding,
                 vertical: verticalPadding,
               ),
-              child: Text(
-                scheduleEntry.title,
-                maxLines: maxLines,
-                softWrap: true,
-                overflow: overflow,
-                textAlign: TextAlign.left,
-                style: textStyle,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      scheduleEntry.title,
+                      maxLines: maxLines,
+                      softWrap: true,
+                      overflow: overflow,
+                      textAlign: TextAlign.left,
+                      style: textStyle,
+                    ),
+                  ),
+                  if (hasReminder && width >= 44)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 1, top: 1),
+                      child: Icon(
+                        isReminderPaused
+                            ? Icons.notifications_off_outlined
+                            : Icons.notifications,
+                        size: isDense ? 11 : 13,
+                        color: textColor.withValues(
+                          alpha: isReminderPaused ? 0.7 : 0.95,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),

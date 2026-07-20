@@ -5,6 +5,8 @@ import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/ui/login_credentials_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:dualmate/schedule/model/schedule_source_type.dart';
+import 'package:dualmate/schedule/ui/widgets/schedule_source_change_confirmation.dart';
 
 class EnterDualisCredentialsDialog {
   final PreferencesProvider _preferencesProvider;
@@ -73,16 +75,28 @@ class EnterDualisCredentialsDialog {
       TextButton(
         child: Text(L.of(context).dialogOk.toUpperCase()),
         onPressed: () async {
+          final nextUsername = _usernameEditingController.text;
+          final previousSourceIdentity =
+              _scheduleSourceProvider.currentSourceIdentity;
+          if (!await ScheduleSourceChangeConfirmation.confirmIfNeeded(
+            context: context,
+            sourceProvider: _scheduleSourceProvider,
+            nextType: ScheduleSourceType.Dualis,
+            nextIdentityValue: nextUsername,
+          )) {
+            return;
+          }
           await _preferencesProvider.storeDualisCredentials(
-            Credentials(
-              _usernameEditingController.text,
-              _passwordEditingController.text,
-            ),
+            Credentials(nextUsername, _passwordEditingController.text),
           );
           TextInput.finishAutofillContext(shouldSave: true);
           await _scheduleSourceProvider.setupForDualis();
+          await ScheduleSourceChangeConfirmation.finishCommittedChange(
+            sourceProvider: _scheduleSourceProvider,
+            previousSourceIdentity: previousSourceIdentity,
+          );
 
-          Navigator.of(context).pop();
+          if (context.mounted) Navigator.of(context).pop();
         },
       ),
     ];

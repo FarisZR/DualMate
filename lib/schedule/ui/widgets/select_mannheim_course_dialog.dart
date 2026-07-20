@@ -4,6 +4,8 @@ import 'package:dualmate/ui/onboarding/viewmodels/mannheim_view_model.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
 import 'package:dualmate/ui/onboarding/widgets/mannheim_page.dart';
 import 'package:flutter/material.dart';
+import 'package:dualmate/schedule/model/schedule_source_type.dart';
+import 'package:dualmate/schedule/ui/widgets/schedule_source_change_confirmation.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
 
 class SelectMannheimCourseDialog {
@@ -11,9 +13,7 @@ class SelectMannheimCourseDialog {
 
   late MannheimViewModel _mannheimViewModel;
 
-  SelectMannheimCourseDialog(
-    this._scheduleSourceProvider,
-  );
+  SelectMannheimCourseDialog(this._scheduleSourceProvider);
 
   Future show(BuildContext context) async {
     _mannheimViewModel = MannheimViewModel(_scheduleSourceProvider);
@@ -63,8 +63,24 @@ class SelectMannheimCourseDialog {
       TextButton(
         child: Text(L.of(context).dialogOk.toUpperCase()),
         onPressed: () async {
+          final course = _mannheimViewModel.selectedCourse;
+          if (course == null) return;
+          final previousSourceIdentity =
+              _scheduleSourceProvider.currentSourceIdentity;
+          if (!await ScheduleSourceChangeConfirmation.confirmIfNeeded(
+            context: context,
+            sourceProvider: _scheduleSourceProvider,
+            nextType: ScheduleSourceType.Mannheim,
+            nextIdentityValue: course.scheduleId,
+          )) {
+            return;
+          }
           await _mannheimViewModel.save();
-          Navigator.of(context).pop();
+          await ScheduleSourceChangeConfirmation.finishCommittedChange(
+            sourceProvider: _scheduleSourceProvider,
+            previousSourceIdentity: previousSourceIdentity,
+          );
+          if (context.mounted) Navigator.of(context).pop();
         },
       ),
     ];

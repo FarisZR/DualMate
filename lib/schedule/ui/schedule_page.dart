@@ -4,10 +4,12 @@ import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
+import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_view_model.dart';
 import 'package:dualmate/schedule/ui/viewmodels/weekly_schedule_view_model.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/weekly_schedule_page.dart';
+import 'package:dualmate/schedule/ui/widgets/class_reminder_paused_notice.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_empty_state.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_empty_state_placeholder.dart';
 import 'package:dualmate/schedule/ui/widgets/select_source_dialog.dart';
@@ -138,10 +140,17 @@ class _SchedulePageState extends State<SchedulePage> {
             );
           }
 
-          return weeklyPage;
+          return _withReminderState(weeklyPage);
         },
       ),
     );
+  }
+
+  Widget _withReminderState(Widget child) {
+    final container = KiwiContainer();
+    if (!container.isRegistered<ClassReminderController>()) return child;
+    final controller = container.resolve<ClassReminderController>();
+    return ClassReminderPauseAwareContent(controller: controller, child: child);
   }
 
   @override
@@ -273,5 +282,54 @@ class _SchedulePageState extends State<SchedulePage> {
         debugLabel: 'schedule.filterWarmup',
       );
     });
+  }
+}
+
+class ClassReminderPauseAwareContent extends StatelessWidget {
+  final ClassReminderController controller;
+  final Widget child;
+
+  const ClassReminderPauseAwareContent({
+    super.key,
+    required this.controller,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      child: child,
+      builder: (context, schedule) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ClipRect(
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                heightFactor: controller.remindersPaused ? 1 : 0,
+                child: IgnorePointer(
+                  ignoring: !controller.remindersPaused,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 120),
+                    opacity: controller.remindersPaused ? 1 : 0,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: ClassReminderPausedNotice(
+                        onFixPermissions:
+                            controller.openReliablePermissionSettings,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(child: schedule!),
+          ],
+        );
+      },
+    );
   }
 }

@@ -1,10 +1,8 @@
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
+import 'package:dualmate/schedule/reminders/canonical_class_name.dart';
 
 class SchedulePrettifier {
-  final RegExp onlinePrefixRegExp = RegExp(r'\(?online\)?([ -]*)', caseSensitive: false);
-  final RegExp onlineSuffixRegExp = RegExp(r'([ -]*)\(?online\)?', caseSensitive: false);
-
   Schedule prettifySchedule(Schedule schedule) {
     var allEntries = <ScheduleEntry>[];
 
@@ -27,11 +25,10 @@ class SchedulePrettifier {
     // begins with "Online - " it implies that it is online
     // In this case remove the online prefix and set the type correctly
 
-    var newTitle = entry.title;
-    newTitle = newTitle.replaceFirst(onlinePrefixRegExp, "");
-    newTitle = newTitle.replaceFirst(onlineSuffixRegExp, "");
+    final withoutMarker = CanonicalClassName.removeOnlineMarker(entry.title);
+    final newTitle = withoutMarker.trim();
 
-    if (newTitle == entry.title) {
+    if (withoutMarker == entry.title) {
       return entry;
     }
 
@@ -44,34 +41,13 @@ class SchedulePrettifier {
     var title = entry.title;
     var details = entry.details;
 
-    var titleRegex =
-    RegExp("[A-Z]{3,}-?[A-Z]+[0-9]*[A-Z]*[0-9]*[\/]?[A-Z]*[0-9]*[ ]*-?");
-    var match = titleRegex.firstMatch(entry.title);
-
-    if (match != null && match.start == 0) {
-      details = title.substring(0, match.end) + " - $details";
-      title = title.substring(match.end).trim();
-    } else {
-      var first = title
-          .split(" ")
-          .first;
-
-      // Prettify titles: T3MB9025 Fluidmechanik -> Fluidmechanik
-
-      // The title can not be prettified, if the first word is not only uppercase
-      // or less than 2 charcters long
-      if (!(first == first.toUpperCase() && first.length >= 3)) return entry;
-
-      var numberCount = first
-          .split(new RegExp("[0-9]"))
-          .length;
-
-      // If there are less thant two numbers in the title, do not prettify it
-      if (numberCount < 2) return entry;
-
-      details = title.substring(0, first.length) + " - $details";
-      title = title.substring(first.length).trim();
-    }
+    final prefix = CanonicalClassName.courseCodePrefix(title);
+    if (prefix == null) return entry;
+    final normalizedPrefix = prefix.replaceFirst(RegExp(r'\s*-\s*$'), '');
+    details = details.trim().isEmpty
+        ? normalizedPrefix
+        : '$normalizedPrefix - $details';
+    title = CanonicalClassName.removeCourseCodePrefix(title).trim();
 
     return entry.copyWith(title: title, details: details);
   }

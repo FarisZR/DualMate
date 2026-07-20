@@ -15,6 +15,7 @@ import 'package:dualmate/common/appstart/locale_preference_sync.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/util/launch_intent.dart';
 import 'package:dualmate/common/util/widget_navigation_payload.dart';
+import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:flutter/services.dart';
 import 'package:dualmate/ui/navigation/main_section_controller.dart';
@@ -121,6 +122,22 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       _fetchLaunchRoute();
       _fetchLaunchPayload();
+      final container = KiwiContainer();
+      if (isInitialized && container.isRegistered<ClassReminderController>()) {
+        unawaited(
+          container
+              .resolve<ClassReminderController>()
+              .onAppResumed()
+              .catchError((Object error, StackTrace trace) async {
+                await AppDiagnostics.instance.reportCaughtException(
+                  error,
+                  trace,
+                  message: 'Class reminder resume handling failed',
+                  tags: {'feature': 'class_reminders'},
+                );
+              }),
+        );
+      }
     }
   }
 

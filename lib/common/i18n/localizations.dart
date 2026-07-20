@@ -406,6 +406,50 @@ class L {
   String get exactAlarmPermissionLater =>
       _getValue("exactAlarmPermissionLater");
 
+  String get classReminderTooltipAdd => _getValue("classReminderTooltipAdd");
+  String get classReminderTooltipEdit => _getValue("classReminderTooltipEdit");
+  String get classReminderSheetTitle => _getValue("classReminderSheetTitle");
+  String get classReminderFiveMinutes => _getValue("classReminderFiveMinutes");
+  String get classReminderFifteenMinutes =>
+      _getValue("classReminderFifteenMinutes");
+  String get classReminderThirtyMinutes =>
+      _getValue("classReminderThirtyMinutes");
+  String get classReminderOneHour => _getValue("classReminderOneHour");
+  String get classReminderCustom => _getValue("classReminderCustom");
+  String get classReminderCustomMinutes =>
+      _getValue("classReminderCustomMinutes");
+  String get classReminderThisOccurrence =>
+      _getValue("classReminderThisOccurrence");
+  String get classReminderEveryOccurrence =>
+      _getValue("classReminderEveryOccurrence");
+  String get classReminderMatchingTitle =>
+      _getValue("classReminderMatchingTitle");
+  String get classReminderMatchingDescription =>
+      _getValue("classReminderMatchingDescription");
+  String get classReminderSave => _getValue("classReminderSave");
+  String get classReminderRemove => _getValue("classReminderRemove");
+  String get classReminderPermissionTitle =>
+      _getValue("classReminderPermissionTitle");
+  String get classReminderPermissionMessage =>
+      _getValue("classReminderPermissionMessage");
+  String get classReminderPermissionCancel =>
+      _getValue("classReminderPermissionCancel");
+  String get classReminderPermissionOpenSettings =>
+      _getValue("classReminderPermissionOpenSettings");
+  String get classReminderPausedTitle => _getValue("classReminderPausedTitle");
+  String get classReminderPausedMessage =>
+      _getValue("classReminderPausedMessage");
+  String get classReminderFixPermissions =>
+      _getValue("classReminderFixPermissions");
+  String get classReminderSourceChangeTitle =>
+      _getValue("classReminderSourceChangeTitle");
+  String get classReminderSourceChangeMessage =>
+      _getValue("classReminderSourceChangeMessage");
+  String get classReminderSourceChangeCancel =>
+      _getValue("classReminderSourceChangeCancel");
+  String get classReminderSourceChangeConfirm =>
+      _getValue("classReminderSourceChangeConfirm");
+
   String get donateButtonTitle => _getValue("donateButtonTitle");
 
   String get donateButtonSubtitle => _getValue("donateButtonSubtitle");
@@ -451,6 +495,11 @@ class L {
   String get filterSaveError => _getValue("filterSaveError");
 
   String get filterLoadError => _getValue("filterLoadError");
+  String get filterReminderHideTitle => _getValue("filterReminderHideTitle");
+  String get filterReminderHideMessage =>
+      _getValue("filterReminderHideMessage");
+  String get filterReminderKeep => _getValue("filterReminderKeep");
+  String get filterReminderRemove => _getValue("filterReminderRemove");
 
   String get canteenFilterAll => _getValue("canteenFilterAll");
   String get canteenFilterNoPork => _getValue("canteenFilterNoPork");

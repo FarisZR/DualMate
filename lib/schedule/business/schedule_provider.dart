@@ -25,6 +25,9 @@ import 'package:intl/intl.dart';
 typedef ScheduleUpdatedCallback =
     Future<void> Function(Schedule schedule, DateTime start, DateTime end);
 
+typedef SchedulePersistedCallback =
+    void Function(Schedule schedule, DateTime start, DateTime end);
+
 typedef ScheduleEntryChangedCallback =
     Future<void> Function(
       ScheduleDiff scheduleDiff,
@@ -52,6 +55,8 @@ class ScheduleProvider {
   final ScheduleQueryInformationRepository _scheduleQueryInformationRepository;
   final List<ScheduleUpdatedCallback> _scheduleUpdatedCallbacks =
       <ScheduleUpdatedCallback>[];
+  final List<SchedulePersistedCallback> _schedulePersistedCallbacks =
+      <SchedulePersistedCallback>[];
 
   late ScheduleFilter _scheduleFilter;
 
@@ -117,6 +122,10 @@ class ScheduleProvider {
 
     _cacheWindow(start, end, cachedSchedule);
     return cachedSchedule;
+  }
+
+  Future<Schedule> getUnfilteredCachedSchedule(DateTime start, DateTime end) {
+    return _scheduleEntryRepository.queryScheduleBetweenDates(start, end);
   }
 
   Future<DateTime?> getLastQueryTimeForWindow(
@@ -205,6 +214,11 @@ class ScheduleProvider {
         },
       );
 
+      final persistedSchedule = schedule;
+      for (final callback in _schedulePersistedCallbacks) {
+        callback(persistedSchedule, start, end);
+      }
+
       schedule = await PerformanceTelemetry.instance.measureTask(
         'schedule.entries.filter',
         args: {
@@ -278,6 +292,14 @@ class ScheduleProvider {
   void removeScheduleUpdatedCallback(ScheduleUpdatedCallback callback) {
     if (_scheduleUpdatedCallbacks.contains(callback))
       _scheduleUpdatedCallbacks.remove(callback);
+  }
+
+  void addSchedulePersistedCallback(SchedulePersistedCallback callback) {
+    _schedulePersistedCallbacks.add(callback);
+  }
+
+  void removeSchedulePersistedCallback(SchedulePersistedCallback callback) {
+    _schedulePersistedCallbacks.remove(callback);
   }
 
   void addScheduleEntryChangedCallback(ScheduleEntryChangedCallback callback) {

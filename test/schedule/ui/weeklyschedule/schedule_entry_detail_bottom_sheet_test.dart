@@ -49,6 +49,46 @@ void main() {
     expect(find.textContaining('A very long details line'), findsOneWidget);
   });
 
+  testWidgets('header action stays pinned to the top right for any title', (
+    tester,
+  ) async {
+    Future<Offset> pumpHeader(String title) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Padding(
+              padding: const EdgeInsets.all(24),
+              child: ScheduleEntryDetailHeaderLayout(
+                leading: const SizedBox(width: 120, height: 80),
+                title: Text(title),
+                trailing: IconButton(
+                  key: const ValueKey('fixed-reminder-action'),
+                  onPressed: () {},
+                  icon: const Icon(Icons.notifications_none_outlined),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      return tester.getTopRight(
+        find.byKey(const ValueKey('fixed-reminder-action')),
+      );
+    }
+
+    final shortTitlePosition = await pumpHeader('Recht');
+    final longTitlePosition = await pumpHeader(
+      'A considerably longer class title that wraps over several lines',
+    );
+    final headerRight = tester.getTopRight(
+      find.byType(ScheduleEntryDetailHeaderLayout),
+    );
+
+    expect(longTitlePosition.dx, shortTitlePosition.dx);
+    expect(longTitlePosition.dy, shortTitlePosition.dy);
+    expect(longTitlePosition.dx, headerRight.dx);
+  });
+
   testWidgets('starts at the medium size and is configured to expand', (
     tester,
   ) async {
@@ -154,45 +194,42 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'snapping recovers after a snap is interrupted by a drag',
-    (tester) async {
-      await tester.pumpWidget(
-        _buildApp(entry: _entry(details: 'Short details')),
-      );
-      await _showSheet(tester);
-      await tester.pumpAndSettle();
+  testWidgets('snapping recovers after a snap is interrupted by a drag', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_buildApp(entry: _entry(details: 'Short details')));
+    await _showSheet(tester);
+    await tester.pumpAndSettle();
 
-      final scrollable = find.byType(SingleChildScrollView);
-      final sheet = tester.widget<DraggableScrollableSheet>(
-        find.byType(DraggableScrollableSheet),
-      );
+    final scrollable = find.byType(SingleChildScrollView);
+    final sheet = tester.widget<DraggableScrollableSheet>(
+      find.byType(DraggableScrollableSheet),
+    );
 
-      // 1. Start a snap toward expanded, then interrupt it mid-flight.
-      await tester.drag(scrollable, const Offset(0, -220));
-      await tester.pump(const Duration(milliseconds: 50)); // snap mid-flight
-      await tester.drag(scrollable, const Offset(0, 60)); // interrupts the snap
-      await tester.pumpAndSettle();
+    // 1. Start a snap toward expanded, then interrupt it mid-flight.
+    await tester.drag(scrollable, const Offset(0, -220));
+    await tester.pump(const Duration(milliseconds: 50)); // snap mid-flight
+    await tester.drag(scrollable, const Offset(0, 60)); // interrupts the snap
+    await tester.pumpAndSettle();
 
-      // 2. Re-establish a known expanded state with a direct (non-snap) drag.
-      await tester.drag(scrollable, const Offset(0, -400)); // clamps at max
-      await tester.pump();
+    // 2. Re-establish a known expanded state with a direct (non-snap) drag.
+    await tester.drag(scrollable, const Offset(0, -400)); // clamps at max
+    await tester.pump();
 
-      // 3. Slowly drag down to an intermediate size and release with almost no
-      //    velocity. A recovered snap settles at the standard size; a guard
-      //    stuck true (interrupted animateTo never completing) leaves it
-      //    mid-screen.
-      await tester.timedDrag(
-        scrollable,
-        const Offset(0, 210),
-        const Duration(seconds: 2),
-      );
-      await tester.pumpAndSettle();
+    // 3. Slowly drag down to an intermediate size and release with almost no
+    //    velocity. A recovered snap settles at the standard size; a guard
+    //    stuck true (interrupted animateTo never completing) leaves it
+    //    mid-screen.
+    await tester.timedDrag(
+      scrollable,
+      const Offset(0, 210),
+      const Duration(seconds: 2),
+    );
+    await tester.pumpAndSettle();
 
-      expect(_currentSheetSize(tester), closeTo(sheet.initialChildSize, 0.06));
-      expect(tester.takeException(), isNull);
-    },
-  );
+    expect(_currentSheetSize(tester), closeTo(sheet.initialChildSize, 0.06));
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('dragging the sheet far down dismisses it', (tester) async {
     await tester.pumpWidget(_buildApp(entry: _entry(details: 'Short details')));
