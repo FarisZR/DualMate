@@ -16,11 +16,12 @@ import 'package:dualmate/schedule/reminders/reminder_sync_queue.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:flutter/foundation.dart';
 
-enum ReminderActivationResult { active, permissionsRequired }
+enum ReminderActivationResult { active, permissionsRequired, ignoredPastEvent }
 
 class ClassReminderController extends ChangeNotifier {
   static const Duration upcomingWindow = Duration(days: 14);
   static const Duration resumeCleanupStaleness = Duration(hours: 6);
+  static const Duration missedReminderGracePeriod = Duration(minutes: 10);
 
   final ClassReminderRepository _repository;
   final ScheduleProvider _scheduleProvider;
@@ -36,6 +37,7 @@ class ClassReminderController extends ChangeNotifier {
   Map<String, ClassReminderRule> _oneTimeRulesByOccurrence = const {};
   bool _permissionsGranted = false;
   bool _permissionStateKnown = false;
+  bool _hasLikelyMissedReminder = false;
   bool _initialized = false;
   Future<void>? _initializationFuture;
   Future<void>? _permissionRefreshFuture;
@@ -77,6 +79,7 @@ class ClassReminderController extends ChangeNotifier {
   bool get isInitialized => _initialized;
   bool get remindersPaused =>
       hasReminders && _permissionStateKnown && !_permissionsGranted;
+  bool get hasLikelyMissedReminder => _hasLikelyMissedReminder;
   ReminderSyncQueue get queue => _queue;
 
   Future<void> initialize() {
@@ -94,9 +97,10 @@ class ClassReminderController extends ChangeNotifier {
   }
 
   Future<void> _initialize() async {
-    await _cleanupIfNeeded(force: true);
     await _reloadRules();
     await refreshPermissionState(scheduleWhenRestored: false);
+    await _detectLikelyMissedReminders();
+    await _cleanupIfNeeded(force: true);
     if (hasReminders && permissionsGranted) {
       await reconcileUpcoming(waitForCompletion: true);
     } else if (remindersPaused) {
@@ -111,9 +115,14 @@ class ClassReminderController extends ChangeNotifier {
       await initialize();
       return;
     }
-    await _cleanupIfNeeded();
+    final permissionsWereGranted = _permissionsGranted;
     await _reloadRules();
-    await refreshPermissionState();
+    await refreshPermissionState(scheduleWhenRestored: false);
+    await _detectLikelyMissedReminders();
+    await _cleanupIfNeeded();
+    if (!permissionsWereGranted && permissionsGranted && hasReminders) {
+      await reconcileUpcoming(waitForCompletion: false);
+    }
   }
 
   Future<void> refreshPermissionState({bool scheduleWhenRestored = true}) {
@@ -176,6 +185,19 @@ class ClassReminderController extends ChangeNotifier {
     }
   }
 
+  void dismissLikelyMissedReminder() {
+    if (!_hasLikelyMissedReminder) return;
+    _hasLikelyMissedReminder = false;
+    notifyListeners();
+  }
+
+  Future<void> openBatterySettingsForMissedReminder() async {
+    final api = _notificationApi();
+    if (api == null) return;
+    final opened = await api.openClassReminderBatterySettings();
+    if (opened) dismissLikelyMissedReminder();
+  }
+
   ClassReminderRule? ruleFor(ScheduleEntry entry) {
     final canonical = CanonicalClassName.fromTitle(entry.title);
     return _oneTimeRulesByOccurrence[_occurrenceRuleKey(
@@ -210,6 +232,9 @@ class ClassReminderController extends ChangeNotifier {
     required Duration offset,
     required ClassReminderScope scope,
   }) async {
+    if (!entry.start.isAfter(_now())) {
+      return ReminderActivationResult.ignoredPastEvent;
+    }
     await refreshPermissionState(scheduleWhenRestored: false);
     if (!_permissionsGranted)
       return ReminderActivationResult.permissionsRequired;
@@ -458,6 +483,43 @@ class ClassReminderController extends ChangeNotifier {
     try {
       await _repository.deleteExpired(now);
       _lastCleanup = now;
+    } catch (error, trace) {
+      await _reportQueueFailure(error, trace);
+    }
+  }
+
+  Future<void> _detectLikelyMissedReminders() async {
+    if (!_permissionStateKnown || !_permissionsGranted) return;
+    final sourceIdentity = _sourceProvider.currentSourceIdentity;
+    if (sourceIdentity == 'none') return;
+    final api = _notificationApi();
+    if (api == null) return;
+
+    try {
+      final cutoff = _now().subtract(missedReminderGracePeriod);
+      final manifest = await _repository.loadManifestForSource(sourceIdentity);
+      final overdue = manifest
+          .where((row) => !row.scheduledTime.isAfter(cutoff))
+          .toList(growable: false);
+      if (overdue.isEmpty) return;
+
+      final pendingIds = await api.pendingNotificationIds();
+      final missed = overdue
+          .where((row) => pendingIds.contains(row.notificationId))
+          .toList(growable: false);
+      if (missed.isEmpty) return;
+
+      for (final row in missed) {
+        await _scheduler.cancel(row.notificationId);
+      }
+      await _repository.applyManifestChanges(
+        upserts: const [],
+        removals: missed,
+      );
+      if (!_hasLikelyMissedReminder) {
+        _hasLikelyMissedReminder = true;
+        notifyListeners();
+      }
     } catch (error, trace) {
       await _reportQueueFailure(error, trace);
     }

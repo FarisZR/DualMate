@@ -58,15 +58,42 @@ each card. Rule reloads notify only when effective reminder state changes, and
 foreground schedule refreshes only enqueue reminder reconciliation after the
 unfiltered schedule is persisted.
 
+## Battery-restriction fallback
+
+Exact allow-while-idle alarms remain the default delivery mechanism. DualMate
+does not proactively ask users to disable battery optimization after creating a
+reminder.
+
+On controller initialization and app resume, DualMate checks the existing
+reminder manifest before expired rows are cleaned up. A reminder is considered
+likely missed only when its scheduled time is at least ten minutes in the past
+and its deterministic notification ID is still present in
+`flutter_local_notifications`' pending queue. A fired one-shot notification is
+removed from that queue, so absence from the queue is not treated as proof of a
+miss or delivery.
+
+Detected stale alarms are cancelled and removed from the manifest, then one
+compact localized notice is shown above the schedule. The notice links Galaxy
+devices to Samsung's Never sleeping apps screen and falls back to Android's
+battery-optimization settings and then the app-details screen. No direct
+battery-optimization exemption permission is requested.
+
+Reminder saves for entries that have already started are ignored before any
+permission check, persistence, or reconciliation work. The existing reminder
+button and removal flow remain unchanged.
+
 # Verification
 
-- Full Flutter suite: 548 tests passed.
+- Full Flutter suite: 572 tests passed.
 - Android JVM/unit build: `:app:testDebugUnitTest` passed.
 - `flutter analyze` passed without issues.
 - Regression coverage includes startup dependency readiness, confirmed
   permission denial, channel disablement, settings routing, unfiltered reminder
   reconciliation, filter keep/remove/cancel behavior, ambiguous one-time moves,
   stable Rapla source identity, notification title resolution, and one reminder
-  listener for a multi-entry weekly schedule.
+  listener for a multi-entry weekly schedule. It also covers the missed-alarm
+  queue heuristic, its grace period and permission boundary, localized notice
+  behavior, and the early guard for already-started entries.
 - Galaxy S21+ profile-mode verification covers cold launch, schedule refresh
-  animation, filter interaction, permission notice behavior, and frame timing.
+  animation, filter interaction, permission notice behavior, the compact
+  missed-reminder notice, and opening Samsung's Never sleeping apps screen.

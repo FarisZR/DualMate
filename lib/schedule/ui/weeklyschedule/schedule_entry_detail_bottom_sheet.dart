@@ -340,14 +340,21 @@ class _ScheduleEntryDetailBottomSheetState
       builder: (sheetContext) => ReminderConfigurationSheet(
         existingRule: existingRule,
         onSave: (offset, scope) async {
-          var result = await controller.saveReminder(
+          final result = await controller.saveReminder(
             entry: widget.scheduleEntry,
             offset: offset,
             scope: scope,
           );
-          if (result != ReminderActivationResult.permissionsRequired ||
-              !sheetContext.mounted) {
-            return;
+          if (!sheetContext.mounted) return;
+          switch (result) {
+            case ReminderActivationResult.active:
+              return;
+            case ReminderActivationResult.ignoredPastEvent:
+              // The configuration sheet closes after this callback. Past
+              // events intentionally need no additional message.
+              return;
+            case ReminderActivationResult.permissionsRequired:
+              break;
           }
           final openSettings = await showDialog<bool>(
             context: sheetContext,
@@ -373,7 +380,7 @@ class _ScheduleEntryDetailBottomSheetState
           if (openSettings != true) return;
           await controller.openReliablePermissionSettings();
           if (controller.permissionsGranted) {
-            result = await controller.saveReminder(
+            await controller.saveReminder(
               entry: widget.scheduleEntry,
               offset: offset,
               scope: scope,

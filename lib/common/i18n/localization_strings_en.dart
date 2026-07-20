@@ -197,6 +197,11 @@ final en = {
   "classReminderPausedMessage":
       "DualMate cannot deliver reminders reliably because a required permission is disabled.",
   "classReminderFixPermissions": "Fix permissions",
+  "classReminderMissedTitle": "A class reminder may have been missed",
+  "classReminderMissedMessage":
+      "Your phone may be restricting DualMate in the background. Allow unrestricted battery usage to improve reminder reliability.",
+  "classReminderBatterySettings": "Battery settings",
+  "classReminderDismiss": "Dismiss",
   "classReminderSourceChangeTitle": "Change schedule source?",
   "classReminderSourceChangeMessage":
       "Changing your schedule will remove all class reminders linked to the current schedule.",
