@@ -133,6 +133,47 @@ void main() {
     expect(opens, 1);
   });
 
+  test('pending class notification requests are exposed as IDs only', () async {
+    final api = NotificationApi(
+      pendingNotificationIdsLoader: (_) async => {-42, -7},
+    );
+
+    expect(await api.pendingNotificationIds(), {-42, -7});
+  });
+
+  test('class reminder battery settings use the dedicated opener', () async {
+    var opens = 0;
+    final api = NotificationApi(
+      classReminderBatterySettingsOpener: () async {
+        opens++;
+        return true;
+      },
+    );
+
+    expect(await api.openClassReminderBatterySettings(), isTrue);
+    expect(opens, 1);
+  });
+
+  test('class reminder battery settings swallow platform failures', () async {
+    final api = NotificationApi(
+      classReminderBatterySettingsOpener: () async {
+        throw PlatformException(code: 'settings-unavailable');
+      },
+    );
+
+    expect(await api.openClassReminderBatterySettings(), isFalse);
+  });
+
+  test(
+    'void notification API has no pending IDs or battery settings',
+    () async {
+      final api = VoidNotificationApi();
+
+      expect(await api.pendingNotificationIds(), isEmpty);
+      expect(await api.openClassReminderBatterySettings(), isFalse);
+    },
+  );
+
   test(
     'class reminders use an exact alarm at the requested Berlin time',
     () async {

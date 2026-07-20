@@ -208,6 +208,11 @@ final de = {
   "classReminderPausedMessage":
       "Aktiviere Benachrichtigungen und genaue Alarme, damit sie wieder funktionieren.",
   "classReminderFixPermissions": "Berechtigungen prüfen",
+  "classReminderMissedTitle": "Eine Erinnerung wurde möglicherweise verpasst",
+  "classReminderMissedMessage":
+      "Dein Smartphone schränkt DualMate möglicherweise im Hintergrund ein. Erlaube eine uneingeschränkte Akkunutzung, damit Erinnerungen zuverlässiger funktionieren.",
+  "classReminderBatterySettings": "Akkueinstellungen",
+  "classReminderDismiss": "Schließen",
   "classReminderSourceChangeTitle": "Stundenplanquelle ändern?",
   "classReminderSourceChangeMessage":
       "Wenn du deinen Stundenplan änderst, werden alle mit dem aktuellen Stundenplan verknüpften Klassenerinnerungen entfernt.",

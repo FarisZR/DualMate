@@ -297,6 +297,214 @@ void main() {
     },
   );
 
+  test(
+    'initialization detects an overdue pending alarm before expired cleanup',
+    () async {
+      final now = DateTime(2026, 7, 20, 8);
+      final row = _manifestRow(
+        id: 42,
+        scheduledTime: now.subtract(const Duration(minutes: 30)),
+        classStart: now.subtract(const Duration(minutes: 5)),
+      );
+      final harness = _ReminderHarness(
+        now: now,
+        manifest: [row],
+        pendingIds: {42},
+      );
+      addTearDown(harness.controller.dispose);
+
+      await harness.controller.initialize();
+
+      expect(harness.controller.hasLikelyMissedReminder, isTrue);
+      expect(harness.permissions.pendingReads, 1);
+      expect(harness.scheduler.cancelledIds, [42]);
+      expect(harness.repository.manifest, isEmpty);
+      expect(harness.repository.deleteExpiredCalls, greaterThanOrEqualTo(1));
+    },
+  );
+
+  test(
+    'overdue alarm absent from pending queue is not treated as missed',
+    () async {
+      final now = DateTime(2026, 7, 20, 8);
+      final row = _manifestRow(
+        id: 42,
+        scheduledTime: now.subtract(const Duration(minutes: 30)),
+        classStart: now.add(const Duration(hours: 1)),
+      );
+      final harness = _ReminderHarness(now: now, manifest: [row]);
+      addTearDown(harness.controller.dispose);
+
+      await harness.controller.initialize();
+
+      expect(harness.controller.hasLikelyMissedReminder, isFalse);
+      expect(harness.permissions.pendingReads, 1);
+      expect(harness.scheduler.cancelledIds, isEmpty);
+      expect(harness.repository.manifest, [row]);
+    },
+  );
+
+  test('pending queue is not queried when no alarm is overdue', () async {
+    final now = DateTime(2026, 7, 20, 8);
+    final row = _manifestRow(
+      id: 42,
+      scheduledTime: now.subtract(const Duration(minutes: 9)),
+      classStart: now.add(const Duration(hours: 1)),
+    );
+    final harness = _ReminderHarness(
+      now: now,
+      manifest: [row],
+      pendingIds: {42},
+    );
+    addTearDown(harness.controller.dispose);
+
+    await harness.controller.initialize();
+
+    expect(harness.controller.hasLikelyMissedReminder, isFalse);
+    expect(harness.permissions.pendingReads, 0);
+  });
+
+  test(
+    'denied permissions suppress battery warning and keep paused flow',
+    () async {
+      final now = DateTime(2026, 7, 20, 8);
+      final harness = _ReminderHarness(
+        now: now,
+        rules: [_recurringRule()],
+        manifest: [
+          _manifestRow(
+            id: 42,
+            scheduledTime: now.subtract(const Duration(minutes: 30)),
+            classStart: now.add(const Duration(hours: 1)),
+          ),
+        ],
+        permissionsGranted: false,
+        pendingIds: {42},
+      );
+      addTearDown(harness.controller.dispose);
+
+      await harness.controller.initialize();
+
+      expect(harness.controller.remindersPaused, isTrue);
+      expect(harness.controller.hasLikelyMissedReminder, isFalse);
+      expect(harness.permissions.pendingReads, 0);
+    },
+  );
+
+  test(
+    'multiple overdue pending alarms produce one notice and are consumed',
+    () async {
+      final now = DateTime(2026, 7, 20, 8);
+      final harness = _ReminderHarness(
+        now: now,
+        manifest: [
+          _manifestRow(
+            id: 42,
+            scheduledTime: now.subtract(const Duration(minutes: 30)),
+            classStart: now.add(const Duration(hours: 1)),
+          ),
+          _manifestRow(
+            id: 43,
+            scheduledTime: now.subtract(const Duration(minutes: 11)),
+            classStart: now.add(const Duration(hours: 2)),
+          ),
+        ],
+        pendingIds: {42, 43},
+      );
+      addTearDown(harness.controller.dispose);
+
+      await harness.controller.initialize();
+
+      expect(harness.controller.hasLikelyMissedReminder, isTrue);
+      expect(harness.scheduler.cancelledIds, containsAll([42, 43]));
+      expect(harness.repository.manifest, isEmpty);
+    },
+  );
+
+  test(
+    'missed reminder notice can be dismissed and settings clear on success',
+    () async {
+      final now = DateTime(2026, 7, 20, 8);
+      final harness = _ReminderHarness(
+        now: now,
+        manifest: [
+          _manifestRow(
+            id: 42,
+            scheduledTime: now.subtract(const Duration(minutes: 30)),
+            classStart: now.add(const Duration(hours: 1)),
+          ),
+        ],
+        pendingIds: {42},
+      );
+      addTearDown(harness.controller.dispose);
+      await harness.controller.initialize();
+
+      harness.controller.dismissLikelyMissedReminder();
+      expect(harness.controller.hasLikelyMissedReminder, isFalse);
+
+      harness.repository.manifest.add(
+        _manifestRow(
+          id: 43,
+          scheduledTime: now.subtract(const Duration(minutes: 20)),
+          classStart: now.add(const Duration(hours: 2)),
+        ),
+      );
+      harness.permissions.pendingIds.add(43);
+      await harness.controller.onAppResumed();
+      expect(harness.controller.hasLikelyMissedReminder, isTrue);
+
+      harness.permissions.batterySettingsResult = false;
+      await harness.controller.openBatterySettingsForMissedReminder();
+      expect(harness.controller.hasLikelyMissedReminder, isTrue);
+
+      harness.permissions.batterySettingsResult = true;
+      await harness.controller.openBatterySettingsForMissedReminder();
+      expect(harness.controller.hasLikelyMissedReminder, isFalse);
+      expect(harness.permissions.batterySettingsOpens, 2);
+    },
+  );
+
+  test(
+    'saving a reminder for an already-started entry is ignored early',
+    () async {
+      final now = DateTime(2026, 7, 20, 10);
+      final harness = _ReminderHarness(now: now);
+      addTearDown(harness.controller.dispose);
+
+      final result = await harness.controller.saveReminder(
+        entry: _entry(start: now),
+        offset: const Duration(minutes: 15),
+        scope: ClassReminderScope.oneTime,
+      );
+
+      expect(result, ReminderActivationResult.ignoredPastEvent);
+      expect(harness.permissions.permissionReads, 0);
+      expect(harness.repository.ruleChangeCalls, 0);
+      expect(harness.scheduleProvider.cacheReads, 0);
+    },
+  );
+
+  test(
+    'saving a future reminder retains the existing permission flow',
+    () async {
+      final now = DateTime(2026, 7, 20, 10);
+      final harness = _ReminderHarness(now: now);
+      addTearDown(harness.controller.dispose);
+
+      final result = await harness.controller.saveReminder(
+        entry: _entry(start: now.add(const Duration(hours: 1))),
+        offset: const Duration(minutes: 15),
+        scope: ClassReminderScope.oneTime,
+      );
+      await harness.controller.queue.drain();
+
+      expect(result, ReminderActivationResult.active);
+      expect(harness.permissions.permissionReads, greaterThanOrEqualTo(3));
+      expect(harness.repository.ruleChangeCalls, greaterThanOrEqualTo(1));
+      expect(harness.scheduleProvider.cacheReads, 1);
+    },
+  );
+
   test('failed initialization can be retried', () async {
     final repository = _FailOnceReminderRepository();
     final source = _FakeScheduleSourceProvider();
@@ -408,6 +616,84 @@ class _GrantedNotificationApi extends VoidNotificationApi {
   Future<bool> canScheduleExactNotifications() async => true;
 }
 
+class _PendingNotificationApi extends VoidNotificationApi {
+  final bool permissionsGranted;
+  final Set<int> pendingIds;
+  int pendingReads = 0;
+  int permissionReads = 0;
+  int batterySettingsOpens = 0;
+  bool batterySettingsResult = true;
+
+  _PendingNotificationApi({
+    this.permissionsGranted = true,
+    Set<int>? pendingIds,
+  }) : pendingIds = pendingIds ?? <int>{};
+
+  @override
+  Future<bool> areNotificationsEnabled() async {
+    permissionReads++;
+    return permissionsGranted;
+  }
+
+  @override
+  Future<bool> areClassRemindersEnabled() async {
+    permissionReads++;
+    return permissionsGranted;
+  }
+
+  @override
+  Future<bool> canScheduleExactNotifications() async {
+    permissionReads++;
+    return permissionsGranted;
+  }
+
+  @override
+  Future<Set<int>> pendingNotificationIds() async {
+    pendingReads++;
+    return Set<int>.from(pendingIds);
+  }
+
+  @override
+  Future<bool> openClassReminderBatterySettings() async {
+    batterySettingsOpens++;
+    return batterySettingsResult;
+  }
+}
+
+class _ReminderHarness {
+  late final _TrackingReminderRepository repository;
+  late final _PendingNotificationApi permissions;
+  late final _RecordingScheduler scheduler;
+  late final _FakeScheduleSourceProvider source;
+  late final _TrackingScheduleProvider scheduleProvider;
+  late final ClassReminderController controller;
+
+  _ReminderHarness({
+    required DateTime now,
+    List<ClassReminderRule>? rules,
+    List<ScheduledClassNotification>? manifest,
+    bool permissionsGranted = true,
+    Set<int>? pendingIds,
+  }) {
+    repository = _TrackingReminderRepository(rules: rules, manifest: manifest);
+    permissions = _PendingNotificationApi(
+      permissionsGranted: permissionsGranted,
+      pendingIds: pendingIds,
+    );
+    scheduler = _RecordingScheduler();
+    source = _FakeScheduleSourceProvider();
+    scheduleProvider = _TrackingScheduleProvider(source);
+    controller = ClassReminderController(
+      repository: repository,
+      scheduleProvider: scheduleProvider,
+      sourceProvider: source,
+      scheduler: scheduler,
+      notificationApi: () => permissions,
+      now: () => now,
+    );
+  }
+}
+
 class _MemoryReminderRepository extends ClassReminderRepository {
   _MemoryReminderRepository() : super(_UnusedDatabaseAccess());
 
@@ -478,6 +764,21 @@ class _FakeScheduleProvider extends ScheduleProvider {
     DateTime start,
     DateTime end,
   ) async {
+    return Schedule();
+  }
+}
+
+class _TrackingScheduleProvider extends _FakeScheduleProvider {
+  int cacheReads = 0;
+
+  _TrackingScheduleProvider(super.source);
+
+  @override
+  Future<Schedule> getUnfilteredCachedSchedule(
+    DateTime start,
+    DateTime end,
+  ) async {
+    cacheReads++;
     return Schedule();
   }
 }
@@ -572,3 +873,121 @@ class _ManifestReminderRepository extends _MemoryReminderRepository {
     // No-op: no real database in tests.
   }
 }
+
+class _TrackingReminderRepository extends ClassReminderRepository {
+  final List<ClassReminderRule> rules;
+  final List<ScheduledClassNotification> manifest;
+  int deleteExpiredCalls = 0;
+  int ruleChangeCalls = 0;
+
+  _TrackingReminderRepository({
+    List<ClassReminderRule>? rules,
+    List<ScheduledClassNotification>? manifest,
+  }) : rules = rules ?? <ClassReminderRule>[],
+       manifest = manifest ?? <ScheduledClassNotification>[],
+       super(_UnusedDatabaseAccess());
+
+  @override
+  Future<List<ClassReminderRule>> loadRelevantRules({
+    required String sourceIdentity,
+    required DateTime now,
+  }) async => List<ClassReminderRule>.from(rules);
+
+  @override
+  Future<List<ScheduledClassNotification>> loadManifestForSource(
+    String sourceIdentity,
+  ) async => manifest
+      .where((row) => row.sourceIdentity == sourceIdentity)
+      .toList(growable: false);
+
+  @override
+  Future<List<ScheduledClassNotification>> loadManifestForWindow({
+    required String sourceIdentity,
+    required DateTime start,
+    required DateTime end,
+  }) async => manifest
+      .where(
+        (row) =>
+            row.sourceIdentity == sourceIdentity &&
+            !row.classStart.isBefore(start) &&
+            row.classStart.isBefore(end),
+      )
+      .toList(growable: false);
+
+  @override
+  Future<void> applyManifestChanges({
+    required List<ScheduledClassNotification> upserts,
+    required List<ScheduledClassNotification> removals,
+  }) async {
+    final removedKeys = {
+      for (final row in removals) '${row.ruleId}|${row.occurrenceIdentity}',
+    };
+    manifest.removeWhere(
+      (row) => removedKeys.contains('${row.ruleId}|${row.occurrenceIdentity}'),
+    );
+    for (final row in upserts) {
+      manifest.removeWhere(
+        (existing) =>
+            existing.ruleId == row.ruleId &&
+            existing.occurrenceIdentity == row.occurrenceIdentity,
+      );
+      manifest.add(row);
+    }
+  }
+
+  @override
+  Future<void> applyRuleChanges({
+    required List<ClassReminderRule> upserts,
+    required List<String> removedRuleIds,
+  }) async {
+    ruleChangeCalls++;
+    rules.removeWhere((rule) => removedRuleIds.contains(rule.id));
+    for (final rule in upserts) {
+      rules.removeWhere((existing) => existing.id == rule.id);
+      rules.add(rule);
+    }
+  }
+
+  @override
+  Future<ExpiredReminderDeletionCount> deleteExpired(DateTime now) async {
+    deleteExpiredCalls++;
+    final previousManifestLength = manifest.length;
+    manifest.removeWhere((row) => !row.classStart.isAfter(now));
+    return ExpiredReminderDeletionCount(
+      oneTimeRules: 0,
+      manifestRows: previousManifestLength - manifest.length,
+    );
+  }
+}
+
+ClassReminderRule _recurringRule() => const ClassReminderRule(
+  id: 'recht',
+  scope: ClassReminderScope.recurring,
+  canonicalTitle: 'Recht',
+  offset: Duration(minutes: 30),
+  sourceIdentity: 'rapla:a',
+);
+
+ScheduledClassNotification _manifestRow({
+  required int id,
+  required DateTime scheduledTime,
+  required DateTime classStart,
+}) => ScheduledClassNotification(
+  ruleId: 'rule-$id',
+  occurrenceIdentity: 'occurrence-$id',
+  sourceIdentity: 'rapla:a',
+  notificationId: id,
+  scheduledTime: scheduledTime,
+  classStart: classStart,
+  contentFingerprint: 'fingerprint-$id',
+);
+
+ScheduleEntry _entry({required DateTime start}) => ScheduleEntry(
+  start: start,
+  end: start.add(const Duration(hours: 1)),
+  title: 'Recht',
+  details: '',
+  professor: '',
+  room: '',
+  type: ScheduleEntryType.Class,
+);

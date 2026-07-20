@@ -301,6 +301,9 @@ class ClassReminderPauseAwareContent extends StatelessWidget {
       animation: controller,
       child: child,
       builder: (context, schedule) {
+        final remindersPaused = controller.remindersPaused;
+        final showMissedReminder =
+            !remindersPaused && controller.hasLikelyMissedReminder;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -309,17 +312,40 @@ class ClassReminderPauseAwareContent extends StatelessWidget {
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOutCubic,
                 alignment: Alignment.topCenter,
-                heightFactor: controller.remindersPaused ? 1 : 0,
+                heightFactor: remindersPaused ? 1 : 0,
                 child: IgnorePointer(
-                  ignoring: !controller.remindersPaused,
+                  ignoring: !remindersPaused,
                   child: AnimatedOpacity(
                     duration: const Duration(milliseconds: 120),
-                    opacity: controller.remindersPaused ? 1 : 0,
+                    opacity: remindersPaused ? 1 : 0,
                     child: Padding(
                       padding: const EdgeInsets.only(top: 12),
                       child: ClassReminderPausedNotice(
                         onFixPermissions:
                             controller.openReliablePermissionSettings,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            ClipRect(
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                heightFactor: showMissedReminder ? 1 : 0,
+                child: IgnorePointer(
+                  ignoring: !showMissedReminder,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 120),
+                    opacity: showMissedReminder ? 1 : 0,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: ClassReminderLikelyMissedNotice(
+                        onOpenBatterySettings:
+                            controller.openBatterySettingsForMissedReminder,
+                        onDismiss: controller.dismissLikelyMissedReminder,
                       ),
                     ),
                   ),

@@ -441,6 +441,12 @@ class L {
       _getValue("classReminderPausedMessage");
   String get classReminderFixPermissions =>
       _getValue("classReminderFixPermissions");
+  String get classReminderMissedTitle => _getValue("classReminderMissedTitle");
+  String get classReminderMissedMessage =>
+      _getValue("classReminderMissedMessage");
+  String get classReminderBatterySettings =>
+      _getValue("classReminderBatterySettings");
+  String get classReminderDismiss => _getValue("classReminderDismiss");
   String get classReminderSourceChangeTitle =>
       _getValue("classReminderSourceChangeTitle");
   String get classReminderSourceChangeMessage =>

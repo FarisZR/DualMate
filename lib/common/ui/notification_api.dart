@@ -29,6 +29,11 @@ typedef NotificationChannelEnabledChecker =
 
 typedef NotificationChannelSettingsOpener = Future<bool> Function();
 
+typedef NotificationPendingIdsLoader =
+    Future<Set<int>> Function(FlutterLocalNotificationsPlugin plugin);
+
+typedef NotificationBatterySettingsOpener = Future<bool> Function();
+
 class NotificationApi {
   static const String classReminderChannelId = 'class_reminders';
   static const MethodChannel _settingsChannel = MethodChannel(
@@ -40,6 +45,8 @@ class NotificationApi {
   final NotificationRuntimePermissionRequester _runtimePermissionRequester;
   final NotificationChannelEnabledChecker _classReminderChannelChecker;
   final NotificationChannelSettingsOpener _classReminderSettingsOpener;
+  final NotificationPendingIdsLoader _pendingNotificationIdsLoader;
+  final NotificationBatterySettingsOpener _classReminderBatterySettingsOpener;
 
   NotificationApi({
     FlutterLocalNotificationsPlugin? localNotificationsPlugin,
@@ -47,6 +54,8 @@ class NotificationApi {
     NotificationRuntimePermissionRequester? runtimePermissionRequester,
     NotificationChannelEnabledChecker? classReminderChannelChecker,
     NotificationChannelSettingsOpener? classReminderSettingsOpener,
+    NotificationPendingIdsLoader? pendingNotificationIdsLoader,
+    NotificationBatterySettingsOpener? classReminderBatterySettingsOpener,
   }) : _localNotificationsPlugin =
            localNotificationsPlugin ?? FlutterLocalNotificationsPlugin(),
        _pluginInitializer = pluginInitializer ?? _defaultPluginInitializer,
@@ -55,7 +64,12 @@ class NotificationApi {
        _classReminderChannelChecker =
            classReminderChannelChecker ?? _defaultClassReminderChannelChecker,
        _classReminderSettingsOpener =
-           classReminderSettingsOpener ?? _defaultClassReminderSettingsOpener;
+           classReminderSettingsOpener ?? _defaultClassReminderSettingsOpener,
+       _pendingNotificationIdsLoader =
+           pendingNotificationIdsLoader ?? _defaultPendingNotificationIdsLoader,
+       _classReminderBatterySettingsOpener =
+           classReminderBatterySettingsOpener ??
+           _defaultClassReminderBatterySettingsOpener;
 
   ///
   /// Initialize the notifications. You can't show any notifications before you
@@ -165,6 +179,20 @@ class NotificationApi {
         false;
   }
 
+  static Future<Set<int>> _defaultPendingNotificationIdsLoader(
+    FlutterLocalNotificationsPlugin plugin,
+  ) async {
+    final requests = await plugin.pendingNotificationRequests();
+    return requests.map((request) => request.id).toSet();
+  }
+
+  static Future<bool> _defaultClassReminderBatterySettingsOpener() async {
+    return await _settingsChannel.invokeMethod<bool>(
+          'openClassReminderBatterySettings',
+        ) ??
+        false;
+  }
+
   ///
   /// Show a notification with the given title and message
   ///
@@ -217,6 +245,20 @@ class NotificationApi {
   Future<bool> openClassReminderSettings() async {
     try {
       return await _classReminderSettingsOpener();
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
+  Future<Set<int>> pendingNotificationIds() {
+    return _pendingNotificationIdsLoader(_localNotificationsPlugin);
+  }
+
+  Future<bool> openClassReminderBatterySettings() async {
+    try {
+      return await _classReminderBatterySettingsOpener();
     } on PlatformException {
       return false;
     } on MissingPluginException {
@@ -310,6 +352,12 @@ class VoidNotificationApi extends NotificationApi {
 
   @override
   Future<bool> openClassReminderSettings() => Future.value(false);
+
+  @override
+  Future<Set<int>> pendingNotificationIds() => Future.value(<int>{});
+
+  @override
+  Future<bool> openClassReminderBatterySettings() => Future.value(false);
 
   @override
   Future<bool> canScheduleExactNotifications() => Future.value(false);
