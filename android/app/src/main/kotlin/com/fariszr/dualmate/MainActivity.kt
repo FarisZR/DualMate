@@ -6,6 +6,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugins.GeneratedPluginRegistrant
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -193,7 +194,10 @@ class MainActivity : FlutterActivity() {
         return try {
             startActivity(settingsIntent)
             true
-        } catch (error: Exception) {
+        } catch (error: ActivityNotFoundException) {
+            Log.w("MainActivity", "Could not open settings intent", error)
+            false
+        } catch (error: SecurityException) {
             Log.w("MainActivity", "Could not open settings intent", error)
             false
         }

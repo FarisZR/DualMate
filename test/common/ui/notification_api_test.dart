@@ -141,6 +141,32 @@ void main() {
     expect(await api.pendingNotificationIds(), {-42, -7});
   });
 
+  test(
+    'pending notification IDs use an empty safe default on platform failure',
+    () async {
+      final api = NotificationApi(
+        pendingNotificationIdsLoader: (_) async {
+          throw PlatformException(code: 'pending-failed');
+        },
+      );
+
+      expect(await api.pendingNotificationIds(), isEmpty);
+    },
+  );
+
+  test(
+    'pending notification IDs use an empty safe default without a plugin',
+    () async {
+      final api = NotificationApi(
+        pendingNotificationIdsLoader: (_) async {
+          throw MissingPluginException('not registered');
+        },
+      );
+
+      expect(await api.pendingNotificationIds(), isEmpty);
+    },
+  );
+
   test('class reminder battery settings use the dedicated opener', () async {
     var opens = 0;
     final api = NotificationApi(

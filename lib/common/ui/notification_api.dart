@@ -252,8 +252,14 @@ class NotificationApi {
     }
   }
 
-  Future<Set<int>> pendingNotificationIds() {
-    return _pendingNotificationIdsLoader(_localNotificationsPlugin);
+  Future<Set<int>> pendingNotificationIds() async {
+    try {
+      return await _pendingNotificationIdsLoader(_localNotificationsPlugin);
+    } on PlatformException {
+      return <int>{};
+    } on MissingPluginException {
+      return <int>{};
+    }
   }
 
   Future<bool> openClassReminderBatterySettings() async {
