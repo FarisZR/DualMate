@@ -1,15 +1,32 @@
-# AGENTS.md - Engineering Guide for DualMate
+# Dualmate
 
-## Project Overview
+DualMate is a companion app for DHBW students, it's an app that gives students information for their studies, and helps them in their day-to-day student life.
+it shows them stuff like their schedule, what's their to eat in the canteen and so on.
 
-- Project: `DualMate` (Flutter/Dart app for DHBW students)
+## The Target User
+
+Our target users are students at the DHBW, most of the DHBW students aren't technical, the app should be easy to use, follow standard platform UX conventions, have a nice UI and just look like a plain friendly student app.
+
+Students often save money on their phones, performance optimization is therefore of utmost priority, we can't assume students will have flagship performance.
+
+## App design
+
+### just get out of the way.
+The app must just follow the UX conventions of the platform, stick to Material 3 / Material you design language, and just follow how an android user would think such an app should function.
+
+This is a companion app, it should be reliable, easy to use and just get out of the way. the faster a user can do something, the better.
+
+### Material 3
+this app is designed for android, you should stick to material 3 / material you design standards. everything must feel like native material 3.
+
+## Technical details
 - Target platform: Android
 - iOS: currently unmaintained, ignore iOS for fixes/features unless explicitly requested
 
-## Localization
+### Localization
 - Supported locales: English (`en`) and German (`de`)
 
-## Testing Guidance
+### Testing Guidance
 
 - Test tree mirrors feature structure in `test/`.
 - Run targeted tests for touched areas, then broader suites.
@@ -19,12 +36,7 @@
   - `test/canteen/ui/*`
   - parser/fixture tests under `test/.../html_resources`
 
-Use real Android device runs when available for final verification of:
-- lifecycle/resume behavior
-- widget tap navigation/payload handling
-- background refresh and performance
-
-## Documentation Workflow
+### Documentation Workflow
 
 - Record fixes in `docs/solutions/<category>/...md` with frontmatter.
 - Keep implementation plans in `docs/plans/`.
@@ -36,17 +48,11 @@ Use real Android device runs when available for final verification of:
   - `docs/multi-day-widgets.md`
   - `docs/support/launch-and-orientation.md`
 
-## workflow for new features / bugfixes
+### workflow for new features / bugfixes
 
 - Always look up relevant docs using the tools you have access to look for the most up to date way to implement a feature or a fix.
-- Test driven development, write automated tests first with full coverage of the bug or the new feature
-- Test your final changes using the debugger and the connected android device if available by reading the logs and checking for issues.
+- Test driven development, write automated tests first with full coverage of the bug or the new feature, to prevent regressions.
+- Test your final changes using a connected android device via the `android` cli if available by reading the logs and checking for issues.
 - target Material you (Material 3) design language (https://m3.material.io/develop/flutter, https://m3.material.io/foundations/content-design/overview)
-
-## Practical Notes
-
-- `README.md` is marked TODO and is not the source of truth for current architecture.
-- `android/build/...` contains generated artifacts; do not treat them as source docs.
-- There is no strict custom lint config (`analysis_options.yaml` absent).
-
-- This is a hard cutover project, meaning there are no current users. Backwards compatibility isn't needed and it shouldn't be taken into account nor have any code written for it.
+- You must always run the full cold start performance harness to make sure your new changes don't cause a performance regression.
+- Your PRs must include screenshots and video captures for visual changes, if it's a new prompt on an exception.
