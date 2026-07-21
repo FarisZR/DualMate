@@ -9,6 +9,8 @@ Our target users are students at the DHBW, most of the DHBW students aren't tech
 
 Students often save money on their phones, performance optimization is therefore of utmost priority, we can't assume students will have flagship performance.
 
+to fix catastrophic issues and crashes asap, we use sentry to capture errors so they can be fixed asap before a user faces them.
+
 ## App design
 
 ### just get out of the way.
@@ -35,6 +37,8 @@ this app is designed for android, you should stick to material 3 / material you 
   - `test/schedule/ui/weeklyschedule/*`
   - `test/canteen/ui/*`
   - parser/fixture tests under `test/.../html_resources`
+
+- App performance is only reflective in profile and release builds, use the local release build type to create a release build using a debug key.
 
 ### Documentation Workflow
 
