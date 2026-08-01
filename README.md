@@ -32,6 +32,7 @@ The app is designed to feel fast, clean, and easy to glance at. Instead of jumpi
 <p align="center">
   <!-- Phone (light mode) screenshots -->
   <img src="screenshots/phone-light-schedule.png" alt="Phone - schedule (light)" width="200" />
+  <img src="screenshots/phone-light-reminder-setup.png" alt="Phone - Reminder seutp (light)" width="200" />
   <img src="screenshots/phone-light-canteen.png" alt="Phone - canteen (light)" width="200" />
   <img src="screenshots/phone-light-dates.png" alt="Phone - dates (light)" width="200" />
   <img src="screenshots/phone-light-dualis.png" alt="Phone - dualis (light)" width="200" />
@@ -41,10 +42,12 @@ The app is designed to feel fast, clean, and easy to glance at. Instead of jumpi
 <p align="center">
   <!-- Tablet (dark mode) screenshots -->
   <img src="screenshots/tablet-schedule.jpg" alt="Tablet - schedule (dark)" width="760" />
+  <img src="screenshots/tablet-reminder-setup.jpg" alt="Tablet - Reminder setup (dark)" width="380" />
   <img src="screenshots/tablet-canteen.jpg" alt="Tablet - canteen (dark)" width="380" />
   <img src="screenshots/tablet-dates.jpg" alt="Tablet - dates (dark)" width="380" />
   <img src="screenshots/tablet-dualis.jpg" alt="Tablet - dualis (dark)" width="380" />
   <img src="screenshots/tablet-exams.jpg" alt="Tablet - exams (dark)" width="380" />
+  
 </p>
 
 
