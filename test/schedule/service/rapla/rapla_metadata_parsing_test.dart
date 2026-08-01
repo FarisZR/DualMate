@@ -9,6 +9,10 @@ Future<void> main() async {
     '${Directory.current.absolute.path}/test/schedule/service/rapla/'
     'html_resources/rapla_v2_metadata_response.html',
   ).readAsString();
+  final v2LinkedNoTooltipResponse = await File(
+    '${Directory.current.absolute.path}/test/schedule/service/rapla/'
+    'html_resources/rapla_v2_link_metadata_response.html',
+  ).readAsString();
 
   test('preserves v1 tooltip metadata and classification', () {
     final result = RaplaResponseParser().parseSchedule(_v1TooltipResponse);
@@ -37,6 +41,24 @@ Future<void> main() async {
     expect(entry.details, isEmpty);
     expect(entry.professor, 'Dr. Ada & Lin, Prof. Bea');
     expect(entry.room, 'Room & Lab, Room 2');
+    expect(entry.type, ScheduleEntryType.Class);
+  });
+
+  test('extracts metadata when v2 link labels wrap the anchor contents', () {
+    final result = RaplaResponseParser().parseSchedule(
+      v2LinkedNoTooltipResponse,
+    );
+
+    expect(result.errors, isEmpty);
+    expect(result.schedule.entries, hasLength(1));
+
+    final entry = result.schedule.entries.single;
+    expect(entry.start, DateTime(2026, 10, 5, 9));
+    expect(entry.end, DateTime(2026, 10, 5, 10, 30));
+    expect(entry.title, 'Linked Module');
+    expect(entry.details, isEmpty);
+    expect(entry.professor, 'Dr. Link');
+    expect(entry.room, 'R1');
     expect(entry.type, ScheduleEntryType.Class);
   });
 }

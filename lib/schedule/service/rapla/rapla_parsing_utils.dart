@@ -172,12 +172,17 @@ class RaplaParsingUtils {
   }
 
   static String _extractTitleFromAnchor(Element anchor) {
-    var lineBreakIndex = anchor.nodes.indexWhere(
-      (node) => node is Element && node.localName == "br",
-    );
+    var lineBreaks = anchor.getElementsByTagName("br");
+    if (lineBreaks.isEmpty) return "";
+
+    var lineBreak = lineBreaks.first;
+    var parent = lineBreak.parent;
+    if (parent == null) return "";
+
+    var lineBreakIndex = parent.nodes.indexOf(lineBreak);
     if (lineBreakIndex == -1) return "";
 
-    return _serializeNodes(anchor.nodes.skip(lineBreakIndex + 1));
+    return _serializeNodes(parent.nodes.skip(lineBreakIndex + 1));
   }
 
   static String _serializeNodes(Iterable<Node> nodes) {
