@@ -58,5 +58,5 @@ this app is designed for android, you should stick to material 3 / material you 
 - Test driven development, write automated tests first with full coverage of the bug or the new feature, to prevent regressions.
 - Test your final changes using a connected android device via the `android` cli if available by reading the logs and checking for issues.
 - target Material you (Material 3) design language (https://m3.material.io/develop/flutter, https://m3.material.io/foundations/content-design/overview)
-- You must always run the full cold start performance harness to make sure your new changes don't cause a performance regression.
+- On changes that affect the UI, the UI thread or how the app renders things, you must always run the full cold start performance harness to make sure your new changes don't cause a performance regression.
 - Your PRs must include screenshots and video captures for visual changes, if it's a new prompt on an exception.
