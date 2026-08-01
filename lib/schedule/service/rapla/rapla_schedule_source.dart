@@ -20,8 +20,11 @@ class RaplaScheduleSource extends ScheduleSource {
   }
 
   @override
-  Future<ScheduleQueryResult> querySchedule(DateTime from, DateTime to,
-      [CancellationToken? cancellationToken]) async {
+  Future<ScheduleQueryResult> querySchedule(
+    DateTime from,
+    DateTime to, [
+    CancellationToken? cancellationToken,
+  ]) async {
     var token = cancellationToken ?? CancellationToken();
     DateTime current = toDayOfWeek(from, DateTime.monday);
 
@@ -30,8 +33,7 @@ class RaplaScheduleSource extends ScheduleSource {
 
     var didChangeMonth = false;
 
-    while ((to.isAfter(current) && !token.isCancelled()) ||
-        didChangeMonth) {
+    while ((to.isAfter(current) && !token.isCancelled()) || didChangeMonth) {
       try {
         var weekSchedule = await _fetchRaplaSource(current, token);
 
@@ -76,7 +78,7 @@ class RaplaScheduleSource extends ScheduleSource {
       var schedule = responseParser.parseSchedule(response.body);
 
       schedule.schedule.urls.add(requestUri.toString());
-    
+
       return schedule;
     } on ParseException catch (_) {
       rethrow;
@@ -92,6 +94,7 @@ class RaplaScheduleSource extends ScheduleSource {
   /// - <rapla_url>?key=XXXXXXXXXX
   /// - <rapla_url>?key=XXXXXXXXXX&salt=XXXXX&allocatable_id=XXXXXX
   /// - <rapla_url>?user=XXXXXXXXXX&file=XXXXX&page=XXXXXX
+  /// - <rapla_url>/calendar?user=XXXXXXXXXX&file=XXXXX
   ///
   Uri buildRequestUri(DateTime date) {
     var normalizedUrl = raplaUrl;
@@ -115,7 +118,9 @@ class RaplaScheduleSource extends ScheduleSource {
   }
 
   Future<Response> _makeRequest(
-      Uri uri, CancellationToken? cancellationToken) async {
+    Uri uri,
+    CancellationToken? cancellationToken,
+  ) async {
     var requestCancellationToken = http.CancellationToken();
     var token = cancellationToken ?? CancellationToken();
 
@@ -124,19 +129,24 @@ class RaplaScheduleSource extends ScheduleSource {
         requestCancellationToken.cancel();
       });
 
-      var response = await http.HttpClientHelper.get(uri,
-          cancelToken: requestCancellationToken);
+      var response = await http.HttpClientHelper.get(
+        uri,
+        cancelToken: requestCancellationToken,
+      );
 
       if (response == null &&
           !requestCancellationToken.isCanceled &&
           uri.scheme == "http") {
         var httpsUri = uri.replace(scheme: "https");
-        response = await http.HttpClientHelper.get(httpsUri,
-            cancelToken: requestCancellationToken);
+        response = await http.HttpClientHelper.get(
+          httpsUri,
+          cancelToken: requestCancellationToken,
+        );
 
         if (response == null && !requestCancellationToken.isCanceled) {
           throw ServiceRequestFailed(
-              "Http request failed for $uri (https fallback $httpsUri)");
+            "Http request failed for $uri (https fallback $httpsUri)",
+          );
         }
       }
 
@@ -183,7 +193,9 @@ class RaplaScheduleSource extends ScheduleSource {
     bool hasAllocatableId = uri.queryParameters.containsKey("allocatable_id");
     bool hasSalt = uri.queryParameters.containsKey("salt");
 
-    if (hasUserParameter && hasFileParameter && hasPageParameter) {
+    if (hasUserParameter &&
+        hasFileParameter &&
+        (hasPageParameter || uri.path.endsWith("/calendar"))) {
       return true;
     }
 
@@ -194,16 +206,12 @@ class RaplaScheduleSource extends ScheduleSource {
     if (hasKeyParameter) {
       return true;
     }
-  
+
     return false;
   }
 }
 
-enum FailureReason {
-  Success,
-  RequestError,
-  ParseError,
-}
+enum FailureReason { Success, RequestError, ParseError }
 
 class ScheduleOrFailure {
   final FailureReason reason;
@@ -214,15 +222,15 @@ class ScheduleOrFailure {
   bool get success => reason == FailureReason.Success;
 
   ScheduleOrFailure.success(this.schedule)
-      : reason = FailureReason.Success,
-        exception = null,
-        trace = null;
+    : reason = FailureReason.Success,
+      exception = null,
+      trace = null;
 
   ScheduleOrFailure.failParseError(this.exception, this.trace)
-      : reason = FailureReason.ParseError,
-        schedule = null;
+    : reason = FailureReason.ParseError,
+      schedule = null;
 
   ScheduleOrFailure.failRequestError(this.exception, this.trace)
-      : reason = FailureReason.RequestError,
-    schedule = null;
+    : reason = FailureReason.RequestError,
+      schedule = null;
 }

@@ -21,10 +21,13 @@ class RaplaParsingUtils {
 
   static const String colorExam = "#ff0000";
   static const String colorExamAlt = "#e2001a";
+  static const String colorExamNew = "#ff6666";
+  static const String colorClass = "#eeeeee";
   static const String colorSpecialEvent = "#c0e2ff";
   static const String colorSpecialEventAlt = "#a3ddff";
   static const String colorPublicHoliday = "#cccccc";
   static const String colorPublicHolidayAlt = "#ee61ff";
+  static const String colorPublicHolidayNew = "#ffff61";
 
   static const Map<String, ScheduleEntryType> entryTypeMapping = {
     "Feiertag": ScheduleEntryType.PublicHoliday,
@@ -33,7 +36,19 @@ class RaplaParsingUtils {
     "Lehrveranstaltung": ScheduleEntryType.Class,
     "Klausur / Prüfung": ScheduleEntryType.Exam,
     "Prüfung": ScheduleEntryType.Exam,
-    "Pruefung": ScheduleEntryType.Exam
+    "Pruefung": ScheduleEntryType.Exam,
+  };
+
+  static const Map<String, ScheduleEntryType> colorEntryTypeMapping = {
+    colorClass: ScheduleEntryType.Class,
+    colorExam: ScheduleEntryType.Exam,
+    colorExamAlt: ScheduleEntryType.Exam,
+    colorExamNew: ScheduleEntryType.Exam,
+    colorSpecialEvent: ScheduleEntryType.SpecialEvent,
+    colorSpecialEventAlt: ScheduleEntryType.SpecialEvent,
+    colorPublicHoliday: ScheduleEntryType.PublicHoliday,
+    colorPublicHolidayAlt: ScheduleEntryType.PublicHoliday,
+    colorPublicHolidayNew: ScheduleEntryType.PublicHoliday,
   };
 
   static ScheduleEntry extractScheduleEntryOrThrow(
@@ -63,8 +78,12 @@ class RaplaParsingUtils {
     // TODO: Display a warning that information is not extracted from the
     //       tooltip. Then provide a link with a manual to activate it in Rapla
     if (tooltip.isEmpty) {
-      var scheduleEntry =
-          extractScheduleDetailsFromCell(timeAndClassName, start, end);
+      var scheduleEntry = extractScheduleDetailsFromCell(
+        timeAndClassName,
+        start,
+        end,
+        value.attributes[STYLE_ATTRIBUTE],
+      );
       return improveScheduleEntry(scheduleEntry);
     } else {
       var scheduleEntry =
@@ -125,7 +144,9 @@ class RaplaParsingUtils {
   static ScheduleEntry extractScheduleDetailsFromCell(
       List<Element> timeAndClassName,
       DateTime start,
-      DateTime end) {
+      DateTime end, [
+    String? style,
+  ]) {
     var descriptionHtml = timeAndClassName[0].innerHtml.substring(12);
     var descriptionParts = descriptionHtml.split("<br>");
 
@@ -145,7 +166,7 @@ class RaplaParsingUtils {
       title: title,
       details: details,
       professor: "",
-      type: ScheduleEntryType.Unknown,
+      type: _mapColorType(style),
       room: "",
     );
     return scheduleEntry;
@@ -208,6 +229,11 @@ class RaplaParsingUtils {
       default:
         return entryTypeMapping[fallbackType] ?? ScheduleEntryType.Class;
     }
+  }
+
+  static ScheduleEntryType _mapColorType(String? style) {
+    var backgroundColor = _extractBackgroundColor(style);
+    return colorEntryTypeMapping[backgroundColor] ?? ScheduleEntryType.Unknown;
   }
 
   static String? _extractBackgroundColor(String? style) {

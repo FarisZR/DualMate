@@ -60,7 +60,7 @@ for target in $targets; do
       adb -s "$serial" shell am force-stop "$perf_app_id"
       rm -f "$run_directory/report.json"
       if PERF_OUTPUT_DIR="$run_directory" PERF_RUN_ID="$run_id" \
-        flutter drive --profile --no-dds --no-pub --keep-app-running \
+        flutter drive --profile --flavor localrelease --no-dds --no-pub --keep-app-running \
           --device-id "$serial" \
           --driver test_driver/aggressive_perf_driver.dart \
           --target integration_test/aggressive_cold_navigation_performance_test.dart \
