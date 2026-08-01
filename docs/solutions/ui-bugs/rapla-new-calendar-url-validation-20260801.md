@@ -17,4 +17,4 @@ legacy format.
 
 ## Verification
 
-- `flutter test test/rapla_service_test.dart`
+- `flutter test test/schedule/service/rapla/rapla_schedule_source_validation_test.dart`

@@ -41,6 +41,11 @@ Future<void> main() async {
           '/test/schedule/service/rapla/html_resources/rapla_week_response_1.html')
       .readAsString();
 
+  var importantEventsPage = await File(
+    Directory.current.absolute.path +
+        '/test/schedule/service/rapla/html_resources/rapla_important_events_week.html',
+  ).readAsString();
+
   test('Rapla correctly read all classes of weekly view', () async {
     var parser = RaplaResponseParser();
 
@@ -174,7 +179,7 @@ Future<void> main() async {
     expect(schedule.entries[0].title, "Marketing und Unternehmensstrategie");
     expect(schedule.entries[0].start, DateTime(2021, 12, 01, 10, 00));
     expect(schedule.entries[0].end, DateTime(2021, 12, 01, 13, 30));
-    expect(schedule.entries[0].type, ScheduleEntryType.Unknown);
+    expect(schedule.entries[0].type, ScheduleEntryType.SpecialEvent);
 
     expect(schedule.entries.length, 36);
   });
@@ -267,6 +272,36 @@ Future<void> main() async {
     expect(schedule.entries[0].room, "TEA20,H031, Hörsaal,N003, Hörsaal,N004, Hörsaal");
 
     expect(schedule.entries.length, 7);
+  });
+
+  test('legacy tooltip classifications remain unchanged', () {
+    var parser = RaplaResponseParser();
+
+    var classSchedule = parser.parseSchedule(raplaPage).schedule;
+    expect(classSchedule.entries.first.type, ScheduleEntryType.Class);
+
+    var importantEvents = parser.parseSchedule(importantEventsPage).schedule;
+    expect(
+      importantEvents.entries
+          .firstWhere((entry) => entry.title == 'Klausur Informatik 2 (90 min)')
+          .type,
+      ScheduleEntryType.Exam,
+    );
+    expect(
+      importantEvents.entries
+          .firstWhere((entry) => entry.title == 'Klausurwoche 2. Semester')
+          .type,
+      ScheduleEntryType.SpecialEvent,
+    );
+    expect(
+      importantEvents.entries
+          .firstWhere((entry) => entry.title == 'Sommerferien')
+          .type,
+      ScheduleEntryType.PublicHoliday,
+    );
+
+    var onlineSchedule = parser.parseSchedule(raplaWeekResponse).schedule;
+    expect(onlineSchedule.entries.first.type, ScheduleEntryType.Online);
   });
 
   test('Rapla robust parse', () async {
