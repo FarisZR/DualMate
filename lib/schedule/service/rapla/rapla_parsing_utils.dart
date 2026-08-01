@@ -8,6 +8,7 @@ class RaplaParsingUtils {
   static const String WEEK_BLOCK_CLASS = "week_block";
   static const String TOOLTIP_CLASS = "tooltip";
   static const String INFOTABLE_CLASS = "infotable";
+  static const String PERSON_CLASS = "person";
   static const String RESOURCE_CLASS = "resource";
   static const String LABEL_CLASS = "label";
   static const String VALUE_CLASS = "value";
@@ -52,7 +53,9 @@ class RaplaParsingUtils {
   };
 
   static ScheduleEntry extractScheduleEntryOrThrow(
-      Element value, DateTime date) {
+    Element value,
+    DateTime date,
+  ) {
     // The tooltip tag contains the most relevant information
     var tooltip = value.getElementsByClassName(TOOLTIP_CLASS);
 
@@ -79,15 +82,20 @@ class RaplaParsingUtils {
     //       tooltip. Then provide a link with a manual to activate it in Rapla
     if (tooltip.isEmpty) {
       var scheduleEntry = extractScheduleDetailsFromCell(
-        timeAndClassName,
+        timeAndClassName[0],
+        value,
         start,
         end,
         value.attributes[STYLE_ATTRIBUTE],
       );
       return improveScheduleEntry(scheduleEntry);
     } else {
-      var scheduleEntry =
-          extractScheduleFromTooltip(tooltip, value, start, end);
+      var scheduleEntry = extractScheduleFromTooltip(
+        tooltip,
+        value,
+        start,
+        end,
+      );
       return improveScheduleEntry(scheduleEntry);
     }
   }
@@ -96,7 +104,8 @@ class RaplaParsingUtils {
     var professor = scheduleEntry.professor;
     if (professor.endsWith(",")) {
       scheduleEntry = scheduleEntry.copyWith(
-          professor: professor.substring(0, professor.length - 1));
+        professor: professor.substring(0, professor.length - 1),
+      );
     }
 
     return scheduleEntry.copyWith(
@@ -108,10 +117,11 @@ class RaplaParsingUtils {
   }
 
   static ScheduleEntry extractScheduleFromTooltip(
-      List<Element> tooltip,
-      Element value,
-      DateTime start,
-      DateTime end) {
+    List<Element> tooltip,
+    Element value,
+    DateTime start,
+    DateTime end,
+  ) {
     var infotable = tooltip[0].getElementsByClassName(INFOTABLE_CLASS);
 
     if (infotable.isEmpty) {
@@ -120,7 +130,8 @@ class RaplaParsingUtils {
 
     Map<String, String> properties = _parsePropertiesTable(infotable[0]);
     var type = _extractEntryType(tooltip, value);
-    var title = properties[CLASS_NAME_LABEL] ??
+    var title =
+        properties[CLASS_NAME_LABEL] ??
         properties[CLASS_TITLE_LABEL] ??
         properties[CLASS_NAME_LABEL_ALTERNATIVE] ??
         "";
@@ -142,34 +153,39 @@ class RaplaParsingUtils {
   }
 
   static ScheduleEntry extractScheduleDetailsFromCell(
-      List<Element> timeAndClassName,
-      DateTime start,
-      DateTime end, [
+    Element anchor,
+    Element cell,
+    DateTime start,
+    DateTime end, [
     String? style,
   ]) {
-    var descriptionHtml = timeAndClassName[0].innerHtml.substring(12);
-    var descriptionParts = descriptionHtml.split("<br>");
-
-    var title = "";
-    var details = "";
-
-    if (descriptionParts.length == 1) {
-      title = descriptionParts[0];
-    } else if (descriptionParts.length > 0) {
-      title = descriptionParts[1];
-      details = descriptionParts.join("\n");
-    }
-
     var scheduleEntry = ScheduleEntry(
       start: start,
       end: end,
-      title: title,
-      details: details,
-      professor: "",
+      title: _extractTitleFromAnchor(anchor),
+      details: "",
+      professor: _extractCellMetadata(cell, PERSON_CLASS),
       type: _mapColorType(style),
-      room: "",
+      room: _extractResources(cell),
     );
     return scheduleEntry;
+  }
+
+  static String _extractTitleFromAnchor(Element anchor) {
+    var lineBreakIndex = anchor.nodes.indexWhere(
+      (node) => node is Element && node.localName == "br",
+    );
+    if (lineBreakIndex == -1) return "";
+
+    return _serializeNodes(anchor.nodes.skip(lineBreakIndex + 1));
+  }
+
+  static String _serializeNodes(Iterable<Node> nodes) {
+    var fragment = DocumentFragment();
+    for (var node in nodes) {
+      fragment.append(node.clone(true));
+    }
+    return fragment.outerHtml;
   }
 
   static ScheduleEntryType _extractEntryType(
@@ -259,8 +275,7 @@ class RaplaParsingUtils {
     var values = infotable.getElementsByClassName(VALUE_CLASS);
 
     for (var i = 0; i < labels.length; i++) {
-      map[labels[i].innerHtml] =
-          i < values.length ? values[i].innerHtml : "";
+      map[labels[i].innerHtml] = i < values.length ? values[i].innerHtml : "";
     }
     return map;
   }
@@ -275,14 +290,17 @@ class RaplaParsingUtils {
   }
 
   static String _extractResources(Element value) {
-    var resources = value.getElementsByClassName(RESOURCE_CLASS);
+    return _extractCellMetadata(value, RESOURCE_CLASS);
+  }
 
-    var resourcesList = <String>[];
-    for (var resource in resources) {
-      resourcesList.add(resource.innerHtml);
-    }
+  static String _extractCellMetadata(Element value, String className) {
+    var metadata = value
+        .getElementsByClassName(className)
+        .where((element) => element.text.trim().isNotEmpty)
+        .map((element) => element.innerHtml)
+        .toList();
 
-    return concatStringList(resourcesList, ", ");
+    return concatStringList(metadata, ", ");
   }
 
   static String readYearOrThrow(Document document) {
