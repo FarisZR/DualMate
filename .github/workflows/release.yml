@@ -96,6 +96,7 @@ jobs:
       - name: Build arm64 APK
         run: |
           flutter build apk \
+            --release \
             --target-platform android-arm64 \
             --split-per-abi \
             --build-name="${{ steps.version.outputs.version_name }}" \

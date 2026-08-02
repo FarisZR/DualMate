@@ -115,11 +115,17 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
-// Flutter maps `--flavor localrelease --release` to the
-// `assembleLocalreleaseRelease` Gradle task.
-def isLocalreleaseReleaseBuild = gradle.startParameter.taskNames.any { taskName ->
-    taskName.toLowerCase().contains('localreleaserelease')
+// Flutter maps `--flavor localrelease` to Gradle tasks whose names contain
+// `localrelease`. Keep the flavor out of the normal variant graph so that
+// flavorless debug and release builds retain their standard output paths and
+// signing behavior.
+def isLocalreleaseVariantRequested = gradle.startParameter.taskNames.any { taskName ->
+    taskName.toLowerCase().contains('localrelease')
 }
+def isLocalreleaseReleaseBuild = isLocalreleaseVariantRequested &&
+        gradle.startParameter.taskNames.any { taskName ->
+            taskName.toLowerCase().contains('localreleaserelease')
+        }
 
 android {
     namespace "com.fariszr.dualmate"
@@ -172,13 +178,16 @@ android {
         }
     }
 
-    flavorDimensions "signing"
+    if (isLocalreleaseVariantRequested) {
+        flavorDimensions "signing"
 
-    productFlavors {
-        // A locally distributable release build: release optimizations with
-        // the Android debug key, so it does not depend on android/key.properties.
-        localrelease {
-            dimension "signing"
+        productFlavors {
+            // A locally distributable release build: release optimizations
+            // with the Android debug key, so it does not depend on
+            // android/key.properties.
+            localrelease {
+                dimension "signing"
+            }
         }
     }
 
