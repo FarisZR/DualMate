@@ -197,6 +197,20 @@ flutter {
     source '../..'
 }
 
+// AGP can incorrectly keep the local release APK's native-library merge
+// tasks up-to-date after switching branches. Force these packaging tasks to
+// consume the app.so produced by the current checked-out Flutter sources.
+def localreleasePackagingTasks = [
+    'mergeLocalreleaseReleaseJniLibFolders',
+    'mergeLocalreleaseReleaseNativeLibs',
+    'packageLocalreleaseRelease',
+]
+tasks.configureEach { task ->
+    if (localreleasePackagingTasks.contains(task.name)) {
+        task.outputs.upToDateWhen { false }
+    }
+}
+
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"
