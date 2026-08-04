@@ -1,5 +1,11 @@
 # Dualmate
 
+## Friction logging
+
+- Run `npx frog list` before starting work to review known friction.
+- Log papercuts and friction in tooling, documentation, APIs, tests, and project conventions as they are encountered with `npx frog log`.
+- Do not log global, system, or internal agent friction in this repository.
+
 DualMate is a companion app for DHBW students, it's an app that gives students information for their studies, and helps them in their day-to-day student life.
 it shows them stuff like their schedule, what's their to eat in the canteen and so on.
 
