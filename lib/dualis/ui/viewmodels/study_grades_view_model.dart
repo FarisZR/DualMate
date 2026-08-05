@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/logging/diagnostic_exception_filter.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/util/cancelable_mutex.dart';
@@ -379,6 +380,10 @@ class StudyGradesViewModel extends BaseViewModel {
       ]);
 
       await _preferencesProvider.setDualisLastRefreshAt(DateTime.now());
+    } catch (error, stackTrace) {
+      if (!shouldSuppressDiagnosticsException(error)) {
+        Error.throwWithStackTrace(error, stackTrace);
+      }
     } finally {
       _refreshInFlight = false;
     }

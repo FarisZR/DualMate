@@ -10,6 +10,7 @@ import 'package:dualmate/dualis/model/semester.dart';
 import 'package:dualmate/dualis/model/study_grades.dart';
 import 'package:dualmate/dualis/service/dualis_service.dart';
 import 'package:dualmate/dualis/ui/viewmodels/study_grades_view_model.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -95,6 +96,45 @@ void main() {
     expect(service.querySemesterNamesCalls, 1);
   });
 
+  test('refreshData absorbs expected external failures', () async {
+    final preferences = _buildPreferences();
+    final service = _StudyGradesTestService(blockFirstModulesRequest: false);
+    final viewModel = StudyGradesViewModel(preferences, service);
+    addTearDown(viewModel.dispose);
+
+    expect(await viewModel.login(Credentials('u', 'p')), isTrue);
+    while (await preferences.getDualisLastRefreshAt() == null) {
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+    }
+    final lastSuccessfulRefresh = await preferences.getDualisLastRefreshAt();
+
+    service.querySemesterNamesError =
+        ServiceRequestFailed('Http request failed!');
+
+    await expectLater(viewModel.refreshData(force: true), completes);
+    expect(await preferences.getDualisLastRefreshAt(), lastSuccessfulRefresh);
+    expect(viewModel.isLoadingSemesterNames, isFalse);
+  });
+
+  test('refreshData still propagates unexpected failures', () async {
+    final preferences = _buildPreferences();
+    final service = _StudyGradesTestService(blockFirstModulesRequest: false);
+    final viewModel = StudyGradesViewModel(preferences, service);
+    addTearDown(viewModel.dispose);
+
+    expect(await viewModel.login(Credentials('u', 'p')), isTrue);
+    while (await preferences.getDualisLastRefreshAt() == null) {
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+    }
+
+    service.querySemesterNamesError = StateError('parser regression');
+
+    await expectLater(
+      viewModel.refreshData(force: true),
+      throwsA(isA<StateError>()),
+    );
+  });
+
   test('login refresh keeps the three Dualis branches concurrent', () async {
     final preferences = _buildPreferences();
     final service = _ParallelRefreshService();
@@ -135,6 +175,7 @@ class _StudyGradesTestService extends DualisService {
   int queryAllModulesCalls = 0;
   int querySemesterNamesCalls = 0;
   int querySemesterCalls = 0;
+  Object? querySemesterNamesError;
   String? lastLoginUsername;
   String? lastLoginPassword;
   final Completer<void> secondModulesRequestStarted = Completer<void>();
@@ -205,6 +246,10 @@ class _StudyGradesTestService extends DualisService {
     CancellationToken? cancellationToken,
   ]) async {
     querySemesterNamesCalls += 1;
+    final error = querySemesterNamesError;
+    if (error != null) {
+      throw error;
+    }
     return const <String>['SoSe2026'];
   }
 
