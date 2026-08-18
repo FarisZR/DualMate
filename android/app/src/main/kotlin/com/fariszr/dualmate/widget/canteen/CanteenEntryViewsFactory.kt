@@ -109,13 +109,6 @@ class CanteenEntryViewsFactory(
         return MultiDayWidgetHelper.VisibleItems(mainMeals, hiddenCount)
     }
 
-    private fun isMainMeal(entry: CanteenEntry): Boolean {
-        val normalized = entry.category.trim().lowercase(Locale.getDefault())
-        val match = Regex("wahl?essen\\s*(\\d)").find(normalized)
-        val choice = match?.groupValues?.getOrNull(1)
-        return choice == "1" || choice == "2"
-    }
-
     private fun mapEmojis(mealTypes: List<String>): String {
         val emojis = mealTypes.mapNotNull { type ->
             when (type) {
@@ -152,6 +145,17 @@ class CanteenEntryViewsFactory(
                     entry.price
                 )
             }
+        }
+
+        internal fun isMainMeal(entry: CanteenEntry): Boolean {
+            val normalized = entry.category.trim().lowercase(Locale.getDefault())
+            if (normalized == "main" || normalized == "hauptgericht") {
+                return true
+            }
+
+            val match = Regex("wahl?essen\\s*(\\d)").find(normalized)
+            val choice = match?.groupValues?.getOrNull(1)
+            return choice == "1" || choice == "2"
         }
     }
 }

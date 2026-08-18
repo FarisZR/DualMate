@@ -47,3 +47,29 @@ and both widgets still appeared under the generic app name.
 
 - Installed the updated debug build on the connected S21 (`RFCR31468LJ`) so the
   new widget resources are packaged for on-device verification.
+
+## 2026-08-19 follow-up: Samsung picker drift
+
+Samsung One UI did not reliably render the scalable `previewLayout` versions.
+On the Galaxy S21+ the picker could show `Couldn't add widget`, while the
+hard-coded layouts also drifted from the actual `RemoteViews` UI (notably emoji
+rendering and spacing).
+
+The previews now use screenshots captured from the real 4x2 widgets on the
+Galaxy S21+ as the `previewImage` fallback, with the same rounded transparency
+as the widget background. The separate preview layouts and preview generator
+were removed so there is no second implementation of the widget UI to drift.
+
+Both widget providers also declare a 4x2 target cell size. One UI therefore
+shows the preview at the same useful size that was used for the device capture
+instead of presenting the widgets as 1x1 by default.
+
+While validating the canteen widget with live DHBW.app data, the native widget
+was also updated to recognize `main`/`Hauptgericht` categories in addition to
+the legacy Karlsruhe `Wahlessen 1/2` labels. This keeps the real widget preview
+representative for all supported canteen sources.
+
+Validation for the follow-up included the targeted native widget unit test, a
+debug APK build, and Samsung One UI picker verification on the connected Galaxy
+S21+. The picker showed both `Canteen` and `Schedule` as 4x2 static previews and
+no longer displayed the preview-layout error.
