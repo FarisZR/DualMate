@@ -2,8 +2,11 @@ package com.fariszr.dualmate.widget.canteen
 
 import com.fariszr.dualmate.model.CanteenEntry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.threeten.bp.LocalDate
+import java.util.Locale
 
 class CanteenEntryViewsFactoryTest {
     @Test
@@ -19,4 +22,31 @@ class CanteenEntryViewsFactoryTest {
         assertEquals(first.name, deduped[0].name)
         assertEquals(second.name, deduped[1].name)
     }
+
+    @Test
+    fun isMainMeal_acceptsLegacyAndDhbwAppMainCategories() {
+        val date = LocalDate.of(2026, 8, 19)
+
+        assertTrue(CanteenEntryViewsFactory.isMainMeal(entry(date, "Wahlessen 1")))
+        assertTrue(CanteenEntryViewsFactory.isMainMeal(entry(date, "Wahlessen 2")))
+        assertTrue(CanteenEntryViewsFactory.isMainMeal(entry(date, "main")))
+        assertTrue(CanteenEntryViewsFactory.isMainMeal(entry(date, "Hauptgericht")))
+        assertFalse(CanteenEntryViewsFactory.isMainMeal(entry(date, "side")))
+    }
+
+    @Test
+    fun isMainMeal_recognizesUppercaseMainUnderTurkishLocale() {
+        val originalLocale = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"))
+            val date = LocalDate.of(2026, 8, 19)
+
+            assertTrue(CanteenEntryViewsFactory.isMainMeal(entry(date, "MAIN")))
+        } finally {
+            Locale.setDefault(originalLocale)
+        }
+    }
+
+    private fun entry(date: LocalDate, category: String) =
+        CanteenEntry(1, date, "Meal", category, 4.5, emptyList())
 }
