@@ -148,7 +148,7 @@ class CanteenEntryViewsFactory(
         }
 
         internal fun isMainMeal(entry: CanteenEntry): Boolean {
-            val normalized = entry.category.trim().lowercase(Locale.getDefault())
+            val normalized = entry.category.trim().lowercase(Locale.ROOT)
             if (normalized == "main" || normalized == "hauptgericht") {
                 return true
             }

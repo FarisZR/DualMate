@@ -6,6 +6,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.threeten.bp.LocalDate
+import java.util.Locale
 
 class CanteenEntryViewsFactoryTest {
     @Test
@@ -31,6 +32,19 @@ class CanteenEntryViewsFactoryTest {
         assertTrue(CanteenEntryViewsFactory.isMainMeal(entry(date, "main")))
         assertTrue(CanteenEntryViewsFactory.isMainMeal(entry(date, "Hauptgericht")))
         assertFalse(CanteenEntryViewsFactory.isMainMeal(entry(date, "side")))
+    }
+
+    @Test
+    fun isMainMeal_recognizesUppercaseMainUnderTurkishLocale() {
+        val originalLocale = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"))
+            val date = LocalDate.of(2026, 8, 19)
+
+            assertTrue(CanteenEntryViewsFactory.isMainMeal(entry(date, "MAIN")))
+        } finally {
+            Locale.setDefault(originalLocale)
+        }
     }
 
     private fun entry(date: LocalDate, category: String) =
