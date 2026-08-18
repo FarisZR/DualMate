@@ -128,6 +128,8 @@ class CanteenEntryViewsFactory(
     }
 
     companion object {
+        private val MAIN_MEAL_CATEGORY_REGEX = Regex("wahl?essen\\s*(\\d)")
+
         private val ROW_METRICS = MultiDayWidgetHelper.RowMetrics(
             headerHeightDp = 0,
             rowVerticalPaddingDp = 12,
@@ -153,7 +155,7 @@ class CanteenEntryViewsFactory(
                 return true
             }
 
-            val match = Regex("wahl?essen\\s*(\\d)").find(normalized)
+            val match = MAIN_MEAL_CATEGORY_REGEX.find(normalized)
             val choice = match?.groupValues?.getOrNull(1)
             return choice == "1" || choice == "2"
         }

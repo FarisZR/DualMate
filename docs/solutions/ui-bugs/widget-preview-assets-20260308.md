@@ -21,6 +21,8 @@ and both widgets still appeared under the generic app name.
 
 # Fix
 
+> Superseded by the 2026-08-19 follow-up below: the `previewLayout` implementation described in this original fix was removed and replaced with real widget captures.
+
 - Added dedicated scalable preview layouts:
   - `android/app/src/main/res/layout/widget_schedule_now_preview.xml`
   - `android/app/src/main/res/layout/widget_canteen_today_preview.xml`
