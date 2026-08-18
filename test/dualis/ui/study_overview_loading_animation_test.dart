@@ -79,7 +79,23 @@ void main() {
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
 
-    final load = viewModel.loadStudyGrades();
+    final initialLoad = viewModel.loadStudyGrades();
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey<String>('dualis_overview_summary_loading')),
+      findsOneWidget,
+    );
+
+    dualisService.completeStudyGrades(StudyGrades(1.7, 1.8, 210, 96));
+    expect(await initialLoad, isTrue);
+    await tester.pumpAndSettle();
+
+    expect(find.text('1.7'), findsOneWidget);
+    expect(find.text('1.8'), findsOneWidget);
+    expect(find.text('96.0 / 210.0'), findsOneWidget);
+
+    final failedRefresh = viewModel.loadStudyGrades();
     await tester.pump();
 
     expect(
@@ -88,7 +104,7 @@ void main() {
     );
 
     dualisService.failStudyGrades(StateError('student results unavailable'));
-    await expectLater(load, completes);
+    expect(await failedRefresh, isFalse);
     await tester.pumpAndSettle();
 
     expect(
@@ -99,6 +115,9 @@ void main() {
       find.byKey(const ValueKey<String>('dualis_overview_summary')),
       findsOneWidget,
     );
+    expect(find.text('1.7'), findsOneWidget);
+    expect(find.text('1.8'), findsOneWidget);
+    expect(find.text('96.0 / 210.0'), findsOneWidget);
   });
 
   testWidgets('shows loading placeholder while semester modules are fetched', (
@@ -242,7 +261,8 @@ Widget _wrapWithExamResultsApp(StudyGradesViewModel viewModel) {
 class _BlockingDualisService extends DualisService {
   final Completer<List<Module>> _allModulesCompleter =
       Completer<List<Module>>();
-  final Completer<StudyGrades> _studyGradesCompleter = Completer<StudyGrades>();
+  final List<Completer<StudyGrades>> _studyGradesRequests =
+      <Completer<StudyGrades>>[];
   final Map<String, Completer<Semester>> _semesterCompleters =
       <String, Completer<Semester>>{};
 
@@ -280,7 +300,11 @@ class _BlockingDualisService extends DualisService {
   @override
   Future<StudyGrades> queryStudyGrades([
     CancellationToken? cancellationToken,
-  ]) => _studyGradesCompleter.future;
+  ]) {
+    final request = Completer<StudyGrades>();
+    _studyGradesRequests.add(request);
+    return request.future;
+  }
 
   @override
   Future<void> logout([CancellationToken? cancellationToken]) async {}
@@ -295,12 +319,16 @@ class _BlockingDualisService extends DualisService {
     _allModulesCompleter.complete(modules);
   }
 
-  void failStudyGrades(Object error) {
-    if (_studyGradesCompleter.isCompleted) {
-      return;
-    }
-    _studyGradesCompleter.completeError(error, StackTrace.current);
+  void completeStudyGrades(StudyGrades studyGrades) {
+    _nextStudyGradesRequest.complete(studyGrades);
   }
+
+  void failStudyGrades(Object error) {
+    _nextStudyGradesRequest.completeError(error, StackTrace.current);
+  }
+
+  Completer<StudyGrades> get _nextStudyGradesRequest =>
+      _studyGradesRequests.firstWhere((request) => !request.isCompleted);
 
   void completeSemester(String name, Semester semester) {
     final completer = _semesterCompleters.putIfAbsent(
