@@ -66,6 +66,41 @@ void main() {
     expect(tooltipTarget.height, greaterThan(0));
   });
 
+  testWidgets('restores the GPA summary when refreshing grades fails', (
+    tester,
+  ) async {
+    final dualisService = _BlockingDualisService();
+    final preferences = PreferencesProvider(
+      _FakePreferencesAccess(),
+      _FakeSecureStorageAccess(),
+    );
+    final viewModel = StudyGradesViewModel(preferences, dualisService);
+    addTearDown(viewModel.dispose);
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+
+    final load = viewModel.loadStudyGrades();
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey<String>('dualis_overview_summary_loading')),
+      findsOneWidget,
+    );
+
+    dualisService.failStudyGrades(StateError('student results unavailable'));
+    await expectLater(load, completes);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey<String>('dualis_overview_summary_loading')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('dualis_overview_summary')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('shows loading placeholder while semester modules are fetched', (
     tester,
   ) async {
@@ -207,6 +242,7 @@ Widget _wrapWithExamResultsApp(StudyGradesViewModel viewModel) {
 class _BlockingDualisService extends DualisService {
   final Completer<List<Module>> _allModulesCompleter =
       Completer<List<Module>>();
+  final Completer<StudyGrades> _studyGradesCompleter = Completer<StudyGrades>();
   final Map<String, Completer<Semester>> _semesterCompleters =
       <String, Completer<Semester>>{};
 
@@ -244,9 +280,7 @@ class _BlockingDualisService extends DualisService {
   @override
   Future<StudyGrades> queryStudyGrades([
     CancellationToken? cancellationToken,
-  ]) async {
-    return StudyGrades(0, 0, 0, 0);
-  }
+  ]) => _studyGradesCompleter.future;
 
   @override
   Future<void> logout([CancellationToken? cancellationToken]) async {}
@@ -259,6 +293,13 @@ class _BlockingDualisService extends DualisService {
       return;
     }
     _allModulesCompleter.complete(modules);
+  }
+
+  void failStudyGrades(Object error) {
+    if (_studyGradesCompleter.isCompleted) {
+      return;
+    }
+    _studyGradesCompleter.completeError(error, StackTrace.current);
   }
 
   void completeSemester(String name, Semester semester) {

@@ -95,6 +95,35 @@ void main() {
     expect(service.querySemesterNamesCalls, 1);
   });
 
+  test('refreshData completes and clears GPA loading when grades fail',
+      () async {
+    final preferences = _buildPreferences();
+    final service = _StudyGradesTestService(blockFirstModulesRequest: false);
+    final viewModel = StudyGradesViewModel(preferences, service);
+    addTearDown(viewModel.dispose);
+
+    expect(await viewModel.login(Credentials('u', 'p')), isTrue);
+    while (await preferences.getDualisLastRefreshAt() == null) {
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+    }
+    final lastSuccessfulRefreshAt =
+        await preferences.getDualisLastRefreshAt();
+
+    service.studyGradesThrows = true;
+    service.resetCallCounters();
+
+    await expectLater(viewModel.refreshData(force: true), completes);
+
+    expect(viewModel.isLoadingStudyGrades, isFalse);
+    expect(service.queryStudyGradesCalls, 1);
+    expect(service.queryAllModulesCalls, 1);
+    expect(service.querySemesterNamesCalls, 1);
+    expect(
+      await preferences.getDualisLastRefreshAt(),
+      lastSuccessfulRefreshAt,
+    );
+  });
+
   test('login refresh keeps the three Dualis branches concurrent', () async {
     final preferences = _buildPreferences();
     final service = _ParallelRefreshService();
@@ -135,6 +164,7 @@ class _StudyGradesTestService extends DualisService {
   int queryAllModulesCalls = 0;
   int querySemesterNamesCalls = 0;
   int querySemesterCalls = 0;
+  bool studyGradesThrows = false;
   String? lastLoginUsername;
   String? lastLoginPassword;
   final Completer<void> secondModulesRequestStarted = Completer<void>();
@@ -197,6 +227,9 @@ class _StudyGradesTestService extends DualisService {
     CancellationToken? cancellationToken,
   ]) async {
     queryStudyGradesCalls += 1;
+    if (studyGradesThrows) {
+      throw StateError('student results unavailable');
+    }
     return StudyGrades(0, 0, 0, 0);
   }
 
