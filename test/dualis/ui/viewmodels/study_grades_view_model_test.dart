@@ -58,6 +58,84 @@ void main() {
   );
 
   test(
+    'loadAllModules notifies loading cleanup after an unexpected failure',
+    () async {
+      final service = _StudyGradesTestService(blockFirstModulesRequest: false)
+        ..queryAllModulesError = StateError('module parser regression');
+      final viewModel = StudyGradesViewModel(_buildPreferences(), service);
+      addTearDown(viewModel.dispose);
+      final loadingStates = <bool>[];
+      var contentNotifications = 0;
+      viewModel.addListener(
+        (_) => loadingStates.add(viewModel.isLoadingAllModules),
+        const ['isLoadingAllModules'],
+      );
+      viewModel.addListener((_) => contentNotifications += 1, const [
+        'allModules',
+      ]);
+
+      await expectLater(viewModel.loadAllModules(), throwsA(isA<StateError>()));
+
+      expect(loadingStates, <bool>[true, false]);
+      expect(contentNotifications, 1);
+    },
+  );
+
+  test(
+    'loadSemesterByName notifies loading cleanup after an unexpected failure',
+    () async {
+      final service = _StudyGradesTestService(blockFirstModulesRequest: false)
+        ..querySemesterError = StateError('semester parser regression');
+      final viewModel = StudyGradesViewModel(_buildPreferences(), service);
+      addTearDown(viewModel.dispose);
+      final loadingStates = <bool>[];
+      var contentNotifications = 0;
+      viewModel.addListener(
+        (_) => loadingStates.add(viewModel.isLoadingCurrentSemester),
+        const ['isLoadingCurrentSemester'],
+      );
+      viewModel.addListener((_) => contentNotifications += 1, const [
+        'currentSemester',
+      ]);
+
+      await expectLater(
+        viewModel.loadSemesterByName('SoSe2026'),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(loadingStates, <bool>[true, false]);
+      expect(contentNotifications, 2);
+    },
+  );
+
+  test(
+    'loadSemesterNamesForCurrentSelection notifies loading cleanup after an unexpected failure',
+    () async {
+      final service = _StudyGradesTestService(blockFirstModulesRequest: false)
+        ..querySemesterNamesError = StateError('semester names regression');
+      final viewModel = StudyGradesViewModel(_buildPreferences(), service);
+      addTearDown(viewModel.dispose);
+      final loadingStates = <bool>[];
+      var contentNotifications = 0;
+      viewModel.addListener(
+        (_) => loadingStates.add(viewModel.isLoadingSemesterNames),
+        const ['isLoadingSemesterNames'],
+      );
+      viewModel.addListener((_) => contentNotifications += 1, const [
+        'semesterNames',
+      ]);
+
+      await expectLater(
+        viewModel.loadSemesterNamesForCurrentSelection(),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(loadingStates, <bool>[true, false]);
+      expect(contentNotifications, 1);
+    },
+  );
+
+  test(
     'restores the Dualis session from saved credentials on page open',
     () async {
       final preferences = _buildPreferences();
@@ -242,7 +320,9 @@ class _StudyGradesTestService extends DualisService {
   int queryAllModulesCalls = 0;
   int querySemesterNamesCalls = 0;
   int querySemesterCalls = 0;
+  Object? queryAllModulesError;
   Object? querySemesterNamesError;
+  Object? querySemesterError;
   Object? studyGradesError;
   StudyGrades studyGradesResult = StudyGrades(0, 0, 0, 0);
   String? lastLoginUsername;
@@ -277,6 +357,11 @@ class _StudyGradesTestService extends DualisService {
     queryAllModulesCalls += 1;
     _allModulesCallCount += 1;
     final token = cancellationToken;
+
+    final error = queryAllModulesError;
+    if (error != null) {
+      throw error;
+    }
 
     if (blockFirstModulesRequest) {
       if (_allModulesCallCount == 1) {
@@ -332,6 +417,10 @@ class _StudyGradesTestService extends DualisService {
     CancellationToken? cancellationToken,
   ]) async {
     querySemesterCalls += 1;
+    final error = querySemesterError;
+    if (error != null) {
+      throw error;
+    }
     return Semester(name, const <Module>[]);
   }
 

@@ -254,10 +254,9 @@ class StudyGradesViewModel extends BaseViewModel {
         return;
       }
       _isLoadingAllModules = false;
+      notifyListeners("allModules");
+      notifyListeners("isLoadingAllModules");
     }
-
-    notifyListeners("allModules");
-    notifyListeners("isLoadingAllModules");
   }
 
   Future<void> loadSemester(String semesterName) async {
@@ -315,10 +314,9 @@ class StudyGradesViewModel extends BaseViewModel {
       }
       _currentLoadingSemesterName = "";
       _isLoadingCurrentSemester = false;
+      notifyListeners("currentSemester");
+      notifyListeners("isLoadingCurrentSemester");
     }
-
-    notifyListeners("currentSemester");
-    notifyListeners("isLoadingCurrentSemester");
   }
 
   Future<void> loadSemesterNames() async {
@@ -362,10 +360,9 @@ class StudyGradesViewModel extends BaseViewModel {
         return;
       }
       _isLoadingSemesterNames = false;
+      notifyListeners("semesterNames");
+      notifyListeners("isLoadingSemesterNames");
     }
-
-    notifyListeners("semesterNames");
-    notifyListeners("isLoadingSemesterNames");
 
     if (epoch == _semesterNamesLoadEpoch) {
       await _loadInitialSemester(
