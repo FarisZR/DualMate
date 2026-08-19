@@ -1,6 +1,7 @@
 ---
 title: 'Android CLI describe fails on Flutter repository root'
 severity: 'minor'
+issue: 'FarisZR/DualMate#121'
 ---
 
 ## Expected Behavior

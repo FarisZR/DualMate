@@ -1,6 +1,7 @@
 ---
 title: 'Dart formatter rewrites legacy Dualis test formatting'
 severity: 'minor'
+issue: 'FarisZR/DualMate#122'
 ---
 
 ## Expected Behavior
