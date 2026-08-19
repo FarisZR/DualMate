@@ -120,6 +120,30 @@ DualMate is an independent student project and is not an official DHBW app. The 
 
 DualMate was developed by FarisZR and is based on the original work of Benedikt Kolb.
 
+## Development validation
+
+DualMate is a Flutter project. The repository root is not a Gradle project root,
+so Android CLI project inspection must target the nested `android/` directory.
+
+From the repository root, use:
+
+```sh
+flutter pub get
+flutter build apk --debug
+android describe --project_dir=android
+android run --apks=build/app/outputs/flutter-apk/app-debug.apk --device=<serial>
+```
+
+For Dart changes, check only the files touched by the change:
+
+```sh
+dart format --output=none --set-exit-if-changed path/to/touched_file.dart
+```
+
+See the [Android CLI validation](docs/solutions/developer-experience/android-cli-flutter-validation-20260819.md)
+and [Dart formatter normalization](docs/solutions/developer-experience/dart-formatter-dualis-tests-20260819.md)
+notes for the repository-specific rationale.
+
 ## Feedback
 
 Found a bug, missing location, broken schedule source, or feature idea? Open an issue on GitHub:
