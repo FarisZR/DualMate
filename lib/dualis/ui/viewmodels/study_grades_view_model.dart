@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/logging/app_diagnostics.dart';
 import 'package:dualmate/common/logging/diagnostic_exception_filter.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
@@ -165,7 +166,7 @@ class StudyGradesViewModel extends BaseViewModel {
     return _preferencesProvider.getStoreDualisCredentials();
   }
 
-  Future<void> loadStudyGrades() async {
+  Future<bool> loadStudyGrades() async {
     final epoch = ++_studyGradesLoadEpoch;
     _isLoadingStudyGrades = true;
     notifyListeners("isLoadingStudyGrades");
@@ -173,9 +174,10 @@ class StudyGradesViewModel extends BaseViewModel {
     await _studyGradesCancellationToken.acquireAndCancelOther();
     if (epoch != _studyGradesLoadEpoch) {
       _studyGradesCancellationToken.release();
-      return;
+      return false;
     }
 
+    var loaded = false;
     try {
       final loadedStudyGrades = await PerformanceTelemetry.instance.measureTask(
         'dualis.results.parse',
@@ -191,17 +193,28 @@ class StudyGradesViewModel extends BaseViewModel {
       _applyDualisState(() {
         _studyGrades = loadedStudyGrades;
       });
+      loaded = true;
     } on OperationCancelledException catch (_) {
+    } catch (error, stackTrace) {
+      unawaited(
+        AppDiagnostics.instance.reportCaughtException(
+          error,
+          stackTrace,
+          message: 'Dualis study-grades refresh failed',
+          tags: const {'feature': 'dualis', 'operation': 'study_grades'},
+        ),
+      );
     } finally {
       _studyGradesCancellationToken.release();
       if (epoch != _studyGradesLoadEpoch) {
-        return;
+        return false;
       }
       _isLoadingStudyGrades = false;
+      notifyListeners("studyGrades");
+      notifyListeners("isLoadingStudyGrades");
     }
 
-    notifyListeners("studyGrades");
-    notifyListeners("isLoadingStudyGrades");
+    return loaded;
   }
 
   Future<void> loadAllModules() async {
@@ -370,8 +383,9 @@ class StudyGradesViewModel extends BaseViewModel {
       }
 
       final preferredSemesterName = _currentSemesterName;
+      final studyGradesLoad = loadStudyGrades();
       await Future.wait<void>([
-        loadStudyGrades(),
+        studyGradesLoad.then<void>((_) {}),
         loadAllModules(),
         loadSemesterNamesForCurrentSelection(
           preferredSemesterName: preferredSemesterName,
@@ -379,7 +393,9 @@ class StudyGradesViewModel extends BaseViewModel {
         ),
       ]);
 
-      await _preferencesProvider.setDualisLastRefreshAt(DateTime.now());
+      if (await studyGradesLoad) {
+        await _preferencesProvider.setDualisLastRefreshAt(DateTime.now());
+      }
     } catch (error, stackTrace) {
       if (!shouldSuppressDiagnosticsException(error)) {
         Error.throwWithStackTrace(error, stackTrace);

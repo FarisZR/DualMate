@@ -255,7 +255,7 @@ Map<String, String> sanitizeDiagnosticsTags(Map<String, String> source) {
 
 SentryEvent? scrubSentryEvent(SentryEvent event, Hint hint) {
   final throwable = event.throwable;
-  if (throwable is Object && shouldSuppressDiagnosticsException(throwable)) {
+  if (throwable != null && shouldSuppressDiagnosticsException(throwable)) {
     return null;
   }
 

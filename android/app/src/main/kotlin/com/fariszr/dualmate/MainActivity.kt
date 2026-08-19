@@ -1,23 +1,31 @@
 package com.fariszr.dualmate
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.provider.Settings
+import android.util.Log
 import androidx.annotation.NonNull
+import androidx.core.view.WindowCompat
 import com.fariszr.dualmate.widget.WidgetNavigationExtras
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugins.GeneratedPluginRegistrant
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.net.Uri
-import android.os.Build
-import android.provider.Settings
-import android.util.Log
 
 class MainActivity : FlutterActivity() {
     private var pendingRoute: String? = null
     private var pendingPayload: Map<String, Any?>? = null
     private var navigationChannel: MethodChannel? = null
     private var notificationSettingsChannel: MethodChannel? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // FlutterActivity resets the system UI flags during onCreate.
+        WindowCompat.enableEdgeToEdge(window)
+    }
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         GeneratedPluginRegistrant.registerWith(flutterEngine)

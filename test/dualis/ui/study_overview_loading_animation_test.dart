@@ -66,6 +66,60 @@ void main() {
     expect(tooltipTarget.height, greaterThan(0));
   });
 
+  testWidgets('restores the GPA summary when refreshing grades fails', (
+    tester,
+  ) async {
+    final dualisService = _BlockingDualisService();
+    final preferences = PreferencesProvider(
+      _FakePreferencesAccess(),
+      _FakeSecureStorageAccess(),
+    );
+    final viewModel = StudyGradesViewModel(preferences, dualisService);
+    addTearDown(viewModel.dispose);
+
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+
+    final initialLoad = viewModel.loadStudyGrades();
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey<String>('dualis_overview_summary_loading')),
+      findsOneWidget,
+    );
+
+    dualisService.completeStudyGrades(StudyGrades(1.7, 1.8, 210, 96));
+    expect(await initialLoad, isTrue);
+    await tester.pumpAndSettle();
+
+    expect(find.text('1.7'), findsOneWidget);
+    expect(find.text('1.8'), findsOneWidget);
+    expect(find.text('96.0 / 210.0'), findsOneWidget);
+
+    final failedRefresh = viewModel.loadStudyGrades();
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey<String>('dualis_overview_summary_loading')),
+      findsOneWidget,
+    );
+
+    dualisService.failStudyGrades(StateError('student results unavailable'));
+    expect(await failedRefresh, isFalse);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey<String>('dualis_overview_summary_loading')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('dualis_overview_summary')),
+      findsOneWidget,
+    );
+    expect(find.text('1.7'), findsOneWidget);
+    expect(find.text('1.8'), findsOneWidget);
+    expect(find.text('96.0 / 210.0'), findsOneWidget);
+  });
+
   testWidgets('shows loading placeholder while semester modules are fetched', (
     tester,
   ) async {
@@ -207,6 +261,8 @@ Widget _wrapWithExamResultsApp(StudyGradesViewModel viewModel) {
 class _BlockingDualisService extends DualisService {
   final Completer<List<Module>> _allModulesCompleter =
       Completer<List<Module>>();
+  final List<Completer<StudyGrades>> _studyGradesRequests =
+      <Completer<StudyGrades>>[];
   final Map<String, Completer<Semester>> _semesterCompleters =
       <String, Completer<Semester>>{};
 
@@ -244,8 +300,10 @@ class _BlockingDualisService extends DualisService {
   @override
   Future<StudyGrades> queryStudyGrades([
     CancellationToken? cancellationToken,
-  ]) async {
-    return StudyGrades(0, 0, 0, 0);
+  ]) {
+    final request = Completer<StudyGrades>();
+    _studyGradesRequests.add(request);
+    return request.future;
   }
 
   @override
@@ -260,6 +318,17 @@ class _BlockingDualisService extends DualisService {
     }
     _allModulesCompleter.complete(modules);
   }
+
+  void completeStudyGrades(StudyGrades studyGrades) {
+    _nextStudyGradesRequest.complete(studyGrades);
+  }
+
+  void failStudyGrades(Object error) {
+    _nextStudyGradesRequest.completeError(error, StackTrace.current);
+  }
+
+  Completer<StudyGrades> get _nextStudyGradesRequest =>
+      _studyGradesRequests.firstWhere((request) => !request.isCompleted);
 
   void completeSemester(String name, Semester semester) {
     final completer = _semesterCompleters.putIfAbsent(
