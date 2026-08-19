@@ -196,14 +196,18 @@ class StudyGradesViewModel extends BaseViewModel {
       loaded = true;
     } on OperationCancelledException catch (_) {
     } catch (error, stackTrace) {
-      unawaited(
-        AppDiagnostics.instance.reportCaughtException(
-          error,
-          stackTrace,
-          message: 'Dualis study-grades refresh failed',
-          tags: const {'feature': 'dualis', 'operation': 'study_grades'},
-        ),
-      );
+      if (shouldSuppressDiagnosticsException(error)) {
+        unawaited(
+          AppDiagnostics.instance.reportCaughtException(
+            error,
+            stackTrace,
+            message: 'Dualis study-grades refresh failed',
+            tags: const {'feature': 'dualis', 'operation': 'study_grades'},
+          ),
+        );
+      } else {
+        Error.throwWithStackTrace(error, stackTrace);
+      }
     } finally {
       _studyGradesCancellationToken.release();
       if (epoch != _studyGradesLoadEpoch) {
