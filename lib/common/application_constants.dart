@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 
-const String _ApplicationVersion = "2.2.0";
+const String _ApplicationVersion = "2.2.1";
 String get ApplicationVersion {
   if (kDebugMode) {
     final commitHash = _getGitCommitHash();
