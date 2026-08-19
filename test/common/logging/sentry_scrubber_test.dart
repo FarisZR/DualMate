@@ -1,4 +1,5 @@
 import 'package:dualmate/common/logging/sentry_scrubber.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sentry/sentry.dart';
@@ -259,6 +260,21 @@ void main() {
     );
     expect(scrubbed.contexts['dualis'], sentryRedactedValue);
   });
+
+  test(
+    'beforeSend drops expected external failures from automatic capture',
+    () {
+      final event = SentryEvent(
+        throwable: ThrowableMechanism(
+          Mechanism(type: 'PlatformDispatcher.onError', handled: false),
+          ServiceRequestFailed('Http request failed!'),
+        ),
+        level: SentryLevel.fatal,
+      );
+
+      expect(scrubSentryEvent(event, Hint()), isNull);
+    },
+  );
 
   test('beforeSend keeps typed Sentry contexts serializable', () {
     final event = SentryEvent(

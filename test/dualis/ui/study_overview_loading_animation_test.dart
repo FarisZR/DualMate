@@ -14,6 +14,7 @@ import 'package:dualmate/dualis/service/dualis_service.dart';
 import 'package:dualmate/dualis/ui/exam_results_page/exam_results_page.dart';
 import 'package:dualmate/dualis/ui/study_overview/study_overview_page.dart';
 import 'package:dualmate/dualis/ui/viewmodels/study_grades_view_model.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -103,7 +104,7 @@ void main() {
       findsOneWidget,
     );
 
-    dualisService.failStudyGrades(StateError('student results unavailable'));
+    dualisService.failStudyGrades(ServiceRequestFailed('Http request failed!'));
     expect(await failedRefresh, isFalse);
     await tester.pumpAndSettle();
 

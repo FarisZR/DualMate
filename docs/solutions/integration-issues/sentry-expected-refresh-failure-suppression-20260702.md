@@ -33,6 +33,10 @@ Expected external failures are now classified before they reach Sentry:
 - Schedule `ServiceRequestFailed` and canteen `CanteenRequestFailed` are
   suppressible.
 - Schedule query wrappers suppress only when their inner cause is suppressible.
+- The Sentry `beforeSend` scrubber applies the same classifier to automatic
+  Flutter error events, including `PlatformDispatcher.onError` captures.
+- Dualis refresh boundaries absorb suppressible failures without advancing the
+  last-successful refresh timestamp, while unexpected failures still surface.
 
 Performance spans keep coarse status data such as `network_error`, but
 suppressible refresh failures are not attached as internal app errors.

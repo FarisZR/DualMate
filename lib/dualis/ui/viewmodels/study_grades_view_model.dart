@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/logging/app_diagnostics.dart';
+import 'package:dualmate/common/logging/diagnostic_exception_filter.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/util/cancelable_mutex.dart';
@@ -195,14 +196,18 @@ class StudyGradesViewModel extends BaseViewModel {
       loaded = true;
     } on OperationCancelledException catch (_) {
     } catch (error, stackTrace) {
-      unawaited(
-        AppDiagnostics.instance.reportCaughtException(
-          error,
-          stackTrace,
-          message: 'Dualis study-grades refresh failed',
-          tags: const {'feature': 'dualis', 'operation': 'study_grades'},
-        ),
-      );
+      if (shouldSuppressDiagnosticsException(error)) {
+        unawaited(
+          AppDiagnostics.instance.reportCaughtException(
+            error,
+            stackTrace,
+            message: 'Dualis study-grades refresh failed',
+            tags: const {'feature': 'dualis', 'operation': 'study_grades'},
+          ),
+        );
+      } else {
+        Error.throwWithStackTrace(error, stackTrace);
+      }
     } finally {
       _studyGradesCancellationToken.release();
       if (epoch != _studyGradesLoadEpoch) {
@@ -394,6 +399,10 @@ class StudyGradesViewModel extends BaseViewModel {
 
       if (await studyGradesLoad) {
         await _preferencesProvider.setDualisLastRefreshAt(DateTime.now());
+      }
+    } catch (error, stackTrace) {
+      if (!shouldSuppressDiagnosticsException(error)) {
+        Error.throwWithStackTrace(error, stackTrace);
       }
     } finally {
       _refreshInFlight = false;

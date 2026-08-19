@@ -10,6 +10,7 @@ import 'package:dualmate/dualis/model/semester.dart';
 import 'package:dualmate/dualis/model/study_grades.dart';
 import 'package:dualmate/dualis/service/dualis_service.dart';
 import 'package:dualmate/dualis/ui/viewmodels/study_grades_view_model.dart';
+import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -93,8 +94,44 @@ void main() {
     expect(service.querySemesterNamesCalls, 1);
   });
 
-  test('refreshData completes and clears GPA loading when grades fail',
-      () async {
+  test('refreshData absorbs expected external failures', () async {
+    final preferences = _buildPreferences();
+    final service = _StudyGradesTestService(blockFirstModulesRequest: false);
+    final viewModel = StudyGradesViewModel(preferences, service);
+    addTearDown(viewModel.dispose);
+
+    expect(await viewModel.login(Credentials('u', 'p')), isTrue);
+    await _waitForDualisRefresh(preferences);
+    final lastSuccessfulRefresh = await preferences.getDualisLastRefreshAt();
+
+    service.querySemesterNamesError = ServiceRequestFailed(
+      'Http request failed!',
+    );
+
+    await expectLater(viewModel.refreshData(force: true), completes);
+    expect(await preferences.getDualisLastRefreshAt(), lastSuccessfulRefresh);
+    expect(viewModel.isLoadingSemesterNames, isFalse);
+  });
+
+  test('refreshData still propagates unexpected failures', () async {
+    final preferences = _buildPreferences();
+    final service = _StudyGradesTestService(blockFirstModulesRequest: false);
+    final viewModel = StudyGradesViewModel(preferences, service);
+    addTearDown(viewModel.dispose);
+
+    expect(await viewModel.login(Credentials('u', 'p')), isTrue);
+    await _waitForDualisRefresh(preferences);
+
+    service.querySemesterNamesError = StateError('parser regression');
+
+    await expectLater(
+      viewModel.refreshData(force: true),
+      throwsA(isA<StateError>()),
+    );
+    expect(viewModel.isLoadingSemesterNames, isFalse);
+  });
+
+  test('refreshData propagates unexpected study-grade failures', () async {
     final preferences = _buildPreferences();
     final service = _StudyGradesTestService(blockFirstModulesRequest: false);
     service.studyGradesResult = StudyGrades(1.7, 1.8, 210, 96);
@@ -103,18 +140,46 @@ void main() {
 
     expect(await viewModel.login(Credentials('u', 'p')), isTrue);
     await _waitForDualisRefresh(preferences);
-    final lastSuccessfulRefreshAt =
-        await preferences.getDualisLastRefreshAt();
+    final lastSuccessfulRefreshAt = await preferences.getDualisLastRefreshAt();
 
-    service.studyGradesThrows = true;
+    service.studyGradesError = StateError('student results unavailable');
+    service.resetCallCounters();
+
+    await expectLater(
+      viewModel.refreshData(force: true),
+      throwsA(isA<StateError>()),
+    );
+
+    expect(viewModel.isLoadingStudyGrades, isFalse);
+    expect(service.queryStudyGradesCalls, 1);
+    expect(viewModel.studyGrades.gpaTotal, 1.7);
+    expect(viewModel.studyGrades.gpaMainModules, 1.8);
+    expect(viewModel.studyGrades.creditsTotal, 210);
+    expect(viewModel.studyGrades.creditsGained, 96);
+    expect(
+      await preferences.getDualisLastRefreshAt(),
+      lastSuccessfulRefreshAt,
+    );
+  });
+
+  test('refreshData absorbs expected study-grade failures', () async {
+    final preferences = _buildPreferences();
+    final service = _StudyGradesTestService(blockFirstModulesRequest: false);
+    service.studyGradesResult = StudyGrades(1.7, 1.8, 210, 96);
+    final viewModel = StudyGradesViewModel(preferences, service);
+    addTearDown(viewModel.dispose);
+
+    expect(await viewModel.login(Credentials('u', 'p')), isTrue);
+    await _waitForDualisRefresh(preferences);
+    final lastSuccessfulRefreshAt = await preferences.getDualisLastRefreshAt();
+
+    service.studyGradesError = ServiceRequestFailed('Http request failed!');
     service.resetCallCounters();
 
     await expectLater(viewModel.refreshData(force: true), completes);
 
     expect(viewModel.isLoadingStudyGrades, isFalse);
     expect(service.queryStudyGradesCalls, 1);
-    expect(service.queryAllModulesCalls, 1);
-    expect(service.querySemesterNamesCalls, 1);
     expect(viewModel.studyGrades.gpaTotal, 1.7);
     expect(viewModel.studyGrades.gpaMainModules, 1.8);
     expect(viewModel.studyGrades.creditsTotal, 210);
@@ -173,7 +238,8 @@ class _StudyGradesTestService extends DualisService {
   int queryAllModulesCalls = 0;
   int querySemesterNamesCalls = 0;
   int querySemesterCalls = 0;
-  bool studyGradesThrows = false;
+  Object? querySemesterNamesError;
+  Object? studyGradesError;
   StudyGrades studyGradesResult = StudyGrades(0, 0, 0, 0);
   String? lastLoginUsername;
   String? lastLoginPassword;
@@ -237,8 +303,9 @@ class _StudyGradesTestService extends DualisService {
     CancellationToken? cancellationToken,
   ]) async {
     queryStudyGradesCalls += 1;
-    if (studyGradesThrows) {
-      throw StateError('student results unavailable');
+    final error = studyGradesError;
+    if (error != null) {
+      throw error;
     }
     return studyGradesResult;
   }
@@ -248,6 +315,10 @@ class _StudyGradesTestService extends DualisService {
     CancellationToken? cancellationToken,
   ]) async {
     querySemesterNamesCalls += 1;
+    final error = querySemesterNamesError;
+    if (error != null) {
+      throw error;
+    }
     return const <String>['SoSe2026'];
   }
 

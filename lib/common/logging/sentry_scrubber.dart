@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:dualmate/common/logging/diagnostic_exception_filter.dart';
 import 'package:flutter/widgets.dart';
 import 'package:sentry/sentry.dart';
 
@@ -253,6 +254,11 @@ Map<String, String> sanitizeDiagnosticsTags(Map<String, String> source) {
 }
 
 SentryEvent? scrubSentryEvent(SentryEvent event, Hint hint) {
+  final throwable = event.throwable;
+  if (throwable != null && shouldSuppressDiagnosticsException(throwable)) {
+    return null;
+  }
+
   event.user = null;
   event.transaction = event.transaction == null
       ? null
