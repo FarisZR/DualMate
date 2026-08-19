@@ -299,9 +299,7 @@ class _BlockingDualisService extends DualisService {
   }
 
   @override
-  Future<StudyGrades> queryStudyGrades([
-    CancellationToken? cancellationToken,
-  ]) {
+  Future<StudyGrades> queryStudyGrades([CancellationToken? cancellationToken]) {
     final request = Completer<StudyGrades>();
     _studyGradesRequests.add(request);
     return request.future;
