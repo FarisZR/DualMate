@@ -50,6 +50,7 @@ this app is designed for android, you should stick to material 3 / material you 
 
 - Record fixes in `docs/solutions/<category>/...md` with frontmatter.
 - Keep implementation plans in `docs/plans/`.
+- Play Store marketing screenshot workflow: `store-assets/play-store-screenshots/README.md`; project skill: `.agents/skills/app-store-screenshots/SKILL.md`.
 - Canonical behavior docs to consult before touching core flows:
   - `docs/modernizing.md`
   - `docs/rapla-cache-refresh-behavior.md`
