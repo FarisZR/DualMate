@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="assets/feature-image.webp" alt="DualMate feature image" />
+  <a href="https://dualmate.fariszr.com?utm_source=dualmate-github">
+    <img src="assets/feature-image.webp" alt="DualMate feature image" />
+  </a>
 </p>
 
 <h1 align="center">DualMate</h1>
