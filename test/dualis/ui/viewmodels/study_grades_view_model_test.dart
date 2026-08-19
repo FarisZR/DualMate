@@ -58,6 +58,143 @@ void main() {
   );
 
   test(
+    'loadAllModules notifies loading cleanup after an unexpected failure',
+    () async {
+      final service = _StudyGradesTestService(blockFirstModulesRequest: false)
+        ..queryAllModulesError = StateError('module parser regression');
+      final viewModel = StudyGradesViewModel(_buildPreferences(), service);
+      addTearDown(viewModel.dispose);
+      final loadingStates = <bool>[];
+      var contentNotifications = 0;
+      viewModel.addListener(
+        (_) => loadingStates.add(viewModel.isLoadingAllModules),
+        const ['isLoadingAllModules'],
+      );
+      viewModel.addListener((_) => contentNotifications += 1, const [
+        'allModules',
+      ]);
+
+      await expectLater(viewModel.loadAllModules(), throwsA(isA<StateError>()));
+
+      expect(loadingStates, <bool>[true, false]);
+      expect(contentNotifications, 1);
+    },
+  );
+
+  test(
+    'loadSemesterByName notifies loading cleanup after an unexpected failure',
+    () async {
+      final service = _StudyGradesTestService(blockFirstModulesRequest: false)
+        ..querySemesterError = StateError('semester parser regression');
+      final viewModel = StudyGradesViewModel(_buildPreferences(), service);
+      addTearDown(viewModel.dispose);
+      final loadingStates = <bool>[];
+      var contentNotifications = 0;
+      viewModel.addListener(
+        (_) => loadingStates.add(viewModel.isLoadingCurrentSemester),
+        const ['isLoadingCurrentSemester'],
+      );
+      viewModel.addListener((_) => contentNotifications += 1, const [
+        'currentSemester',
+      ]);
+
+      await expectLater(
+        viewModel.loadSemesterByName('SoSe2026'),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(loadingStates, <bool>[true, false]);
+      expect(contentNotifications, 2);
+    },
+  );
+
+  test(
+    'loadSemesterNamesForCurrentSelection notifies loading cleanup after an unexpected failure',
+    () async {
+      final service = _StudyGradesTestService(blockFirstModulesRequest: false)
+        ..querySemesterNamesError = StateError('semester names regression');
+      final viewModel = StudyGradesViewModel(_buildPreferences(), service);
+      addTearDown(viewModel.dispose);
+      final loadingStates = <bool>[];
+      var contentNotifications = 0;
+      viewModel.addListener(
+        (_) => loadingStates.add(viewModel.isLoadingSemesterNames),
+        const ['isLoadingSemesterNames'],
+      );
+      viewModel.addListener((_) => contentNotifications += 1, const [
+        'semesterNames',
+      ]);
+
+      await expectLater(
+        viewModel.loadSemesterNamesForCurrentSelection(),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(loadingStates, <bool>[true, false]);
+      expect(contentNotifications, 1);
+    },
+  );
+
+  test('loadAllModules ignores stale cleanup notifications', () async {
+    final service = _OverlappingLoadsService();
+    final viewModel = StudyGradesViewModel(_buildPreferences(), service);
+    addTearDown(viewModel.dispose);
+
+    await _expectStaleCleanupNotificationsIgnored(
+      viewModel: viewModel,
+      requests: service.allModulesRequests,
+      startOlderLoad: viewModel.loadAllModules,
+      startNewerLoad: viewModel.loadAllModules,
+      completeRequest: (index) =>
+          service.allModulesRequests.complete(index, const <Module>[]),
+      contentProperty: 'allModules',
+      loadingProperty: 'isLoadingAllModules',
+      isLoading: () => viewModel.isLoadingAllModules,
+    );
+  });
+
+  test('loadSemesterByName ignores stale cleanup notifications', () async {
+    final service = _OverlappingLoadsService();
+    final viewModel = StudyGradesViewModel(_buildPreferences(), service);
+    addTearDown(viewModel.dispose);
+
+    await _expectStaleCleanupNotificationsIgnored(
+      viewModel: viewModel,
+      requests: service.semesterRequests,
+      startOlderLoad: () => viewModel.loadSemesterByName('Older'),
+      startNewerLoad: () => viewModel.loadSemesterByName('Newer'),
+      completeRequest: (index) => service.semesterRequests.complete(
+        index,
+        Semester(index == 0 ? 'Older' : 'Newer', const <Module>[]),
+      ),
+      contentProperty: 'currentSemester',
+      loadingProperty: 'isLoadingCurrentSemester',
+      isLoading: () => viewModel.isLoadingCurrentSemester,
+    );
+  });
+
+  test(
+    'loadSemesterNamesForCurrentSelection ignores stale cleanup notifications',
+    () async {
+      final service = _OverlappingLoadsService();
+      final viewModel = StudyGradesViewModel(_buildPreferences(), service);
+      addTearDown(viewModel.dispose);
+
+      await _expectStaleCleanupNotificationsIgnored(
+        viewModel: viewModel,
+        requests: service.semesterNamesRequests,
+        startOlderLoad: viewModel.loadSemesterNamesForCurrentSelection,
+        startNewerLoad: viewModel.loadSemesterNamesForCurrentSelection,
+        completeRequest: (index) =>
+            service.semesterNamesRequests.complete(index, const <String>[]),
+        contentProperty: 'semesterNames',
+        loadingProperty: 'isLoadingSemesterNames',
+        isLoading: () => viewModel.isLoadingSemesterNames,
+      );
+    },
+  );
+
+  test(
     'restores the Dualis session from saved credentials on page open',
     () async {
       final preferences = _buildPreferences();
@@ -225,6 +362,58 @@ Future<void> _waitForDualisRefresh(PreferencesProvider preferences) async {
   }).timeout(const Duration(seconds: 2));
 }
 
+Future<void> _waitUntil(bool Function() condition) async {
+  await Future.doWhile(() async {
+    if (condition()) {
+      return false;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 1));
+    return true;
+  }).timeout(const Duration(seconds: 2));
+}
+
+Future<void> _expectStaleCleanupNotificationsIgnored<T>({
+  required StudyGradesViewModel viewModel,
+  required _ControllableRequests<T> requests,
+  required Future<void> Function() startOlderLoad,
+  required Future<void> Function() startNewerLoad,
+  required void Function(int index) completeRequest,
+  required String contentProperty,
+  required String loadingProperty,
+  required bool Function() isLoading,
+}) async {
+  var contentNotifications = 0;
+  var loadingNotifications = 0;
+  viewModel.addListener((_) => contentNotifications += 1, <String>[
+    contentProperty,
+  ]);
+  viewModel.addListener((_) => loadingNotifications += 1, <String>[
+    loadingProperty,
+  ]);
+
+  final olderLoad = startOlderLoad();
+  await requests.waitForCount(1);
+  final newerLoad = startNewerLoad();
+  await _waitUntil(() => loadingNotifications >= 2);
+  final contentCountAfterNewerStarted = contentNotifications;
+  final loadingCountAfterNewerStarted = loadingNotifications;
+
+  completeRequest(0);
+  await olderLoad;
+  await requests.waitForCount(2);
+
+  expect(contentNotifications, contentCountAfterNewerStarted);
+  expect(loadingNotifications, loadingCountAfterNewerStarted);
+  expect(isLoading(), isTrue);
+
+  completeRequest(1);
+  await newerLoad;
+
+  expect(contentNotifications, contentCountAfterNewerStarted + 1);
+  expect(loadingNotifications, loadingCountAfterNewerStarted + 1);
+  expect(isLoading(), isFalse);
+}
+
 PreferencesProvider _buildPreferences() {
   return PreferencesProvider(
     _FakePreferencesAccess(),
@@ -242,7 +431,9 @@ class _StudyGradesTestService extends DualisService {
   int queryAllModulesCalls = 0;
   int querySemesterNamesCalls = 0;
   int querySemesterCalls = 0;
+  Object? queryAllModulesError;
   Object? querySemesterNamesError;
+  Object? querySemesterError;
   Object? studyGradesError;
   StudyGrades studyGradesResult = StudyGrades(0, 0, 0, 0);
   String? lastLoginUsername;
@@ -277,6 +468,11 @@ class _StudyGradesTestService extends DualisService {
     queryAllModulesCalls += 1;
     _allModulesCallCount += 1;
     final token = cancellationToken;
+
+    final error = queryAllModulesError;
+    if (error != null) {
+      throw error;
+    }
 
     if (blockFirstModulesRequest) {
       if (_allModulesCallCount == 1) {
@@ -332,6 +528,10 @@ class _StudyGradesTestService extends DualisService {
     CancellationToken? cancellationToken,
   ]) async {
     querySemesterCalls += 1;
+    final error = querySemesterError;
+    if (error != null) {
+      throw error;
+    }
     return Semester(name, const <Module>[]);
   }
 
@@ -349,6 +549,68 @@ class _StudyGradesTestService extends DualisService {
     queryAllModulesCalls = 0;
     querySemesterNamesCalls = 0;
     querySemesterCalls = 0;
+  }
+}
+
+class _OverlappingLoadsService extends DualisService {
+  final allModulesRequests = _ControllableRequests<List<Module>>();
+  final semesterRequests = _ControllableRequests<Semester>();
+  final semesterNamesRequests = _ControllableRequests<List<String>>();
+
+  @override
+  Future<LoginResult> login(
+    String username,
+    String password, [
+    CancellationToken? cancellationToken,
+  ]) async => LoginResult.LoggedIn;
+
+  @override
+  Future<List<Module>> queryAllModules([CancellationToken? cancellationToken]) {
+    return allModulesRequests.add();
+  }
+
+  @override
+  Future<Semester> querySemester(
+    String name, [
+    CancellationToken? cancellationToken,
+  ]) {
+    return semesterRequests.add();
+  }
+
+  @override
+  Future<List<String>> querySemesterNames([
+    CancellationToken? cancellationToken,
+  ]) {
+    return semesterNamesRequests.add();
+  }
+
+  @override
+  Future<StudyGrades> queryStudyGrades([
+    CancellationToken? cancellationToken,
+  ]) async => StudyGrades(0, 0, 0, 0);
+
+  @override
+  Future<void> logout([CancellationToken? cancellationToken]) async {}
+
+  @override
+  void clearCache() {}
+}
+
+class _ControllableRequests<T> {
+  final List<Completer<T>> _requests = [];
+
+  Future<T> add() {
+    final request = Completer<T>();
+    _requests.add(request);
+    return request.future;
+  }
+
+  Future<void> waitForCount(int count) {
+    return _waitUntil(() => _requests.length >= count);
+  }
+
+  void complete(int index, T value) {
+    _requests[index].complete(value);
   }
 }
 
