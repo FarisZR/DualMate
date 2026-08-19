@@ -1,0 +1,677 @@
+{
+  "schemaVersion": 3,
+  "appName": "DualMate",
+  "themeId": "dualmate",
+  "connectedCanvas": false,
+  "locales": [
+    "de",
+    "en"
+  ],
+  "locale": "de",
+  "device": "android-10",
+  "orientation": "landscape",
+  "deviceViews": {
+    "iphone": {
+      "orientation": "portrait",
+      "connectedCanvas": true
+    },
+    "ipad": {
+      "orientation": "portrait",
+      "connectedCanvas": true
+    },
+    "android": {
+      "orientation": "portrait",
+      "connectedCanvas": true
+    },
+    "android-7": {
+      "orientation": "portrait",
+      "connectedCanvas": true
+    },
+    "android-10": {
+      "orientation": "landscape",
+      "connectedCanvas": false
+    },
+    "feature-graphic": {
+      "orientation": "portrait",
+      "connectedCanvas": false
+    }
+  },
+  "appIcon": "/app-icon.png",
+  "slidesByDevice": {
+    "iphone": [],
+    "android": [
+      {
+        "id": "dualmate-schedule",
+        "layout": "hero",
+        "label": {
+          "de": "DEIN TAG AUF EINEN BLICK",
+          "en": "YOUR DAY AT A GLANCE"
+        },
+        "headline": {
+          "de": "Dein Stundenplan.\nImmer aktuell.",
+          "en": "Your schedule.\nAlways up to date."
+        },
+        "screenshot": "/screenshots/android/phone/de/01.png",
+        "transforms": {
+          "caption": {
+            "x": 86,
+            "y": 112,
+            "width": 908,
+            "height": 470,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "device": {
+            "x": 201,
+            "y": 610,
+            "width": 679,
+            "height": 1471,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "dualmate-reminders",
+        "layout": "device-bottom",
+        "label": {
+          "de": "AUTOMATISCH ERINNERT",
+          "en": "AUTOMATIC REMINDERS"
+        },
+        "headline": {
+          "de": "Nie wieder\nzu spät.",
+          "en": "Never be\nlate again."
+        },
+        "screenshot": "/screenshots/android/phone/de/02.png",
+        "transforms": {
+          "caption": {
+            "x": 86.39997627258322,
+            "y": 113.59999450683594,
+            "width": 907,
+            "height": 578,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "dualmate-dualis",
+        "layout": "device-top",
+        "label": {
+          "de": "DUALIS OHNE UMWEGE",
+          "en": "DUALIS, SIMPLIFIED"
+        },
+        "headline": {
+          "de": "Noten sofort\nim Blick.",
+          "en": "Your grades.\nRight away."
+        },
+        "screenshot": "/screenshots/android/phone/de/03.png",
+        "transforms": {
+          "caption": {
+            "x": 85.99996860504143,
+            "y": 1413.9999633789062,
+            "width": 908,
+            "height": 376,
+            "rotation": 0,
+            "zIndex": 5
+          },
+          "device": {
+            "x": 195,
+            "y": -125,
+            "width": 690,
+            "height": 1495,
+            "rotation": -2,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "dualmate-canteen",
+        "layout": "hero",
+        "label": {
+          "de": "MITTAGSPAUSE GEKLÄRT",
+          "en": "LUNCH, SORTED"
+        },
+        "headline": {
+          "de": "Mensa checken.\nDirekt in der App.",
+          "en": "Check the canteen.\nRight in the app."
+        },
+        "screenshot": "/screenshots/android/phone/de/04.png",
+        "transforms": {
+          "caption": {
+            "x": 520,
+            "y": 225,
+            "width": 500,
+            "height": 560,
+            "rotation": 0,
+            "zIndex": 5
+          },
+          "device": {
+            "x": -90,
+            "y": 360,
+            "width": 700,
+            "height": 1517,
+            "rotation": -6,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "dualmate-dates",
+        "layout": "device-bottom",
+        "label": {
+          "de": "DAMIT NICHTS UNTERGEHT",
+          "en": "NEVER MISS A DATE"
+        },
+        "headline": {
+          "de": "Wichtige Termine.\nImmer im Blick.",
+          "en": "Important dates.\nAlways in view."
+        },
+        "screenshot": "/screenshots/android/phone/de/05.png",
+        "transforms": {
+          "caption": {
+            "x": 82,
+            "y": 90,
+            "width": 916,
+            "height": 560,
+            "rotation": 0,
+            "zIndex": 5
+          },
+          "device": {
+            "x": 255,
+            "y": 520,
+            "width": 700,
+            "height": 1517,
+            "rotation": 4,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "dualmate-widgets",
+        "layout": "no-device",
+        "label": {
+          "de": "AUF EINEN BLICK",
+          "en": "AT A GLANCE"
+        },
+        "headline": {
+          "de": "Vorlesungen & Mensa.\nDirekt auf deinem Homescreen.",
+          "en": "Classes & canteen.\nRight on your home screen."
+        },
+        "screenshot": "",
+        "transforms": {
+          "caption": {
+            "x": 81.99988834381111,
+            "y": 24.000003051757812,
+            "width": 916,
+            "height": 406,
+            "rotation": 0,
+            "zIndex": 6
+          }
+        },
+        "imageElements": [
+          {
+            "id": "schedule-widget",
+            "src": "/widgets/schedule_now.png",
+            "transform": {
+              "x": 110,
+              "y": 472.34432234432234,
+              "width": 860,
+              "height": 541,
+              "rotation": -2,
+              "zIndex": 3
+            },
+            "borderRadius": 28,
+            "shadow": "0 22px 60px rgba(34, 20, 18, 0.18)"
+          },
+          {
+            "id": "canteen-widget",
+            "src": "/widgets/canteen_today.png",
+            "transform": {
+              "x": 110,
+              "y": 1180,
+              "width": 860,
+              "height": 541,
+              "rotation": 2,
+              "zIndex": 3
+            },
+            "borderRadius": 28,
+            "shadow": "0 22px 60px rgba(34, 20, 18, 0.18)"
+          }
+        ],
+        "textElements": [
+          {
+            "id": "schedule-widget-note",
+            "text": {
+              "de": "STUNDENPLAN-WIDGET  ·  Kommende Vorlesungen über mehrere Tage",
+              "en": "SCHEDULE WIDGET  ·  Upcoming classes across multiple days"
+            },
+            "transform": {
+              "x": 110,
+              "y": 1020,
+              "width": 860,
+              "height": 100,
+              "rotation": 0,
+              "zIndex": 5
+            },
+            "fontSize": 27,
+            "fontWeight": 700,
+            "color": "#6F6A68",
+            "align": "center"
+          },
+          {
+            "id": "canteen-widget-note",
+            "text": {
+              "de": "MENSA-WIDGET  ·  Kommende Gerichte für die nächsten Tage",
+              "en": "CANTEEN WIDGET  ·  Upcoming meals for the next days"
+            },
+            "transform": {
+              "x": 110,
+              "y": 1730,
+              "width": 860,
+              "height": 100,
+              "rotation": 0,
+              "zIndex": 5
+            },
+            "fontSize": 27,
+            "fontWeight": 700,
+            "color": "#6F6A68",
+            "align": "center"
+          }
+        ]
+      },
+      {
+        "id": "dualmate-all-in-one",
+        "layout": "no-device",
+        "label": {
+          "de": "DAS IST DUALMATE",
+          "en": "THIS IS DUALMATE"
+        },
+        "headline": {
+          "de": "Alles für dein\nDHBW-Studium.",
+          "en": "Everything for \nDHBW Students."
+        },
+        "screenshot": "",
+        "transforms": {
+          "caption": {
+            "x": 102.34432234432279,
+            "y": 180.73991453289545,
+            "width": 880,
+            "height": 566,
+            "rotation": 0,
+            "zIndex": 1
+          }
+        },
+        "textElements": [
+          {
+            "id": "feature-grid",
+            "text": {
+              "de": "Stundenplan\n\nDualis\n\nMensa\n\nTermine\n\nErinnerungen\n\n Widgets",
+              "en": "Schedule\n\nDualis\n\nCanteen\n\nDates\n\nReminders\n\nWidgets"
+            },
+            "transform": {
+              "x": 90,
+              "y": 850,
+              "width": 900,
+              "height": 410,
+              "rotation": 0,
+              "zIndex": 3
+            },
+            "fontSize": 57,
+            "fontWeight": 700,
+            "color": "#151515",
+            "align": "center"
+          },
+          {
+            "id": "feature-note",
+            "text": {
+              "de": "Von DHBW-Studierenden für DHBW-Studierende.",
+              "en": "Built by DHBW students for DHBW students."
+            },
+            "transform": {
+              "x": 156.35036496350585,
+              "y": 1500.1459854014593,
+              "width": 800,
+              "height": 180,
+              "rotation": 0,
+              "zIndex": 2
+            },
+            "fontSize": 34,
+            "fontWeight": 500,
+            "color": "#6F6A68",
+            "align": "center"
+          }
+        ]
+      }
+    ],
+    "ipad": [],
+    "android-7": [],
+    "android-10": [
+      {
+        "id": "tablet-schedule",
+        "layout": "device-bottom",
+        "label": {
+          "de": "DEIN TAG AUF EINEN BLICK",
+          "en": "YOUR DAY AT A GLANCE"
+        },
+        "headline": {
+          "de": "Dein Stundenplan.\nImmer aktuell.",
+          "en": "Your schedule.\nAlways up to date."
+        },
+        "screenshot": "/screenshots/android/tablet/{locale}/01.jpg",
+        "transforms": {
+          "caption": {
+            "x": 180,
+            "y": 70,
+            "width": 2200,
+            "height": 350,
+            "rotation": 0,
+            "zIndex": 5
+          },
+          "device": {
+            "x": 380,
+            "y": 430,
+            "width": 1800,
+            "height": 1125,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "tablet-reminders",
+        "layout": "split-landscape",
+        "label": {
+          "de": "AUTOMATISCH ERINNERT",
+          "en": "AUTOMATIC REMINDERS"
+        },
+        "headline": {
+          "de": "Nie wieder\nzu spät.",
+          "en": "Never be\nlate again."
+        },
+        "screenshot": "/screenshots/android/tablet/{locale}/02.jpg",
+        "transforms": {
+          "caption": {
+            "x": 110,
+            "y": 330,
+            "width": 790,
+            "height": 650,
+            "rotation": 0,
+            "zIndex": 5
+          },
+          "device": {
+            "x": 930,
+            "y": 285,
+            "width": 1540,
+            "height": 962.5,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "tablet-dualis",
+        "layout": "split-landscape",
+        "label": {
+          "de": "DUALIS OHNE UMWEGE",
+          "en": "DUALIS, SIMPLIFIED"
+        },
+        "headline": {
+          "de": "Noten sofort\nim Blick.",
+          "en": "Your grades.\nRight away."
+        },
+        "screenshot": "/screenshots/android/tablet/{locale}/03.jpg",
+        "transforms": {
+          "caption": {
+            "x": 1750,
+            "y": 330,
+            "width": 720,
+            "height": 650,
+            "rotation": 0,
+            "zIndex": 5
+          },
+          "device": {
+            "x": 100,
+            "y": 265,
+            "width": 1580,
+            "height": 987.5,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "tablet-canteen",
+        "layout": "device-bottom",
+        "label": {
+          "de": "MITTAGSPAUSE GEKLÄRT",
+          "en": "LUNCH, SORTED"
+        },
+        "headline": {
+          "de": "Mensa checken.\nDirekt in der App.",
+          "en": "Check the canteen.\nRight in the app."
+        },
+        "screenshot": "/screenshots/android/tablet/{locale}/04.jpg",
+        "transforms": {
+          "caption": {
+            "x": 180,
+            "y": 70,
+            "width": 2200,
+            "height": 350,
+            "rotation": 0,
+            "zIndex": 5
+          },
+          "device": {
+            "x": 400,
+            "y": 440,
+            "width": 1760,
+            "height": 1100,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "tablet-dates",
+        "layout": "split-landscape",
+        "label": {
+          "de": "DAMIT NICHTS UNTERGEHT",
+          "en": "NEVER MISS A DATE"
+        },
+        "headline": {
+          "de": "Wichtige Termine.\nImmer im Blick.",
+          "en": "Important dates.\nAlways in view."
+        },
+        "screenshot": "/screenshots/android/tablet/{locale}/05.jpg",
+        "transforms": {
+          "caption": {
+            "x": 110,
+            "y": 340,
+            "width": 800,
+            "height": 650,
+            "rotation": 0,
+            "zIndex": 5
+          },
+          "device": {
+            "x": 940,
+            "y": 300,
+            "width": 1520,
+            "height": 950,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "tablet-widgets",
+        "layout": "no-device",
+        "label": {
+          "de": "AUF EINEN BLICK",
+          "en": "AT A GLANCE"
+        },
+        "headline": {
+          "de": "Vorlesungen & Mensa. Direkt auf deinem Homescreen.",
+          "en": "Classes & canteen. Right on your home screen."
+        },
+        "screenshot": "",
+        "transforms": {
+          "caption": {
+            "x": 220,
+            "y": 70,
+            "width": 2120,
+            "height": 330,
+            "rotation": 0,
+            "zIndex": 6
+          }
+        },
+        "imageElements": [
+          {
+            "id": "schedule-widget",
+            "src": "/widgets/schedule_now.png",
+            "transform": {
+              "x": 170,
+              "y": 500,
+              "width": 1040,
+              "height": 654,
+              "rotation": -1.5,
+              "zIndex": 3
+            },
+            "borderRadius": 34,
+            "shadow": "0 24px 70px rgba(34, 20, 18, 0.16)"
+          },
+          {
+            "id": "canteen-widget",
+            "src": "/widgets/canteen_today.png",
+            "transform": {
+              "x": 1350,
+              "y": 500,
+              "width": 1040,
+              "height": 654,
+              "rotation": 1.5,
+              "zIndex": 3
+            },
+            "borderRadius": 34,
+            "shadow": "0 24px 70px rgba(34, 20, 18, 0.16)"
+          }
+        ],
+        "textElements": [
+          {
+            "id": "schedule-widget-note",
+            "text": {
+              "de": "STUNDENPLAN-WIDGET\nKommende Vorlesungen über mehrere Tage",
+              "en": "SCHEDULE WIDGET\nUpcoming classes across multiple days"
+            },
+            "transform": {
+              "x": 190,
+              "y": 1210,
+              "width": 1000,
+              "height": 180,
+              "rotation": 0,
+              "zIndex": 5
+            },
+            "fontSize": 38,
+            "fontWeight": 700,
+            "color": "#6F6A68",
+            "align": "center"
+          },
+          {
+            "id": "canteen-widget-note",
+            "text": {
+              "de": "MENSA-WIDGET\nKommende Gerichte für die nächsten Tage",
+              "en": "CANTEEN WIDGET\nUpcoming meals for the next days"
+            },
+            "transform": {
+              "x": 1370,
+              "y": 1210,
+              "width": 1000,
+              "height": 180,
+              "rotation": 0,
+              "zIndex": 5
+            },
+            "fontSize": 38,
+            "fontWeight": 700,
+            "color": "#6F6A68",
+            "align": "center"
+          }
+        ]
+      },
+      {
+        "id": "tablet-all-in-one",
+        "layout": "no-device",
+        "label": {
+          "de": "DAS IST DUALMATE",
+          "en": "THIS IS DUALMATE"
+        },
+        "headline": {
+          "de": "Alles für dein\nDHBW-Studium.",
+          "en": "Everything for your\nDHBW studies."
+        },
+        "screenshot": "",
+        "transforms": {
+          "caption": {
+            "x": 260,
+            "y": 150,
+            "width": 2040,
+            "height": 500,
+            "rotation": 0,
+            "zIndex": 2
+          }
+        },
+        "textElements": [
+          {
+            "id": "feature-grid",
+            "text": {
+              "de": "Stundenplan   •   Dualis   •   Mensa\nTermine   •   Erinnerungen   •   Widgets",
+              "en": "Schedule   •   Dualis   •   Canteen\nDates   •   Reminders   •   Widgets"
+            },
+            "transform": {
+              "x": 260,
+              "y": 790,
+              "width": 2040,
+              "height": 300,
+              "rotation": 0,
+              "zIndex": 4
+            },
+            "fontSize": 66,
+            "fontWeight": 700,
+            "color": "#151515",
+            "align": "center"
+          },
+          {
+            "id": "feature-note",
+            "text": {
+              "de": "Von DHBW-Studierenden für DHBW-Studierende.",
+              "en": "Built by DHBW students for DHBW students."
+            },
+            "transform": {
+              "x": 480,
+              "y": 1230,
+              "width": 1600,
+              "height": 150,
+              "rotation": 0,
+              "zIndex": 3
+            },
+            "fontSize": 40,
+            "fontWeight": 500,
+            "color": "#6F6A68",
+            "align": "center"
+          }
+        ]
+      }
+    ],
+    "feature-graphic": []
+  },
+  "customThemes": {
+    "dualmate": {
+      "id": "dualmate",
+      "name": "DualMate",
+      "bg": "#FCFAF9",
+      "bgAlt": "#FFFFFF",
+      "fg": "#151515",
+      "fgAlt": "#151515",
+      "accent": "#DE2323",
+      "muted": "#8C8785",
+      "decoration": "orbit"
+    }
+  }
+}
