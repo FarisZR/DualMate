@@ -73,6 +73,7 @@ Color colorNoConnectionForeground() => Colors.white;
 class ColorPalettes {
   ColorPalettes._();
 
+  // ignore: cyclomatic-complexity
   static ThemeData buildTheme(AppTheme theme) {
     if (theme == AppTheme.System) {
       theme = PlatformUtil.platformBrightness() == Brightness.light
