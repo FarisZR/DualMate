@@ -50,6 +50,7 @@ class ScheduleEntryWidget extends StatelessWidget {
     );
   }
 
+  // ignore: cyclomatic-complexity
   Widget _buildCard(
     BuildContext context,
     double width,
