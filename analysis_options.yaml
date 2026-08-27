@@ -2,7 +2,16 @@ analyzer:
   exclude:
     - third_party/**
 
-# Prevent agent-generated overly complex control flow.
-linter:
-  rules:
-    - cyclomatic-complexity
+# Keep individual functions simple enough to reason about and review.
+dart_code_linter:
+  metrics:
+    cyclomatic-complexity: 20
+  metrics-exclude:
+    - test/**
+    - third_party/**
+    # Existing hotspots are grandfathered so this gate can ratchet new code.
+    - lib/common/ui/colors.dart
+    - lib/common/util/widget_navigation_payload.dart
+    - lib/date_management/ui/widgets/dates_render_data.dart
+    - lib/schedule/reminders/class_reminder_coordinator.dart
+    - lib/schedule/ui/weeklyschedule/widgets/schedule_entry_widget.dart

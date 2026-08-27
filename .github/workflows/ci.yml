@@ -34,6 +34,9 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      - name: Check cyclomatic complexity
+        run: dart run dart_code_linter:metrics analyze lib --set-exit-on-violation-level=warning
+
       - name: Run tests
         run: flutter test
 
