@@ -1,6 +1,7 @@
 ---
 title: 'Debug cold start asserts while building ScheduleViewModel provider'
 severity: 'major'
+issue: 'FarisZR/DualMate#128'
 ---
 
 ## Expected Behavior
