@@ -1,6 +1,7 @@
 ---
 title: 'Cold-navigation setup assumes a modal phone drawer on tablets'
 severity: 'major'
+issue: 'FarisZR/DualMate#140'
 ---
 
 ## Expected Behavior

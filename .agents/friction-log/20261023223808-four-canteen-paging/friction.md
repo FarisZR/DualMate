@@ -1,6 +1,7 @@
 ---
 title: 'Four canteen paging tests fail on the unchanged v2 branch'
 severity: 'minor'
+issue: 'FarisZR/DualMate#138'
 ---
 
 ## Expected Behavior

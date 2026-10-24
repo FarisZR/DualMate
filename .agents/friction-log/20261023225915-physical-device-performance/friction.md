@@ -1,6 +1,7 @@
 ---
 title: 'Physical-device performance previews use a test-controlled frame cadence'
 severity: 'major'
+issue: 'FarisZR/DualMate#139'
 ---
 
 ## Expected Behavior
