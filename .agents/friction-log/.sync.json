@@ -1,0 +1,33 @@
+{
+  "mirrors": [
+    {
+      "issue": "FarisZR/DualMate#128",
+      "path": ".agents/friction-log/20260819164219-debug-cold-start/friction.md"
+    },
+    {
+      "issue": "FarisZR/DualMate#138",
+      "path": ".agents/friction-log/20261023223808-four-canteen-paging/friction.md"
+    },
+    {
+      "issue": "FarisZR/DualMate#139",
+      "path": ".agents/friction-log/20261023225915-physical-device-performance/friction.md"
+    },
+    {
+      "issue": "FarisZR/DualMate#140",
+      "path": ".agents/friction-log/20261023230528-cold-navigation-setup/friction.md"
+    },
+    {
+      "issue": "FarisZR/DualMate#141",
+      "path": ".agents/friction-log/20261024103338-long-physical-device/friction.md"
+    },
+    {
+      "issue": "FarisZR/DualMate#144",
+      "path": ".agents/friction-log/20261024162457-integration-driver-exits/friction.md"
+    },
+    {
+      "issue": "FarisZR/DualMate#150",
+      "path": ".agents/friction-log/20261024202538-canteen-weekday-normalization/friction.md"
+    }
+  ],
+  "version": 1
+}
