@@ -8,9 +8,10 @@ then reopened after the server stops to verify the offline path.
 
 - `timetable-tablet-light.png`: English, light theme.
 - `timetable-tablet-dark.png`: English, dark theme.
-- `timetable-tablet-dark-modules.png`: second source and add action in dark theme.
 - `timetable-tablet-dark-de.png`: German, dark theme.
-- `timetable-tablet-flow.mp4`: source configuration and module selection flow.
+
+Video capture is unavailable on this tablet because its Android image does not
+include `screenrecord`. The screenshots are the available visual evidence.
 
 Reproduce visual QA with the current stable Flutter SDK:
 

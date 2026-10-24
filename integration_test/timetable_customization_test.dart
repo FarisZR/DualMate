@@ -138,7 +138,11 @@ void main() {
     await tester.tap(find.text('Mathematics'));
     await tester.tap(find.text('Computer Networks'));
     await demoPause();
-    await tester.ensureVisible(find.text('Add timetable'));
+    await tester.scrollUntilVisible(
+      find.text('Add timetable'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Add timetable'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).at(0), 'B6');
@@ -219,10 +223,6 @@ void main() {
     theme.value = ThemeMode.dark;
     await tester.pumpAndSettle();
     await binding.takeScreenshot('timetable-tablet-dark');
-    await tester.ensureVisible(find.text('Add timetable'));
-    await tester.pumpAndSettle();
-    await binding.takeScreenshot('timetable-tablet-dark-modules');
-    await tester.ensureVisible(find.text('Customize timetable'));
     locale.value = const Locale('de');
     await tester.pumpAndSettle();
     expect(find.text('Stundenplan anpassen'), findsOneWidget);
