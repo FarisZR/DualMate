@@ -387,7 +387,7 @@ class ScheduleSourceProvider {
 
   void fireScheduleSourceChanged() {
     _onDidChangeScheduleSourceCallbacks.forEach((element) {
-      element(currentScheduleSource, true);
+      element(currentScheduleSource, didSetupCorrectly());
     });
   }
 }

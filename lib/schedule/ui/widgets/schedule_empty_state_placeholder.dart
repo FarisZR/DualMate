@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 class ScheduleEmptyStatePlaceholder extends StatelessWidget {
   final int columns;
   final int rows;
+  final bool showLessonPlaceholders;
 
   const ScheduleEmptyStatePlaceholder({
     Key? key,
     this.columns = 5,
     this.rows = 10,
+    this.showLessonPlaceholders = true,
   }) : super(key: key);
 
   @override
@@ -18,9 +20,7 @@ class ScheduleEmptyStatePlaceholder extends StatelessWidget {
         return Container(
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
-            border: Border.all(
-              color: colorScheduleGridGridLines(context),
-            ),
+            border: Border.all(color: colorScheduleGridGridLines(context)),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -40,9 +40,9 @@ class ScheduleEmptyStatePlaceholder extends StatelessWidget {
                     columns: columns,
                     rows: rows,
                     gridColor: colorScheduleGridGridLines(context),
-                    accentColor: colorScheduleEntryClass(context).withValues(
-                      alpha: 0.12,
-                    ),
+                    accentColor: colorScheduleEntryClass(context)
+                        .withValues(alpha: 0.12),
+                    showLessonPlaceholders: showLessonPlaceholders,
                   ),
                   child: Container(),
                 ),
@@ -60,12 +60,14 @@ class _SchedulePlaceholderGridPainter extends CustomPainter {
   final int rows;
   final Color gridColor;
   final Color accentColor;
+  final bool showLessonPlaceholders;
 
   _SchedulePlaceholderGridPainter({
     required this.columns,
     required this.rows,
     required this.gridColor,
     required this.accentColor,
+    required this.showLessonPlaceholders,
   });
 
   @override
@@ -91,15 +93,33 @@ class _SchedulePlaceholderGridPainter extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
+    if (!showLessonPlaceholders) return;
+
     final placeholderBlocks = [
-      Rect.fromLTWH(columnWidth * 0.2, rowHeight * 1.2, columnWidth * 0.6,
-          rowHeight * 0.8),
-      Rect.fromLTWH(columnWidth * 1.3, rowHeight * 3.1, columnWidth * 0.5,
-          rowHeight * 1.1),
-      Rect.fromLTWH(columnWidth * 2.1, rowHeight * 5.4, columnWidth * 0.7,
-          rowHeight * 0.9),
-      Rect.fromLTWH(columnWidth * 3.2, rowHeight * 2.2, columnWidth * 0.6,
-          rowHeight * 1.3),
+      Rect.fromLTWH(
+        columnWidth * 0.2,
+        rowHeight * 1.2,
+        columnWidth * 0.6,
+        rowHeight * 0.8,
+      ),
+      Rect.fromLTWH(
+        columnWidth * 1.3,
+        rowHeight * 3.1,
+        columnWidth * 0.5,
+        rowHeight * 1.1,
+      ),
+      Rect.fromLTWH(
+        columnWidth * 2.1,
+        rowHeight * 5.4,
+        columnWidth * 0.7,
+        rowHeight * 0.9,
+      ),
+      Rect.fromLTWH(
+        columnWidth * 3.2,
+        rowHeight * 2.2,
+        columnWidth * 0.6,
+        rowHeight * 1.3,
+      ),
     ];
 
     for (final block in placeholderBlocks) {
@@ -115,6 +135,7 @@ class _SchedulePlaceholderGridPainter extends CustomPainter {
     return oldDelegate.columns != columns ||
         oldDelegate.rows != rows ||
         oldDelegate.gridColor != gridColor ||
+        oldDelegate.showLessonPlaceholders != showLessonPlaceholders ||
         oldDelegate.accentColor != accentColor;
   }
 }

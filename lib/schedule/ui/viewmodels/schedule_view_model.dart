@@ -39,14 +39,11 @@ class ScheduleViewModel extends BaseViewModel {
     if (isPerformanceFixtureMode) {
       // The profile harness validates and installs its deterministic local
       // source during app initialization, before this view model registers
-      // its source-change callback.  The fixture therefore already has a
-      // valid source.  Mark initialization complete so the view model does
-      // not remain stuck in the initializing state.
-      if (_scheduleSourceProvider.didSetupCorrectly()) {
-        _isInitializingScheduleSource = false;
-        _didAttemptSetup = true;
-        notifyIfMounted("isInitializingScheduleSource");
-      }
+      // its source-change callback. Mark setup complete even when the last
+      // timetable was subsequently removed.
+      _isInitializingScheduleSource = false;
+      _didAttemptSetup = true;
+      notifyIfMounted("isInitializingScheduleSource");
       return;
     }
     _initialSetupTimer?.cancel();
@@ -67,6 +64,7 @@ class ScheduleViewModel extends BaseViewModel {
 
   void onDidChangeScheduleSource(ScheduleSource scheduleSource, bool valid) {
     if (_isDisposed) return;
+    _didAttemptSetup = true;
     _didSetupProperly = valid;
     if (_isInitializingScheduleSource) {
       _isInitializingScheduleSource = false;
