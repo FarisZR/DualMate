@@ -1,6 +1,7 @@
 ---
 title: 'Canteen weekday normalization fails across autumn DST'
 severity: 'minor'
+issue: 'FarisZR/DualMate#150'
 ---
 
 ## Expected Behavior

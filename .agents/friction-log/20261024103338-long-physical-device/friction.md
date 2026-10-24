@@ -1,6 +1,7 @@
 ---
 title: 'Long physical-device performance runs can lose their rendering surface to screen sleep'
 severity: 'major'
+issue: 'FarisZR/DualMate#141'
 ---
 
 ## Expected Behavior
