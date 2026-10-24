@@ -410,6 +410,37 @@
         }
       },
       {
+        "id": "tablet-customization",
+        "layout": "device-bottom",
+        "label": {
+          "de": "KURSE FLEXIBEL KOMBINIEREN",
+          "en": "MIX CLASSES YOUR WAY"
+        },
+        "headline": {
+          "de": "Deine Kurse.\nDein Stundenplan.",
+          "en": "Your courses.\nOne timetable."
+        },
+        "screenshot": "/screenshots/android/tablet/{locale}/06.png",
+        "transforms": {
+          "caption": {
+            "x": 180,
+            "y": 70,
+            "width": 2200,
+            "height": 350,
+            "rotation": 0,
+            "zIndex": 5
+          },
+          "device": {
+            "x": 503,
+            "y": 500,
+            "width": 1554,
+            "height": 1050,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
         "id": "tablet-reminders",
         "layout": "split-landscape",
         "label": {

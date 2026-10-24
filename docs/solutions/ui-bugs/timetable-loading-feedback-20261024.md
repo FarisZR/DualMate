@@ -60,6 +60,8 @@ fixture application and remains separate from the continuous cold stress run.
 
 Validation: the schedule suite plus indicator tests passed (299 tests). After
 the final wording change, all 26 customization/indicator tests passed again.
-The Pixel integration flow passed in both themes, including German. The full
+The Pixel and Huawei MRDI_W09 tablet integration flows passed in both themes,
+including German. Tablet captures use landscape in the isolated fixture app,
+with the device's existing resolution and density settings preserved. The full
 cold stress run is omitted at the user's explicit request; these changes make
 no new performance measurement claims.

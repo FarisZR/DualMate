@@ -27,7 +27,7 @@ From this directory:
 
 - Android phone: portrait, Connected canvas, German + English copy.
 - Android 10-inch tablet: landscape, Isolated canvas, German + English copy.
-- Eight phone slides, including timetable customization; seven tablet slides.
+- Eight slides per device, including timetable customization.
 - The `dualmate` theme is project-defined in `customThemes`; do not hard-code DualMate branding into the editor fork.
 
 The setup script stages existing repository screenshots and the app icon into the editor. Widget preview images are intentionally stored under `assets/widgets/` because this deck uses the exact previews from DualMate commit `5a8a010f8ab62b8d8f9c510ae1998492cca32e9d`, rather than whatever happens to be current in the Android resources.
@@ -47,6 +47,16 @@ The ready-to-upload German slide is
 (1080 × 1920, opaque 24-bit PNG). It was exported from the editor in Chromium;
 the fully opaque alpha channel was removed losslessly to match Google's format
 requirements. The existing seven slides retain their positions and copy.
+
+The tablet deck also includes the localized customization slide. Its German
+sources are `screenshots/tablet-light-timetable-customization.png` and
+`screenshots/tablet-dark-timetable-customization.png`, captured on the Huawei
+MRDI_W09 at 2800 × 1840 in landscape. The English variant uses its own capture.
+The ready-to-upload tablet slide is
+[`exports/de/timetable-customization-tablet.png`](exports/de/timetable-customization-tablet.png)
+(2560 × 1600, opaque 24-bit PNG), matching the existing landscape tablet deck.
+The new frame's saved dimensions fit the tablet's native screenshot aspect
+ratio, keeping the Save action visible without cropping the app screen.
 
 ## Updating editor functionality
 

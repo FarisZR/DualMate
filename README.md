@@ -47,9 +47,16 @@ The app is designed to feel fast, clean, and easy to glance at. Instead of jumpi
   <img src="screenshots/phone-dark-timetable-customization.png" alt="Stundenplan anpassen: Hauptkurs und zusätzlichen Stundenplan auswählen (dunkel)" width="250" />
 </p>
 
+<p align="center">
+  <img src="screenshots/tablet-light-timetable-customization.png" alt="Tablet: Module mehrerer Kurse zu einem Stundenplan kombinieren (Deutsch, hell)" width="380" />
+  <img src="screenshots/tablet-dark-timetable-customization.png" alt="Tablet: Hauptkurs und zusätzlichen Stundenplan anpassen (Deutsch, dunkel)" width="380" />
+</p>
+
 German captures of timetable customization are also available in the
 [Play Store screenshot project](store-assets/play-store-screenshots/README.md),
-including a [ready-to-upload German slide](store-assets/play-store-screenshots/exports/de/timetable-customization.png).
+including ready-to-upload German slides for
+[phones](store-assets/play-store-screenshots/exports/de/timetable-customization.png)
+and [tablets](store-assets/play-store-screenshots/exports/de/timetable-customization-tablet.png).
 
 <p align="center">
   <!-- Tablet (dark mode) screenshots -->

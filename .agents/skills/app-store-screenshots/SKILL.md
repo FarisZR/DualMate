@@ -37,7 +37,7 @@ Never vendor another editor copy into DualMate. Never treat `.editor/` as source
 - Android phone: portrait, Connected canvas.
 - Android 10-inch tablet: landscape, Isolated canvas.
 - Both device decks live in the same JSON.
-- Eight phone slides: schedule, timetable customization, reminders, Dualis, canteen, dates, widgets, all-features summary. The tablet deck retains seven slides without customization.
+- Eight slides per device: schedule, timetable customization, reminders, Dualis, canteen, dates, widgets, all-features summary.
 - The DualMate visual theme is defined in JSON under `customThemes.dualmate` and uses the hero-style near-white/red treatment.
 - Real product screenshots must remain real screenshots. Do not regenerate or restyle the app UI with an image-generation model.
 - Widget cards are arbitrary `imageElements`, not fake device screenshots.
@@ -47,11 +47,11 @@ Never vendor another editor copy into DualMate. Never treat `.editor/` as source
 `setup.sh` intentionally reconstructs the editor's `public/` tree from repository sources:
 
 - Phone UI: `screenshots/phone-light-*.png`
-- Tablet UI: `screenshots/tablet-light-*.jpg`
+- Tablet UI: `screenshots/tablet-light-*.jpg`, plus `screenshots/tablet-light-timetable-customization.png`
 - App icon: `icons/dualmate_icon_v1_refined_playstore_512.png`
 - Widget previews: `store-assets/play-store-screenshots/assets/widgets/`
 
-Most phone slides reference one shared set of captures while localizing the marketing copy. The customization slide has separate German and English captures staged at `phone/{locale}/06.png`. Tablet locale paths are both staged from the current light tablet captures. Preserve this behavior unless new locale-specific product captures are supplied.
+Most phone slides reference one shared set of captures while localizing the marketing copy. The customization slides have separate German and English captures staged at `phone/{locale}/06.png` and `tablet/{locale}/06.png`. Other tablet locale paths are both staged from the current light tablet captures. Preserve this behavior unless new locale-specific product captures are supplied.
 
 ## Editor changes
 

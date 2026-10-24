@@ -33,3 +33,19 @@ flutter drive --profile --flavor localrelease --no-dds --no-pub \
 Video capture requires Android's `screenrecord` binary. These are visual QA
 artifacts, not performance measurements. The full cold performance run was
 skipped at the user's request.
+
+## Tablet captures
+
+`tablet/timetable-tablet-{light,dark}-de.png` show the same saved mixed timetable
+in German on the Huawei MRDI_W09 (2800 × 1840, landscape, Android API 31).
+`tablet/timetable-tablet-loading-{light,dark}-de.png` show pending loading
+feedback. English variants are retained alongside them for the localized store
+deck. The German light and dark captures also appear in the repository README.
+
+Use the same visual QA command with the tablet's serial,
+`SCREENSHOT_OUTPUT_DIR=screenshots/timetable-loading-feedback/tablet`, and
+`--dart-define=SCREENSHOT_DEVICE=tablet`. That define sets landscape orientation
+only in the fixture app and names the captures appropriately; teardown returns
+the app to the OS orientation policy. The tablet's existing resolution and
+density overrides remain unchanged. The real app's installation and data are
+untouched. This tablet has no `screenrecord`, so its evidence is screenshots.

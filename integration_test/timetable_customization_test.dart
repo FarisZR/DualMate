@@ -18,6 +18,7 @@ import 'package:dualmate/schedule/model/timetable_configuration.dart';
 import 'package:dualmate/schedule/ui/customization/timetable_customization_page.dart';
 import 'package:dualmate/schedule/ui/customization/timetable_customization_view_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -29,6 +30,19 @@ void main() {
   testWidgets('mix sources, save, reload offline, and render both themes', (
     tester,
   ) async {
+    const screenshotDevice = String.fromEnvironment(
+      'SCREENSHOT_DEVICE',
+      defaultValue: 'phone',
+    );
+    if (screenshotDevice == 'tablet') {
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+      ]);
+      addTearDown(() => SystemChrome.setPreferredOrientations([]));
+    }
+    Future<void> capture(String name) =>
+        binding.takeScreenshot('timetable-$screenshotDevice-$name');
+
     Future<void> demoPause() async {
       if (const bool.fromEnvironment('RECORD_UI_DEMO'))
         await tester.pump(const Duration(milliseconds: 1000));
@@ -190,19 +204,19 @@ void main() {
     final loading = find.byKey(const ValueKey('timetable_loading_source'));
     expect(loading, findsOneWidget);
     expect(find.text('Loading lessons…'), findsOneWidget);
-    await binding.takeScreenshot('timetable-phone-loading-light');
+    await capture('loading-light');
     await demoPause();
     locale.value = const Locale('de');
     await tester.pump(const Duration(milliseconds: 400));
-    await binding.takeScreenshot('timetable-phone-loading-light-de');
+    await capture('loading-light-de');
     locale.value = const Locale('en');
     theme.value = ThemeMode.dark;
     await tester.pump(const Duration(milliseconds: 400));
-    await binding.takeScreenshot('timetable-phone-loading-dark');
+    await capture('loading-dark');
     await demoPause();
     locale.value = const Locale('de');
     await tester.pump(const Duration(milliseconds: 400));
-    await binding.takeScreenshot('timetable-phone-loading-dark-de');
+    await capture('loading-dark-de');
     locale.value = const Locale('en');
     theme.value = ThemeMode.light;
     releaseLessons.complete();
@@ -246,18 +260,18 @@ void main() {
     await tester.pumpAndSettle();
     await demoPause();
     await tester.pumpAndSettle();
-    await binding.takeScreenshot('timetable-phone-light');
+    await capture('light');
     locale.value = const Locale('de');
     await tester.pumpAndSettle();
-    await binding.takeScreenshot('timetable-phone-light-de');
+    await capture('light-de');
     locale.value = const Locale('en');
     theme.value = ThemeMode.dark;
     await tester.pumpAndSettle();
-    await binding.takeScreenshot('timetable-phone-dark');
+    await capture('dark');
     locale.value = const Locale('de');
     await tester.pumpAndSettle();
     expect(find.text('Stundenplan anpassen'), findsOneWidget);
-    await binding.takeScreenshot('timetable-phone-dark-de');
+    await capture('dark-de');
     expect(tester.takeException(), isNull);
     semantics.dispose();
     binding.testTextInput.unregister();

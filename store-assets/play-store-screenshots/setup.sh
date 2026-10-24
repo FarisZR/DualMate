@@ -48,6 +48,9 @@ for locale in de en; do
   done
 done
 
+cp "$REPO_ROOT/screenshots/tablet-light-timetable-customization.png" "$EDITOR_DIR/public/screenshots/android/tablet/de/06.png"
+cp "$REPO_ROOT/screenshots/timetable-loading-feedback/tablet/timetable-tablet-light.png" "$EDITOR_DIR/public/screenshots/android/tablet/en/06.png"
+
 cp "$REPO_ROOT/icons/dualmate_icon_v1_refined_playstore_512.png" "$EDITOR_DIR/public/app-icon.png"
 cp "$PROJECT_DIR/assets/widgets/schedule_now.png" "$EDITOR_DIR/public/widgets/schedule_now.png"
 cp "$PROJECT_DIR/assets/widgets/canteen_today.png" "$EDITOR_DIR/public/widgets/canteen_today.png"
