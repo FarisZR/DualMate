@@ -68,7 +68,8 @@ the profiler's overhead as a release-build regression.
 Validated with Flutter 3.47.8 / Dart 3.13.7, AGP 9.4.1, Kotlin 2.4.21,
 Gradle 9.8.2, Android SDK 37.2 and Build Tools 37.0.0. CI pins the same Flutter
 version. Direct packages are upgraded to current stable versions. The latest
-secure-storage plugin supports Android API 24; the app retains its Android 7 minimum.
+secure-storage plugin supports Android API 24, but Sentry 10.2 requires API 26;
+the app's minimum is Android 8 with the current dependency set.
 The older `device_calendar` dependency still constrains timezone to 0.9; the
 timezone override uses 0.11.2 alongside notifications 22.3.2. Calendar code compiles
 against the unchanged TZDateTime interface; local calendar export remains gated

@@ -39,9 +39,11 @@ accidental network requests before the harness can re-pin it. The script invokes
 the canonical harness/driver directly; the old aggressive entry points remain
 delegating compatibility wrappers with the same workload.
 
-The installed `flutter_secure_storage` 11.2.0 Android manifest/build configuration
-requires API 24, so the app retains API 24 support. The earlier API 26 requirement
-in the feature documentation was incorrect.
+The installed `flutter_secure_storage` 11.2.0 supports API 24. However, building
+the complete app at API 24 fails manifest merging because `sentry_flutter` 10.2
+requires API 26. The app therefore retains API 26 with the latest dependencies;
+the earlier attribution to secure storage was incorrect. The review suggestion
+to lower the minimum cannot be applied to this dependency set.
 
 Regression checks cover the primary/empty/additional picker paths, secure-storage
 commit/discard/failure behavior, password-only changes, cold Dualis queries,
