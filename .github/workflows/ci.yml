@@ -45,5 +45,20 @@ jobs:
       - name: Run tests
         run: flutter test
 
+      - name: Check DST calendar boundaries
+        env:
+          TZ: Europe/Berlin
+        run: >-
+          flutter test --no-pub
+          test/common/util/date_utils_test.dart
+          test/canteen/data/canteen_meal_repository_test.dart
+          test/canteen/ui/canteen_page_bounds_test.dart
+
+      - name: Check fixture startup notifications
+        run: >-
+          flutter test --no-pub --dart-define=PERF_TEST_OFFLINE_FIXTURES=true
+          test/schedule/ui/schedule_page_test.dart
+          --plain-name 'visible startup does not notify providers during construction'
+
       - name: Run Android unit tests
         run: ./android/gradlew -p android :app:testDebugUnitTest --console=plain

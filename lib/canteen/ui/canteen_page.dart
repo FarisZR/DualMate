@@ -170,7 +170,7 @@ class _CanteenPageState extends State<CanteenPage> {
     super.initState();
     viewModel = Provider.of<CanteenViewModel>(context, listen: false);
     viewModel.initialize();
-    baseDate = _normalizeToWeekday(DateTime.now());
+    baseDate = _normalizeToWeekday(viewModel.today);
     _lastInteractionWeekStart = viewModel.weekStartFor(baseDate);
     pageController = PageController(initialPage: 0);
     pageNotifier = ValueNotifier<int>(0);
@@ -306,10 +306,10 @@ class _CanteenPageState extends State<CanteenPage> {
   DateTime _normalizeToWeekday(DateTime date) {
     var normalized = DateTime(date.year, date.month, date.day);
     if (normalized.weekday == DateTime.saturday) {
-      return normalized.add(const Duration(days: 2));
+      return addDays(normalized, 2);
     }
     if (normalized.weekday == DateTime.sunday) {
-      return normalized.add(const Duration(days: 1));
+      return addDays(normalized, 1);
     }
     return normalized;
   }
@@ -1036,9 +1036,9 @@ class _CanteenDayContentState extends State<_CanteenDayContent>
 
   String? _formatLastUpdated(BuildContext context, DateTime? lastUpdated) {
     if (lastUpdated == null) return null;
-    final formatted = DateFormat.yMMMd(
-      L.of(context).locale.toString(),
-    ).add_Hm().format(lastUpdated);
+    final formatted = DateFormat.yMMMd(L.of(context).locale.toString())
+        .add_Hm()
+        .format(lastUpdated);
     final template = L.of(context).lastUpdatedLabel;
     assert(template.contains("%0"));
     if (!template.contains("%0")) {

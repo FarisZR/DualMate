@@ -115,7 +115,7 @@ class CanteenWeekRenderState {
     final normalizedWeekStart = toStartOfDay(toMonday(weekStart));
     final days = List<CanteenDayRenderState>.generate(5, (index) {
       return CanteenDayRenderState(
-        date: normalizedWeekStart.add(Duration(days: index)),
+        date: addDays(normalizedWeekStart, index),
         meals: const <Meal>[],
         hasWeekData: false,
         isLoading: isLoading,
@@ -155,7 +155,7 @@ class CanteenWeekRenderState {
     final menus = <DailyMenu>[];
     final contentDays = <DateTime>[];
     for (var index = 0; index < 5; index++) {
-      final date = normalizedWeekStart.add(Duration(days: index));
+      final date = addDays(normalizedWeekStart, index);
       final sourceMeals = sourceByDate[date] ?? const <Meal>[];
       final previousDay = previous?.dayFor(date);
       final meals =

@@ -11,8 +11,11 @@ import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 
-typedef CanteenMenuUpdatedCallback =
-    Future<void> Function(List<DailyMenu> menus, DateTime start, DateTime end);
+typedef CanteenMenuUpdatedCallback = Future<void> Function(
+  List<DailyMenu> menus,
+  DateTime start,
+  DateTime end,
+);
 
 class CanteenProvider {
   final CanteenMealRepository _repository;
@@ -42,7 +45,7 @@ class CanteenProvider {
   Future<List<DailyMenu>> getCachedWeek(DateTime date) async {
     await _ensureActiveLocationCache();
     var weekStart = toStartOfDay(toMonday(date));
-    var weekEnd = weekStart.add(const Duration(days: 5));
+    var weekEnd = addDays(weekStart, 5);
 
     var meals = await _repository.queryMealsBetween(weekStart, weekEnd);
     return _groupMealsByDay(weekStart, meals);
@@ -51,7 +54,7 @@ class CanteenProvider {
   Future<DateTime?> lastUpdatedForWeek(DateTime date) async {
     await _ensureActiveLocationCache();
     var weekStart = toStartOfDay(toMonday(date));
-    var weekEnd = weekStart.add(const Duration(days: 5));
+    var weekEnd = addDays(weekStart, 5);
     return _repository.latestMealDateBetween(weekStart, weekEnd);
   }
 
@@ -130,7 +133,7 @@ class CanteenProvider {
     required bool prefetchNextWeek,
   }) async {
     final locationId = location.id;
-    var weekEnd = weekStart.add(const Duration(days: 5));
+    var weekEnd = addDays(weekStart, 5);
 
     var menus = await _loadWeekForLocation(
       location,
@@ -171,8 +174,8 @@ class CanteenProvider {
     CancellationToken? cancellationToken,
   ) async {
     final locationId = location.id;
-    var nextWeekStart = toStartOfDay(weekStart.add(const Duration(days: 7)));
-    var nextWeekEnd = nextWeekStart.add(const Duration(days: 5));
+    var nextWeekStart = addDays(weekStart, 7);
+    var nextWeekEnd = addDays(nextWeekStart, 5);
 
     try {
       _throwIfLocationChanged(locationId);
@@ -306,7 +309,7 @@ class CanteenProvider {
     var dailyMenus = <DailyMenu>[];
 
     for (var i = 0; i < 5; i++) {
-      var day = toStartOfDay(weekStart.add(Duration(days: i)));
+      var day = addDays(weekStart, i);
       var mealsForDay = mealsByDay[day] ?? [];
 
       for (var meal in mealsForDay) {

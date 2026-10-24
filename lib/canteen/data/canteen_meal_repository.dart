@@ -10,7 +10,7 @@ class CanteenMealRepository {
 
   Future<List<Meal>> queryMealsForDay(DateTime date) async {
     var start = toStartOfDay(date);
-    var end = start.add(const Duration(days: 1));
+    var end = addDays(start, 1);
 
     return queryMealsBetween(start, end);
   }
@@ -19,10 +19,7 @@ class CanteenMealRepository {
     var rows = await _database.queryRows(
       CanteenMealEntity.tableName(),
       where: "date>=? AND date<?",
-      whereArgs: [
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ],
+      whereArgs: [start.millisecondsSinceEpoch, end.millisecondsSinceEpoch],
       orderBy: "date ASC, category ASC, name ASC",
     );
 
@@ -37,10 +34,7 @@ class CanteenMealRepository {
   Future<DateTime?> latestMealDateBetween(DateTime start, DateTime end) async {
     var rows = await _database.rawQuery(
       "SELECT MAX(date) as last_date FROM ${CanteenMealEntity.tableName()} WHERE date>=? AND date<?",
-      [
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ],
+      [start.millisecondsSinceEpoch, end.millisecondsSinceEpoch],
     );
 
     if (rows.isEmpty) return null;
@@ -57,8 +51,9 @@ class CanteenMealRepository {
   }
 
   Future<void> saveMeals(List<Meal> meals) async {
-    var rows =
-        meals.map((meal) => CanteenMealEntity.fromModel(meal).toMap()).toList();
+    var rows = meals
+        .map((meal) => CanteenMealEntity.fromModel(meal).toMap())
+        .toList();
     await _database.insertBatch(CanteenMealEntity.tableName(), rows);
   }
 
@@ -66,10 +61,7 @@ class CanteenMealRepository {
     await _database.deleteWhere(
       CanteenMealEntity.tableName(),
       where: "date>=? AND date<?",
-      whereArgs: [
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ],
+      whereArgs: [start.millisecondsSinceEpoch, end.millisecondsSinceEpoch],
     );
   }
 
