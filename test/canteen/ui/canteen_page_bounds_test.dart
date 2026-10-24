@@ -23,6 +23,116 @@ import '../test_canteen_location_service.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets('hides go back with no menus or only the earliest menu', (
+    tester,
+  ) async {
+    final today = _normalizeToWeekday(DateTime.now());
+    final nextWeek = toStartOfDay(toMonday(addDays(today, 7)));
+    final menusByWeek = <DateTime, List<DailyMenu>>{};
+    final provider = _FakeCanteenProvider(menusByWeek);
+    final viewModel = CanteenViewModel(provider, TestCanteenLocationService());
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox());
+      viewModel.dispose();
+    });
+    await tester.pumpWidget(_wrapWithApp(viewModel));
+    await _pumpFor(tester, const Duration(milliseconds: 900));
+    final button = find.byType(FloatingActionButton);
+    expect(button.hitTestable(), findsNothing);
+
+    menusByWeek[nextWeek] = _buildWeekMenusWithSingleDayMeal(
+      nextWeek,
+      nextWeek,
+    );
+    await provider.refreshWeek(nextWeek);
+    await _pumpFor(tester, const Duration(milliseconds: 600));
+    expect(viewModel.visibleContentDays, [nextWeek]);
+    expect(button.hitTestable(), findsNothing);
+    expect(
+      tester
+          .widget<AnimatedOpacity>(
+            find.ancestor(of: button, matching: find.byType(AnimatedOpacity)),
+          )
+          .opacity,
+      0,
+    );
+    expect(viewModel.visibleContentDays.contains(today), isFalse);
+  });
+
+  for (final locale in ['en', 'de']) {
+    testWidgets(
+      'go back targets the earliest menu and tracks menu updates ($locale)',
+      (tester) async {
+        final today = _normalizeToWeekday(DateTime.now());
+        final weekStart = toStartOfDay(toMonday(today));
+        final earlierWeek = toStartOfDay(toMonday(addDays(today, -7)));
+        final menusByWeek = <DateTime, List<DailyMenu>>{
+          weekStart: _buildWeekMenusWithSingleDayMeal(weekStart, today),
+          earlierWeek: _buildWeekMenusWithSingleDayMeal(
+            earlierWeek,
+            earlierWeek,
+          ),
+        };
+        final provider = _FakeCanteenProvider(menusByWeek);
+        final viewModel = CanteenViewModel(
+          provider,
+          TestCanteenLocationService(),
+        );
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox());
+          viewModel.dispose();
+        });
+        await viewModel.loadWeek(weekStart);
+        await viewModel.loadWeek(earlierWeek);
+        await tester.pumpWidget(
+          _wrapWithApp(viewModel, locale: Locale(locale)),
+        );
+        await _pumpFor(tester, const Duration(milliseconds: 900));
+        final button = find.byType(FloatingActionButton);
+        expect(button.hitTestable(), findsNothing);
+        await tester.fling(find.byType(PageView), const Offset(-600, 0), 1400);
+        await _pumpFor(tester, const Duration(milliseconds: 600));
+        // Today is selected, but an earlier menu is available.
+        expect(button.hitTestable(), findsOneWidget);
+        expect(
+          find.text(locale == 'en' ? 'Go back' : 'Zurück'),
+          findsOneWidget,
+        );
+
+        menusByWeek[earlierWeek] = _buildWeekMenusWithMealDays(earlierWeek, {});
+        await provider.refreshWeek(earlierWeek);
+        await _pumpFor(tester, const Duration(milliseconds: 600));
+        expect(button.hitTestable(), findsNothing);
+
+        menusByWeek[earlierWeek] = _buildWeekMenusWithSingleDayMeal(
+          earlierWeek,
+          earlierWeek,
+        );
+        await provider.refreshWeek(earlierWeek);
+        await _pumpFor(tester, const Duration(milliseconds: 600));
+        expect(viewModel.visibleContentDays.first, earlierWeek);
+        // Re-inserting the first page can make it the active page again.
+        if (button.hitTestable().evaluate().isEmpty) {
+          await tester.fling(
+            find.byType(PageView),
+            const Offset(-600, 0),
+            1400,
+          );
+          await _pumpFor(tester, const Duration(milliseconds: 600));
+        }
+        expect(button.hitTestable(), findsOneWidget);
+        await tester.tap(button);
+        await _pumpFor(tester, const Duration(milliseconds: 600));
+        final viewport = tester.getRect(find.byType(PageView));
+        expect(
+          _hasVisibleText(tester, _mealNameFor(earlierWeek), viewport),
+          isTrue,
+        );
+        expect(button.hitTestable(), findsNothing);
+      },
+    );
+  }
+
   testWidgets('limits page count to only days with content', (tester) async {
     final now = DateTime.now();
     final today = _normalizeToWeekday(now);
@@ -408,10 +518,14 @@ bool _hasVisibleText(WidgetTester tester, String text, Rect viewport) {
   return false;
 }
 
-Widget _wrapWithApp(CanteenViewModel viewModel) {
+Widget _wrapWithApp(
+  CanteenViewModel viewModel, {
+  Locale locale = const Locale('en'),
+}) {
   return ChangeNotifierProvider<CanteenViewModel>.value(
     value: viewModel,
     child: MaterialApp(
+      locale: locale,
       localizationsDelegates: const [
         LocalizationDelegate(),
         GlobalMaterialLocalizations.delegate,

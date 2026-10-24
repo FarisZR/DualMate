@@ -517,7 +517,7 @@ class L {
   String get canteenFilterNoPork => _getValue("canteenFilterNoPork");
   String get canteenFilterVegetarian => _getValue("canteenFilterVegetarian");
   String get canteenFilterVegan => _getValue("canteenFilterVegan");
-  String get canteenBackToToday => _getValue("canteenBackToToday");
+  String get canteenGoBack => _getValue("canteenGoBack");
   String get canteenNoMenuToday => _getValue("canteenNoMenuToday");
   String get canteenLoadError => _getValue("canteenLoadError");
   String get canteenCategoryWahlessen => _getValue("canteenCategoryWahlessen");
