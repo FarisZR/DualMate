@@ -47,7 +47,7 @@ class DhbwAppCanteenSource {
       _DhbwAppWeekParseRequest(
         sitePayload: sitePayload,
         mensaId: mensaId,
-        weekStart: weekStart,
+        weekStart: toStartOfDay(weekStart),
       ),
       debugLabel: 'dhbwAppCanteenParseWeek',
     );

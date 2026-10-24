@@ -39,6 +39,13 @@ fixtures use a fixed Tuesday instead of the execution date. Separate cases cover
 Friday-to-Monday paging and Saturday/Sunday startup around both 2026 DST changes.
 Database tests check the actual 23-hour and 25-hour daily query bounds.
 
+PR review identified one additional source-boundary case: a direct
+`DhbwAppCanteenSource.loadWeek` call with a non-midnight Monday preserved its
+time in generated menu dates, while parsed API meals used midnight keys. The
+source now normalizes the input before dispatching parsing. Regression tests
+cover populated and missing-mensa responses, retained Monday/Friday meals and
+exclusion of the surrounding weekend dates.
+
 ## Existing harness fixes (#139, #140, #141, #144)
 
 The first three fixes were already merged in #137, and video export in #143:
@@ -62,7 +69,8 @@ does not include Android's `screenrecord` executable.
 
 - Flutter 3.47.8 / Dart 3.13.7, matching CI.
 - Regression tests were observed failing before the relevant fixes.
-- `TZ=Europe/Berlin flutter test --no-pub`: 655 tests passed.
+- `TZ=Europe/Berlin flutter test --no-pub`: 657 tests passed after the review fix.
+- Canteen suite: 73 passed; source tests under UTC: 14 passed.
 - Focused UTC date, repository and canteen paging tests: 27 passed.
 - Fixture-enabled startup regression: passed.
 - `flutter analyze` and the repository's complexity check: clean.
@@ -76,7 +84,7 @@ fixture setup has different completion timing from ordinary source setup.
 
 ## Physical-device performance
 
-The unchanged `de7cc6e` control and the candidate each completed three fresh
+The unchanged `de7cc6e` control and the `b7b6874` candidate each completed three fresh
 profile-mode stress journeys on the Huawei MRDI_W09 (Android 12/API 31). Every
 journey exercised Schedule, customization, Canteen, Dates and Dualis over three
 rounds. All six runs reached their expected final states, rendered intermediate

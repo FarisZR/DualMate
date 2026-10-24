@@ -7,6 +7,40 @@ import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final missingMensa in [false, true]) {
+    test(
+      'normalizes non-midnight week input (${missingMensa ? 'missing' : 'populated'} mensa)',
+      () async {
+        final monday = DateTime(2026, 6, 1);
+        final friday = DateTime(2026, 6, 5);
+        final source = DhbwAppCanteenSource(
+          loadSitePayloadResponse: (_, __) async => jsonEncode([
+            _mensaEntry(missingMensa ? 5 : 7, [
+              _menu(DateTime(2026, 5, 31), 'PreviousSunday'),
+              _menu(monday, 'MondayMeal'),
+              _menu(friday, 'FridayMeal'),
+              _menu(DateTime(2026, 6, 6), 'FollowingSaturday'),
+            ]),
+          ]),
+        );
+
+        final menus = await source.loadWeek(
+          'MA',
+          7,
+          DateTime(2026, 6, 1, 12, 34, 56, 789),
+        );
+
+        expect(menus.map((menu) => menu.date), [
+          for (var day = 1; day <= 5; day++) DateTime(2026, 6, day),
+        ]);
+        expect(
+          menus.expand((menu) => menu.meals).map((meal) => meal.name),
+          missingMensa ? isEmpty : ['MondayMeal', 'FridayMeal'],
+        );
+      },
+    );
+  }
+
   test('reuses one decoded site payload for multiple weeks', () async {
     var requestCount = 0;
     final source = DhbwAppCanteenSource(
