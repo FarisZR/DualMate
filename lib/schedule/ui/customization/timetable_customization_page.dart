@@ -11,6 +11,12 @@ import 'package:dualmate/schedule/service/rapla/rapla_schedule_source.dart';
 import 'package:dualmate/schedule/service/mannheim/mannheim_course_service.dart';
 import 'package:dualmate/schedule/ui/customization/timetable_customization_view_model.dart';
 import 'package:dualmate/schedule/ui/customization/timetable_module_tile.dart';
+import 'package:dualmate/dualis/model/credentials.dart';
+
+typedef _TimetableDraft = ({
+  TimetableConfiguration configuration,
+  Credentials? credentials,
+});
 
 class TimetableCustomizationPage extends StatefulWidget {
   final TimetableCustomizationViewModel? viewModel;
@@ -102,20 +108,26 @@ class _TimetableCustomizationPageState
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
   Future<void> _configure([TimetableConfiguration? source]) async {
-    final configured = await showDialog<TimetableConfiguration>(
+    final draft = await showDialog<_TimetableDraft>(
       context: context,
       builder: (_) => _ConfigureTimetableDialog(
         source: source,
-        primary: model.sources.isEmpty,
+        primary: model.sources.isEmpty || source?.id == model.sources.first.id,
+        credentials: model.dualisCredentials,
       ),
     );
-    if (configured == null || !mounted) return;
+    if (draft == null || !mounted) return;
+    final configured = draft.configuration;
     if (model.sources.any((s) => s.id == configured.id && s.id != source?.id)) {
       _showError(L.of(context).timetableDuplicate);
       return;
     }
     try {
-      await model.put(configured, replacingId: source?.id);
+      await model.put(
+        configured,
+        replacingId: source?.id,
+        dualisCredentials: draft.credentials,
+      );
     } catch (_) {
       if (mounted) _showError(L.of(context).timetableLoadError);
     }
@@ -477,7 +489,12 @@ String _sourceName(L l, ScheduleSourceType type) => switch (type) {
 class _ConfigureTimetableDialog extends StatefulWidget {
   final TimetableConfiguration? source;
   final bool primary;
-  const _ConfigureTimetableDialog({this.source, required this.primary});
+  final Credentials credentials;
+  const _ConfigureTimetableDialog({
+    this.source,
+    required this.primary,
+    required this.credentials,
+  });
   @override
   State<_ConfigureTimetableDialog> createState() =>
       _ConfigureTimetableDialogState();
@@ -487,6 +504,8 @@ class _ConfigureTimetableDialogState extends State<_ConfigureTimetableDialog> {
   final form = GlobalKey<FormState>();
   late final TextEditingController label;
   late final TextEditingController url;
+  late final TextEditingController username;
+  late final TextEditingController password;
   late ScheduleSourceType type;
   bool busy = false;
   @override
@@ -494,6 +513,8 @@ class _ConfigureTimetableDialogState extends State<_ConfigureTimetableDialog> {
     super.initState();
     label = TextEditingController(text: widget.source?.label);
     url = TextEditingController(text: widget.source?.value);
+    username = TextEditingController(text: widget.credentials.username);
+    password = TextEditingController(text: widget.credentials.password);
     type = widget.source?.type ?? ScheduleSourceType.Rapla;
   }
 
@@ -501,6 +522,8 @@ class _ConfigureTimetableDialogState extends State<_ConfigureTimetableDialog> {
   void dispose() {
     label.dispose();
     url.dispose();
+    username.dispose();
+    password.dispose();
     super.dispose();
   }
 
@@ -529,7 +552,10 @@ class _ConfigureTimetableDialogState extends State<_ConfigureTimetableDialog> {
 
   void _submit() {
     if (!form.currentState!.validate()) return;
-    final value = url.text.trim();
+    final credentials = type == ScheduleSourceType.Dualis
+        ? Credentials(username.text.trim(), password.text)
+        : null;
+    final value = credentials?.username ?? url.text.trim();
     final id = type == widget.source?.type && value == widget.source?.value
         ? widget.source!.id
         : ScheduleSourceIdentity.create(
@@ -538,9 +564,8 @@ class _ConfigureTimetableDialogState extends State<_ConfigureTimetableDialog> {
                 ? Uri.parse(value).pathSegments.last
                 : value,
           );
-    Navigator.pop(
-      context,
-      TimetableConfiguration(
+    Navigator.pop(context, (
+      configuration: TimetableConfiguration(
         id: id,
         label: label.text.trim(),
         type: type,
@@ -548,8 +573,69 @@ class _ConfigureTimetableDialogState extends State<_ConfigureTimetableDialog> {
         includeAll: widget.source?.includeAll ?? widget.primary,
         exceptions: id == widget.source?.id ? widget.source!.exceptions : {},
       ),
-    );
+      credentials: credentials,
+    ));
   }
+
+  bool _canSelect(ScheduleSourceType source) =>
+      source != ScheduleSourceType.None &&
+      (source != ScheduleSourceType.Dualis ||
+          widget.primary ||
+          widget.source?.type == source);
+
+  String? _required(String? value) => value == null || value.trim().isEmpty
+      ? L.of(context).timetableRequired
+      : null;
+
+  String? _validateUrl(String? value) {
+    final l = L.of(context);
+    final text = value?.trim() ?? '';
+    final uri = Uri.tryParse(text);
+    if (uri == null ||
+        !['http', 'https'].contains(uri.scheme) ||
+        uri.host.isEmpty) {
+      return l.timetableInvalidUrl;
+    }
+    if (type == ScheduleSourceType.Rapla &&
+        !RaplaScheduleSource.isValidUrl(text)) {
+      return l.timetableInvalidUrl;
+    }
+    if (type == ScheduleSourceType.Mannheim &&
+        !MannheimCourseService.isMannheimProfileUrl(text)) {
+      return l.timetableInvalidUrl;
+    }
+    return null;
+  }
+
+  Widget _credentialsFields(L l) => AutofillGroup(
+    onDisposeAction: AutofillContextAction.cancel,
+    child: Column(
+      children: [
+        Text(l.onboardingDualisSourceDescription),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: username,
+          autocorrect: false,
+          enableSuggestions: false,
+          decoration: InputDecoration(labelText: l.loginUsername),
+          autofillHints: const [AutofillHints.username, 'dualis.dhbw.de'],
+          textInputAction: TextInputAction.next,
+          validator: _required,
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: password,
+          obscureText: true,
+          autocorrect: false,
+          enableSuggestions: false,
+          decoration: InputDecoration(labelText: l.loginPassword),
+          autofillHints: const [AutofillHints.password, 'dualis.dhbw.de'],
+          validator: _required,
+          onFieldSubmitted: (_) => _submit(),
+        ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -568,9 +654,7 @@ class _ConfigureTimetableDialogState extends State<_ConfigureTimetableDialog> {
                   controller: label,
                   textCapitalization: TextCapitalization.words,
                   decoration: InputDecoration(labelText: l.timetableClassName),
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? l.timetableRequired
-                      : null,
+                  validator: _required,
                 ),
                 const SizedBox(height: 20),
                 DropdownButtonFormField<ScheduleSourceType>(
@@ -579,10 +663,7 @@ class _ConfigureTimetableDialogState extends State<_ConfigureTimetableDialog> {
                   decoration: InputDecoration(labelText: l.timetableSource),
                   items: [
                     for (final source in ScheduleSourceType.values.where(
-                      (s) =>
-                          s != ScheduleSourceType.None &&
-                          (s != ScheduleSourceType.Dualis ||
-                              widget.source?.type == s),
+                      _canSelect,
                     ))
                       DropdownMenuItem(
                         value: source,
@@ -598,33 +679,17 @@ class _ConfigureTimetableDialogState extends State<_ConfigureTimetableDialog> {
                   },
                 ),
                 const SizedBox(height: 20),
-                TextFormField(
-                  controller: url,
-                  keyboardType: TextInputType.url,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  readOnly: type == ScheduleSourceType.Dualis,
-                  decoration: InputDecoration(
-                    labelText: type == ScheduleSourceType.Dualis
-                        ? l.scheduleSourceTypeDualis
-                        : l.timetableUrl,
+                if (type == ScheduleSourceType.Dualis)
+                  _credentialsFields(l)
+                else
+                  TextFormField(
+                    controller: url,
+                    keyboardType: TextInputType.url,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    decoration: InputDecoration(labelText: l.timetableUrl),
+                    validator: _validateUrl,
                   ),
-                  validator: (value) {
-                    if (type == ScheduleSourceType.Dualis) return null;
-                    final uri = Uri.tryParse(value?.trim() ?? '');
-                    if (uri == null ||
-                        !['http', 'https'].contains(uri.scheme) ||
-                        uri.host.isEmpty)
-                      return l.timetableInvalidUrl;
-                    if (type == ScheduleSourceType.Rapla &&
-                        !RaplaScheduleSource.isValidUrl(value!))
-                      return l.timetableInvalidUrl;
-                    if (type == ScheduleSourceType.Mannheim &&
-                        !MannheimCourseService.isMannheimProfileUrl(value!))
-                      return l.timetableInvalidUrl;
-                    return null;
-                  },
-                ),
                 if (type == ScheduleSourceType.Mannheim)
                   TextButton.icon(
                     onPressed: busy ? null : _pickMannheim,

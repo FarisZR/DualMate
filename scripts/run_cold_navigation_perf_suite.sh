@@ -79,8 +79,8 @@ for target in $targets; do
       if PERF_OUTPUT_DIR="$run_directory" PERF_RUN_ID="$run_id" \
         flutter drive --profile --flavor localrelease --no-dds --no-pub --keep-app-running \
           --device-id "$serial" \
-          --driver test_driver/aggressive_perf_driver.dart \
-          --target integration_test/aggressive_cold_navigation_performance_test.dart \
+          --driver test_driver/cold_navigation_perf_driver.dart \
+          --target integration_test/cold_navigation_performance_test.dart \
           --dart-define=PERF_TEST_OFFLINE_FIXTURES=true \
           --dart-define=PERF_TARGET="$target" \
           --dart-define=PERF_PROFILE_MODE="${PERF_PROFILE_MODE:-ranking}" \

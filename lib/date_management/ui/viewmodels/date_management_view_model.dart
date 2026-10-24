@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/appstart/performance_fixture_mode.dart';
 import 'package:dualmate/common/logging/app_diagnostics.dart';
@@ -120,6 +122,8 @@ class DateManagementViewModel extends BaseViewModel {
 
   Future<void>? _preparationFuture;
   Future<void>? _pageInitializationFuture;
+  int? _timetableRevision;
+  Set<String> _timetableIdentities = {};
 
   bool _isReloadingPreferences = false;
 
@@ -179,19 +183,41 @@ class DateManagementViewModel extends BaseViewModel {
   }
 
   void _timetableChanged(ScheduleSource _, bool __) {
+    if (_isDisposed) return;
+    final provider = timetableSourceProvider!;
+    final identities = provider.activeSourceIdentities.toSet();
+    final previousRevision = _timetableRevision;
+    final unchanged =
+        previousRevision == provider.configurationRevision &&
+        setEquals(_timetableIdentities, identities);
+    _timetableRevision = provider.configurationRevision;
+    _timetableIdentities = identities;
+    // Initial source setup can happen inside this page's own refresh.
+    if (previousRevision == null || unchanged) return;
     _pageInitializationFuture = null;
     if (!_useDhMineForDates) {
       _updateMutex.cancel();
-      _resetRaplaPaging();
       _setImportantEvents([]);
+      unawaited(updateDates());
     }
   }
 
-  Future<bool> _hasTimetable() async => timetableSourceProvider != null
-      ? timetableSourceProvider!.activeSourceIdentities.isNotEmpty
-      : RaplaScheduleSource.isValidUrl(
-          await _preferencesProvider.getRaplaUrl(),
-        );
+  Future<bool> _hasTimetable() async {
+    final repository = timetableSourceProvider?.timetableRepository;
+    if (repository == null) {
+      return RaplaScheduleSource.isValidUrl(
+        await _preferencesProvider.getRaplaUrl(),
+      );
+    }
+    final snapshot = await repository.loadSnapshot();
+    if (_timetableRevision == null) {
+      _timetableRevision = snapshot.revision;
+      _timetableIdentities = snapshot.sources
+          .map((source) => source.id)
+          .toSet();
+    }
+    return snapshot.sources.isNotEmpty;
+  }
 
   void initialize() {
     unawaited(_initializeForPage());

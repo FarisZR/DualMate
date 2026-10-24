@@ -9,6 +9,9 @@ then reopened after the server stops to verify the offline path.
 - `timetable-tablet-light.png`: English, light theme.
 - `timetable-tablet-dark.png`: English, dark theme.
 - `timetable-tablet-dark-de.png`: German, dark theme.
+- `timetable-tablet-dualis-source.png`: primary source switched to Dualis with
+  credential entry (public review account).
+- `timetable-tablet-dualis.png`: Dualis primary alongside the retained iCal class.
 
 Video capture is unavailable on this tablet because its Android image does not
 include `screenrecord`. The screenshots are the available visual evidence.
@@ -24,6 +27,11 @@ flutter drive --profile --flavor localrelease --no-dds --keep-app-running \
 
 The visual test converts the Flutter surface for screenshot capture. It is kept
 separate from performance measurements because surface conversion is expensive.
+Use `integration_test/timetable_dualis_test.dart` as the target with the same
+driver to reproduce the Dualis regression check. It verifies credential drafts,
+Save, retaining the additional timetable, and querying a fresh Dualis adapter.
+The public review account intentionally returns an empty timetable; combined
+lesson selection is covered by the source and configuration regression tests.
 After that test, launch `integration_test/timetable_restart_test.dart` in a new
 process with the same driver and fixture define. It reads the existing SQLite
 data without seeding it or restarting the loopback server, checking saved

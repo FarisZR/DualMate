@@ -98,16 +98,17 @@ class ClassReminderController extends ChangeNotifier {
   }
 
   Future<void> _initialize() async {
+    final identities = await _configuredSourceIdentities();
     if (_sourceProvider.timetableRepository != null) {
       final obsolete = (await _repository.loadSourceIdentities()).difference(
-        _sourceProvider.activeSourceIdentities.toSet(),
+        identities.toSet(),
       );
       for (final identity in obsolete) {
         await _pauseSource(identity);
         await _repository.clearSource(identity);
       }
     }
-    await _reloadRules();
+    await _reloadRules(sourceIdentities: identities);
     await refreshPermissionState(scheduleWhenRestored: false);
     await _detectLikelyMissedReminders();
     await _cleanupIfNeeded(force: true);
@@ -423,10 +424,16 @@ class ClassReminderController extends ChangeNotifier {
     return applicable.map((rule) => rule.id).toList(growable: false);
   }
 
-  Future<void> _reloadRules() async {
+  Future<List<String>> _configuredSourceIdentities() async {
+    final timetables = _sourceProvider.timetableRepository;
+    if (timetables == null) return _sourceProvider.activeSourceIdentities;
+    return (await timetables.load()).map((source) => source.id).toList();
+  }
+
+  Future<void> _reloadRules({List<String>? sourceIdentities}) async {
     final revision = ++_reloadRevision;
     final sourceIdentity = _sourceProvider.currentSourceIdentity;
-    final identities = _sourceProvider.activeSourceIdentities;
+    final identities = sourceIdentities ?? await _configuredSourceIdentities();
     final rules = <ClassReminderRule>[];
     for (final id in identities) {
       rules.addAll(

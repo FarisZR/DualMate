@@ -9,6 +9,9 @@ import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 import 'package:dualmate/schedule/data/schedule_query_information_repository.dart';
+import 'package:dualmate/schedule/data/timetable_repository.dart';
+import 'package:dualmate/schedule/model/timetable_configuration.dart';
+import 'package:dualmate/schedule/model/schedule_source_type.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/reminders/class_reminder.dart';
@@ -20,6 +23,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+    'cold startup retains persisted timetable rules before source setup',
+    () async {
+      final repository = _ColdReminderRepository();
+      final source = ScheduleSourceProvider(
+        _FakePreferencesProvider(),
+        false,
+        _FakeScheduleEntryRepository(),
+        _FakeScheduleQueryInformationRepository(),
+        timetableRepository: _SavedTimetables(),
+      );
+      expect(source.activeSourceIdentities, isEmpty);
+      final controller = ClassReminderController(
+        repository: repository,
+        scheduleProvider: _FakeScheduleProvider(source),
+        sourceProvider: source,
+        scheduler: _NoopScheduler(),
+        notificationApi: () => null,
+        now: () => DateTime(2026, 7, 20, 8),
+      );
+      addTearDown(controller.dispose);
+      await controller.initialize();
+      expect(repository.cleared, ['obsolete']);
+      expect(repository.loaded, containsAll(['rapla:a', 'ical:b']));
+      expect(controller.hasReminders, isTrue);
+      await controller.onAppResumed();
+      expect(controller.hasReminders, isTrue);
+    },
+  );
   testWidgets(
     'startup never renders paused while granted permissions are loading',
     (tester) async {
@@ -521,6 +553,48 @@ void main() {
     expect(controller.isInitialized, isTrue);
     expect(repository.loadAttempts, greaterThanOrEqualTo(2));
   });
+}
+
+class _SavedTimetables implements TimetableRepository {
+  @override
+  Future<List<TimetableConfiguration>> load() async => [
+    for (final id in ['rapla:a', 'ical:b'])
+      TimetableConfiguration(
+        id: id,
+        label: id,
+        type: ScheduleSourceType.Ical,
+        value: 'https://example.com/$id.ics',
+      ),
+  ];
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _ColdReminderRepository extends _MemoryReminderRepository {
+  final List<String> cleared = [];
+  final List<String> loaded = [];
+  @override
+  Future<Set<String>> loadSourceIdentities() async => {
+    'rapla:a',
+    'ical:b',
+    'obsolete',
+  };
+  @override
+  Future<void> clearSource(String sourceIdentity) async {
+    cleared.add(sourceIdentity);
+    rules.removeWhere((rule) => rule.sourceIdentity == sourceIdentity);
+  }
+
+  @override
+  Future<List<ClassReminderRule>> loadRelevantRules({
+    required String sourceIdentity,
+    required DateTime now,
+  }) async {
+    loaded.add(sourceIdentity);
+    return rules
+        .where((rule) => rule.sourceIdentity == sourceIdentity)
+        .toList();
+  }
 }
 
 class _DelayedNotificationApi extends VoidNotificationApi {

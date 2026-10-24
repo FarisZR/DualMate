@@ -13,13 +13,15 @@ import 'package:dualmate/schedule/service/mannheim/mannheim_course_service.dart'
 import 'package:dualmate/schedule/service/rapla/rapla_schedule_source.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
-import 'package:kiwi/kiwi.dart';
 import 'package:dualmate/schedule/data/timetable_repository.dart';
 import 'package:dualmate/schedule/model/timetable_configuration.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/service/combined_schedule_source.dart';
 import 'package:mutex/mutex.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
+import 'package:dualmate/dualis/model/credentials.dart';
+import 'package:dualmate/dualis/service/dualis_scraper.dart';
+import 'package:dualmate/dualis/service/fake_account_dualis_scraper_decorator.dart';
 
 typedef OnDidChangeScheduleSource = void Function(
   ScheduleSource newSource,
@@ -38,6 +40,7 @@ class ScheduleSourceProvider {
   final ScheduleQueryInformationRepository _scheduleQueryInformationRepository;
 
   ScheduleSource _currentScheduleSource = InvalidScheduleSource();
+  ScheduleSource? _performanceFixtureSource;
   ScheduleSourceType _currentScheduleSourceType = ScheduleSourceType.None;
   String _currentSourceIdentity = 'none';
   int _sourceGeneration = 0;
@@ -77,9 +80,11 @@ class ScheduleSourceProvider {
       for (final config in timetables) {
         sources[config.id] = await createSource(config);
       }
-      _currentScheduleSource = sources.isEmpty
+      _currentScheduleSource =
+          sources.isEmpty ||
+              sources.values.any((source) => source is InvalidScheduleSource)
           ? InvalidScheduleSource()
-          : CombinedScheduleSource(sources);
+          : _performanceFixtureSource ?? CombinedScheduleSource(sources);
       _currentScheduleSourceType = timetables.isEmpty
           ? ScheduleSourceType.None
           : timetables.first.type;
@@ -109,7 +114,9 @@ class ScheduleSourceProvider {
       scheduleSource = await init();
     }
 
-    _currentScheduleSource = scheduleSource;
+    _currentScheduleSource = scheduleSource is InvalidScheduleSource
+        ? scheduleSource
+        : _performanceFixtureSource ?? scheduleSource;
     _currentScheduleSourceType = didSetupCorrectly()
         ? scheduleSourceType
         : ScheduleSourceType.None;
@@ -124,7 +131,7 @@ class ScheduleSourceProvider {
     var success = didSetupCorrectly();
 
     _onDidChangeScheduleSourceCallbacks.forEach((element) {
-      element(scheduleSource, success);
+      element(_currentScheduleSource, success);
     });
 
     return success;
@@ -138,13 +145,16 @@ class ScheduleSourceProvider {
     return scheduleSourceType;
   }
 
-  Future<ScheduleSource> _dualisScheduleSource() async {
-    var dualis = DualisScheduleSource(KiwiContainer().resolve());
-
-    var credentials = await _preferencesProvider.loadDualisCredentials();
+  Future<ScheduleSource> _dualisScheduleSource({
+    Credentials? credentials,
+  }) async {
+    // Draft credentials must never change the active timetable's session.
+    final scraper = FakeAccountDualisScraperDecorator(DualisScraper());
+    final dualis = DualisScheduleSource(scraper);
+    credentials ??= await _preferencesProvider.loadDualisCredentials();
 
     if (credentials.allFieldsFilled()) {
-      dualis.setLoginCredentials(credentials);
+      await dualis.setLoginCredentials(credentials);
       FilterViewModel.invalidateCache();
       return ErrorReportScheduleSourceDecorator(dualis);
     } else {
@@ -301,9 +311,12 @@ class ScheduleSourceProvider {
     return !(_currentScheduleSource is InvalidScheduleSource);
   }
 
-  Future<ScheduleSource> createSource(TimetableConfiguration config) async {
+  Future<ScheduleSource> createSource(
+    TimetableConfiguration config, {
+    Credentials? dualisCredentials,
+  }) async {
     if (config.type == ScheduleSourceType.Dualis)
-      return _dualisScheduleSource();
+      return _dualisScheduleSource(credentials: dualisCredentials);
     if (config.type == ScheduleSourceType.Rapla) {
       if (!RaplaScheduleSource.isValidUrl(config.value))
         return InvalidScheduleSource();
@@ -317,11 +330,27 @@ class ScheduleSourceProvider {
   }
 
   Future<void> saveTimetables(
-    List<TimetableConfiguration> configurations,
-  ) async {
+    List<TimetableConfiguration> configurations, {
+    Credentials? dualisCredentials,
+  }) async {
     await _configurationMutex.protect(() async {
       _sourceGeneration++;
-      await timetableRepository!.save(configurations);
+      final previousCredentials = dualisCredentials == null
+          ? null
+          : await _preferencesProvider.loadDualisCredentials();
+      try {
+        if (dualisCredentials != null) {
+          await _preferencesProvider.storeDualisCredentials(dualisCredentials);
+        }
+        await timetableRepository!.save(configurations);
+      } catch (_) {
+        if (previousCredentials != null) {
+          await _preferencesProvider.storeDualisCredentials(
+            previousCredentials,
+          );
+        }
+        rethrow;
+      }
     });
     FilterViewModel.invalidateCache();
     await setupScheduleSource();
@@ -358,6 +387,7 @@ class ScheduleSourceProvider {
   /// Replaces a validated configured source only for the opt-in performance
   /// fixture. Production setup continues to use [setupScheduleSource].
   void usePerformanceFixtureSource(ScheduleSource source) {
+    _performanceFixtureSource = source;
     _currentScheduleSource = source;
     _onDidChangeScheduleSourceCallbacks.forEach((element) {
       element(source, true);

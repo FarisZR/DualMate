@@ -14,7 +14,10 @@ tags: [schedule, material3, sources, notifications, migration]
 The timetable toolbar opens Customize timetable. Source configuration and module
 selection share one screen; Settings retains general display preferences.
 Rapla and iCal can be mixed, Mannheim retains its searchable course directory,
-and existing Dualis timetable configurations migrate with their account identity.
+and Dualis is available when adding or editing the primary timetable. Existing
+Dualis configurations migrate with their account identity. Credentials stay in
+memory while editing and are written to secure storage only on Save; previews
+and active adapters use independent sessions.
 
 SQLite schema 6 adds `sourceIdentity` to lessons plus `TimetableSources`,
 `TimetableModuleSelections`, and `TimetableConfigurationState`. The first load
@@ -65,7 +68,7 @@ the profiler's overhead as a release-build regression.
 Validated with Flutter 3.47.8 / Dart 3.13.7, AGP 9.4.1, Kotlin 2.4.21,
 Gradle 9.8.2, Android SDK 37.2 and Build Tools 37.0.0. CI pins the same Flutter
 version. Direct packages are upgraded to current stable versions. The latest
-secure-storage plugin requires Android API 26; the app's minimum is now Android 8.
+secure-storage plugin supports Android API 24; the app retains its Android 7 minimum.
 The older `device_calendar` dependency still constrains timezone to 0.9; the
 timezone override uses 0.11.2 alongside notifications 22.3.2. Calendar code compiles
 against the unchanged TZDateTime interface; local calendar export remains gated

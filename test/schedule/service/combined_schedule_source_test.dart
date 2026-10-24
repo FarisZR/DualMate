@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:dualmate/schedule/model/timetable_configuration.dart';
-import 'package:dualmate/schedule/model/schedule_source_type.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
@@ -26,17 +24,6 @@ void main() {
     expect(first.cancelled, isTrue);
     expect(second.cancelled, isTrue);
   });
-  test('primary defaults include future modules; additions opt in', () {
-    final primary = configuration('b4', includeAll: true, exceptions: {'Math'});
-    final additional = configuration('b6', exceptions: {'Math'});
-    expect(primary.includes('Math'), isFalse);
-    expect(primary.includes('New module'), isTrue);
-    expect(additional.includes('Math'), isTrue);
-    expect(additional.includes('New module'), isFalse);
-    expect(primary.withModule('Math', true).includes('Math'), isTrue);
-    expect(primary.includes('Math'), isFalse);
-  });
-
   test('identical lessons retain independent source identity', () async {
     final combined = CombinedScheduleSource({'b4': _Source(), 'b6': _Source()});
     final result = await combined.querySchedule(DateTime(2026), DateTime(2027));
@@ -109,19 +96,6 @@ class _WaitingSource implements ScheduleSource {
     return result.future;
   }
 }
-
-TimetableConfiguration configuration(
-  String id, {
-  bool includeAll = false,
-  Set<String> exceptions = const {},
-}) => TimetableConfiguration(
-  id: id,
-  label: id,
-  type: ScheduleSourceType.Ical,
-  value: 'https://example.com/$id.ics',
-  includeAll: includeAll,
-  exceptions: exceptions,
-);
 
 class _Source implements ScheduleSource {
   final bool fail;

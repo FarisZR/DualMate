@@ -1,6 +1,7 @@
 import 'package:dualmate/common/data/preferences/app_theme_enum.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/colors.dart';
+import 'package:dualmate/dualis/model/credentials.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
@@ -14,6 +15,66 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final empty in [false, true]) {
+    testWidgets('Dualis can configure the primary timetable (empty: $empty)', (
+      tester,
+    ) async {
+      final model = _Model(empty: empty);
+      await _open(tester, model);
+      if (empty) {
+        await tester.tap(find.text('Add timetable'));
+      } else {
+        await tester.tap(find.byType(PopupMenuButton<String>).first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Edit timetable'));
+      }
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byType(DropdownButtonFormField<ScheduleSourceType>),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Dualis'), findsWidgets);
+      await tester.tap(find.text('Dualis').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField).first, 'My class');
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Username'),
+        'student',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Password'),
+        'secret',
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Ok'));
+      await tester.pumpAndSettle();
+      expect(model.configured?.type, ScheduleSourceType.Dualis);
+      expect(model.configured?.value, 'student');
+      expect(model.configured?.includeAll, isTrue);
+      expect(model.credentials?.username, 'student');
+      expect(model.credentials?.password, 'secret');
+      if (!empty) expect(model.replacingId, 'rapla:b4');
+      model.dispose();
+    });
+  }
+
+  testWidgets('an additional timetable cannot create another Dualis account', (
+    tester,
+  ) async {
+    final model = _Model();
+    await _open(tester, model);
+    await tester.scrollUntilVisible(
+      find.text('Add timetable'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Add timetable'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButtonFormField<ScheduleSourceType>));
+    await tester.pumpAndSettle();
+    expect(find.text('Dualis'), findsNothing);
+    model.dispose();
+  });
+
   for (final theme in [AppTheme.Light, AppTheme.Dark]) {
     for (final language in ['en', 'de']) {
       for (final width in [320.0, 393.0, 800.0]) {
@@ -67,7 +128,11 @@ void main() {
 }
 
 class _Model extends TimetableCustomizationViewModel {
-  _Model()
+  final bool empty;
+  TimetableConfiguration? configured;
+  Credentials? credentials;
+  String? replacingId;
+  _Model({this.empty = false})
     : super(
         repository: _Repository(),
         sourceProvider: _Sources(),
@@ -75,23 +140,36 @@ class _Model extends TimetableCustomizationViewModel {
         entryRepository: _Entries(),
       );
   @override
+  Future<void> put(
+    TimetableConfiguration source, {
+    String? replacingId,
+    Credentials? dualisCredentials,
+  }) async {
+    configured = source;
+    credentials = dualisCredentials;
+    this.replacingId = replacingId;
+  }
+
+  @override
   Future<void> load() async {
-    sources = [
-      TimetableConfiguration(
-        id: 'rapla:b4',
-        label: 'TINF25B4',
-        type: ScheduleSourceType.Rapla,
-        value: 'https://example.com',
-        includeAll: true,
-      ),
-      TimetableConfiguration(
-        id: 'ical:b6',
-        label: 'TINF25B6',
-        type: ScheduleSourceType.Ical,
-        value: 'https://example.com/b6.ics',
-        exceptions: {'Software Engineering'},
-      ),
-    ];
+    sources = empty
+        ? []
+        : [
+            TimetableConfiguration(
+              id: 'rapla:b4',
+              label: 'TINF25B4',
+              type: ScheduleSourceType.Rapla,
+              value: 'https://example.com',
+              includeAll: true,
+            ),
+            TimetableConfiguration(
+              id: 'ical:b6',
+              label: 'TINF25B6',
+              type: ScheduleSourceType.Ical,
+              value: 'https://example.com/b6.ics',
+              exceptions: {'Software Engineering'},
+            ),
+          ];
     modules = {
       for (final source in sources)
         source.id: [
@@ -102,6 +180,20 @@ class _Model extends TimetableCustomizationViewModel {
     loading = false;
     notifyListeners();
   }
+}
+
+Future<void> _open(WidgetTester tester, _Model model) async {
+  tester.view.physicalSize = const Size(800, 1200);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  await tester.pumpWidget(
+    MaterialApp(
+      localizationsDelegates: const [LocalizationDelegate()],
+      home: TimetableCustomizationPage(viewModel: model),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 class _Repository implements TimetableRepository {

@@ -360,6 +360,9 @@ Future<void> _runCustomizationColdStart(
         condition: () => page.evaluate().isEmpty,
         description: 'saved customization returned to timetable',
       );
+      KiwiContainer()
+          .resolve<ScheduleSourceProvider>()
+          .usePerformanceFixtureSource(PerformanceFixtureScheduleSource());
       await _settleFrameSchedulerIdle(tester);
       final saved = await KiwiContainer().resolve<TimetableRepository>().load();
       return _ScenarioEvidence(

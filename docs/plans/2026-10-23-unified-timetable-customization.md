@@ -14,6 +14,11 @@ to a source, so identically named modules in different classes stay independent.
 Future modules follow each timetable's default. Editing and removing timetables
 and selecting modules remain drafts until Save changes.
 
+The primary timetable can use the app's Dualis account, including switching from
+another source or setting up a first timetable. Credential edits follow the same
+draft/Save behavior. Additional timetables use Rapla, iCal or Mannheim; multiple
+Dualis accounts are outside this feature's scope.
+
 Use the provided light/dark mockups as the design direction with Flutter Material
 components, DualMate's red palette and typography, rounded selectable rows,
 expandable class groups, and a plain surface around the save action. Support

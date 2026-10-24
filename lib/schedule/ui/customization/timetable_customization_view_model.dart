@@ -10,6 +10,8 @@ import 'package:dualmate/schedule/service/schedule_prettifier.dart';
 import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
 import 'package:dualmate/native/widget/widget_helper.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
+import 'package:dualmate/dualis/model/credentials.dart';
+import 'package:dualmate/schedule/model/schedule_source_type.dart';
 
 class TimetableCustomizationViewModel extends ChangeNotifier {
   final TimetableRepository repository;
@@ -23,6 +25,10 @@ class TimetableCustomizationViewModel extends ChangeNotifier {
   Map<String, List<String>> modules = {};
   final Map<String, Schedule> _previews = {};
   final CancellationToken _token = CancellationToken();
+  Credentials _savedDualisCredentials = Credentials('', '');
+  Credentials? _draftDualisCredentials;
+  Credentials get dualisCredentials =>
+      _draftDualisCredentials ?? _savedDualisCredentials;
   bool loading = true;
   bool saving = false;
   bool dirty = false;
@@ -51,6 +57,8 @@ class TimetableCustomizationViewModel extends ChangeNotifier {
     try {
       sources = await repository.load();
       modules = await repository.moduleNames();
+      _savedDualisCredentials = await repository.preferences
+          .loadDualisCredentials();
       for (final source in sources) {
         modules[source.id] = {
           ...?modules[source.id],
@@ -76,13 +84,22 @@ class TimetableCustomizationViewModel extends ChangeNotifier {
   void remove(TimetableConfiguration source) {
     if (saving || loadingSource) return;
     sources = sources.where((s) => s.id != source.id).toList();
+    _discardUnusedCredentials();
     _previews.remove(source.id);
     dirty = true;
     _notify();
   }
 
-  Future<void> refreshModules(TimetableConfiguration source) async {
-    final remote = await sourceProvider.createSource(source);
+  Future<void> refreshModules(
+    TimetableConfiguration source, {
+    Credentials? credentials,
+  }) async {
+    final remote = await sourceProvider.createSource(
+      source,
+      dualisCredentials: source.type == ScheduleSourceType.Dualis
+          ? credentials ?? _draftDualisCredentials
+          : null,
+    );
     final now = DateTime.now();
     var result = (await remote.querySchedule(
       now.subtract(const Duration(days: 14)),
@@ -106,19 +123,34 @@ class TimetableCustomizationViewModel extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> put(TimetableConfiguration source, {String? replacingId}) async {
+  Future<void> put(
+    TimetableConfiguration source, {
+    String? replacingId,
+    Credentials? dualisCredentials,
+  }) async {
     loadingSource = true;
     _notify();
     try {
       if (sources.any((s) => s.id == source.id && s.id != replacingId))
         throw ArgumentError('duplicate');
       final sameEndpoint = replacingId == source.id;
-      if (!sameEndpoint) await refreshModules(source);
+      final changedCredentials =
+          dualisCredentials != null &&
+          (dualisCredentials.username != this.dualisCredentials.username ||
+              dualisCredentials.password != this.dualisCredentials.password);
+      if (!sameEndpoint || changedCredentials) {
+        await refreshModules(source, credentials: dualisCredentials);
+      }
       if (replacingId == null) {
         sources = [...sources, source];
       } else {
         sources = sources.map((s) => s.id == replacingId ? source : s).toList();
       }
+      if (source.type == ScheduleSourceType.Dualis &&
+          dualisCredentials != null) {
+        _draftDualisCredentials = dualisCredentials;
+      }
+      _discardUnusedCredentials();
       dirty = true;
       _notify();
     } finally {
@@ -127,11 +159,22 @@ class TimetableCustomizationViewModel extends ChangeNotifier {
     }
   }
 
+  void _discardUnusedCredentials() {
+    if (!sources.any((s) => s.type == ScheduleSourceType.Dualis)) {
+      _draftDualisCredentials = null;
+    }
+  }
+
   Future<void> save() async {
     saving = true;
     _notify();
     try {
-      await sourceProvider.saveTimetables(sources);
+      await sourceProvider.saveTimetables(
+        sources,
+        dualisCredentials: _draftDualisCredentials,
+      );
+      _savedDualisCredentials = dualisCredentials;
+      _draftDualisCredentials = null;
       for (final preview in _previews.entries) {
         if (sources.any((s) => s.id == preview.key))
           await entryRepository.saveSchedule(preview.value);
