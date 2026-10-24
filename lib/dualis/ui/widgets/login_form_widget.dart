@@ -1,6 +1,7 @@
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/dualis/model/credentials.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 typedef OnLogin = Future<bool> Function(Credentials credentials);
 typedef OnLoadCredentials = Future<Credentials> Function();
@@ -31,14 +32,14 @@ class LoginForm extends StatefulWidget {
 
   @override
   _LoginFormState createState() => _LoginFormState(
-        onLogin,
-        title,
-        loginFailedText,
-        onLoadCredentials,
-        onSaveCredentials,
-        onClearCredentials,
-        getDoSaveCredentials,
-      );
+    onLogin,
+    title,
+    loginFailedText,
+    onLoadCredentials,
+    onSaveCredentials,
+    onClearCredentials,
+    getDoSaveCredentials,
+  );
 }
 
 class _LoginFormState extends State<LoginForm> {
@@ -97,26 +98,41 @@ class _LoginFormState extends State<LoginForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
-          child: _title,
-        ),
-        TextField(
-          controller: _usernameEditingController,
-          decoration: InputDecoration(
-            enabled: !_isLoading,
-            hintText: L.of(context).loginUsername,
-            icon: Icon(Icons.alternate_email),
-          ),
-        ),
-        TextField(
-          controller: _passwordEditingController,
-          obscureText: true,
-          decoration: InputDecoration(
-            enabled: !_isLoading,
-            hintText: L.of(context).loginPassword,
-            icon: Icon(Icons.lock_outline),
-            errorText: _loginFailed ? _loginFailedText : null,
+        Padding(padding: const EdgeInsets.fromLTRB(0, 0, 0, 24), child: _title),
+        AutofillGroup(
+          // Only a successful login should offer to save credentials.
+          onDisposeAction: AutofillContextAction.cancel,
+          child: Column(
+            children: <Widget>[
+              TextField(
+                controller: _usernameEditingController,
+                autofillHints: const [
+                  AutofillHints.username,
+                  'dualis.dhbw.de',
+                  'https://dualis.dhbw.de/',
+                ],
+                decoration: InputDecoration(
+                  enabled: !_isLoading,
+                  hintText: L.of(context).loginUsername,
+                  icon: Icon(Icons.alternate_email),
+                ),
+              ),
+              TextField(
+                controller: _passwordEditingController,
+                obscureText: true,
+                autofillHints: const [
+                  AutofillHints.password,
+                  'dualis.dhbw.de',
+                  'https://dualis.dhbw.de/',
+                ],
+                decoration: InputDecoration(
+                  enabled: !_isLoading,
+                  hintText: L.of(context).loginPassword,
+                  icon: Icon(Icons.lock_outline),
+                  errorText: _loginFailed ? _loginFailedText : null,
+                ),
+              ),
+            ],
           ),
         ),
         Padding(
@@ -124,9 +140,7 @@ class _LoginFormState extends State<LoginForm> {
           child: CheckboxListTile(
             controlAffinity: ListTileControlAffinity.trailing,
             dense: true,
-            title: Text(
-              L.of(context).dualisStoreCredentials,
-            ),
+            title: Text(L.of(context).dualisStoreCredentials),
             onChanged: (bool? value) {
               if (value == null) return;
               setState(() {
@@ -174,8 +188,11 @@ class _LoginFormState extends State<LoginForm> {
 
     bool loginSuccess = await _onLogin(credentials);
 
-    if (loginSuccess && _storeCredentials) {
-      await _onSaveCredentials(credentials);
+    if (loginSuccess) {
+      TextInput.finishAutofillContext(shouldSave: true);
+      if (_storeCredentials) {
+        await _onSaveCredentials(credentials);
+      }
     }
 
     if (!mounted) return;
