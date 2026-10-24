@@ -11,7 +11,6 @@ assignees: ''
 <!-- Fülle [x] ein um die entsprechende Option zu markieren -->
 - [ ] Rapla
 - [ ] Dualis
-- [ ] DHBW Mannheim
 - [ ] iCAL Kalender
 
 ## Link zum Vorlesungsplan (Wichtig!)

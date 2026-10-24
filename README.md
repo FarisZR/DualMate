@@ -65,7 +65,7 @@ DualMate gives you a clear weekly schedule that is easy to use during a busy uni
 - Filter schedule entries so your view stays focused.
 - Keep using cached schedule data when the network is unreliable.
 - Get local notifications for the next day and for schedule changes.
-- Use schedule sources such as Rapla, Dualis, iCal calendars, and DHBW Mannheim schedules.
+- Use schedule sources such as Rapla, Dualis, and iCal calendars.
 
 ### Canteen
 
@@ -114,7 +114,7 @@ DualMate includes modern widgets for the information you want to see without ope
 
 DualMate is no longer limited to a single location or one fixed source of data. Depending on what your DHBW location provides, you can use the app with different schedule sources and canteen locations.
 
-The app currently supports schedule setup through Rapla, Dualis, iCal calendars, and DHBW Mannheim course schedules. Canteen support covers several DHBW locations, so the app can be useful outside a single campus setup.
+The app currently supports schedule setup through Rapla, Dualis, and iCal calendars. Canteen support covers several DHBW locations, so the app can be useful outside a single campus setup.
 
 ## Unofficial app
 

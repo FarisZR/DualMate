@@ -8,7 +8,6 @@ import 'package:dualmate/schedule/model/schedule_source_type.dart';
 import 'package:dualmate/schedule/model/timetable_configuration.dart';
 import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
 import 'package:dualmate/schedule/service/rapla/rapla_schedule_source.dart';
-import 'package:dualmate/schedule/service/mannheim/mannheim_course_service.dart';
 import 'package:dualmate/schedule/ui/customization/timetable_customization_view_model.dart';
 import 'package:dualmate/schedule/ui/customization/timetable_module_tile.dart';
 import 'package:dualmate/dualis/model/credentials.dart';
@@ -482,7 +481,6 @@ String _sourceName(L l, ScheduleSourceType type) => switch (type) {
   ScheduleSourceType.Rapla => l.scheduleSourceTypeRapla,
   ScheduleSourceType.Ical => l.scheduleSourceTypeIcal,
   ScheduleSourceType.Dualis => l.scheduleSourceTypeDualis,
-  ScheduleSourceType.Mannheim => l.scheduleSourceTypeMannheim,
   ScheduleSourceType.None => l.scheduleSourceTypeNone,
 };
 
@@ -507,7 +505,6 @@ class _ConfigureTimetableDialogState extends State<_ConfigureTimetableDialog> {
   late final TextEditingController username;
   late final TextEditingController password;
   late ScheduleSourceType type;
-  bool busy = false;
   @override
   void initState() {
     super.initState();
@@ -527,29 +524,6 @@ class _ConfigureTimetableDialogState extends State<_ConfigureTimetableDialog> {
     super.dispose();
   }
 
-  Future<void> _pickMannheim() async {
-    setState(() => busy = true);
-    try {
-      final courses = await MannheimCourseService().loadCourses();
-      if (!mounted) return;
-      final course = await showSearch<MannheimCourse?>(
-        context: context,
-        delegate: _MannheimSearch(courses),
-      );
-      if (course != null) {
-        url.text = course.icalUrl;
-        if (label.text.trim().isEmpty) label.text = course.name;
-      }
-    } catch (_) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(L.of(context).timetableLoadError)),
-        );
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
-  }
-
   void _submit() {
     if (!form.currentState!.validate()) return;
     final credentials = type == ScheduleSourceType.Dualis
@@ -558,12 +532,7 @@ class _ConfigureTimetableDialogState extends State<_ConfigureTimetableDialog> {
     final value = credentials?.username ?? url.text.trim();
     final id = type == widget.source?.type && value == widget.source?.value
         ? widget.source!.id
-        : ScheduleSourceIdentity.create(
-            type,
-            type == ScheduleSourceType.Mannheim
-                ? Uri.parse(value).pathSegments.last
-                : value,
-          );
+        : ScheduleSourceIdentity.create(type, value);
     Navigator.pop(context, (
       configuration: TimetableConfiguration(
         id: id,
@@ -598,10 +567,6 @@ class _ConfigureTimetableDialogState extends State<_ConfigureTimetableDialog> {
     }
     if (type == ScheduleSourceType.Rapla &&
         !RaplaScheduleSource.isValidUrl(text)) {
-      return l.timetableInvalidUrl;
-    }
-    if (type == ScheduleSourceType.Mannheim &&
-        !MannheimCourseService.isMannheimProfileUrl(text)) {
       return l.timetableInvalidUrl;
     }
     return null;
@@ -690,13 +655,6 @@ class _ConfigureTimetableDialogState extends State<_ConfigureTimetableDialog> {
                     decoration: InputDecoration(labelText: l.timetableUrl),
                     validator: _validateUrl,
                   ),
-                if (type == ScheduleSourceType.Mannheim)
-                  TextButton.icon(
-                    onPressed: busy ? null : _pickMannheim,
-                    icon: const Icon(Icons.search),
-                    label: Text(l.timetableChooseClass),
-                  ),
-                if (busy) const LinearProgressIndicator(),
               ],
             ),
           ),
@@ -707,42 +665,8 @@ class _ConfigureTimetableDialogState extends State<_ConfigureTimetableDialog> {
           onPressed: () => Navigator.pop(context),
           child: Text(l.dialogCancel),
         ),
-        FilledButton(onPressed: busy ? null : _submit, child: Text(l.dialogOk)),
+        FilledButton(onPressed: _submit, child: Text(l.dialogOk)),
       ],
-    );
-  }
-}
-
-class _MannheimSearch extends SearchDelegate<MannheimCourse?> {
-  final List<MannheimCourse> courses;
-  _MannheimSearch(this.courses);
-  @override
-  List<Widget> buildActions(BuildContext context) => [
-    IconButton(onPressed: () => query = '', icon: const Icon(Icons.clear)),
-  ];
-  @override
-  Widget buildLeading(BuildContext context) => IconButton(
-    onPressed: () => close(context, null),
-    icon: const Icon(Icons.arrow_back),
-  );
-  @override
-  Widget buildResults(BuildContext context) => buildSuggestions(context);
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    final matches = courses
-        .where(
-          (c) => '${c.name} ${c.title}'.toLowerCase().contains(
-            query.toLowerCase(),
-          ),
-        )
-        .toList();
-    return ListView.builder(
-      itemCount: matches.length,
-      itemBuilder: (context, i) => ListTile(
-        title: Text(matches[i].name),
-        subtitle: Text(matches[i].title),
-        onTap: () => close(context, matches[i]),
-      ),
     );
   }
 }

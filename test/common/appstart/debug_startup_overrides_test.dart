@@ -12,8 +12,10 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    preferencesProvider =
-        PreferencesProvider(PreferencesAccess(), SecureStorageAccess());
+    preferencesProvider = PreferencesProvider(
+      PreferencesAccess(),
+      SecureStorageAccess(),
+    );
   });
 
   group('isActive', () {
@@ -22,7 +24,10 @@ void main() {
     });
 
     test('skip onboarding makes overrides active', () {
-      expect(const DebugStartupOverrides(skipOnboarding: true).isActive, isTrue);
+      expect(
+        const DebugStartupOverrides(skipOnboarding: true).isActive,
+        isTrue,
+      );
     });
 
     test('a rapla url makes overrides active', () {
@@ -43,29 +48,13 @@ void main() {
     });
 
     test('rapla url infers rapla source', () {
-      const overrides = DebugStartupOverrides(raplaUrl: 'https://rapla.example');
+      const overrides = DebugStartupOverrides(
+        raplaUrl: 'https://rapla.example',
+      );
       expect(overrides.effectiveScheduleSource, ScheduleSourceType.Rapla);
     });
 
     test('ical url infers ical source', () {
-      const overrides = DebugStartupOverrides(icalUrl: 'https://ical.example');
-      expect(overrides.effectiveScheduleSource, ScheduleSourceType.Ical);
-    });
-
-    test('mannheim id alone does not infer a source', () {
-      const overrides = DebugStartupOverrides(mannheimId: 'abc123');
-      expect(overrides.effectiveScheduleSource, isNull);
-    });
-
-    test('mannheim id with ical url infers mannheim source', () {
-      const overrides = DebugStartupOverrides(
-        mannheimId: 'abc123',
-        icalUrl: 'https://ical.example',
-      );
-      expect(overrides.effectiveScheduleSource, ScheduleSourceType.Mannheim);
-    });
-
-    test('ical url without mannheim id infers ical source', () {
       const overrides = DebugStartupOverrides(icalUrl: 'https://ical.example');
       expect(overrides.effectiveScheduleSource, ScheduleSourceType.Ical);
     });
@@ -86,7 +75,9 @@ void main() {
     });
 
     test('does not touch first start when skipOnboarding is false', () async {
-      const overrides = DebugStartupOverrides(raplaUrl: 'https://rapla.example');
+      const overrides = DebugStartupOverrides(
+        raplaUrl: 'https://rapla.example',
+      );
 
       await overrides.apply(preferencesProvider);
 
@@ -94,7 +85,9 @@ void main() {
     });
 
     test('persists rapla url and infers rapla source type', () async {
-      const overrides = DebugStartupOverrides(raplaUrl: 'https://rapla.example');
+      const overrides = DebugStartupOverrides(
+        raplaUrl: 'https://rapla.example',
+      );
 
       await overrides.apply(preferencesProvider);
 
@@ -114,36 +107,6 @@ void main() {
       expect(
         await preferencesProvider.getScheduleSourceType(),
         ScheduleSourceType.Ical.index,
-      );
-    });
-
-    test('persists mannheim id with ical url and infers mannheim source type', () async {
-      const overrides = DebugStartupOverrides(
-        mannheimId: 'course-42',
-        icalUrl: 'https://ical.example',
-      );
-
-      await overrides.apply(preferencesProvider);
-
-      expect(await preferencesProvider.getMannheimScheduleId(), 'course-42');
-      expect(await preferencesProvider.getIcalUrl(), 'https://ical.example');
-      expect(
-        await preferencesProvider.getScheduleSourceType(),
-        ScheduleSourceType.Mannheim.index,
-      );
-    });
-
-    test('mannheim id without ical url does not select a source type', () async {
-      const overrides = DebugStartupOverrides(mannheimId: 'course-42');
-
-      await overrides.apply(preferencesProvider);
-
-      expect(await preferencesProvider.getMannheimScheduleId(), 'course-42');
-      // Source type stays at default (None): Mannheim is built on the iCal
-      // source, so a bare course id cannot produce a valid source.
-      expect(
-        await preferencesProvider.getScheduleSourceType(),
-        ScheduleSourceType.None.index,
       );
     });
 

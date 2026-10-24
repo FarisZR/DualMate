@@ -1,13 +1,11 @@
 import 'package:dualmate/ui/onboarding/viewmodels/dualis_login_view_model.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/ical_url_view_model.dart';
-import 'package:dualmate/ui/onboarding/viewmodels/mannheim_view_model.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/rapla_url_view_model.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/onboarding_view_model_base.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/select_canteen_location_view_model.dart';
 import 'package:dualmate/ui/onboarding/viewmodels/select_source_view_model.dart';
 import 'package:dualmate/ui/onboarding/widgets/dualis_login_page.dart';
 import 'package:dualmate/ui/onboarding/widgets/ical_url_page.dart';
-import 'package:dualmate/ui/onboarding/widgets/mannheim_page.dart';
 import 'package:dualmate/ui/onboarding/widgets/rapla_url_page.dart';
 import 'package:dualmate/ui/onboarding/widgets/select_canteen_location_page.dart';
 import 'package:dualmate/ui/onboarding/widgets/select_source_page.dart';
@@ -116,27 +114,6 @@ class IcalOnboardingStep extends OnboardingStep {
   @override
   Widget buildContent(BuildContext context) {
     return IcalUrlPage();
-  }
-
-  @override
-  String? nextStep() {
-    return "dualis";
-  }
-
-  @override
-  OnboardingStepViewModel viewModel() {
-    return _viewModel;
-  }
-}
-
-class MannheimOnboardingStep extends OnboardingStep {
-  final MannheimViewModel _viewModel = MannheimViewModel(
-    KiwiContainer().resolve(),
-  );
-
-  @override
-  Widget buildContent(BuildContext context) {
-    return MannheimPage();
   }
 
   @override

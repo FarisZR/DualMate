@@ -9,7 +9,6 @@ import 'package:dualmate/schedule/service/error_report_schedule_source_decorator
 import 'package:dualmate/schedule/service/ical/ical_schedule_source.dart';
 import 'package:dualmate/schedule/service/invalid_schedule_source.dart';
 import 'package:dualmate/schedule/service/isolate_schedule_source_decorator.dart';
-import 'package:dualmate/schedule/service/mannheim/mannheim_course_service.dart';
 import 'package:dualmate/schedule/service/rapla/rapla_schedule_source.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
@@ -106,7 +105,6 @@ class ScheduleSourceProvider {
       ScheduleSourceType.Dualis: () async => await _dualisScheduleSource(),
       ScheduleSourceType.Rapla: () async => await _raplaScheduleSource(),
       ScheduleSourceType.Ical: () async => await _icalScheduleSource(),
-      ScheduleSourceType.Mannheim: () async => await _mannheimScheduleSource(),
     };
 
     var init = initializer[scheduleSourceType];
@@ -187,15 +185,6 @@ class ScheduleSourceProvider {
     return _scheduleSourceFromIcalUrl(url);
   }
 
-  Future<ScheduleSource> _mannheimScheduleSource() async {
-    var url = await _preferencesProvider.getIcalUrl();
-    if (!MannheimCourseService.isMannheimProfileUrl(url)) {
-      return InvalidScheduleSource();
-    }
-
-    return _scheduleSourceFromIcalUrl(url);
-  }
-
   Future<ScheduleSource> _scheduleSourceFromIcalUrl(String url) async {
     var ical = IcalScheduleSource();
     ical.setIcalUrl(url);
@@ -216,8 +205,6 @@ class ScheduleSourceProvider {
     final configuredValue = switch (type) {
       ScheduleSourceType.Rapla => await _preferencesProvider.getRaplaUrl(),
       ScheduleSourceType.Ical => await _preferencesProvider.getIcalUrl(),
-      ScheduleSourceType.Mannheim =>
-        await _preferencesProvider.getMannheimScheduleId(),
       ScheduleSourceType.Dualis =>
         (await _preferencesProvider.loadDualisCredentials()).username,
       ScheduleSourceType.None => '',
@@ -284,27 +271,6 @@ class ScheduleSourceProvider {
     await setupScheduleSource();
 
     await analytics.setUserProperty(name: "schedule_source", value: "Ical");
-  }
-
-  Future<void> setupForMannheim(MannheimCourse selectedCourse) async {
-    await _preferencesProvider.setMannheimScheduleId(selectedCourse.scheduleId);
-    await _preferencesProvider.setIcalUrl(selectedCourse.icalUrl);
-    await _preferencesProvider.setScheduleSourceType(
-      ScheduleSourceType.Mannheim.index,
-    );
-    await _replacePrimary(
-      ScheduleSourceType.Mannheim,
-      selectedCourse.icalUrl,
-      selectedCourse.scheduleId,
-    );
-
-    await _clearEntryCache();
-    await setupScheduleSource();
-
-    await analytics.setUserProperty(
-      name: "schedule_source",
-      value: "DHBW Mannheim",
-    );
   }
 
   bool didSetupCorrectly() {

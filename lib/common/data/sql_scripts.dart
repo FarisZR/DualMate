@@ -116,5 +116,13 @@ ON ScheduledClassNotifications(sourceIdentity, classStart);
         title TEXT NOT NULL, selected INTEGER NOT NULL, PRIMARY KEY(sourceIdentity, title))''',
       'CREATE TABLE TimetableConfigurationState (id INTEGER PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 0)',
     ],
+    // Version 7 - Remove unsupported source configurations and their cache.
+    [
+      'UPDATE TimetableConfigurationState SET revision=revision+1 WHERE EXISTS (SELECT 1 FROM TimetableSources WHERE type NOT IN (1,2,3))',
+      'DELETE FROM ScheduleQueryInformation WHERE EXISTS (SELECT 1 FROM TimetableSources WHERE type NOT IN (1,2,3))',
+      'DELETE FROM ScheduleEntries WHERE sourceIdentity IN (SELECT id FROM TimetableSources WHERE type NOT IN (1,2,3))',
+      'DELETE FROM TimetableModuleSelections WHERE sourceIdentity IN (SELECT id FROM TimetableSources WHERE type NOT IN (1,2,3))',
+      'DELETE FROM TimetableSources WHERE type NOT IN (1,2,3)',
+    ],
   ];
 }

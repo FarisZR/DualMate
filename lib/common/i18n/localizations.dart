@@ -32,7 +32,6 @@ class L {
   String get timetableUrl => _getValue('timetableUrl');
   String get timetableRequired => _getValue('timetableRequired');
   String get timetableInvalidUrl => _getValue('timetableInvalidUrl');
-  String get timetableChooseClass => _getValue('timetableChooseClass');
   final Locale locale;
   late String _language;
 
@@ -393,28 +392,6 @@ class L {
   String get onboardingIcalUrlHint => _getValue("onboardingIcalUrlHint");
 
   String get scheduleSourceTypeIcal => _getValue("scheduleSourceTypeIcal");
-
-  String get scheduleSourceTypeMannheim =>
-      _getValue("scheduleSourceTypeMannheim");
-
-  String get onboardingMannheimLoadCoursesFailed =>
-      _getValue("onboardingMannheimLoadCoursesFailed");
-
-  String get onboardingMannheimDescription =>
-      _getValue("onboardingMannheimDescription");
-
-  String get onboardingMannheimSearchHint =>
-      _getValue("onboardingMannheimSearchHint");
-
-  String get onboardingMannheimNoCourses =>
-      _getValue("onboardingMannheimNoCourses");
-
-  String get onboardingMannheimNoSearchResults =>
-      _getValue("onboardingMannheimNoSearchResults");
-
-  String get onboardingMannheimRetry => _getValue("onboardingMannheimRetry");
-
-  String get onboardingMannheimTitle => _getValue("onboardingMannheimTitle");
 
   String get settingsPrettifySchedule => _getValue("settingsPrettifySchedule");
 

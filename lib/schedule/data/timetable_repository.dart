@@ -90,20 +90,16 @@ class TimetableRepository {
         ScheduleSourceType.values[await preferences.getScheduleSourceType()];
     final value = switch (type) {
       ScheduleSourceType.Rapla => await preferences.getRaplaUrl(),
-      ScheduleSourceType.Ical ||
-      ScheduleSourceType.Mannheim => await preferences.getIcalUrl(),
+      ScheduleSourceType.Ical => await preferences.getIcalUrl(),
       ScheduleSourceType.Dualis =>
         (await preferences.loadDualisCredentials()).username,
       ScheduleSourceType.None => '',
     };
-    final identityValue = type == ScheduleSourceType.Mannheim
-        ? await preferences.getMannheimScheduleId()
-        : value;
     final hidden = await database.queryRows('ScheduleEntryFilters');
     final primary = type == ScheduleSourceType.None
         ? null
         : TimetableConfiguration(
-            id: ScheduleSourceIdentity.create(type, identityValue),
+            id: ScheduleSourceIdentity.create(type, value),
             label: labelFor(type, value),
             type: type,
             value: value,
@@ -175,8 +171,7 @@ class TimetableRepository {
       final source = sources.first;
       if (source.type == ScheduleSourceType.Rapla)
         await preferences.setRaplaUrl(source.value);
-      if (source.type == ScheduleSourceType.Ical ||
-          source.type == ScheduleSourceType.Mannheim)
+      if (source.type == ScheduleSourceType.Ical)
         await preferences.setIcalUrl(source.value);
     }
   }

@@ -6,6 +6,8 @@ import 'package:dualmate/common/data/preferences/preferences_access.dart';
 import 'package:dualmate/common/data/preferences/secure_storage_access.dart';
 import 'package:dualmate/date_management/data/calendar_access.dart';
 import 'package:dualmate/dualis/model/credentials.dart';
+import 'package:dualmate/schedule/model/schedule_source_type.dart'
+    as schedule_sources;
 
 class PreferencesProvider {
   static const String AppThemeKey = "AppTheme";
@@ -26,7 +28,6 @@ class PreferencesProvider {
   static const String LastViewedDateEntryYear = "LastViewedDateEntryYear";
   static const String ScheduleSourceType = "ScheduleSourceType";
   static const String ScheduleIcalUrl = "ScheduleIcalUrl";
-  static const String MannheimScheduleId = "MannheimScheduleId";
   static const String PrettifySchedule = "PrettifySchedule";
   static const String DidShowWidgetHelpDialog = "DidShowWidgetHelpDialog";
   static const String SynchronizeScheduleWithCalendar =
@@ -228,7 +229,10 @@ class PreferencesProvider {
   }
 
   Future<int> getScheduleSourceType() async {
-    return await _preferencesAccess.get<int>(ScheduleSourceType) ?? 0;
+    final type = await _preferencesAccess.get<int>(ScheduleSourceType) ?? 0;
+    return type >= 0 && type < schedule_sources.ScheduleSourceType.values.length
+        ? type
+        : schedule_sources.ScheduleSourceType.None.index;
   }
 
   Future<void> setScheduleSourceType(int value) async {
@@ -241,14 +245,6 @@ class PreferencesProvider {
 
   Future<void> setIcalUrl(String url) {
     return _preferencesAccess.set<String>(ScheduleIcalUrl, url);
-  }
-
-  Future<String> getMannheimScheduleId() async {
-    return await _preferencesAccess.get<String>(MannheimScheduleId) ?? "";
-  }
-
-  Future<void> setMannheimScheduleId(String url) {
-    return _preferencesAccess.set<String>(MannheimScheduleId, url);
   }
 
   Future<bool> getPrettifySchedule() async {

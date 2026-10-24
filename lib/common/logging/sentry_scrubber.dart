@@ -83,7 +83,6 @@ const Set<String> _genericValues = <String>{
   'analytics.user_property',
   'rapla',
   'ical',
-  'mannheim',
   'unknown',
   'success',
   'empty',

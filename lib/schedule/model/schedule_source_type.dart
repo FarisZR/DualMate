@@ -1,7 +1,1 @@
-enum ScheduleSourceType {
-  None,
-  Rapla,
-  Dualis,
-  Ical,
-  Mannheim,
-}
+enum ScheduleSourceType { None, Rapla, Dualis, Ical }

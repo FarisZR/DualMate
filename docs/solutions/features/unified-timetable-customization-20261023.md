@@ -13,8 +13,8 @@ tags: [schedule, material3, sources, notifications, migration]
 
 The timetable toolbar opens Customize timetable. Source configuration and module
 selection share one screen; Settings retains general display preferences.
-Rapla and iCal can be mixed, Mannheim retains its searchable course directory,
-and Dualis is available when adding or editing the primary timetable. Existing
+Rapla and iCal can be mixed, and Dualis is available when adding or editing the
+primary timetable. Existing
 Dualis configurations migrate with their account identity. Credentials stay in
 memory while editing and are written to secure storage only on Save; previews
 and active adapters use independent sessions.
@@ -24,6 +24,10 @@ SQLite schema 6 adds `sourceIdentity` to lessons plus `TimetableSources`,
 migrates the legacy source and hidden names in one transaction, preserving cached
 lessons. The migration loop now starts after the previous database version so
 non-idempotent migrations are not reapplied.
+
+Schema 7 removes unsupported source configurations and their cached lessons and
+selections. Unknown legacy source preferences resolve to no source, keeping the
+remaining providers' stored numeric identities unchanged.
 
 Module exceptions invert a source's default: the primary includes future modules,
 while additions exclude them until selected. Choices are persisted by source and
