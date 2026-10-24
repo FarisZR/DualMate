@@ -335,6 +335,7 @@ class _TimetableCustomizationPageState
                 child: SizedBox(
                   width: double.infinity,
                   child: FilledButton(
+                    key: const ValueKey('timetable_save_changes'),
                     onPressed:
                         model.loading ||
                             model.loadFailed ||

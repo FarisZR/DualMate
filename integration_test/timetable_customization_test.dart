@@ -197,7 +197,7 @@ void main() {
     await tester.tap(find.text('Formal Languages'));
     await tester.pumpAndSettle();
     await demoPause();
-    await tester.tap(find.widgetWithText(FilledButton, 'Save changes'));
+    await tester.tap(find.byKey(const ValueKey('timetable_save_changes')));
     await tester.pumpAndSettle();
     final saved = await repository.load();
     expect(saved, hasLength(2));

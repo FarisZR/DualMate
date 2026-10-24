@@ -107,6 +107,10 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
+          expect(
+            find.byKey(const ValueKey('timetable_save_changes')),
+            findsOneWidget,
+          );
           expect(tester.takeException(), isNull);
           await tester.scrollUntilVisible(
             find.byKey(const ValueKey('rapla:b4/Software Engineering')),

@@ -110,7 +110,7 @@ void main() {
       expect(model.modules.containsKey(model.sources.first.id), isTrue);
       await tester.pumpAndSettle();
       await binding.takeScreenshot('timetable-tablet-dualis');
-      await tester.tap(find.text('Save changes'));
+      await tester.tap(find.byKey(const ValueKey('timetable_save_changes')));
       await tester.pumpAndSettle();
       final saved = await repository.load();
       expect(saved.first.type, ScheduleSourceType.Dualis);

@@ -309,14 +309,21 @@ Future<void> _runCustomizationColdStart(
       await tester.fling(list, const Offset(0, -650), 1800);
       await tester.pump(_pollStep);
       await _settleFrameSchedulerIdle(tester);
-      final moved = state.position.pixels > before + 100;
+      final afterForward = state.position.pixels;
+      final movedForward = afterForward > before + 100;
       await tester.fling(list, const Offset(0, 650), 1800);
       await tester.pump(_pollStep);
       await _settleFrameSchedulerIdle(tester);
+      final movedBackward = state.position.pixels < afterForward - 100;
+      final moved = movedForward && movedBackward;
       return _ScenarioEvidence(
         finalStateReached:
             moved && find.byType(TimetableModuleTile).evaluate().length < 40,
         intermediateFramesRendered: moved,
+        animationChecks: {
+          'forward_scroll': movedForward,
+          'reverse_scroll': movedBackward,
+        },
         finalStateDescription:
             'Real flings scroll the lazy module list in both directions',
       );
@@ -353,7 +360,7 @@ Future<void> _runCustomizationColdStart(
   await recorder.measure(
     'customization_save_and_apply',
     action: () async {
-      await tester.tap(find.widgetWithText(FilledButton, 'Save changes'));
+      await tester.tap(find.byKey(const ValueKey('timetable_save_changes')));
       await tester.pump(_pollStep);
       await _pumpUntil(
         tester,
@@ -933,7 +940,7 @@ Future<void> _runFullStressJourney(
         checks['round_${round}_additional_module_selected'] = tester
             .widget<TimetableModuleTile>(tile)
             .selected;
-        await tester.tap(find.widgetWithText(FilledButton, 'Save changes'));
+        await tester.tap(find.byKey(const ValueKey('timetable_save_changes')));
         await tester.pump(const Duration(milliseconds: 8));
         await _pumpUntil(
           tester,
