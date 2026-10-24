@@ -13,6 +13,107 @@ import 'package:dualmate/schedule/ui/viewmodels/weekly_schedule_view_model.dart'
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final initialize in [true, false]) {
+    test(
+      'a cache read cannot outlive source removal (initializing: $initialize)',
+      () async {
+        final provider = _BlockingCachedScheduleProvider();
+        final sources = _FakeScheduleSourceProvider();
+        final model = WeeklyScheduleViewModel(
+          provider,
+          sources,
+          nowProvider: () => DateTime(2026, 2, 10),
+        );
+        addTearDown(model.dispose);
+        if (!initialize) await model.initialize();
+        final start = DateTime(2026, 2, 16);
+        provider.pending = Completer<Schedule>();
+        final read = initialize
+            ? model.initialize()
+            : model.prefetchWeek(start, start.add(const Duration(days: 7)));
+        await Future<void>.delayed(Duration.zero);
+        sources.emitSourceChanged(valid: false);
+        provider.pending!.complete(
+          Schedule.fromList([_entry(start, 'REMOVED_SOURCE')]),
+        );
+        await read;
+
+        expect(model.weekSchedule, isNull);
+        expect(
+          model.getCachedWeek(start, start.add(const Duration(days: 7))),
+          isNull,
+        );
+      },
+    );
+  }
+
+  for (final paging in [false, true]) {
+    test(
+      'removing the final source clears visible and cached weeks (paging: $paging)',
+      () async {
+        final start = DateTime(2026, 2, 9);
+        final provider = _CountingScheduleProvider([
+          _entry(start, 'REMOVED_SOURCE'),
+          _entry(start.add(const Duration(days: 7)), 'NEXT_WEEK'),
+        ]);
+        final sources = _FakeScheduleSourceProvider();
+        final model = WeeklyScheduleViewModel(
+          provider,
+          sources,
+          nowProvider: () => DateTime(2026, 2, 10),
+        );
+        addTearDown(model.dispose);
+        await model.initialize();
+        expect(model.weekSchedule!.entries, isNotEmpty);
+        if (paging) model.beginVisiblePaging();
+
+        sources.emitSourceChanged(valid: false);
+
+        expect(model.weekSchedule, isNull);
+        expect(model.visibleScheduleSnapshot!.entries, isEmpty);
+        expect(
+          model.getCachedWeek(start, start.add(const Duration(days: 7))),
+          isNull,
+        );
+        if (paging)
+          model.endVisiblePaging(model.currentDateStart, model.currentDateEnd);
+        expect(model.weekSchedule, isNull);
+        expect(provider.updatedScheduleRequests, 0);
+      },
+    );
+  }
+
+  test(
+    'a refresh completing after final-source removal cannot restore lessons',
+    () async {
+      final provider = _BlockingCountingScheduleProvider();
+      final sources = _FakeScheduleSourceProvider();
+      final model = WeeklyScheduleViewModel(
+        provider,
+        sources,
+        nowProvider: () => DateTime(2026, 2, 10),
+      );
+      addTearDown(model.dispose);
+      await model.initialize();
+      unawaited(model.refreshVisibleWeek());
+      await provider.waitForRequestCount(1);
+
+      sources.emitSourceChanged(valid: false);
+      provider.completeNext(
+        ScheduleQueryResult(
+          Schedule.fromList([_entry(DateTime(2026, 2, 9), 'REMOVED_SOURCE')]),
+          const [],
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+
+      expect(model.weekSchedule, isNull);
+      expect(model.visibleScheduleSnapshot!.entries, isEmpty);
+      expect(model.isUpdating, isFalse);
+      expect(model.updateFailed, isFalse);
+    },
+  );
+
   test('cache-only preparation never starts a network refresh', () async {
     final provider = _CountingScheduleProvider(<ScheduleEntry>[
       _entry(DateTime(2026, 2, 9), 'CACHED'),
@@ -545,6 +646,15 @@ class _CountingScheduleProvider extends _FakeScheduleProvider {
   }
 }
 
+class _BlockingCachedScheduleProvider extends _FakeScheduleProvider {
+  _BlockingCachedScheduleProvider() : super([]);
+  Completer<Schedule>? pending;
+
+  @override
+  Future<Schedule> getCachedSchedule(DateTime start, DateTime end) =>
+      pending?.future ?? super.getCachedSchedule(start, end);
+}
+
 class _BlockingScheduleProvider extends _FakeScheduleProvider {
   final Completer<ScheduleQueryResult> _updatedScheduleCompleter =
       Completer<ScheduleQueryResult>();
@@ -659,12 +769,13 @@ class _FakeScheduleSourceProvider implements ScheduleSourceProvider {
   final ScheduleSource _source = _FakeScheduleSource();
   final List<OnDidChangeScheduleSource> _callbacks =
       <OnDidChangeScheduleSource>[];
+  bool _valid = true;
 
   @override
   ScheduleSource get currentScheduleSource => _source;
 
   @override
-  bool didSetupCorrectly() => true;
+  bool didSetupCorrectly() => _valid;
 
   @override
   void addDidChangeScheduleSourceCallback(OnDidChangeScheduleSource callback) {
@@ -678,9 +789,10 @@ class _FakeScheduleSourceProvider implements ScheduleSourceProvider {
     _callbacks.remove(callback);
   }
 
-  void emitSourceChanged() {
+  void emitSourceChanged({bool valid = true}) {
+    _valid = valid;
     for (final callback in List<OnDidChangeScheduleSource>.from(_callbacks)) {
-      callback(_source, true);
+      callback(_source, valid);
     }
   }
 

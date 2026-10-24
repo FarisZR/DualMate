@@ -147,6 +147,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   Future<void> prepareCachedSchedule() async {
     if (_isDisposed) return;
+    final sourceGeneration = _scheduleSourceGeneration;
     final start = toStartOfDay(toDayOfWeek(now, DateTime.monday));
     final end = toNextWeek(start);
     currentDateStart = start;
@@ -155,7 +156,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     final cachedSchedule =
         _lastCachedSchedule ??
         await scheduleProvider.getCachedSchedule(start, end);
-    if (_isDisposed) return;
+    if (!_isCurrentScheduleSourceGeneration(sourceGeneration)) return;
     _applyVisibleSchedule(cachedSchedule, start, end);
     _lastCachedSchedule = cachedSchedule;
   }
@@ -163,6 +164,9 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   Future<void> initialize() async {
     if (_initialized) return;
     _initialized = true;
+    scheduleSourceProvider.addDidChangeScheduleSourceCallback(
+      _onDidChangeScheduleSource,
+    );
     try {
       await _initViewModel();
     } catch (error, trace) {
@@ -203,6 +207,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
   }
 
   Future<void> _initViewModel() async {
+    final sourceGeneration = _scheduleSourceGeneration;
     await PerformanceTelemetry.instance.measureTask(
       'schedule.open',
       args: {'sourceType': _coarseSourceType()},
@@ -222,6 +227,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
             currentDateStart,
             currentDateEnd,
           );
+          if (!_isCurrentScheduleSourceGeneration(sourceGeneration)) return;
           _applyVisibleSchedule(
             cachedSchedule,
             currentDateStart,
@@ -231,11 +237,8 @@ class WeeklyScheduleViewModel extends BaseViewModel {
           _scheduleInitialRefresh();
           ensureUpdateNowTimerRunning();
           _ensureWindowRefreshTimer();
-
-          scheduleSourceProvider.addDidChangeScheduleSourceCallback(
-            _onDidChangeScheduleSource,
-          );
         } catch (error, trace) {
+          if (!_isCurrentScheduleSourceGeneration(sourceGeneration)) return;
           initializeFailed = true;
           notifyIfMounted("initializeFailed");
           _debugScheduleError("Weekly schedule init failed", error, trace);
@@ -294,29 +297,46 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     ScheduleSource newSource,
     bool setupSuccess,
   ) async {
-    if (setupSuccess) {
-      try {
-        _scheduleSourceGeneration += 1;
-        _refreshInFlightByWindow.clear();
-        _memoryWeekCache.clear();
-        _windowFreshnessGates.clear();
-        _knownFetchedWindows.clear();
-        _lastWarmedWeekStart = null;
-        _freshnessGate.reset();
-        _entryRefreshGate.reset();
-        if (weekSchedule == null) {
-          await _openWeekFromCache(currentDateStart, currentDateEnd);
-        }
-        if (_isDisposed) return;
-        await updateSchedule(currentDateStart, currentDateEnd, force: true);
-      } catch (error, trace) {
-        _debugScheduleError(
-          "Weekly schedule source refresh failed",
-          error,
-          trace,
-        );
-        await reportException(error, trace);
+    if (_isDisposed) return;
+    final sourceGeneration = ++_scheduleSourceGeneration;
+    _refreshInFlightByWindow.clear();
+    _prefetchInFlight.clear();
+    _memoryWeekCache.clear();
+    _windowFreshnessGates.clear();
+    _knownFetchedWindows.clear();
+    _lastWarmedWeekStart = null;
+    _freshnessGate.reset();
+    _entryRefreshGate.reset();
+    if (!setupSuccess) {
+      _updateMutex.cancel();
+      _visibleInitialRefreshTimer?.cancel();
+      _visibleRefreshDebounce?.cancel();
+      _initialRefreshTimer?.cancel();
+      _errorResetTimer?.cancel();
+      _queuedVisibleScheduleResult = null;
+      _isVisiblePaging = false;
+      _visibleStateRequestId++;
+      scheduleUrl = null;
+      _hasQueryErrors = false;
+      isUpdating = false;
+      updateFailed = false;
+      _setSchedule(null, currentDateStart, currentDateEnd);
+      return;
+    }
+    try {
+      if (weekSchedule == null) {
+        await _openWeekFromCache(currentDateStart, currentDateEnd);
       }
+      if (!_isCurrentScheduleSourceGeneration(sourceGeneration)) return;
+      await updateSchedule(currentDateStart, currentDateEnd, force: true);
+    } catch (error, trace) {
+      if (!_isCurrentScheduleSourceGeneration(sourceGeneration)) return;
+      _debugScheduleError(
+        "Weekly schedule source refresh failed",
+        error,
+        trace,
+      );
+      await reportException(error, trace);
     }
   }
 
@@ -1175,6 +1195,7 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
   Future<void> _warmAdjacentWeeks(DateTime weekStart) async {
     if (_isDisposed) return;
+    final sourceGeneration = _scheduleSourceGeneration;
     final previousStart = toPreviousWeek(weekStart);
     final nextStart = toNextWeek(weekStart);
     final previousEnd = toNextWeek(previousStart);
@@ -1185,19 +1206,25 @@ class WeeklyScheduleViewModel extends BaseViewModel {
 
     if (!_memoryWeekCache.containsKey(previousKey)) {
       try {
-        _memoryWeekCache[previousKey] = await scheduleProvider
-            .getCachedSchedule(previousStart, previousEnd);
+        final schedule = await scheduleProvider.getCachedSchedule(
+          previousStart,
+          previousEnd,
+        );
+        if (!_isCurrentScheduleSourceGeneration(sourceGeneration)) return;
+        _memoryWeekCache[previousKey] = schedule;
       } catch (_) {}
     }
 
-    if (_isDisposed) return;
+    if (!_isCurrentScheduleSourceGeneration(sourceGeneration)) return;
 
     if (!_memoryWeekCache.containsKey(nextKey)) {
       try {
-        _memoryWeekCache[nextKey] = await scheduleProvider.getCachedSchedule(
+        final schedule = await scheduleProvider.getCachedSchedule(
           nextStart,
           nextEnd,
         );
+        if (!_isCurrentScheduleSourceGeneration(sourceGeneration)) return;
+        _memoryWeekCache[nextKey] = schedule;
       } catch (_) {}
     }
 
@@ -1240,14 +1267,17 @@ class WeeklyScheduleViewModel extends BaseViewModel {
     DateTime start,
     DateTime end,
   ) async {
+    final sourceGeneration = _scheduleSourceGeneration;
     try {
       final schedule = await scheduleProvider.getCachedSchedule(start, end);
-      if (_isDisposed) return;
+      if (!_isCurrentScheduleSourceGeneration(sourceGeneration)) return;
       _memoryWeekCache[cacheKey] = schedule;
     } catch (_) {
       // Best-effort warmup only.
     } finally {
-      _prefetchInFlight.remove(cacheKey);
+      if (_isCurrentScheduleSourceGeneration(sourceGeneration)) {
+        _prefetchInFlight.remove(cacheKey);
+      }
     }
   }
 

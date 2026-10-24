@@ -1,25 +1,50 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
+import 'package:dualmate/common/data/preferences/app_theme_enum.dart';
+import 'package:dualmate/common/ui/colors.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
+import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/dualis/model/credentials.dart';
 import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
+import 'package:dualmate/schedule/data/timetable_repository.dart';
+import 'package:dualmate/schedule/model/timetable_configuration.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:dualmate/schedule/ui/schedule_page.dart';
+import 'package:dualmate/schedule/ui/customization/timetable_customization_page.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_view_model.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/weekly_schedule_page.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_empty_state.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:provider/provider.dart';
 
 void main() {
+  if (const bool.fromEnvironment('CAPTURE_TIMETABLE_EMPTY_STATE')) {
+    setUpAll(() async {
+      final fonts =
+          '${Platform.environment['FLUTTER_ROOT']}/bin/cache/artifacts/material_fonts';
+      final loader = FontLoader('Roboto')
+        ..addFont(
+          File('$fonts/Roboto-Regular.ttf')
+              .readAsBytes()
+              .then((bytes) => bytes.buffer.asByteData()),
+        );
+      await loader.load();
+    });
+  }
   setUp(() {
     KiwiContainer().clear();
     FilterViewModel.resetCachedStateForTesting();
@@ -31,6 +56,63 @@ void main() {
     FilterViewModel.resetCachedStateForTesting();
     KiwiContainer().clear();
   });
+
+  for (final language in ['en', 'de']) {
+    for (final theme in [AppTheme.Light, AppTheme.Dark]) {
+      testWidgets(
+        'no source hides a cached week and Configure opens customization ($language / $theme)',
+        (tester) async {
+          tester.view.physicalSize = const Size(393, 852);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final sourceProvider = _FakeScheduleSourceProvider(
+            didSetupCorrectlyValue: false,
+            setupResult: false,
+          );
+          _registerScheduleDependencies(
+            scheduleProvider: _FakeScheduleProvider([
+              _entry(DateTime.now(), 'REMOVED_TIMETABLE'),
+            ]),
+            sourceProvider: sourceProvider,
+            entryRepository: _FakeScheduleEntryRepository([]),
+          );
+          KiwiContainer().registerInstance<TimetableRepository>(
+            _EmptyTimetables(),
+          );
+          final model = ScheduleViewModel(sourceProvider);
+          await tester.pumpWidget(
+            _wrapSchedulePage(model, locale: Locale(language), theme: theme),
+          );
+          await tester.pump(const Duration(milliseconds: 1100));
+          await tester.pump();
+
+          expect(find.byType(ScheduleEmptyState), findsOneWidget);
+          expect(find.byType(WeeklySchedulePage), findsNothing);
+          expect(find.text('REMOVED_TIMETABLE'), findsNothing);
+          await tester.pumpAndSettle();
+          if (const bool.fromEnvironment('CAPTURE_TIMETABLE_EMPTY_STATE')) {
+            await _capture(
+              tester,
+              'empty-$language-${theme.name.toLowerCase()}',
+            );
+          }
+          final l = L.of(tester.element(find.byType(ScheduleEmptyState)));
+          await tester.tap(
+            find.widgetWithText(
+              FilledButton,
+              l.scheduleEmptyStateSetUrl.toUpperCase(),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(find.byType(TimetableCustomizationPage), findsOneWidget);
+          expect(find.text(l.timetableAdd), findsOneWidget);
+          expect(tester.takeException(), isNull);
+          await _disposeHarness(tester, model);
+        },
+      );
+    }
+  }
 
   testWidgets('renders weekly schedule directly without pager shell', (
     tester,
@@ -180,6 +262,24 @@ void main() {
   });
 }
 
+class _EmptyTimetables implements TimetableRepository {
+  @override
+  Future<List<TimetableConfiguration>> load() async => [];
+  @override
+  Future<Map<String, List<String>>> moduleNames() async => {};
+  @override
+  PreferencesProvider get preferences => _EmptyPreferences();
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _EmptyPreferences implements PreferencesProvider {
+  @override
+  Future<Credentials> loadDualisCredentials() async => Credentials('', '');
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void _registerScheduleDependencies({
   required ScheduleProvider scheduleProvider,
   required ScheduleSourceProvider sourceProvider,
@@ -200,10 +300,18 @@ void _registerScheduleDependencies({
 Widget _wrapSchedulePage(
   ScheduleViewModel scheduleViewModel, {
   ValueNotifier<int>? currentEntryIndex,
+  Locale locale = const Locale('en'),
+  AppTheme theme = AppTheme.Light,
 }) {
   final child = ChangeNotifierProvider<ScheduleViewModel>.value(
     value: scheduleViewModel,
     child: MaterialApp(
+      locale: locale,
+      theme: ColorPalettes.buildTheme(theme),
+      builder: (_, child) => RepaintBoundary(
+        key: const ValueKey('schedule_test_capture'),
+        child: child!,
+      ),
       localizationsDelegates: const [
         LocalizationDelegate(),
         GlobalMaterialLocalizations.delegate,
@@ -211,7 +319,7 @@ Widget _wrapSchedulePage(
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('en'), Locale('de')],
-      home: SchedulePage(),
+      home: Scaffold(body: SchedulePage()),
     ),
   );
   if (currentEntryIndex == null) {
@@ -221,6 +329,24 @@ Widget _wrapSchedulePage(
     value: currentEntryIndex,
     child: child,
   );
+}
+
+Future<void> _capture(WidgetTester tester, String name) async {
+  final boundary = tester.renderObject<RenderRepaintBoundary>(
+    find.byKey(const ValueKey('schedule_test_capture')),
+  );
+  await tester.runAsync(() async {
+    final image = await boundary.toImage();
+    try {
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      final directory = Directory('screenshots/timetable-empty-state')
+        ..createSync(recursive: true);
+      await File('${directory.path}/$name.png')
+          .writeAsBytes(bytes!.buffer.asUint8List());
+    } finally {
+      image.dispose();
+    }
+  });
 }
 
 Future<void> _disposeHarness(

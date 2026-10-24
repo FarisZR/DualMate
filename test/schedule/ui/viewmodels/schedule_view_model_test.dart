@@ -8,6 +8,27 @@ import 'package:dualmate/schedule/ui/viewmodels/schedule_view_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('fixture mode: an empty configuration finishes setup', () {
+    if (!isPerformanceFixtureMode) return;
+    final model = ScheduleViewModel(_FakeScheduleSourceProvider(valid: false));
+    addTearDown(model.dispose);
+    model.initialize();
+    expect(model.isInitializingScheduleSource, isFalse);
+    expect(model.didAttemptSetup, isTrue);
+    expect(model.didSetupProperly, isFalse);
+  });
+
+  test('a completed source change marks an empty setup as finished', () {
+    final model = ScheduleViewModel(_FakeScheduleSourceProvider());
+    addTearDown(model.dispose);
+
+    model.onDidChangeScheduleSource(_FakeScheduleSource(), false);
+
+    expect(model.didSetupProperly, isFalse);
+    expect(model.didAttemptSetup, isTrue);
+    expect(model.isInitializingScheduleSource, isFalse);
+  });
+
   test(
     'initialize does not notify isInitializingScheduleSource when already true',
     () {
@@ -44,9 +65,13 @@ void main() {
       final viewModel = ScheduleViewModel(_FakeScheduleSourceProvider());
       viewModel.initialize();
 
-      expect(viewModel.isInitializingScheduleSource, isFalse,
-          reason: 'Fixture mode must complete initialization immediately '
-              'when the source is already valid.');
+      expect(
+        viewModel.isInitializingScheduleSource,
+        isFalse,
+        reason:
+            'Fixture mode must complete initialization immediately '
+            'when the source is already valid.',
+      );
       expect(viewModel.didAttemptSetup, isTrue);
       viewModel.dispose();
     },
@@ -55,12 +80,14 @@ void main() {
 
 class _FakeScheduleSourceProvider implements ScheduleSourceProvider {
   final ScheduleSource _source = _FakeScheduleSource();
+  final bool valid;
+  _FakeScheduleSourceProvider({this.valid = true});
 
   @override
   ScheduleSource get currentScheduleSource => _source;
 
   @override
-  bool didSetupCorrectly() => true;
+  bool didSetupCorrectly() => valid;
 
   @override
   void addDidChangeScheduleSourceCallback(OnDidChangeScheduleSource callback) {}

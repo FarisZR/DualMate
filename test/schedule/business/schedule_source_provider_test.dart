@@ -13,6 +13,34 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test(
+    'removing the final timetable stays invalid after the save notification',
+    () async {
+      final provider = _provider(
+        _Timetables([
+          _configuration(
+            ScheduleSourceType.Ical,
+            'https://example.com/calendar.ics',
+          ),
+        ]),
+      );
+      await provider.setupScheduleSource();
+      expect(provider.didSetupCorrectly(), isTrue);
+      final setupResults = <bool>[];
+      provider.addDidChangeScheduleSourceCallback(
+        (_, success) => setupResults.add(success),
+      );
+
+      await provider.saveTimetables([]);
+      provider.fireScheduleSourceChanged();
+
+      expect(setupResults, [false, false]);
+      expect(provider.didSetupCorrectly(), isFalse);
+      expect(provider.currentScheduleSource.canQuery(), isFalse);
+      expect(provider.activeSourceIdentities, isEmpty);
+    },
+  );
+
+  test(
     'an invalid child marks the combined timetable setup as invalid',
     () async {
       final configs = _Timetables([

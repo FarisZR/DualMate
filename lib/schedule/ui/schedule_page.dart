@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
 import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_view_model.dart';
@@ -9,8 +8,6 @@ import 'package:dualmate/schedule/ui/weeklyschedule/weekly_schedule_page.dart';
 import 'package:dualmate/schedule/ui/widgets/class_reminder_paused_notice.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_empty_state.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_empty_state_placeholder.dart';
-import 'package:dualmate/schedule/ui/customization/timetable_customization_page.dart';
-import 'package:dualmate/ui/banner_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:kiwi/kiwi.dart';
@@ -85,15 +82,17 @@ class _SchedulePageState extends State<SchedulePage> {
           final hasScheduleLoadFailure =
               weeklyViewModel.updateFailed || weeklyViewModel.initializeFailed;
 
-          if (!viewModel.didSetupProperly && !hasCachedSchedule) {
-            if (viewModel.isInitializingScheduleSource ||
-                !viewModel.didAttemptSetup) {
+          if (!viewModel.didSetupProperly) {
+            final setupPending =
+                viewModel.isInitializingScheduleSource ||
+                !viewModel.didAttemptSetup;
+            if (!setupPending) return ScheduleEmptyState();
+            if (!hasCachedSchedule) {
               return Padding(
                 padding: const EdgeInsets.all(32),
                 child: ScheduleEmptyStatePlaceholder(),
               );
             }
-            return ScheduleEmptyState();
           }
 
           if (!hasCachedSchedule && !hasScheduleLoadFailure) {
@@ -104,34 +103,6 @@ class _SchedulePageState extends State<SchedulePage> {
           }
 
           const weeklyPage = WeeklySchedulePage();
-
-          if (!viewModel.didSetupProperly &&
-              viewModel.didAttemptSetup &&
-              !viewModel.isInitializingScheduleSource) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
-                  child: BannerWidget(
-                    message: L.of(context).scheduleEmptyStateBannerMessage,
-                    onButtonTap: () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const TimetableCustomizationPage(),
-                        ),
-                      );
-                    },
-                    buttonText: L
-                        .of(context)
-                        .scheduleEmptyStateSetUrl
-                        .toUpperCase(),
-                  ),
-                ),
-                Expanded(child: weeklyPage),
-              ],
-            );
-          }
 
           return _withReminderState(weeklyPage);
         },
