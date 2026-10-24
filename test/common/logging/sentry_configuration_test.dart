@@ -19,7 +19,7 @@ void main() {
     await configureSentryOptions(options);
 
     expect(options.sendDefaultPii, isFalse);
-    expect(options.enableLogs, isFalse);
+    expect(options.beforeSendLog, isNotNull);
     expect(options.attachScreenshot, isFalse);
     expect(options.replay.sessionSampleRate, 0.0);
     expect(options.replay.onErrorSampleRate, 0.0);

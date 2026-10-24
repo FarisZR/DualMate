@@ -14,23 +14,25 @@ import 'package:timezone/timezone.dart' as tz;
 ///
 /// Provides methods to display native notifications
 ///
-typedef NotificationPluginInitializer =
-    Future<bool?> Function(
-      FlutterLocalNotificationsPlugin plugin,
-      InitializationSettings settings,
-      DidReceiveNotificationResponseCallback onDidReceiveNotificationResponse,
-    );
+typedef NotificationPluginInitializer = Future<bool?> Function(
+  FlutterLocalNotificationsPlugin plugin,
+  InitializationSettings settings,
+  DidReceiveNotificationResponseCallback onDidReceiveNotificationResponse,
+);
 
-typedef NotificationRuntimePermissionRequester =
-    Future<bool?> Function(FlutterLocalNotificationsPlugin plugin);
+typedef NotificationRuntimePermissionRequester = Future<bool?> Function(
+  FlutterLocalNotificationsPlugin plugin,
+);
 
-typedef NotificationChannelEnabledChecker =
-    Future<bool> Function(FlutterLocalNotificationsPlugin plugin);
+typedef NotificationChannelEnabledChecker = Future<bool> Function(
+  FlutterLocalNotificationsPlugin plugin,
+);
 
 typedef NotificationChannelSettingsOpener = Future<bool> Function();
 
-typedef NotificationPendingIdsLoader =
-    Future<Set<int>> Function(FlutterLocalNotificationsPlugin plugin);
+typedef NotificationPendingIdsLoader = Future<Set<int>> Function(
+  FlutterLocalNotificationsPlugin plugin,
+);
 
 typedef NotificationBatterySettingsOpener = Future<bool> Function();
 
@@ -140,7 +142,7 @@ class NotificationApi {
     DidReceiveNotificationResponseCallback onDidReceiveNotificationResponse,
   ) {
     return plugin.initialize(
-      settings,
+      settings: settings,
       onDidReceiveNotificationResponse: onDidReceiveNotificationResponse,
     );
   }
@@ -222,10 +224,10 @@ class NotificationApi {
 
     await _localNotificationsPlugin.show(
       // TODO: This is a quick and dirty fix. Find a better solution in the future
-      id ?? Random().nextInt(1 << 30),
-      title,
-      message,
-      platformChannelSpecifics,
+      id: id ?? Random().nextInt(1 << 30),
+      title: title,
+      body: message,
+      notificationDetails: platformChannelSpecifics,
       payload: "",
     );
   }
@@ -307,20 +309,31 @@ class NotificationApi {
     );
     const details = NotificationDetails(android: androidDetails);
     await _localNotificationsPlugin.zonedSchedule(
-      id,
-      title,
-      body,
-      tz.TZDateTime.from(scheduledTime, tz.getLocation('Europe/Berlin')),
-      details,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: tz.TZDateTime.from(
+        scheduledTime,
+        tz.getLocation('Europe/Berlin'),
+      ),
+      notificationDetails: details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       payload: payload,
     );
   }
 
   Future<void> cancelNotification(int id) {
-    return _localNotificationsPlugin.cancel(id);
+    return _localNotificationsPlugin.cancel(id: id);
+  }
+
+  Future<void> cancelScheduleInformationNotifications() async {
+    final active = await _localNotificationsPlugin.getActiveNotifications();
+    for (final notification in active) {
+      if (notification.channelId == 'Notifications' &&
+          notification.id != null) {
+        await cancelNotification(notification.id!);
+      }
+    }
   }
 
   void selectNotification(NotificationResponse notificationResponse) {

@@ -7,11 +7,10 @@ import 'package:dualmate/common/util/cancellation_token.dart';
 import 'package:http/http.dart';
 import 'package:http_client_helper/http_client_helper.dart' as http;
 
-typedef CanteenResponseLoader =
-    Future<Response?> Function(
-      Uri uri,
-      http.CancellationToken cancellationToken,
-    );
+typedef CanteenResponseLoader = Future<Response?> Function(
+  Uri uri,
+  http.CancellationToken cancellationToken,
+);
 
 class CanteenScraper {
   final Map<int, String> _weekCache = {};
@@ -39,7 +38,7 @@ class CanteenScraper {
 
   Future<List<DailyMenu>> _parseInIsolate(String html) async {
     try {
-      return Isolate.run(() => CanteenParser().parseWeeklyMenu(html));
+      return await Isolate.run(() => CanteenParser().parseWeeklyMenu(html));
     } catch (e, st) {
       // Fallback to main thread parse if isolate spawn fails; surface last-good cache upstream.
       print("Canteen parse isolate failed: $e\n$st");

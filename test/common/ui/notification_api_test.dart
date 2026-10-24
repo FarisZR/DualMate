@@ -11,6 +11,32 @@ import 'package:timezone/timezone.dart' as tz;
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('configuration edits clear stale timetable notices and preserve reminder alarms', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    AndroidFlutterLocalNotificationsPlugin.registerWith();
+    const channel = MethodChannel('dexterous.com/flutter/local_notifications');
+    final cancelled = <int>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          if (call.method == 'getActiveNotifications')
+            return [
+              {'id': 10, 'channelId': 'Notifications'},
+              {'id': -42, 'channelId': NotificationApi.classReminderChannelId},
+              {'id': 20, 'channelId': 'other_feature'},
+            ];
+          if (call.method == 'cancel')
+            cancelled.add((call.arguments as Map)['id'] as int);
+          return null;
+        });
+    addTearDown(() {
+      debugDefaultTargetPlatformOverride = null;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+    await NotificationApi().cancelScheduleInformationNotifications();
+    expect(cancelled, [10]);
+  });
+
   test('initialize does not wait for runtime permission completion', () async {
     final permissionCompleter = Completer<bool?>();
     var permissionRequested = false;
@@ -82,6 +108,7 @@ void main() {
               'description': '',
               'groupId': null,
               'showBadge': true,
+              'bypassDnd': false,
               'importance': Importance.none.value,
               'playSound': false,
               'sound': null,

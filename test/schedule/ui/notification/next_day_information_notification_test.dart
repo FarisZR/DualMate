@@ -6,8 +6,49 @@ import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/ui/notification/next_day_information_notification.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:dualmate/schedule/business/schedule_filter.dart';
+import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 
 void main() {
+  for (final visible in [true, false]) {
+    test('tomorrow filters overlapping lessons, visible=$visible', () async {
+      final now = DateTime(2026, 10, 23, 20);
+      final api = _RecordingNotificationApi();
+      final entries = [
+        for (final title in ['Hidden A', 'Hidden B', 'Visible'])
+          ScheduleEntry(
+            title: title,
+            start: DateTime(2026, 10, 24, 9),
+            end: DateTime(2026, 10, 24, 10),
+            details: '',
+            room: '',
+            professor: '',
+            type: ScheduleEntryType.Class,
+          ),
+      ];
+      final notification = NextDayInformationNotification(
+        api,
+        _FakeScheduleEntryRepository(entries),
+        _FakeWorkSchedulerService(),
+        _FakePreferencesProvider(),
+        now: () => now,
+        scheduleFilter: ScheduleFilter(
+          _HiddenNames(
+            visible
+                ? ['Hidden A', 'Hidden B']
+                : ['Hidden A', 'Hidden B', 'Visible'],
+          ),
+        ),
+      );
+      await notification.run();
+      if (visible) {
+        expect(api.message, contains('Visible'));
+        expect(api.message, isNot(contains('Hidden')));
+      } else {
+        expect(api.message, isEmpty);
+      }
+    });
+  }
   test(
     'run loads localization from preferences without Kiwi registration',
     () async {
@@ -215,6 +256,15 @@ class _FakePreferencesProvider implements PreferencesProvider {
   @override
   // Test-only fallback for the many unused PreferencesProvider members.
   // Unexpected calls still fail through the default noSuchMethod behavior.
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _HiddenNames implements ScheduleFilterRepository {
+  final List<String> names;
+  _HiddenNames(this.names);
+  @override
+  Future<List<String>> queryAllHiddenNames() async => names;
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 

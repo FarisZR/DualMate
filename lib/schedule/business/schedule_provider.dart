@@ -21,18 +21,24 @@ import 'package:dualmate/schedule/service/schedule_prettifier.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
+import 'package:dualmate/schedule/data/timetable_repository.dart';
 
-typedef ScheduleUpdatedCallback =
-    Future<void> Function(Schedule schedule, DateTime start, DateTime end);
+typedef ScheduleUpdatedCallback = Future<void> Function(
+  Schedule schedule,
+  DateTime start,
+  DateTime end,
+);
 
-typedef SchedulePersistedCallback =
-    void Function(Schedule schedule, DateTime start, DateTime end);
+typedef SchedulePersistedCallback = void Function(
+  Schedule schedule,
+  DateTime start,
+  DateTime end,
+);
 
-typedef ScheduleEntryChangedCallback =
-    Future<void> Function(
-      ScheduleDiff scheduleDiff,
-      ScheduleRefreshOrigin origin,
-    );
+typedef ScheduleEntryChangedCallback = Future<void> Function(
+  ScheduleDiff scheduleDiff,
+  ScheduleRefreshOrigin origin,
+);
 
 enum ScheduleRefreshOrigin {
   userBrowsing,
@@ -59,6 +65,7 @@ class ScheduleProvider {
       <SchedulePersistedCallback>[];
 
   late ScheduleFilter _scheduleFilter;
+  final TimetableRepository? timetables;
 
   final List<ScheduleEntryChangedCallback> _scheduleEntryChangedCallbacks =
       <ScheduleEntryChangedCallback>[];
@@ -71,9 +78,13 @@ class ScheduleProvider {
     this._scheduleEntryRepository,
     this._scheduleQueryInformationRepository,
     this._preferencesProvider,
-    this._scheduleFilterRepository,
-  ) {
-    _scheduleFilter = ScheduleFilter(_scheduleFilterRepository);
+    this._scheduleFilterRepository, {
+    this.timetables,
+  }) {
+    _scheduleFilter = ScheduleFilter(
+      _scheduleFilterRepository,
+      timetables: timetables,
+    );
   }
 
   Future<void> warmScheduleCache(DateTime start, DateTime end) async {
@@ -128,6 +139,9 @@ class ScheduleProvider {
     return _scheduleEntryRepository.queryScheduleBetweenDates(start, end);
   }
 
+  Future<Schedule> filterSchedule(Schedule schedule) =>
+      _scheduleFilter.filter(schedule);
+
   Future<DateTime?> getLastQueryTimeForWindow(
     DateTime start,
     DateTime end,
@@ -152,6 +166,12 @@ class ScheduleProvider {
     CancellationToken cancellationToken, {
     ScheduleRefreshOrigin origin = ScheduleRefreshOrigin.userBrowsing,
   }) async {
+    final generation = timetables == null
+        ? 0
+        : _scheduleSource.sourceGeneration;
+    final revision = timetables == null
+        ? 0
+        : _scheduleSource.configurationRevision;
     _debugLog(
       "Fetching schedule for ${DateFormat.yMd().format(start)} - ${DateFormat.yMd().format(end)}",
     );
@@ -193,6 +213,11 @@ class ScheduleProvider {
       );
 
       _debugLog("Schedule returned with ${schedule.entries.length} entries");
+      cancellationToken.throwIfCancelled();
+      if (timetables != null &&
+          generation != _scheduleSource.sourceGeneration) {
+        throw OperationCancelledException();
+      }
 
       await PerformanceTelemetry.instance.measureTask(
         'schedule.state.apply',
@@ -201,16 +226,39 @@ class ScheduleProvider {
           'sourceType': _coarseSourceType(),
         },
         action: (_) async {
-          await _diffToCache(start, end, schedule, origin);
-          await _scheduleEntryRepository.deleteScheduleEntriesBetween(
-            start,
-            end,
-          );
-          await _scheduleEntryRepository.saveSchedule(schedule);
-          await _scheduleQueryInformationRepository
-              .saveScheduleQueryInformation(
-                ScheduleQueryInformation(start, end, DateTime.now()),
+          Future<void> persist() async {
+            if (timetables != null) {
+              final previous = await getUnfilteredCachedSchedule(start, end);
+              final known = await _scheduleQueryInformationRepository
+                  .getQueryInformationBetweenDates(start, end);
+              await timetables!.persistSchedule(schedule, start, end, revision);
+              await _diffToCache(
+                start,
+                end,
+                schedule,
+                origin,
+                previous: previous,
+                known: known,
               );
+              return;
+            }
+            await _diffToCache(start, end, schedule, origin);
+            await _scheduleEntryRepository.deleteScheduleEntriesBetween(
+              start,
+              end,
+            );
+            await _scheduleEntryRepository.saveSchedule(schedule);
+            await _scheduleQueryInformationRepository
+                .saveScheduleQueryInformation(
+                  ScheduleQueryInformation(start, end, DateTime.now()),
+                );
+          }
+
+          if (timetables == null) {
+            await persist();
+          } else {
+            await _scheduleSource.withConfiguration(generation, persist);
+          }
         },
       );
 
@@ -264,19 +312,25 @@ class ScheduleProvider {
     DateTime start,
     DateTime end,
     Schedule updatedSchedule,
-    ScheduleRefreshOrigin origin,
-  ) async {
-    var oldSchedule = await _scheduleEntryRepository.queryScheduleBetweenDates(
-      start,
-      end,
-    );
+    ScheduleRefreshOrigin origin, {
+    Schedule? previous,
+    List<ScheduleQueryInformation>? known,
+  }) async {
+    var oldSchedule =
+        previous ??
+        await _scheduleEntryRepository.queryScheduleBetweenDates(start, end);
 
     var diff = ScheduleDiffCalculator().calculateDiff(
-      oldSchedule,
-      updatedSchedule,
+      await _scheduleFilter.filter(oldSchedule),
+      await _scheduleFilter.filter(updatedSchedule),
     );
 
-    var cleanedDiff = await _cleanDiffFromNewlyQueriedEntries(start, end, diff);
+    var cleanedDiff = await _cleanDiffFromNewlyQueriedEntries(
+      start,
+      end,
+      diff,
+      known: known,
+    );
 
     if (cleanedDiff.didSomethingChange()) {
       for (var c in _scheduleEntryChangedCallbacks) {
@@ -316,10 +370,13 @@ class ScheduleProvider {
   Future<ScheduleDiff> _cleanDiffFromNewlyQueriedEntries(
     DateTime start,
     DateTime end,
-    ScheduleDiff diff,
-  ) async {
-    var queryInformation = await _scheduleQueryInformationRepository
-        .getQueryInformationBetweenDates(start, end);
+    ScheduleDiff diff, {
+    List<ScheduleQueryInformation>? known,
+  }) async {
+    var queryInformation =
+        known ??
+        await _scheduleQueryInformationRepository
+            .getQueryInformationBetweenDates(start, end);
 
     var cleanedAddedEntries = <ScheduleEntry>[];
 

@@ -30,6 +30,7 @@ import 'package:dualmate/schedule/reminders/class_reminder_scheduler.dart';
 import 'package:dualmate/schedule/reminders/platform_class_reminder_scheduler.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
 import 'package:kiwi/kiwi.dart';
+import 'package:dualmate/schedule/data/timetable_repository.dart';
 
 bool _isInjected = false;
 
@@ -56,8 +57,15 @@ void injectServices(bool isBackground) {
   c.registerInstance(ScheduleEntryRepository(c.resolve()));
   c.registerInstance(ScheduleFilterRepository(c.resolve()));
   c.registerInstance(ScheduleQueryInformationRepository(c.resolve()));
+  c.registerInstance(TimetableRepository(c.resolve(), c.resolve()));
   c.registerInstance(
-    ScheduleSourceProvider(c.resolve(), isBackground, c.resolve(), c.resolve()),
+    ScheduleSourceProvider(
+      c.resolve(),
+      isBackground,
+      c.resolve(),
+      c.resolve(),
+      timetableRepository: c.resolve<TimetableRepository>(),
+    ),
   );
   c.registerInstance(
     ScheduleProvider(
@@ -66,9 +74,16 @@ void injectServices(bool isBackground) {
       c.resolve(),
       c.resolve(),
       c.resolve(),
+      timetables: c.resolve<TimetableRepository>(),
     ),
   );
   c.registerInstance(ClassReminderRepository(c.resolve()));
+  c.resolve<ScheduleSourceProvider>().addDidChangeScheduleSourceCallback((
+    _,
+    __,
+  ) {
+    c.resolve<ScheduleProvider>().invalidateScheduleCache();
+  });
   c.registerInstance<ClassReminderScheduler>(
     PlatformClassReminderScheduler(
       () => c.resolve<NotificationApi>(),

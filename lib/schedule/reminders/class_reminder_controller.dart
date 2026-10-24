@@ -45,6 +45,7 @@ class ClassReminderController extends ChangeNotifier {
   Future<void> _sourceChangeFuture = Future<void>.value();
   DateTime? _lastCleanup;
   String _activeSourceIdentity = 'none';
+  Set<String> _knownSourceIdentities = {};
 
   ClassReminderController({
     required ClassReminderRepository repository,
@@ -69,7 +70,7 @@ class ClassReminderController extends ChangeNotifier {
       currentGeneration: () => _sourceProvider.sourceGeneration,
       onError: _reportQueueFailure,
     );
-    _scheduleProvider.addSchedulePersistedCallback(_scheduleUpdated);
+    _scheduleProvider.addScheduleUpdatedCallback(_scheduleUpdated);
     _sourceProvider.addDidChangeScheduleSourceCallback(_sourceChanged);
   }
 
@@ -97,6 +98,15 @@ class ClassReminderController extends ChangeNotifier {
   }
 
   Future<void> _initialize() async {
+    if (_sourceProvider.timetableRepository != null) {
+      final obsolete = (await _repository.loadSourceIdentities()).difference(
+        _sourceProvider.activeSourceIdentities.toSet(),
+      );
+      for (final identity in obsolete) {
+        await _pauseSource(identity);
+        await _repository.clearSource(identity);
+      }
+    }
     await _reloadRules();
     await refreshPermissionState(scheduleWhenRestored: false);
     await _detectLikelyMissedReminders();
@@ -104,7 +114,9 @@ class ClassReminderController extends ChangeNotifier {
     if (hasReminders && permissionsGranted) {
       await reconcileUpcoming(waitForCompletion: true);
     } else if (remindersPaused) {
-      await _pauseSource(_activeSourceIdentity);
+      for (final id in _knownSourceIdentities) {
+        await _pauseSource(id);
+      }
     }
     _initialized = true;
     notifyListeners();
@@ -155,7 +167,9 @@ class ClassReminderController extends ChangeNotifier {
     if (_permissionsGranted == false &&
         hasReminders &&
         (!wasKnown || previous != _permissionsGranted)) {
-      await _pauseSource(_activeSourceIdentity);
+      for (final id in _knownSourceIdentities) {
+        await _pauseSource(id);
+      }
     }
     if (scheduleWhenRestored &&
         !previous &&
@@ -200,11 +214,12 @@ class ClassReminderController extends ChangeNotifier {
 
   ClassReminderRule? ruleFor(ScheduleEntry entry) {
     final canonical = CanonicalClassName.fromTitle(entry.title);
+    final identity = _sourceProvider.identityForEntry(entry);
     return _oneTimeRulesByOccurrence[_occurrenceRuleKey(
-          canonical,
+          '$identity|$canonical',
           entry.start,
         )] ??
-        _recurringRulesByTitle[canonical];
+        _recurringRulesByTitle['$identity|$canonical'];
   }
 
   bool hasReminderForTitle(String title) {
@@ -245,7 +260,7 @@ class ClassReminderController extends ChangeNotifier {
       id: ClassReminderIdentity.ruleId(
         scope: scope,
         canonicalTitle: canonical,
-        sourceIdentity: _sourceProvider.currentSourceIdentity,
+        sourceIdentity: _sourceProvider.identityForEntry(entry),
         occurrenceStart: scope == ClassReminderScope.oneTime
             ? entry.start
             : null,
@@ -253,7 +268,7 @@ class ClassReminderController extends ChangeNotifier {
       scope: scope,
       canonicalTitle: canonical,
       offset: offset,
-      sourceIdentity: _sourceProvider.currentSourceIdentity,
+      sourceIdentity: _sourceProvider.identityForEntry(entry),
       occurrenceStart: scope == ClassReminderScope.oneTime ? entry.start : null,
       occurrenceEnd: scope == ClassReminderScope.oneTime ? entry.end : null,
     );
@@ -297,25 +312,26 @@ class ClassReminderController extends ChangeNotifier {
   Future<void> reconcileUpcoming({required bool waitForCompletion}) async {
     final now = _now();
     final end = now.add(upcomingWindow);
-    final schedule = await _scheduleProvider.getUnfilteredCachedSchedule(
-      now,
-      end,
-    );
+    final schedule = await _scheduleProvider.getCachedSchedule(now, end);
     _enqueue(schedule, now, end);
     if (waitForCompletion) await _queue.drain();
   }
 
-  void _scheduleUpdated(Schedule schedule, DateTime start, DateTime end) {
+  Future<void> _scheduleUpdated(
+    Schedule schedule,
+    DateTime start,
+    DateTime end,
+  ) async {
     if (!hasReminders) return;
     _enqueue(schedule, start, end);
   }
 
   void _sourceChanged(ScheduleSource _, bool setupSuccess) {
-    if (!setupSuccess) return;
     _sourceChangeFuture = () async {
-      final previousIdentity = _activeSourceIdentity;
-      final currentIdentity = _sourceProvider.currentSourceIdentity;
-      if (previousIdentity != 'none' && previousIdentity != currentIdentity) {
+      final removed = _knownSourceIdentities.difference(
+        _sourceProvider.activeSourceIdentities.toSet(),
+      );
+      for (final previousIdentity in removed) {
         await _queue.runSerialized(() async {
           await _pauseSource(previousIdentity);
           await _repository.clearSource(previousIdentity);
@@ -334,15 +350,24 @@ class ClassReminderController extends ChangeNotifier {
   }
 
   void _enqueue(Schedule schedule, DateTime start, DateTime end) {
-    _queue.enqueue(
-      ReminderSyncRequest(
-        schedule: schedule,
-        start: start,
-        end: end,
-        sourceIdentity: _sourceProvider.currentSourceIdentity,
-        sourceGeneration: _sourceProvider.sourceGeneration,
-      ),
-    );
+    for (final identity in _sourceProvider.activeSourceIdentities) {
+      _queue.enqueue(
+        ReminderSyncRequest(
+          schedule: schedule.copyWith(
+            entries: schedule.entries
+                .where(
+                  (entry) =>
+                      _sourceProvider.identityForEntry(entry) == identity,
+                )
+                .toList(),
+          ),
+          start: start,
+          end: end,
+          sourceIdentity: identity,
+          sourceGeneration: _sourceProvider.sourceGeneration,
+        ),
+      );
+    }
   }
 
   Future<void> _processRequest(ReminderSyncRequest request) async {
@@ -391,6 +416,7 @@ class ClassReminderController extends ChangeNotifier {
     final applicable = _rules.where(
       (rule) =>
           rule.canonicalTitle == canonical &&
+          rule.sourceIdentity == _sourceProvider.identityForEntry(entry) &&
           (rule.scope == ClassReminderScope.recurring ||
               rule.occurrenceStart == entry.start),
     );
@@ -400,12 +426,13 @@ class ClassReminderController extends ChangeNotifier {
   Future<void> _reloadRules() async {
     final revision = ++_reloadRevision;
     final sourceIdentity = _sourceProvider.currentSourceIdentity;
-    final rules = sourceIdentity == 'none'
-        ? const <ClassReminderRule>[]
-        : await _repository.loadRelevantRules(
-            sourceIdentity: sourceIdentity,
-            now: _now(),
-          );
+    final identities = _sourceProvider.activeSourceIdentities;
+    final rules = <ClassReminderRule>[];
+    for (final id in identities) {
+      rules.addAll(
+        await _repository.loadRelevantRules(sourceIdentity: id, now: _now()),
+      );
+    }
     if (revision != _reloadRevision ||
         sourceIdentity != _sourceProvider.currentSourceIdentity) {
       return;
@@ -416,6 +443,7 @@ class ClassReminderController extends ChangeNotifier {
         _activeSourceIdentity != sourceIdentity ||
         !_sameRules(_rules, sortedRules);
     _activeSourceIdentity = sourceIdentity;
+    _knownSourceIdentities = identities.toSet();
     _rules = sortedRules;
     _rebuildRuleIndexes();
     if (didChange) notifyListeners();
@@ -425,13 +453,16 @@ class ClassReminderController extends ChangeNotifier {
     _recurringRulesByTitle = {
       for (final rule in _rules)
         if (rule.scope == ClassReminderScope.recurring)
-          rule.canonicalTitle: rule,
+          '${rule.sourceIdentity}|${rule.canonicalTitle}': rule,
     };
     _oneTimeRulesByOccurrence = {
       for (final rule in _rules)
         if (rule.scope == ClassReminderScope.oneTime &&
             rule.occurrenceStart != null)
-          _occurrenceRuleKey(rule.canonicalTitle, rule.occurrenceStart!): rule,
+          _occurrenceRuleKey(
+            '${rule.sourceIdentity}|${rule.canonicalTitle}',
+            rule.occurrenceStart!,
+          ): rule,
     };
   }
 
@@ -497,7 +528,10 @@ class ClassReminderController extends ChangeNotifier {
 
     try {
       final cutoff = _now().subtract(missedReminderGracePeriod);
-      final manifest = await _repository.loadManifestForSource(sourceIdentity);
+      final manifest = <ScheduledClassNotification>[];
+      for (final id in _sourceProvider.activeSourceIdentities) {
+        manifest.addAll(await _repository.loadManifestForSource(id));
+      }
       final overdue = manifest
           .where((row) => !row.scheduledTime.isAfter(cutoff))
           .toList(growable: false);
@@ -539,7 +573,7 @@ class ClassReminderController extends ChangeNotifier {
 
   @override
   void dispose() {
-    _scheduleProvider.removeSchedulePersistedCallback(_scheduleUpdated);
+    _scheduleProvider.removeScheduleUpdatedCallback(_scheduleUpdated);
     _sourceProvider.removeDidChangeScheduleSourceCallback(_sourceChanged);
     super.dispose();
   }

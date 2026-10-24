@@ -1,0 +1,113 @@
+{
+  "date": "2026-10-24",
+  "device": "Huawei MRDI_W09",
+  "android_api": 31,
+  "active_refresh_rate_hz": 60,
+  "flutter": "3.47.8",
+  "dart": "3.13.7",
+  "build": "localrelease profile",
+  "workload": "One cold launch per repetition; three continuous rounds through Schedule, customization, Canteen, Dates and Dualis. Four forward/four reverse real flings; control readiness only; no settling or timing-drain pauses between screens. Two timetable sources and at least 160 cached modules.",
+  "run_count": 3,
+  "total_gesture_count": 835,
+  "runs": [
+    {
+      "run": "stress-01",
+      "duration_us": 124434180,
+      "frame_count": 7873,
+      "gesture_count": 278,
+      "first_gesture_after_app_start_us": 311467,
+      "all_scroll_and_save_checks_passed": true,
+      "expected_final_state_reached": true,
+      "ui_build": {
+        "p95_us": 4716,
+        "p99_us": 11296,
+        "worst_us": 32062,
+        "over_16_67ms_count": 52,
+        "over_33ms_count": 0,
+        "over_50ms_count": 0
+      },
+      "raster": {
+        "p95_us": 6331,
+        "p99_us": 7833,
+        "worst_us": 32276,
+        "over_16_67ms_count": 9,
+        "over_33ms_count": 0,
+        "over_50ms_count": 0
+      },
+      "combined": {
+        "p95_us": 6604,
+        "p99_us": 13500,
+        "worst_us": 32276,
+        "over_16_67ms_count": 61,
+        "over_33ms_count": 0,
+        "over_50ms_count": 0
+      }
+    },
+    {
+      "run": "stress-02",
+      "duration_us": 125094776,
+      "frame_count": 7728,
+      "gesture_count": 279,
+      "first_gesture_after_app_start_us": 308357,
+      "all_scroll_and_save_checks_passed": true,
+      "expected_final_state_reached": true,
+      "ui_build": {
+        "p95_us": 4799,
+        "p99_us": 10706,
+        "worst_us": 32743,
+        "over_16_67ms_count": 41,
+        "over_33ms_count": 0,
+        "over_50ms_count": 0
+      },
+      "raster": {
+        "p95_us": 6055,
+        "p99_us": 7639,
+        "worst_us": 35199,
+        "over_16_67ms_count": 11,
+        "over_33ms_count": 1,
+        "over_50ms_count": 0
+      },
+      "combined": {
+        "p95_us": 6397,
+        "p99_us": 13432,
+        "worst_us": 35199,
+        "over_16_67ms_count": 52,
+        "over_33ms_count": 1,
+        "over_50ms_count": 0
+      }
+    },
+    {
+      "run": "stress-03",
+      "duration_us": 121759070,
+      "frame_count": 7568,
+      "gesture_count": 278,
+      "first_gesture_after_app_start_us": 289303,
+      "all_scroll_and_save_checks_passed": true,
+      "expected_final_state_reached": true,
+      "ui_build": {
+        "p95_us": 4699,
+        "p99_us": 10316,
+        "worst_us": 29624,
+        "over_16_67ms_count": 37,
+        "over_33ms_count": 0,
+        "over_50ms_count": 0
+      },
+      "raster": {
+        "p95_us": 6002,
+        "p99_us": 7450,
+        "worst_us": 36117,
+        "over_16_67ms_count": 7,
+        "over_33ms_count": 1,
+        "over_50ms_count": 0
+      },
+      "combined": {
+        "p95_us": 6290,
+        "p99_us": 12413,
+        "worst_us": 36117,
+        "over_16_67ms_count": 44,
+        "over_33ms_count": 1,
+        "over_50ms_count": 0
+      }
+    }
+  ]
+}

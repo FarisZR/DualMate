@@ -2,17 +2,14 @@ import 'dart:async';
 
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/logging/performance_telemetry.dart';
-import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
-import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_view_model.dart';
 import 'package:dualmate/schedule/ui/viewmodels/weekly_schedule_view_model.dart';
-import 'package:dualmate/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/weekly_schedule_page.dart';
 import 'package:dualmate/schedule/ui/widgets/class_reminder_paused_notice.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_empty_state.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_empty_state_placeholder.dart';
-import 'package:dualmate/schedule/ui/widgets/select_source_dialog.dart';
+import 'package:dualmate/schedule/ui/customization/timetable_customization_page.dart';
 import 'package:dualmate/ui/banner_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -42,7 +39,6 @@ class SchedulePage extends StatefulWidget {
 class _SchedulePageState extends State<SchedulePage> {
   static const int _scheduleNavigationIndex = 0;
   static const Duration _weeklyInitDelay = Duration(milliseconds: 520);
-  static const Duration _filterWarmDelay = Duration(milliseconds: 1200);
 
   WeeklyScheduleViewModel get weeklyScheduleViewModel {
     SchedulePage._sharedWeeklyScheduleViewModel ??= WeeklyScheduleViewModel(
@@ -53,12 +49,9 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   Timer? _weeklyInitTimer;
-  Timer? _filterWarmTimer;
   ValueNotifier<int>? _currentEntryIndex;
-  ScheduleViewModel? _scheduleViewModel;
   bool _scheduleSourceInitialized = false;
   bool _weeklyInitializationStarted = false;
-  bool _filterWarmupStarted = false;
 
   @override
   void initState() {
@@ -77,7 +70,6 @@ class _SchedulePageState extends State<SchedulePage> {
   void dispose() {
     _currentEntryIndex?.removeListener(_handleNavigationIndexChanged);
     _weeklyInitTimer?.cancel();
-    _filterWarmTimer?.cancel();
     super.dispose();
   }
 
@@ -124,10 +116,11 @@ class _SchedulePageState extends State<SchedulePage> {
                   child: BannerWidget(
                     message: L.of(context).scheduleEmptyStateBannerMessage,
                     onButtonTap: () async {
-                      await SelectSourceDialog(
-                        KiwiContainer().resolve(),
-                        KiwiContainer().resolve(),
-                      ).show(context);
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const TimetableCustomizationPage(),
+                        ),
+                      );
                     },
                     buttonText: L
                         .of(context)
@@ -156,7 +149,6 @@ class _SchedulePageState extends State<SchedulePage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _scheduleViewModel = Provider.of<ScheduleViewModel>(context, listen: false);
     ValueNotifier<int>? nextEntryIndex;
     try {
       nextEntryIndex = Provider.of<ValueNotifier<int>>(context, listen: false);
@@ -174,33 +166,6 @@ class _SchedulePageState extends State<SchedulePage> {
     _syncDeferredWorkWithVisibility();
   }
 
-  Future<void> _warmFilterPageState() async {
-    try {
-      final scheduleViewModel = _scheduleViewModel;
-      if (scheduleViewModel == null) return;
-      final deadline = DateTime.now().add(const Duration(seconds: 3));
-      while (mounted &&
-          scheduleViewModel.isInitializingScheduleSource &&
-          DateTime.now().isBefore(deadline)) {
-        await Future.delayed(const Duration(milliseconds: 120));
-      }
-      if (!mounted) return;
-      await FilterViewModel.preloadStates(
-        KiwiContainer().resolve<ScheduleEntryRepository>(),
-        KiwiContainer().resolve<ScheduleFilterRepository>(),
-      );
-    } on ProviderNotFoundException {
-      rethrow;
-    } on FlutterError catch (error, trace) {
-      debugPrint('Failed to warm filter state: $error');
-      debugPrint('$trace');
-    } catch (error, trace) {
-      debugPrint('Unexpected error while warming filter state: $error');
-      debugPrint('$trace');
-      rethrow;
-    }
-  }
-
   void _handleNavigationIndexChanged() {
     _syncDeferredWorkWithVisibility();
   }
@@ -210,14 +175,11 @@ class _SchedulePageState extends State<SchedulePage> {
     if (!_isScheduleSectionVisible) {
       _weeklyInitTimer?.cancel();
       _weeklyInitTimer = null;
-      _filterWarmTimer?.cancel();
-      _filterWarmTimer = null;
       return;
     }
 
     _initializeScheduleSourceIfNeeded();
     _scheduleDeferredWeeklyInitialization();
-    _scheduleDeferredFilterWarmup();
   }
 
   bool get _isScheduleSectionVisible {
@@ -257,29 +219,6 @@ class _SchedulePageState extends State<SchedulePage> {
         },
         Priority.idle,
         debugLabel: 'schedule.weeklyInit',
-      );
-    });
-  }
-
-  void _scheduleDeferredFilterWarmup() {
-    if (_filterWarmupStarted || _filterWarmTimer != null) {
-      return;
-    }
-    _filterWarmTimer = Timer(_filterWarmDelay, () {
-      if (!mounted) return;
-      if (!_isScheduleSectionVisible) {
-        _filterWarmTimer = null;
-        return;
-      }
-      _filterWarmTimer = null;
-      SchedulerBinding.instance.scheduleTask<void>(
-        () {
-          if (!mounted || !_isScheduleSectionVisible) return;
-          _filterWarmupStarted = true;
-          unawaited(_warmFilterPageState());
-        },
-        Priority.idle,
-        debugLabel: 'schedule.filterWarmup',
       );
     });
   }

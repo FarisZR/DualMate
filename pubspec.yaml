@@ -15,11 +15,11 @@ publish_to: none
 version: 2.2.1+20201
 
 environment:
-  sdk: ">=3.11.0 <4.0.0"
-  flutter: ">=3.38.4"
+  sdk: ">=3.13.7 <4.0.0"
+  flutter: ">=3.47.8"
 
 dependencies:
-  sentry_flutter: ^9.20.0
+  sentry_flutter: ^10.2.0
   flutter:
     sdk: flutter
   flutter_localizations:
@@ -37,16 +37,16 @@ dependencies:
   shared_preferences: ^2.5.5
   url_launcher: ^6.3.2
   kiwi: ^5.0.1
-  flutter_local_notifications: ^18.0.1
-  workmanager: ^0.9.0+3
+  flutter_local_notifications: ^22.3.2
+  workmanager: ^0.10.10
   in_app_review: ^2.0.12
-  flutter_secure_storage: ^10.2.0
-  animations: ^2.2.0
+  flutter_secure_storage: ^11.2.0
+  animations: ^3.0.0
   mutex: ^3.1.0
   device_calendar: ^4.3.3
   flutter_widgetkit: ^1.0.3
-  flutter_app_group_directory: ^1.1.0
-  timezone: ^0.9.4
+  flutter_app_group_directory: ^2.0.0
+  timezone: ^0.11.2
   dualmate_widget_bridge:
     path: third_party/dualmate_widget_bridge
 
@@ -56,6 +56,7 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
+  sqflite_common_ffi: ^2.4.5
 
 
 # For information on the generic Dart part of this file, see the
@@ -90,3 +91,7 @@ sentry:
   upload_source_maps: true
   project: dualmate
   org: fariszr
+
+# device_calendar still constrains timezone to 0.9; its TZDateTime API is unchanged.
+dependency_overrides:
+  timezone: ^0.11.2

@@ -309,7 +309,10 @@ SentryTransaction? scrubSentryTransaction(
 
 Breadcrumb? scrubSentryBreadcrumb(Breadcrumb? breadcrumb, [Hint? hint]) {
   if (breadcrumb == null) return null;
-  return breadcrumb.copyWith(
+  return Breadcrumb(
+    timestamp: breadcrumb.timestamp,
+    level: breadcrumb.level,
+    type: breadcrumb.type,
     message: breadcrumb.message == null
         ? null
         : sanitizeDiagnosticsName(breadcrumb.message!),
@@ -381,7 +384,13 @@ SentryMessage? _scrubMessage(SentryMessage? message) {
 }
 
 SentryException _scrubException(SentryException exception) {
-  return exception.copyWith(
+  return SentryException(
+    type: exception.type,
+    module: exception.module,
+    stackTrace: exception.stackTrace,
+    mechanism: exception.mechanism,
+    threadId: exception.threadId,
+    throwable: exception.throwable,
     value: exception.value == null
         ? null
         : sanitizeDiagnosticsValue(exception.value).toString(),

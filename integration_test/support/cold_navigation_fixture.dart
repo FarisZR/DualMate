@@ -4,14 +4,19 @@ import 'package:dualmate/canteen/model/meal.dart';
 import 'package:dualmate/canteen/model/meal_type.dart';
 import 'package:dualmate/common/data/database_access.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
+import 'package:dualmate/common/data/preferences/preferences_access.dart';
+import 'package:dualmate/common/data/preferences/secure_storage_access.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/dualis/service/fake_account_dualis_scraper_decorator.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_query_information_repository.dart';
+import 'package:dualmate/schedule/data/timetable_repository.dart';
+import 'package:dualmate/schedule/business/schedule_source_identity.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/model/schedule_query_information.dart';
 import 'package:dualmate/schedule/model/schedule_source_type.dart';
+import 'package:dualmate/schedule/model/timetable_configuration.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -27,6 +32,9 @@ class ColdNavigationFixture {
   static const String firstRaplaEventTitle = 'Fixture examination 01';
   static const String firstCanteenMealName = 'Fixture seasonal bowl 01';
   static const String firstScheduleEntryTitle = 'Fixture software engineering';
+  static const String additionalTimetableId = 'ical:customization-fixture-b6';
+  static String customizationModule(int index) =>
+      'Module ${index.toString().padLeft(3, '0')} — Software Engineering';
 
   final DateTime currentWeekStart;
   final DateTime tallWeekStart;
@@ -41,6 +49,86 @@ class ColdNavigationFixture {
     required this.databaseCachedWeekStart,
     required this.refreshRequiredWeekStart,
   });
+
+  /// Two source namespaces and 160 cached modules, prepared before app startup.
+  /// Keep one lesson in the visible week so the real timetable opens normally;
+  /// the remaining modules live in later cached weeks and stay cheap to render.
+  Future<void> prepareCustomization({bool preserveSchedule = false}) async {
+    final database = DatabaseAccess();
+    final preferences = PreferencesProvider(
+      PreferencesAccess(),
+      SecureStorageAccess(),
+    );
+    final repository = TimetableRepository(database, preferences);
+    if (preserveSchedule) await repository.load();
+    final sources = [
+      TimetableConfiguration(
+        id: ScheduleSourceIdentity.create(
+          ScheduleSourceType.Rapla,
+          scheduleSourceUrl,
+        ),
+        label: 'B4',
+        type: ScheduleSourceType.Rapla,
+        value: scheduleSourceUrl,
+        includeAll: true,
+      ),
+      TimetableConfiguration(
+        id: additionalTimetableId,
+        label: 'B6',
+        type: ScheduleSourceType.Ical,
+        value: 'https://example.com/customization-b6.ics',
+      ),
+    ];
+    await repository.save(sources);
+    final entries = ScheduleEntryRepository(database);
+    if (!preserveSchedule) await entries.deleteAllScheduleEntries();
+    await entries.saveSchedule(
+      Schedule.fromList([
+        for (var sourceIndex = 0; sourceIndex < sources.length; sourceIndex++)
+          for (var index = 0; index < 80; index++)
+            ScheduleEntry(
+              sourceIdentity: sources[sourceIndex].id,
+              title: sourceIndex == 0 && index == 0
+                  ? firstScheduleEntryTitle
+                  : customizationModule(index),
+              start: currentWeekStart.add(
+                Duration(
+                  days: sourceIndex == 0 && index == 0 ? 1 : 35 + index ~/ 8,
+                  hours: 9 + index % 8,
+                ),
+              ),
+              end: currentWeekStart.add(
+                Duration(
+                  days: sourceIndex == 0 && index == 0 ? 1 : 35 + index ~/ 8,
+                  hours: 10 + index % 8,
+                ),
+              ),
+              details: '',
+              professor: 'Prof. Fixture',
+              room: 'H 101',
+              type: ScheduleEntryType.Class,
+            ),
+      ]),
+    );
+    await ScheduleQueryInformationRepository(database)
+        .saveScheduleQueryInformation(
+          ScheduleQueryInformation(
+            currentWeekStart,
+            toNextWeek(currentWeekStart),
+            DateTime.now(),
+          ),
+        );
+    if (preserveSchedule) {
+      for (var offset = -1; offset < 17; offset++) {
+        final week = currentWeekStart.add(Duration(days: offset * 7));
+        if (week == refreshRequiredWeekStart) continue;
+        await ScheduleQueryInformationRepository(database)
+            .saveScheduleQueryInformation(
+              ScheduleQueryInformation(week, toNextWeek(week), DateTime.now()),
+            );
+      }
+    }
+  }
 
   static Future<ColdNavigationFixture> prepare() async {
     final now = DateTime.now();
@@ -65,6 +153,11 @@ class ColdNavigationFixture {
     });
 
     final database = DatabaseAccess();
+    await database.transaction((tx) async {
+      await tx.delete('TimetableModuleSelections');
+      await tx.delete('TimetableSources');
+      await tx.delete('TimetableConfigurationState');
+    });
     await Future.wait(<Future<void>>[
       _seedSchedule(
         database,

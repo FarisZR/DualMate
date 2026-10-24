@@ -14,7 +14,6 @@ import 'package:dualmate/schedule/business/schedule_provider.dart';
 import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/ui/notification/next_day_information_notification.dart';
 import 'package:dualmate/schedule/ui/schedule_page.dart';
-import 'package:dualmate/schedule/ui/widgets/select_source_dialog.dart';
 import 'package:dualmate/ui/settings/select_theme_dialog.dart';
 import 'package:dualmate/ui/settings/viewmodels/settings_view_model.dart';
 import 'package:flutter/material.dart';
@@ -210,15 +209,6 @@ class _SettingsPageState extends State<SettingsPage> {
   List<Widget> buildScheduleSourceSettings(BuildContext context) {
     final widgets = <Widget>[
       TitleListTile(title: L.of(context).settingsScheduleSourceTitle),
-      ListTile(
-        title: Text(L.of(context).settingsSetupScheduleSource),
-        onTap: () async {
-          await SelectSourceDialog(
-            KiwiContainer().resolve(),
-            KiwiContainer().resolve(),
-          ).show(context);
-        },
-      ),
       PropertyChangeConsumer<SettingsViewModel, String>(
         properties: const ["useDhMineForDates"],
         builder:

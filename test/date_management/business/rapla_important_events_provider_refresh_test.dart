@@ -7,6 +7,7 @@ import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_query_result.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:dualmate/schedule/data/timetable_repository.dart';
 
 void main() {
   test('rapla refresh uses a silent foreground maintenance origin', () async {
@@ -60,6 +61,8 @@ class _FakePreferencesProvider implements PreferencesProvider {
 }
 
 class _FakeScheduleSourceProvider implements ScheduleSourceProvider {
+  @override
+  TimetableRepository? get timetableRepository => null;
   final ScheduleSource _source = _FakeScheduleSource();
 
   @override

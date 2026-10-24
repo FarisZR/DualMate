@@ -52,7 +52,7 @@ METRIC_PATHS = (
 # Compound journeys (multi-screen sequences) are ranked in a separate
 # category so that their larger absolute frame counts do not dominate the
 # individual-animation ranking.
-COMPOUND_PREFIXES = ("combined_", "journey_")
+COMPOUND_PREFIXES = ("combined_", "journey_", "stress_")
 
 
 def parse_args() -> argparse.Namespace:

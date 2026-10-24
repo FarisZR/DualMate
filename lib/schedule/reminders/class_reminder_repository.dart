@@ -51,6 +51,14 @@ class ClassReminderRepository implements ClassReminderRepositoryApi {
 
   ClassReminderRepository(this._database);
 
+  Future<Set<String>> loadSourceIdentities() async {
+    final rows = await _database.rawQuery(
+      'SELECT sourceIdentity FROM ClassReminderRules UNION SELECT sourceIdentity FROM ScheduledClassNotifications',
+      [],
+    );
+    return rows.map((row) => row['sourceIdentity'] as String).toSet();
+  }
+
   Future<bool> hasAnyRules({String? sourceIdentity}) async {
     final rows = await _database.queryRows(
       rulesTable,
@@ -96,8 +104,7 @@ class ClassReminderRepository implements ClassReminderRepositoryApi {
   }) async {
     final rows = await _database.queryRows(
       rulesTable,
-      where:
-          'sourceIdentity=? AND canonicalTitle=? AND (scope=? OR occurrenceStart>?)',
+      where: 'sourceIdentity=? AND canonicalTitle=? AND (scope=? OR occurrenceStart>?)',
       whereArgs: [
         sourceIdentity,
         canonicalTitle,

@@ -1,17 +1,47 @@
 final de = {
+  "timetableCustomize": "Stundenplan anpassen",
+  "timetableDescription":
+      "Wähle die Module aus, die in deinem Stundenplan erscheinen.",
+  "timetableMyClass": "Mein Kurs",
+  "timetableAdditional": "Zusätzlicher Stundenplan",
+  "timetableSelectedCount": "{selected} von {total} ausgewählt",
+  "timetableAdd": "Stundenplan hinzufügen",
+  "timetableAddDescription":
+      "Füge einen weiteren Kurs mit einer anderen Quelle hinzu.",
+  "timetableSave": "Änderungen speichern",
+  "timetableEdit": "Stundenplan bearbeiten",
+  "timetableRemove": "Stundenplan entfernen",
+  "timetableRemoveTitle": "{name} entfernen?",
+  "timetableRemoveMessage": "Die zugehörigen Lehrveranstaltungen und Erinnerungen werden beim Speichern entfernt.",
+  "timetableOptions": "Stundenplanoptionen",
+  "timetableRefresh": "Module laden",
+  "timetableNoModules": "Noch keine Module gespeichert. Lade die nächsten drei Monate, um Module auszuwählen.",
+  "timetableLoadError": "Der Stundenplan konnte nicht geladen werden. Prüfe die Quelle oder versuche es erneut, sobald du online bist.",
+  "timetableSaveError":
+      "Speichern konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
+  "timetableDuplicate": "Dieser Stundenplan wurde bereits hinzugefügt.",
+  "timetableRetry": "Erneut versuchen",
+  "timetableDiscardTitle": "Änderungen verwerfen?",
+  "timetableDiscardMessage":
+      "Dein Stundenplan enthält ungespeicherte Änderungen.",
+  "timetableDiscard": "Verwerfen",
+  "timetableClassName": "Kursname",
+  "timetableSource": "Quelle",
+  "timetableUrl": "Stundenplan-URL",
+  "timetableRequired": "Gib einen Kursnamen ein.",
+  "timetableInvalidUrl": "Gib eine gültige Stundenplan-URL ein.",
+  "timetableChooseClass": "Mannheimer Kurs suchen",
   "pageWeekOverviewTitle": "Wochenübersicht",
   "scheduleBackToCurrentWeek": "Aktuelle Woche",
   "noConnectionMessage": "Keine Verbindung!",
   "settingsViewSourceCode": "Source code auf GitHub ansehen",
   "settingsPrivacyPolicy": "Datenschutzerklärung",
   "calendarSyncPageTitle": "Kalender synchronisieren",
-  "calendarSyncPageSubtitle":
-      "Wähle den Kalender aus, in den der Vorlesungsplan übertragen werden soll:",
+  "calendarSyncPageSubtitle": "Wähle den Kalender aus, in den der Vorlesungsplan übertragen werden soll:",
   "calendarSyncPageEndSync": "Synchronisation beenden",
   "calendarSyncPageBeginSync": "Kalender synchronisieren",
   "applicationName": "DualMate",
-  "applicationLegalese":
-      "Entwickelt von FarisZR, basierend auf der Arbeit von Benedikt Kolb. Dies ist keine offizielle App der DHBW und wird in Eigeninitiative entwickelt.",
+  "applicationLegalese": "Entwickelt von FarisZR, basierend auf der Arbeit von Benedikt Kolb. Dies ist keine offizielle App der DHBW und wird in Eigeninitiative entwickelt.",
   "settingsAbout": "Über DualMate",
   "settingsAboutTitle": "Über",
   "settingsDarkMode": "Dark mode",
@@ -31,8 +61,7 @@ final de = {
       "Die nächste Vorlesung ist %0 um %1!",
   "notificationNextClassTomorrow": "Morgen geht's los mit %0 um %1!",
   "notificationNextClassTitle": "Nächste Vorlesung",
-  "disclaimer":
-      "Dies ist keine offizielle App der DHBW. Es besteht keine Garantie für Korrektheit und Vollständigkeit der angezeigten Daten!",
+  "disclaimer": "Dies ist keine offizielle App der DHBW. Es besteht keine Garantie für Korrektheit und Vollständigkeit der angezeigten Daten!",
   "notificationScheduleChangedNewClass": "Weitere Vorlesung: %0 am %1 um %2",
   "notificationScheduleChangedNewClassTitle": "Weitere Vorlesung",
   "notificationScheduleChangedRemovedClass": "%0 am %1 um %2 entfällt",
@@ -74,8 +103,7 @@ final de = {
   "rateDialogRateNowButton": "Jetzt bewerten",
   "rateDialogRateLaterButton": "Später",
   "rateDialogDoNotRateButton": "Nein, danke",
-  "rateDialogMessage":
-      "Dann empfehle sie anderen Studenten weiter oder bewerte sie im PlayStore!",
+  "rateDialogMessage": "Dann empfehle sie anderen Studenten weiter oder bewerte sie im PlayStore!",
   "rateDialogTitle": "Gefällt Dir diese App?",
   "dualisStoreCredentials": "Zugangsdaten speichern",
   "onboardingFinishButton": "Fertig",
@@ -86,14 +114,12 @@ final de = {
   "onboardingFunctionSwitchRapla": "Rapla Vorlesungsplan laden",
   "onboardingFunctionSwitchTitle": "Wähle das aus, was du brauchst!",
   "onboardingRaplaPageTitle": "Rapla Link",
-  "onboardingRaplaPageDescription":
-      "Hier kannst Du den Link zum Rapla Vorlesungsplan eingeben. Diesen bekommst Du üblicherweise am Anfang des Semesters aus dem Sekretariat.",
+  "onboardingRaplaPageDescription": "Hier kannst Du den Link zum Rapla Vorlesungsplan eingeben. Diesen bekommst Du üblicherweise am Anfang des Semesters aus dem Sekretariat.",
   "onboardingRaplaUrlInvalid": "Der Link ist nicht gültig",
   "onboardingRaplaUrlHint":
       "https://rapla.dhbw-stuttgart.de/rapla?key=7tfKQX7jOZcKnAU",
   "onboardingRaplaUrlPaste": "Einfügen",
-  "onboardingDualisPageDescription":
-      "Hier kannst Du die Dualis Zugangsdaten eingeben um deine Noten in der App abzurufen. Dieser Schritt ist optional und kann auch zu einem späteren Zeitpunkt durchgeführt werden",
+  "onboardingDualisPageDescription": "Hier kannst Du die Dualis Zugangsdaten eingeben um deine Noten in der App abzurufen. Dieser Schritt ist optional und kann auch zu einem späteren Zeitpunkt durchgeführt werden",
   "onboardingDualisPageTitle": "Dualis Login",
   "onboardingDualisTestButton": "Testen",
   "onboardingDualisWrongCredentials": "Passwort oder Benutzername falsch",
@@ -111,12 +137,10 @@ final de = {
   "dialogOk": "Ok",
   "dialogCancel": "Cancel",
   "dialogSetRaplaUrlTitle": "Rapla Url festlegen",
-  "dialogCalendarAccessNotGranted":
-      "Wenn du den Vorlesungsplan mit deinem nativen Kalender synchronisieren möchtest, musst du in den Einstellungen den Kalenderzugriff erlauben.",
+  "dialogCalendarAccessNotGranted": "Wenn du den Vorlesungsplan mit deinem nativen Kalender synchronisieren möchtest, musst du in den Einstellungen den Kalenderzugriff erlauben.",
   "dialogTitleCalendarAccessNotGranted": "Keine Zugriffsrechte",
   "scheduleEmptyStateSetUrl": "Konfigurieren",
-  "scheduleEmptyStateBannerMessage":
-      "Der Vorlesungsplan wurde noch nicht konfiguriert. Ist der Vorlesungsplan konfiguriert, kannst Du ihn hier sehen.",
+  "scheduleEmptyStateBannerMessage": "Der Vorlesungsplan wurde noch nicht konfiguriert. Ist der Vorlesungsplan konfiguriert, kannst Du ihn hier sehen.",
   "helpButtonTooltip": "Hilfe",
   "logoutButtonTooltip": "Abmelden",
   "scheduleHelpDialogContent":
@@ -135,16 +159,13 @@ final de = {
   "dateManagementExportToCalendarConfirm": "Übertragen",
   "dateManagementExportToCalendarDescription":
       "Wähle den Kalender aus, in den die Termine übertragen werden sollen:",
-  "dateManagementRaplaMissing":
-      "Keine Rapla-URL konfiguriert. Richte eine Vorlesungsplan-Quelle ein, um Rapla-Termine zu sehen.",
-  "dateManagementEmptyStateBannerMessage":
-      "Keine Terminquelle konfiguriert. Richte eine Quelle ein, um Rapla-Termine zu sehen.",
+  "dateManagementRaplaMissing": "Keine Rapla-URL konfiguriert. Richte eine Vorlesungsplan-Quelle ein, um Rapla-Termine zu sehen.",
+  "dateManagementEmptyStateBannerMessage": "Keine Terminquelle konfiguriert. Richte eine Quelle ein, um Rapla-Termine zu sehen.",
   "dateManagementRaplaEmpty":
       "Keine Rapla-Termine für diesen Zeitraum gefunden.",
   "dateManagementAgendaRangeConnector": "bis",
   "dateManagementAgendaPast": "vergangen",
-  "scheduleQueryFailedMessage":
-      "Ups, da ist etwas schief gelaufen. Möglicherweise wird nicht der gesamte Plan angezeigt. Schaue Dir daher den Plan im Browser an um sicher zu gehen, dass Du nichts verpasst.",
+  "scheduleQueryFailedMessage": "Ups, da ist etwas schief gelaufen. Möglicherweise wird nicht der gesamte Plan angezeigt. Schaue Dir daher den Plan im Browser an um sicher zu gehen, dass Du nichts verpasst.",
   "scheduleLoadingLatest": "Lade aktuellen Vorlesungsplan...",
   "retry": "Erneut versuchen",
   "noMoreEvents": "Keine weiteren Termine",
@@ -157,8 +178,7 @@ final de = {
   "scheduleSourceTypeNone": "Keinen Vorlesungsplan",
   "settingsSetupScheduleSource": "Vorlesungsplan konfigurieren",
   "settingsUseDhMineDates": "DHmine für Termine verwenden",
-  "onboardingDualisSourceDescription":
-      "Um den Vorlesungsplan aus Dualis anzuzeigen kannst Du hier deine Dualis Anmeldedaten eingeben:",
+  "onboardingDualisSourceDescription": "Um den Vorlesungsplan aus Dualis anzuzeigen kannst Du hier deine Dualis Anmeldedaten eingeben:",
   "onboardingIcalPageDescription":
       "Hier kannst Du den Link zum iCal online Kalender eingeben:",
   "onboardingIcalPageTitle": "iCal Kalender",
@@ -175,12 +195,10 @@ final de = {
   "onboardingMannheimRetry": "Erneut versuchen",
   "onboardingMannheimTitle": "DHBW Mannheim",
   "settingsPrettifySchedule": "Texte im Vorlesungsplan verschönern",
-  "widgetHelpDialogMessage":
-      "Platziere ein Widget auf deinen Startbildschirm um einen schnellen Blick auf deinen täglichen Vorlesungsplan zu bekommen.",
+  "widgetHelpDialogMessage": "Platziere ein Widget auf deinen Startbildschirm um einen schnellen Blick auf deinen täglichen Vorlesungsplan zu bekommen.",
   "widgetHelpDialogTitle": "Schon gewusst?",
   "exactAlarmPermissionTitle": "Zuverlässige Erinnerungen und Widgets erlauben",
-  "exactAlarmPermissionMessage":
-      "Damit Klassenerinnerungen und Stundenplan-Widgets pünktlich funktionieren, erlaube genaue Alarme für DualMate.",
+  "exactAlarmPermissionMessage": "Damit Klassenerinnerungen und Stundenplan-Widgets pünktlich funktionieren, erlaube genaue Alarme für DualMate.",
   "exactAlarmPermissionAllow": "Erlauben",
   "exactAlarmPermissionLater": "Später",
   "classReminderTooltipAdd": "Erinnerung hinzufügen",
@@ -195,33 +213,27 @@ final de = {
   "classReminderThisOccurrence": "Dieser Termin",
   "classReminderEveryOccurrence": "Jeder Termin",
   "classReminderMatchingTitle": "Abgleich nach Kursname",
-  "classReminderMatchingDescription":
-      "Gilt für künftige Termine mit demselben Kursnamen. Wird er geändert, greift die Erinnerung nicht mehr.",
+  "classReminderMatchingDescription": "Gilt für künftige Termine mit demselben Kursnamen. Wird er geändert, greift die Erinnerung nicht mehr.",
   "classReminderSave": "Erinnerung speichern",
   "classReminderRemove": "Erinnerung entfernen",
   "classReminderPermissionTitle": "Zuverlässige Erinnerungen aktivieren",
-  "classReminderPermissionMessage":
-      "DualMate benötigt die Benachrichtigungsberechtigung und die Berechtigung für genaue Alarme, um Klassenerinnerungen pünktlich zuzustellen.",
+  "classReminderPermissionMessage": "DualMate benötigt die Benachrichtigungsberechtigung und die Berechtigung für genaue Alarme, um Klassenerinnerungen pünktlich zuzustellen.",
   "classReminderPermissionCancel": "Abbrechen",
   "classReminderPermissionOpenSettings": "Einstellungen öffnen",
   "classReminderPausedTitle": "Klassenerinnerungen pausiert",
-  "classReminderPausedMessage":
-      "Aktiviere Benachrichtigungen und genaue Alarme, damit sie wieder funktionieren.",
+  "classReminderPausedMessage": "Aktiviere Benachrichtigungen und genaue Alarme, damit sie wieder funktionieren.",
   "classReminderFixPermissions": "Berechtigungen prüfen",
   "classReminderMissedTitle": "Eine Erinnerung wurde möglicherweise verpasst",
-  "classReminderMissedMessage":
-      "Dein Smartphone schränkt DualMate möglicherweise im Hintergrund ein. Erlaube eine uneingeschränkte Akkunutzung, damit Erinnerungen zuverlässiger funktionieren.",
+  "classReminderMissedMessage": "Dein Smartphone schränkt DualMate möglicherweise im Hintergrund ein. Erlaube eine uneingeschränkte Akkunutzung, damit Erinnerungen zuverlässiger funktionieren.",
   "classReminderBatterySettings": "Akkueinstellungen",
   "classReminderDismiss": "Schließen",
   "classReminderSourceChangeTitle": "Stundenplanquelle ändern?",
-  "classReminderSourceChangeMessage":
-      "Wenn du deinen Stundenplan änderst, werden alle mit dem aktuellen Stundenplan verknüpften Klassenerinnerungen entfernt.",
+  "classReminderSourceChangeMessage": "Wenn du deinen Stundenplan änderst, werden alle mit dem aktuellen Stundenplan verknüpften Klassenerinnerungen entfernt.",
   "classReminderSourceChangeCancel": "Abbrechen",
   "classReminderSourceChangeConfirm": "Ändern und Erinnerungen entfernen",
   "donateButtonTitle": "Spendiere dem Entwickler einen Kaffee",
   "donateButtonSubtitle": "Hier kannst du die Entwicklung der App unterstützen",
-  "donateDialogMessage":
-      "Du kannst die Entwicklung der App unterstützen, indem Du dem Entwickler einen Kaffee spendierst",
+  "donateDialogMessage": "Du kannst die Entwicklung der App unterstützen, indem Du dem Entwickler einen Kaffee spendierst",
   "donateDialogTitle": "Unterstütze die App",
   "donateDialogPositiveButton": "Unterstützen",
   "donateDialogNegativeButton": "Nicht jetzt",
@@ -238,14 +250,12 @@ final de = {
   "selectThemeDark": "Dunkel",
   "selectThemeSystem": "Systemeinstellungen",
   "filterDisplayedClasses": "Angezeigte Vorlesungen:",
-  "filterDescription":
-      "Wähle hier die Vorlesungen, die angezeigt werden sollen. Pass auf, dass Du keine ausgeblendete Vorlesung versehentlich verpasst.",
+  "filterDescription": "Wähle hier die Vorlesungen, die angezeigt werden sollen. Pass auf, dass Du keine ausgeblendete Vorlesung versehentlich verpasst.",
   "filterTitle": "Filter",
   "filterSaveError": "Filter konnten nicht gespeichert werden",
   "filterLoadError": "Filter konnten nicht geladen werden",
   "filterReminderHideTitle": "{className} ausblenden?",
-  "filterReminderHideMessage":
-      "Für diese Vorlesung sind Erinnerungen aktiv. Sollen sie erhalten oder beim Ausblenden entfernt werden?",
+  "filterReminderHideMessage": "Für diese Vorlesung sind Erinnerungen aktiv. Sollen sie erhalten oder beim Ausblenden entfernt werden?",
   "filterReminderKeep": "Erinnerungen behalten",
   "filterReminderRemove": "Ausblenden und Erinnerungen entfernen",
   "canteenFilterAll": "Alle Gerichte",
@@ -263,8 +273,7 @@ final de = {
   "onboardingCanteenLocationTitle": "Mensa",
   "onboardingCanteenLocationDescription":
       "Wähle die genaue Mensa aus, die in der App verwendet werden soll.",
-  "onboardingCanteenLocationRequired":
-      "Diese Auswahl ist erforderlich und kann später in den Einstellungen geändert werden.",
+  "onboardingCanteenLocationRequired": "Diese Auswahl ist erforderlich und kann später in den Einstellungen geändert werden.",
   "settingsCanteenTitle": "Mensa",
   "settingsSetupCanteenLocation": "Mensa auswählen",
   "canteenPoweredByDhbwApp": "bereitgestellt von dhbw.app",

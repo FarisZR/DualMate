@@ -16,6 +16,7 @@ class ScheduleEntry {
   final String professor;
   final String room;
   final ScheduleEntryType type;
+  final String sourceIdentity;
 
   ScheduleEntry({
     this.id,
@@ -26,10 +27,12 @@ class ScheduleEntry {
     required this.professor,
     required this.room,
     required this.type,
+    this.sourceIdentity = '',
   });
 
   bool equalsWithIdIgnored(ScheduleEntry other) {
-    return this.start == other.start &&
+    return sourceIdentity == other.sourceIdentity &&
+        this.start == other.start &&
         this.end == other.end &&
         this.title == other.title &&
         this.details == other.details &&
@@ -66,16 +69,19 @@ class ScheduleEntry {
     return changedProperties;
   }
 
-  ScheduleEntry copyWith(
-      {DateTime? start,
-      DateTime? end,
-      String? title,
-      String? details,
-      String? professor,
-      String? room,
-      ScheduleEntryType? type}) {
+  ScheduleEntry copyWith({
+    String? sourceIdentity,
+    DateTime? start,
+    DateTime? end,
+    String? title,
+    String? details,
+    String? professor,
+    String? room,
+    ScheduleEntryType? type,
+  }) {
     return ScheduleEntry(
       id: id,
+      sourceIdentity: sourceIdentity ?? this.sourceIdentity,
       start: start ?? this.start,
       end: end ?? this.end,
       title: title ?? this.title,

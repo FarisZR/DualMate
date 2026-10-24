@@ -171,9 +171,12 @@ class ScheduleProvider(private val context: Context) {
                 "FROM \n" +
                 "    ScheduleEntries\n" +
                 "    LEFT JOIN ScheduleEntryFilters\n" +
-                "        ON ScheduleEntries.title = ScheduleEntryFilters.title\n" +
+                "        ON ScheduleEntries.title = ScheduleEntryFilters.title AND ScheduleEntries.sourceIdentity = ''\n" +
+                "    LEFT JOIN TimetableSources ON TimetableSources.id = ScheduleEntries.sourceIdentity\n" +
+                "    LEFT JOIN TimetableModuleSelections ON TimetableModuleSelections.sourceIdentity = ScheduleEntries.sourceIdentity AND TimetableModuleSelections.title = ScheduleEntries.title\n" +
                 "    WHERE end >= ? AND start <= ?\n" +
                 "        AND ScheduleEntryFilters.title IS NULL\n" +
+                "        AND (ScheduleEntries.sourceIdentity = '' OR (TimetableSources.id IS NOT NULL AND COALESCE(TimetableModuleSelections.selected, TimetableSources.includeAll) = 1))\n" +
                 "ORDER BY ScheduleEntries.start ASC;\n"
     }
 }

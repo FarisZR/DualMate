@@ -151,7 +151,7 @@ void main() {
     currentEntryIndex.dispose();
   });
 
-  testWidgets('deferred filter warmup uses cached dependencies', (
+  testWidgets('does not preload the obsolete global filter list', (
     tester,
   ) async {
     final sourceProvider = _FakeScheduleSourceProvider();
@@ -174,7 +174,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1300));
     await tester.idle();
 
-    expect(entryRepository.queryAllNamesCallCount, 1);
+    expect(entryRepository.queryAllNamesCallCount, 0);
 
     await _disposeHarness(tester, scheduleViewModel);
   });
