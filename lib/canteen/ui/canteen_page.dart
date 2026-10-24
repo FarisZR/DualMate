@@ -255,35 +255,43 @@ class _CanteenPageState extends State<CanteenPage> {
                     );
                   },
                 ),
-                ValueListenableBuilder<DateTime>(
-                  valueListenable: _selectedDateNotifier,
-                  builder: (context, date, _) {
-                    final showButton = !_isBaseDate(date);
-                    return Positioned(
-                      right: 16,
-                      bottom: 16,
-                      child: AnimatedOpacity(
-                        duration: const Duration(milliseconds: 200),
-                        opacity: showButton ? 1 : 0,
-                        child: IgnorePointer(
-                          ignoring: !showButton,
-                          child: FloatingActionButton.extended(
-                            heroTag: 'canteenBackToToday',
-                            onPressed: () {
-                              final targetDay = viewModel
-                                  .nearestVisibleContentDay(baseDate);
-                              if (targetDay == null) return;
-                              _goToVisibleDay(
-                                targetDay,
-                                viewModel.visibleContentDays,
-                                animate: true,
-                              );
-                            },
-                            icon: const Icon(Icons.today),
-                            label: Text(L.of(context).canteenBackToToday),
+                PropertyChangeConsumer<CanteenViewModel, String>(
+                  properties: const [CanteenViewModel.weekStateProperty],
+                  builder: (context, model, _) {
+                    if (model == null) return const SizedBox();
+                    return ValueListenableBuilder<DateTime>(
+                      valueListenable: _selectedDateNotifier,
+                      builder: (context, date, _) {
+                        final visibleDays = model.visibleContentDays;
+                        final firstDay = visibleDays.firstOrNull;
+                        final showButton =
+                            firstDay != null && !isAtSameDay(date, firstDay);
+                        return Positioned(
+                          right: 16,
+                          bottom: 16,
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 200),
+                            opacity: showButton ? 1 : 0,
+                            child: IgnorePointer(
+                              ignoring: !showButton,
+                              child: FloatingActionButton.extended(
+                                heroTag: 'canteenGoBack',
+                                onPressed: () {
+                                  final currentDays = model.visibleContentDays;
+                                  if (currentDays.isEmpty) return;
+                                  _goToVisibleDay(
+                                    currentDays.first,
+                                    currentDays,
+                                    animate: true,
+                                  );
+                                },
+                                icon: const Icon(Icons.arrow_back),
+                                label: Text(L.of(context).canteenGoBack),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     );
                   },
                 ),
@@ -542,12 +550,6 @@ class _CanteenPageState extends State<CanteenPage> {
     }
 
     return nearest;
-  }
-
-  bool _isBaseDate(DateTime date) {
-    return date.year == baseDate.year &&
-        date.month == baseDate.month &&
-        date.day == baseDate.day;
   }
 }
 

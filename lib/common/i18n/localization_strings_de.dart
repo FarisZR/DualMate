@@ -252,7 +252,7 @@ final de = {
   "canteenFilterNoPork": "Ohne Schwein",
   "canteenFilterVegetarian": "Vegetarisch",
   "canteenFilterVegan": "Vegan",
-  "canteenBackToToday": "Zurück zu heute",
+  "canteenGoBack": "Zurück",
   "canteenNoMenuToday": "Kein Speiseplan für diesen Tag verfügbar",
   "canteenLoadError": "Speiseplan konnte nicht geladen werden",
   "canteenCategoryWahlessen": "Wahlessen %0",

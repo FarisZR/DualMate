@@ -245,7 +245,7 @@ final en = {
   "canteenFilterNoPork": "Without pork",
   "canteenFilterVegetarian": "Vegetarian",
   "canteenFilterVegan": "Vegan",
-  "canteenBackToToday": "Back to today",
+  "canteenGoBack": "Go back",
   "canteenNoMenuToday": "No menu available for this day",
   "canteenLoadError": "Could not load the canteen menu",
   "canteenCategoryWahlessen": "Choice %0",
