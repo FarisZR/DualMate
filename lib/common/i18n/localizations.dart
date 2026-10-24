@@ -7,7 +7,7 @@ import 'package:flutter/widgets.dart';
 class L {
   String get timetableCustomize => _getValue('timetableCustomize');
   String get timetableDescription => _getValue('timetableDescription');
-  String get timetableMyClass => _getValue('timetableMyClass');
+  String get timetableMainCourse => _getValue('timetableMainCourse');
   String get timetableAdditional => _getValue('timetableAdditional');
   String get timetableSelectedCount => _getValue('timetableSelectedCount');
   String get timetableAdd => _getValue('timetableAdd');
@@ -21,6 +21,7 @@ class L {
   String get timetableRefresh => _getValue('timetableRefresh');
   String get timetableNoModules => _getValue('timetableNoModules');
   String get timetableLoadError => _getValue('timetableLoadError');
+  String get timetableLoadingLessons => _getValue('timetableLoadingLessons');
   String get timetableSaveError => _getValue('timetableSaveError');
   String get timetableDuplicate => _getValue('timetableDuplicate');
   String get timetableRetry => _getValue('timetableRetry');

@@ -32,7 +32,8 @@ class TimetableCustomizationViewModel extends ChangeNotifier {
   bool loading = true;
   bool saving = false;
   bool dirty = false;
-  bool loadingSource = false;
+  TimetableConfiguration? loadingTimetable;
+  bool get loadingSource => loadingTimetable != null;
   bool loadFailed = false;
   bool _disposed = false;
 
@@ -128,7 +129,7 @@ class TimetableCustomizationViewModel extends ChangeNotifier {
     String? replacingId,
     Credentials? dualisCredentials,
   }) async {
-    loadingSource = true;
+    loadingTimetable = source;
     _notify();
     try {
       if (sources.any((s) => s.id == source.id && s.id != replacingId))
@@ -154,7 +155,7 @@ class TimetableCustomizationViewModel extends ChangeNotifier {
       dirty = true;
       _notify();
     } finally {
-      loadingSource = false;
+      loadingTimetable = null;
       _notify();
     }
   }

@@ -1,8 +1,9 @@
 final de = {
   "timetableCustomize": "Stundenplan anpassen",
+  "timetableLoadingLessons": "Lehrveranstaltungen werden geladen…",
   "timetableDescription":
       "Wähle die Module aus, die in deinem Stundenplan erscheinen.",
-  "timetableMyClass": "Mein Kurs",
+  "timetableMainCourse": "Hauptkurs",
   "timetableAdditional": "Zusätzlicher Stundenplan",
   "timetableSelectedCount": "{selected} von {total} ausgewählt",
   "timetableAdd": "Stundenplan hinzufügen",

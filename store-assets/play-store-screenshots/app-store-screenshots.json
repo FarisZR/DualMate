@@ -72,6 +72,37 @@
         }
       },
       {
+        "id": "dualmate-customization",
+        "layout": "hero",
+        "label": {
+          "de": "KURSE FLEXIBEL KOMBINIEREN",
+          "en": "MIX CLASSES YOUR WAY"
+        },
+        "headline": {
+          "de": "Deine Kurse.\nDein Stundenplan.",
+          "en": "Your courses.\nOne timetable."
+        },
+        "screenshot": "/screenshots/android/phone/{locale}/06.png",
+        "transforms": {
+          "caption": {
+            "x": 86,
+            "y": 112,
+            "width": 908,
+            "height": 390,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "device": {
+            "x": 226,
+            "y": 510,
+            "width": 628,
+            "height": 1360,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
         "id": "dualmate-reminders",
         "layout": "device-bottom",
         "label": {

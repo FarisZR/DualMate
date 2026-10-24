@@ -42,6 +42,16 @@ The app is designed to feel fast, clean, and easy to glance at. Instead of jumpi
 </p>
 
 <p align="center">
+  <!-- Timetable customization, captured in German -->
+  <img src="screenshots/phone-light-timetable-customization.png" alt="Stundenplan anpassen: Module aus mehreren Kursen kombinieren (hell)" width="250" />
+  <img src="screenshots/phone-dark-timetable-customization.png" alt="Stundenplan anpassen: Hauptkurs und zusätzlichen Stundenplan auswählen (dunkel)" width="250" />
+</p>
+
+German captures of timetable customization are also available in the
+[Play Store screenshot project](store-assets/play-store-screenshots/README.md),
+including a [ready-to-upload German slide](store-assets/play-store-screenshots/exports/de/timetable-customization.png).
+
+<p align="center">
   <!-- Tablet (dark mode) screenshots -->
   <img src="screenshots/tablet-schedule.jpg" alt="Tablet - schedule (dark)" width="760" />
   <img src="screenshots/tablet-reminder-setup.jpg" alt="Tablet - Reminder setup (dark)" width="380" />
@@ -62,7 +72,7 @@ DualMate gives you a clear weekly schedule that is easy to use during a busy uni
 - Browse your week and move between weeks quickly.
 - See lectures, rooms, lecturers, online classes, exams, public holidays, and special events in one overview.
 - Open schedule entries for more details.
-- Filter schedule entries so your view stays focused.
+- Combine selected modules from multiple classes and sources into one timetable.
 - Keep using cached schedule data when the network is unreliable.
 - Get local notifications for the next day and for schedule changes.
 - Use schedule sources such as Rapla, Dualis, and iCal calendars.
