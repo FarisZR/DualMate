@@ -11,6 +11,7 @@ import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/model/schedule_marker_event.dart';
 import 'package:intl/intl.dart';
+import 'package:dualmate/schedule/business/schedule_filter.dart';
 
 class NextDayInformationNotification extends TaskCallback {
   final PreferencesProvider _preferencesProvider;
@@ -18,6 +19,7 @@ class NextDayInformationNotification extends TaskCallback {
   final ScheduleEntryRepository _scheduleEntryRepository;
   final WorkSchedulerService _scheduler;
   final DateTime Function() _now;
+  final ScheduleFilter? scheduleFilter;
 
   NextDayInformationNotification(
     this._notificationApi,
@@ -25,6 +27,7 @@ class NextDayInformationNotification extends TaskCallback {
     this._scheduler,
     this._preferencesProvider, {
     DateTime Function()? now,
+    this.scheduleFilter,
   }) : _now = now ?? DateTime.now;
 
   @override
@@ -74,19 +77,13 @@ class NextDayInformationNotification extends TaskCallback {
     if (daysToNextEntry == 0) {
       message = interpolate(
         localization.notificationNextClassNextClassAtMessage,
-        [
-          nextScheduleEntry.title,
-          format.format(nextScheduleEntry.start),
-        ],
+        [nextScheduleEntry.title, format.format(nextScheduleEntry.start)],
       );
     } else if (daysToNextEntry == 1) {
-      message = interpolate(
-        localization.notificationNextClassTomorrow,
-        [
-          nextScheduleEntry.title,
-          format.format(nextScheduleEntry.start),
-        ],
-      );
+      message = interpolate(localization.notificationNextClassTomorrow, [
+        nextScheduleEntry.title,
+        format.format(nextScheduleEntry.start),
+      ]);
     }
     return message;
   }
@@ -97,16 +94,17 @@ class NextDayInformationNotification extends TaskCallback {
   }
 
   Future<ScheduleEntry?> _findNextNotifiableScheduleEntry(DateTime now) async {
-    final schedule = await _scheduleEntryRepository.queryScheduleBetweenDates(
+    var schedule = await _scheduleEntryRepository.queryScheduleBetweenDates(
       now,
       addDays(toStartOfDay(now), 2),
     );
+    if (scheduleFilter != null)
+      schedule = await scheduleFilter!.filter(schedule);
 
     var upcomingEntries = schedule.entries.where((entry) {
       return entry.start.isAfter(now) &&
           !ScheduleMarkerEvent.isMarkerEntry(entry);
-    }).toList()
-      ..sort((a, b) => a.start.compareTo(b.start));
+    }).toList()..sort((a, b) => a.start.compareTo(b.start));
 
     if (upcomingEntries.isEmpty) {
       return null;

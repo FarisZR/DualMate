@@ -135,6 +135,7 @@ class _OnboardingPageState extends State<OnboardingPage>
           animation: animation,
           secondaryAnimation: secondaryAnimation,
           transitionType: SharedAxisTransitionType.horizontal,
+          fillColor: Theme.of(context).scaffoldBackgroundColor,
         ),
         child: body,
       ),

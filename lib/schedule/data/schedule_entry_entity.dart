@@ -14,33 +14,35 @@ class ScheduleEntryEntity extends DatabaseEntity {
 
   @override
   void fromMap(Map<String, dynamic> map) {
-    DateTime startDate =
-        DateTime.fromMillisecondsSinceEpoch(map["start"] ?? 0);
+    DateTime startDate = DateTime.fromMillisecondsSinceEpoch(map["start"] ?? 0);
 
     DateTime endDate = DateTime.fromMillisecondsSinceEpoch(map["end"] ?? 0);
 
     _scheduleEntry = ScheduleEntry(
-        id: map["id"],
-        start: startDate,
-        end: endDate,
+      id: map["id"],
+      sourceIdentity: map['sourceIdentity'] ?? '',
+      start: startDate,
+      end: endDate,
       details: map["details"] ?? "",
       professor: map["professor"] ?? "",
       title: map["title"] ?? "",
       room: map["room"] ?? "",
-        type: ScheduleEntryType.values[map["type"]]);
+      type: ScheduleEntryType.values[map["type"]],
+    );
   }
 
   @override
   Map<String, dynamic> toMap() {
     return {
       "id": _scheduleEntry.id,
+      "sourceIdentity": _scheduleEntry.sourceIdentity,
       "start": _scheduleEntry.start.millisecondsSinceEpoch,
       "end": _scheduleEntry.end.millisecondsSinceEpoch,
       "details": _scheduleEntry.details,
       "professor": _scheduleEntry.professor,
       "room": _scheduleEntry.room,
       "title": _scheduleEntry.title,
-      "type": _scheduleEntry.type.index
+      "type": _scheduleEntry.type.index,
     };
   }
 

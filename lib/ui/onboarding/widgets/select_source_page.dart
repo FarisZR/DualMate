@@ -61,10 +61,6 @@ class SelectSourcePage extends StatelessWidget {
                         L.of(context).scheduleSourceTypeDualis,
                       ),
                       buildScheduleTypeRadio(
-                        ScheduleSourceType.Mannheim,
-                        "DHBW Mannheim",
-                      ),
-                      buildScheduleTypeRadio(
                         ScheduleSourceType.Ical,
                         L.of(context).scheduleSourceTypeIcal,
                       ),

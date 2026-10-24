@@ -14,11 +14,6 @@ import 'package:dualmate/schedule/service/schedule_source.dart';
 class IsolateScheduleSourceDecorator extends ScheduleSource {
   final ScheduleSource _scheduleSource;
 
-  late ReceivePort _isolateToMain;
-  late SendPort _sendPort;
-  bool _isInitialized = false;
-  int _requestIdCounter = 0;
-
   IsolateScheduleSourceDecorator(this._scheduleSource);
 
   @override
@@ -27,29 +22,29 @@ class IsolateScheduleSourceDecorator extends ScheduleSource {
     DateTime to, [
     CancellationToken? cancellationToken,
   ]) async {
-    await _initializeIsolate();
-    var token = cancellationToken ?? CancellationToken();
-    var requestId = _nextRequestId();
-    var responsePort = ReceivePort();
-
-    // Use the cancellation token to send a cancel message.
-    // The isolate then uses a new instance to cancel the request
-    token.setCancellationCallback(() {
-      _sendPort.send({"type": "cancel", "requestId": requestId});
-    });
-
-    _sendPort.send({
-      "type": "execute",
-      "source": _scheduleSource,
-      "from": from,
-      "to": to,
-      "replyPort": responsePort.sendPort,
-      "requestId": requestId,
-    });
-
+    final token = cancellationToken ?? CancellationToken();
+    token.throwIfCancelled();
+    final handshake = ReceivePort();
+    final responsePort = ReceivePort();
+    Isolate? worker;
     try {
+      // Scope the parser worker to this request. Replacing sources or previewing
+      // extra classes must not leave idle isolates alive for the app's lifetime.
+      worker = await Isolate.spawn(
+        scheduleSourceIsolateEntryPoint,
+        handshake.sendPort,
+      );
+      final sendPort = await handshake.first as SendPort;
+      token.throwIfCancelled();
+      token.setCancellationCallback(() => responsePort.sendPort.send(null));
+      sendPort.send({
+        "type": "execute",
+        "source": _scheduleSource,
+        "from": from,
+        "to": to,
+        "replyPort": responsePort.sendPort,
+      });
       final result = await responsePort.first;
-      token.setCancellationCallback(null);
 
       if (result == null) {
         throw OperationCancelledException();
@@ -61,31 +56,16 @@ class IsolateScheduleSourceDecorator extends ScheduleSource {
         throw ScheduleQueryFailedException(result);
       }
     } finally {
+      token.setCancellationCallback(null);
+      worker?.kill(priority: Isolate.immediate);
+      handshake.close();
       responsePort.close();
     }
-  }
-
-  Future<void> _initializeIsolate() async {
-    if (_isInitialized) return;
-
-    var isolateToMain = ReceivePort();
-    _isolateToMain = isolateToMain;
-    await Isolate.spawn(
-      scheduleSourceIsolateEntryPoint,
-      isolateToMain.sendPort,
-    );
-    _sendPort = await _isolateToMain.first;
-    _isInitialized = true;
   }
 
   @override
   bool canQuery() {
     return _scheduleSource.canQuery();
-  }
-
-  int _nextRequestId() {
-    _requestIdCounter += 1;
-    return _requestIdCounter;
   }
 }
 

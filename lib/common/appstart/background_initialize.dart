@@ -9,6 +9,9 @@ import 'package:dualmate/schedule/background/background_schedule_update.dart';
 import 'package:dualmate/schedule/ui/notification/next_day_information_notification.dart';
 import 'package:dualmate/schedule/reminders/class_reminder_controller.dart';
 import 'package:kiwi/kiwi.dart';
+import 'package:dualmate/schedule/business/schedule_filter.dart';
+import 'package:dualmate/schedule/data/timetable_repository.dart';
+import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 
 ///
 /// Initializes the background scheduler and schedules all tasks.
@@ -50,6 +53,14 @@ class BackgroundInitialize {
         container.resolve(),
         container.resolve(),
         container.resolve(),
+        scheduleFilter: container.isRegistered<ScheduleFilterRepository>()
+            ? ScheduleFilter(
+                container.resolve(),
+                timetables: container.isRegistered<TimetableRepository>()
+                    ? container.resolve<TimetableRepository>()
+                    : null,
+              )
+            : null,
       ),
     ];
 

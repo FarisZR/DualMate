@@ -1,12 +1,7 @@
+import 'package:dualmate/schedule/ui/customization/timetable_customization_page.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
-import 'package:dualmate/schedule/business/schedule_provider.dart';
-import 'package:dualmate/schedule/business/schedule_source_provider.dart';
-import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
-import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 import 'package:dualmate/schedule/ui/schedule_page.dart';
 import 'package:dualmate/schedule/ui/viewmodels/schedule_view_model.dart';
-import 'package:dualmate/schedule/ui/weeklyschedule/filter/filter_view_model.dart';
-import 'package:dualmate/schedule/ui/weeklyschedule/filter/schedule_filter_page.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_help_dialog.dart';
 import 'package:dualmate/ui/navigation/navigation_entry.dart';
 import 'package:flutter/material.dart';
@@ -65,62 +60,17 @@ class ScheduleNavigationEntry extends NavigationEntry<ScheduleViewModel> {
         child: PropertyChangeConsumer<ScheduleViewModel, String>(
           properties: const ["didSetupProperly"],
           builder: (BuildContext _, ScheduleViewModel? __, Set<String>? ___) =>
-              viewModel.didSetupProperly
-              ? IconButton(
-                  icon: Icon(Icons.filter_alt),
-                  onPressed: () async {
-                    final scheduleEntryRepository = KiwiContainer()
-                        .resolve<ScheduleEntryRepository>();
-                    final scheduleFilterRepository = KiwiContainer()
-                        .resolve<ScheduleFilterRepository>();
-                    final preloadFuture = FilterViewModel.preloadStates(
-                      scheduleEntryRepository,
-                      scheduleFilterRepository,
-                    );
-                    final didChangeFilters = await Navigator.of(context)
-                        .push<bool>(
-                          PageRouteBuilder<bool>(
-                            transitionDuration: const Duration(
-                              milliseconds: 180,
-                            ),
-                            reverseTransitionDuration: const Duration(
-                              milliseconds: 160,
-                            ),
-                            pageBuilder:
-                                (context, animation, secondaryAnimation) =>
-                                    ScheduleFilterPage(
-                                      preloadFuture: preloadFuture,
-                                    ),
-                            transitionsBuilder:
-                                (
-                                  context,
-                                  animation,
-                                  secondaryAnimation,
-                                  child,
-                                ) {
-                                  final opacityTween =
-                                      Tween<double>(begin: 0, end: 1).chain(
-                                        CurveTween(curve: Curves.easeOutCubic),
-                                      );
-
-                                  return FadeTransition(
-                                    opacity: animation.drive(opacityTween),
-                                    child: child,
-                                  );
-                                },
-                          ),
-                        );
-                    if (didChangeFilters == true) {
-                      final scheduleProvider = KiwiContainer()
-                          .resolve<ScheduleProvider>();
-                      final scheduleSourceProvider = KiwiContainer()
-                          .resolve<ScheduleSourceProvider>();
-                      scheduleProvider.invalidateScheduleCache();
-                      scheduleSourceProvider.fireScheduleSourceChanged();
-                    }
-                  },
-                )
-              : Container(),
+              IconButton(
+                icon: Icon(Icons.tune),
+                tooltip: L.of(context).timetableCustomize,
+                onPressed: () async {
+                  await Navigator.of(context).push<bool>(
+                    MaterialPageRoute(
+                      builder: (_) => const TimetableCustomizationPage(),
+                    ),
+                  );
+                },
+              ),
         ),
       ),
     ];

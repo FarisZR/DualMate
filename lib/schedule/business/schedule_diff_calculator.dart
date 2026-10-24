@@ -2,10 +2,7 @@ import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 
 class ScheduleDiffCalculator {
-  ScheduleDiff calculateDiff(
-    Schedule oldSchedule,
-    Schedule newSchedule,
-  ) {
+  ScheduleDiff calculateDiff(Schedule oldSchedule, Schedule newSchedule) {
     var oldEntries = List<ScheduleEntry>.from(oldSchedule.entries);
     var newEntries = List<ScheduleEntry>.from(newSchedule.entries);
 
@@ -13,36 +10,38 @@ class ScheduleDiffCalculator {
     var addedEntries = <ScheduleEntry>[];
 
     for (var entry in oldEntries) {
-      if (!newEntries.any((ScheduleEntry element) =>
-          _areScheduleEntriesEqual(element, entry))) {
+      if (!newEntries.any(
+        (ScheduleEntry element) => _areScheduleEntriesEqual(element, entry),
+      )) {
         removedEntries.add(entry);
       }
     }
 
     for (var entry in newEntries) {
-      if (!oldEntries.any((ScheduleEntry element) =>
-          _areScheduleEntriesEqual(element, entry))) {
+      if (!oldEntries.any(
+        (ScheduleEntry element) => _areScheduleEntriesEqual(element, entry),
+      )) {
         addedEntries.add(entry);
       }
     }
 
-    var scheduleDiff =
-        _tryConnectNewAndOldEntries(addedEntries, removedEntries);
+    var scheduleDiff = _tryConnectNewAndOldEntries(
+      addedEntries,
+      removedEntries,
+    );
 
     return scheduleDiff;
   }
 
-  bool _areScheduleEntriesEqual(
-    ScheduleEntry entry1,
-    ScheduleEntry entry2,
-  ) {
-    return entry1.start.isAtSameMomentAs(entry2.start) &&
+  bool _areScheduleEntriesEqual(ScheduleEntry entry1, ScheduleEntry entry2) {
+    return entry1.sourceIdentity == entry2.sourceIdentity &&
+        entry1.start.isAtSameMomentAs(entry2.start) &&
         entry1.end.isAtSameMomentAs(entry2.end) &&
         entry1.type == entry2.type &&
-      entry1.room == entry2.room &&
-      entry1.details == entry2.details &&
-      entry1.title == entry2.title &&
-      entry1.professor == entry2.professor;
+        entry1.room == entry2.room &&
+        entry1.details == entry2.details &&
+        entry1.title == entry2.title &&
+        entry1.professor == entry2.professor;
   }
 
   ScheduleDiff _tryConnectNewAndOldEntries(
@@ -51,8 +50,9 @@ class ScheduleDiffCalculator {
   ) {
     var allDistinctTitles = <String>[];
 
-    allDistinctTitles.addAll(addedEntries.map((ScheduleEntry e) => e.title));
-    allDistinctTitles.addAll(removedEntries.map((ScheduleEntry e) => e.title));
+    String key(ScheduleEntry e) => '${e.sourceIdentity}|${e.title}';
+    allDistinctTitles.addAll(addedEntries.map(key));
+    allDistinctTitles.addAll(removedEntries.map(key));
     allDistinctTitles = allDistinctTitles.toSet().toList();
 
     var updatedEntries = <UpdatedEntry>[];
@@ -61,18 +61,18 @@ class ScheduleDiffCalculator {
 
     for (var intersectingTitle in allDistinctTitles) {
       var oldElementsWithName = removedEntries
-          .where((ScheduleEntry e) => e.title == intersectingTitle)
+          .where((ScheduleEntry e) => key(e) == intersectingTitle)
           .toList();
 
       var newElementsWithName = addedEntries
-          .where((ScheduleEntry e) => e.title == intersectingTitle)
+          .where((ScheduleEntry e) => key(e) == intersectingTitle)
           .toList();
 
       removedEntries.removeWhere(
-        (ScheduleEntry e) => e.title == intersectingTitle,
+        (ScheduleEntry e) => key(e) == intersectingTitle,
       );
       addedEntries.removeWhere(
-        (ScheduleEntry e) => e.title == intersectingTitle,
+        (ScheduleEntry e) => key(e) == intersectingTitle,
       );
 
       if (newElementsWithName.isEmpty && oldElementsWithName.isNotEmpty) {
@@ -86,14 +86,18 @@ class ScheduleDiffCalculator {
       }
 
       if (oldElementsWithName.length == 1 && newElementsWithName.length == 1) {
-        updatedEntries.add(UpdatedEntry(
-          newElementsWithName[0],
-          newElementsWithName[0].getDifferentProperties(oldElementsWithName[0]),
-        ));
+        updatedEntries.add(
+          UpdatedEntry(
+            newElementsWithName[0],
+            newElementsWithName[0].getDifferentProperties(
+              oldElementsWithName[0],
+            ),
+          ),
+        );
         continue;
       }
 
-      if (oldElementsWithName.length > 1 && newElementsWithName.length > 1) {
+      if (oldElementsWithName.isNotEmpty && newElementsWithName.isNotEmpty) {
         _matchMNChangedElements(
           oldElementsWithName,
           newElementsWithName,
@@ -113,15 +117,18 @@ class ScheduleDiffCalculator {
   }
 
   void _matchMNChangedElements(
-      List<ScheduleEntry> oldElementsWithName,
-      List<ScheduleEntry> newElementsWithName,
-      List<UpdatedEntry> updatedEntries,
-      List<ScheduleEntry> oldEntries,
-      List<ScheduleEntry> newEntries) {
+    List<ScheduleEntry> oldElementsWithName,
+    List<ScheduleEntry> newElementsWithName,
+    List<UpdatedEntry> updatedEntries,
+    List<ScheduleEntry> oldEntries,
+    List<ScheduleEntry> newEntries,
+  ) {
     if (oldElementsWithName.length == newElementsWithName.length) {
       for (var oldElement in oldElementsWithName) {
-        ScheduleEntry nearestElement =
-            _findNearestElementByStart(newElementsWithName, oldElement);
+        ScheduleEntry nearestElement = _findNearestElementByStart(
+          newElementsWithName,
+          oldElement,
+        );
 
         newElementsWithName.remove(nearestElement);
 
@@ -144,10 +151,13 @@ class ScheduleDiffCalculator {
   }
 
   ScheduleEntry _findNearestElementByStart(
-      List<ScheduleEntry> elements, ScheduleEntry reference) {
+    List<ScheduleEntry> elements,
+    ScheduleEntry reference,
+  ) {
     ScheduleEntry nearestElement = elements[0];
-    Duration minimalDifference =
-        reference.start.difference(nearestElement.start).abs();
+    Duration minimalDifference = reference.start
+        .difference(nearestElement.start)
+        .abs();
 
     for (var newElement in elements) {
       var difference = reference.start.difference(newElement.start).abs();
@@ -170,9 +180,9 @@ class ScheduleDiff {
     List<ScheduleEntry>? addedEntries,
     List<ScheduleEntry>? removedEntries,
     List<UpdatedEntry>? updatedEntries,
-  })  : addedEntries = addedEntries ?? [],
-        removedEntries = removedEntries ?? [],
-        updatedEntries = updatedEntries ?? [];
+  }) : addedEntries = addedEntries ?? [],
+       removedEntries = removedEntries ?? [],
+       updatedEntries = updatedEntries ?? [];
 
   bool didSomethingChange() {
     return addedEntries.isNotEmpty ||

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:io';
+import 'dart:ui' show FramePhase;
 
 import 'package:dualmate/canteen/ui/canteen_page.dart';
 import 'package:dualmate/canteen/ui/widgets/meal_card.dart';
@@ -11,9 +12,15 @@ import 'package:dualmate/dualis/ui/dualis_page.dart';
 import 'package:dualmate/dualis/ui/exam_results_page/exam_results_page.dart';
 import 'package:dualmate/dualis/service/fake_data_dualis_scraper.dart';
 import 'package:dualmate/main.dart' as app;
+import 'package:dualmate/ui/navigation_drawer.dart';
 import 'package:dualmate/schedule/ui/viewmodels/weekly_schedule_view_model.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/weekly_schedule_page.dart';
 import 'package:dualmate/schedule/ui/weeklyschedule/widgets/schedule_entry_widget.dart';
+import 'package:dualmate/schedule/ui/customization/timetable_customization_page.dart';
+import 'package:dualmate/schedule/ui/customization/timetable_module_tile.dart';
+import 'package:dualmate/schedule/data/timetable_repository.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
+import 'package:kiwi/kiwi.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,7 +36,7 @@ const String _profileMode = String.fromEnvironment(
 );
 const String _perfTarget = String.fromEnvironment(
   'PERF_TARGET',
-  defaultValue: 'all',
+  defaultValue: 'stress',
 );
 const bool _requiresVmServiceReadinessCheck = bool.fromEnvironment(
   'PERF_TIMELINE_READY_CHECK',
@@ -39,6 +46,7 @@ const Duration _pollStep = Duration(milliseconds: 16);
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
 
   testWidgets(
     'records loaded cold-navigation frame timing per visible interaction',
@@ -51,6 +59,9 @@ void main() {
       }
 
       final fixture = await ColdNavigationFixture.prepare();
+      if (_perfTarget == 'customization') await fixture.prepareCustomization();
+      if (_perfTarget == 'stress')
+        await fixture.prepareCustomization(preserveSchedule: true);
       await _waitForVmServiceReadiness();
       final collectTimeline = _profileMode != 'ranking';
       final recorder = _ScenarioRecorder(
@@ -63,8 +74,12 @@ void main() {
       StackTrace? harnessFailureStack;
       try {
         switch (_perfTarget) {
+          case 'stress':
+            await _runFullStressJourney(tester, recorder);
           case 'schedule':
             await _runScheduleColdStart(tester, recorder, fixture);
+          case 'customization':
+            await _runCustomizationColdStart(tester, recorder);
           case 'canteen':
             await _runCanteenColdStart(tester, recorder);
           case 'dates':
@@ -166,6 +181,223 @@ Future<void> _runScheduleColdStart(
       description: 'cold first swipe',
       expectedWeekStart: fixture.tallWeekStart,
     ),
+  );
+}
+
+Future<void> _runCustomizationColdStart(
+  WidgetTester tester,
+  _ScenarioRecorder recorder,
+) async {
+  final page = find.byType(TimetableCustomizationPage);
+  final firstTitle = ColdNavigationFixture.firstScheduleEntryTitle;
+  final firstTile = find.ancestor(
+    of: find.text(firstTitle),
+    matching: find.byType(TimetableModuleTile),
+  );
+  final list = find.descendant(
+    of: page,
+    matching: find.byType(CustomScrollView),
+  );
+  Future<void> open() async {
+    final customize = find.byIcon(Icons.tune);
+    await _waitFor(
+      tester,
+      customize,
+      description: 'Customize timetable toolbar action',
+    );
+    await tester.tap(customize);
+    await _waitFor(
+      tester,
+      firstTile,
+      description: 'cached customization modules',
+    );
+    await _settleFrameSchedulerIdle(tester);
+  }
+
+  await recorder.measure(
+    'customization_cold_launch_to_open_160_modules',
+    animated: false,
+    action: () async {
+      unawaited(app.main());
+      await _waitForLoadedSchedule(tester);
+      await open();
+      final mounted = find.byType(TimetableModuleTile).evaluate().length;
+      return _ScenarioEvidence(
+        finalStateReached:
+            page.evaluate().isNotEmpty && mounted > 0 && mounted < 40,
+        intermediateFramesRendered: true,
+        finalStateDescription:
+            'Two sources with 160 cached modules; $mounted module rows mounted near the viewport',
+        animationChecks: {'lazy_module_rows': mounted < 40},
+      );
+    },
+  );
+
+  await recorder.measure(
+    'customization_toggle_primary_module',
+    action: () async {
+      await tester.tap(firstTile);
+      await tester.pump(_pollStep);
+      await _settleFrameSchedulerIdle(tester);
+      return _ScenarioEvidence(
+        finalStateReached: !tester
+            .widget<TimetableModuleTile>(firstTile)
+            .selected,
+        intermediateFramesRendered: true,
+        finalStateDescription: 'Primary module excluded using the entire row',
+      );
+    },
+  );
+
+  Future<bool> expandOrCollapse() async {
+    final header = find.ancestor(
+      of: find.text('B4'),
+      matching: find.byType(ListTile),
+    );
+    final rotation = find.descendant(
+      of: header,
+      matching: find.byType(RotationTransition),
+    );
+    final samples = <double>[];
+    void sample() {
+      if (rotation.evaluate().isNotEmpty)
+        samples.add(
+          tester.widget<RotationTransition>(rotation.first).turns.value,
+        );
+    }
+
+    sample();
+    await tester.tap(find.text('B4'));
+    await tester.pump(_pollStep);
+    await _pumpUntilWithCallback(
+      tester,
+      condition: () => !tester.binding.hasScheduledFrame,
+      description: 'timetable expansion arrow',
+      onPump: sample,
+    );
+    sample();
+    return _verifyProgressiveChange(samples);
+  }
+
+  await recorder.measure(
+    'customization_collapse_and_expand',
+    action: () async {
+      final closedProgressively = await expandOrCollapse();
+      final collapsed = firstTile.evaluate().isEmpty;
+      final openedProgressively = await expandOrCollapse();
+      return _ScenarioEvidence(
+        finalStateReached: collapsed && firstTile.evaluate().isNotEmpty,
+        intermediateFramesRendered: closedProgressively && openedProgressively,
+        finalStateDescription:
+            'B4 collapses and expands with progressive arrow rotation',
+        animationChecks: {
+          'collapse_rotation': closedProgressively,
+          'expand_rotation': openedProgressively,
+        },
+      );
+    },
+  );
+
+  await recorder.measure(
+    'customization_scroll_modules',
+    action: () async {
+      final scrollable = find
+          .descendant(of: list, matching: find.byType(Scrollable))
+          .first;
+      final state = tester.state<ScrollableState>(scrollable);
+      final before = state.position.pixels;
+      await tester.fling(list, const Offset(0, -650), 1800);
+      await tester.pump(_pollStep);
+      await _settleFrameSchedulerIdle(tester);
+      final afterForward = state.position.pixels;
+      final movedForward = afterForward > before + 100;
+      await tester.fling(list, const Offset(0, 650), 1800);
+      await tester.pump(_pollStep);
+      await _settleFrameSchedulerIdle(tester);
+      final movedBackward = state.position.pixels < afterForward - 100;
+      final moved = movedForward && movedBackward;
+      return _ScenarioEvidence(
+        finalStateReached:
+            moved && find.byType(TimetableModuleTile).evaluate().length < 40,
+        intermediateFramesRendered: moved,
+        animationChecks: {
+          'forward_scroll': movedForward,
+          'reverse_scroll': movedBackward,
+        },
+        finalStateDescription:
+            'Real flings scroll the lazy module list in both directions',
+      );
+    },
+  );
+
+  await tester.ensureVisible(find.text('B4'));
+  await expandOrCollapse();
+  final addedTile = find.byKey(
+    ValueKey(
+      '${ColdNavigationFixture.additionalTimetableId}/${ColdNavigationFixture.customizationModule(1)}',
+    ),
+  );
+  await tester.ensureVisible(addedTile);
+  await recorder.measure(
+    'customization_select_additional_module',
+    action: () async {
+      await tester.tap(addedTile);
+      await tester.pump(_pollStep);
+      await _settleFrameSchedulerIdle(tester);
+      final tile = find.descendant(
+        of: addedTile,
+        matching: find.byType(TimetableModuleTile),
+      );
+      return _ScenarioEvidence(
+        finalStateReached: tester.widget<TimetableModuleTile>(tile).selected,
+        intermediateFramesRendered: true,
+        finalStateDescription:
+            'One module selected from B6 independently of the same name in B4',
+      );
+    },
+  );
+
+  await recorder.measure(
+    'customization_save_and_apply',
+    action: () async {
+      await tester.tap(find.byKey(const ValueKey('timetable_save_changes')));
+      await tester.pump(_pollStep);
+      await _pumpUntil(
+        tester,
+        condition: () => page.evaluate().isEmpty,
+        description: 'saved customization returned to timetable',
+      );
+      KiwiContainer()
+          .resolve<ScheduleSourceProvider>()
+          .usePerformanceFixtureSource(PerformanceFixtureScheduleSource());
+      await _settleFrameSchedulerIdle(tester);
+      final saved = await KiwiContainer().resolve<TimetableRepository>().load();
+      return _ScenarioEvidence(
+        finalStateReached:
+            saved.length == 2 &&
+            !saved.first.includes(firstTitle) &&
+            saved.last.includes(ColdNavigationFixture.customizationModule(1)) &&
+            saved.first.includes(ColdNavigationFixture.customizationModule(1)),
+        intermediateFramesRendered: true,
+        finalStateDescription:
+            'Source-scoped choices committed and applied to the real timetable',
+      );
+    },
+  );
+
+  await recorder.measure(
+    'customization_reopen_saved_choices',
+    action: () async {
+      await open();
+      return _ScenarioEvidence(
+        finalStateReached: !tester
+            .widget<TimetableModuleTile>(firstTile)
+            .selected,
+        intermediateFramesRendered: true,
+        finalStateDescription:
+            'Persisted choices loaded on reopening customization',
+      );
+    },
   );
 }
 
@@ -538,6 +770,261 @@ Future<void> _runDiagnosticScenarios(
   );
 }
 
+/// One continuous measured cold launch. Gesture bursts deliberately interrupt
+/// ballistic scrolling and screen transitions; there are no idle/settle waits
+/// between screens, no per-screen frame-drain gaps, and no warm-up journey.
+Future<void> _runFullStressJourney(
+  WidgetTester tester,
+  _ScenarioRecorder recorder,
+) async {
+  await recorder.measure(
+    'stress_full_cold_journey',
+    action: () async {
+      final clock = Stopwatch()..start();
+      final checks = <String, bool>{};
+      final phases = <Map<String, dynamic>>[];
+      var gestures = 0;
+      int? firstGestureUs;
+
+      Future<void> navigate(String route, Finder destination) async {
+        if (destination.evaluate().isNotEmpty) return;
+        final item = find.byKey(ValueKey('drawer_item_$route')).hitTestable();
+        if (!_usesPersistentNavigation(tester)) {
+          final menu = find.byTooltip('Open navigation menu');
+          await _waitFor(tester, menu, description: 'stress navigation menu');
+          await tester.tap(menu.first);
+        }
+        await _waitFor(
+          tester,
+          item,
+          description: 'stress $route navigation control',
+        );
+        await tester.tap(item.first);
+        await tester.pump(const Duration(milliseconds: 8));
+        await _waitFor(
+          tester,
+          destination,
+          description: 'stress $route construction',
+        );
+      }
+
+      Future<void> burst(
+        Finder scope,
+        Axis axis,
+        int count,
+        String label,
+      ) async {
+        Finder? scrollable;
+        ScrollableState? state;
+        await _pumpUntil(
+          tester,
+          condition: () {
+            for (final element
+                in find
+                    .descendant(of: scope, matching: find.byType(Scrollable))
+                    .hitTestable()
+                    .evaluate()) {
+              final candidate =
+                  (element as StatefulElement).state as ScrollableState;
+              final position = candidate.position;
+              if (position.hasContentDimensions &&
+                  position.axis == axis &&
+                  position.maxScrollExtent > position.minScrollExtent + 1) {
+                scrollable = find.byElementPredicate(
+                  (e) => identical(e, element),
+                );
+                state = candidate;
+                return true;
+              }
+            }
+            return false;
+          },
+          description: '$label scrollable content ready',
+        );
+        final started = clock.elapsedMicroseconds;
+        final samples = <double>[state!.position.pixels];
+        print('PERF_STRESS_PHASE=$label');
+        for (var index = 0; index < count; index++) {
+          // Four forward and four reverse gestures traverse multiple pages/rows,
+          // starting each new drag while the previous fling is still active.
+          final direction = index % 8 < 4 ? -1.0 : 1.0;
+          final rect = tester.getRect(scrollable!);
+          final extent = axis == Axis.horizontal ? rect.width : rect.height;
+          final offset = direction * extent * .64;
+          final start =
+              rect.center +
+              (axis == Axis.horizontal
+                  ? Offset(-direction * extent * .32, 0)
+                  : Offset(0, -direction * extent * .32));
+          firstGestureUs ??= clock.elapsedMicroseconds;
+          await tester.flingFrom(
+            start,
+            axis == Axis.horizontal ? Offset(offset, 0) : Offset(0, offset),
+            3600,
+            frameInterval: const Duration(milliseconds: 8),
+          );
+          await tester.pump(const Duration(milliseconds: 8));
+          samples.add(state!.position.pixels);
+          gestures++;
+        }
+        final moved = _verifyProgressiveChange(samples);
+        checks['${label}_real_scroll_progression'] = moved;
+        phases.add({
+          'name': label,
+          'start_us': started,
+          'end_us': clock.elapsedMicroseconds,
+          'gesture_count': count,
+          'scroll_progression': moved,
+        });
+      }
+
+      Future<void> customize(int round) async {
+        final action = find.byIcon(Icons.tune).hitTestable();
+        await _waitFor(tester, action, description: 'stress customize toolbar');
+        await tester.tap(action);
+        final page = find.byType(TimetableCustomizationPage);
+        await _waitFor(
+          tester,
+          find.byType(TimetableModuleTile),
+          description: 'stress cached modules',
+        );
+        await burst(page, Axis.vertical, 24, 'round_${round}_customization');
+        final header = find.text('B4').hitTestable();
+        for (
+          var attempt = 0;
+          header.evaluate().isEmpty && attempt < 24;
+          attempt++
+        ) {
+          final list = find.descendant(
+            of: page,
+            matching: find.byType(CustomScrollView),
+          );
+          final rect = tester.getRect(list);
+          await tester.flingFrom(
+            Offset(rect.center.dx, rect.top + rect.height * .15),
+            Offset(0, rect.height * .7),
+            3600,
+            frameInterval: const Duration(milliseconds: 8),
+          );
+          await tester.pump(const Duration(milliseconds: 8));
+          gestures++;
+        }
+        await _waitFor(tester, header, description: 'stress B4 header');
+        // Toggle a visible primary module twice, preserving the main schedule
+        // workload while selection feedback and scrolling overlap.
+        final row = find.byType(TimetableModuleTile).hitTestable().first;
+        for (var tap = 0; tap < 2; tap++) {
+          await tester.tap(row);
+          await tester.pump(const Duration(milliseconds: 8));
+        }
+        for (var tap = 0; tap < 5; tap++) {
+          await tester.tap(header);
+          await tester.pump(const Duration(milliseconds: 8));
+        }
+        final added = find
+            .byKey(
+              ValueKey(
+                '${ColdNavigationFixture.additionalTimetableId}/${ColdNavigationFixture.customizationModule(1)}',
+              ),
+            )
+            .hitTestable();
+        await _waitFor(tester, added, description: 'stress B6 module');
+        final tile = find.descendant(
+          of: added,
+          matching: find.byType(TimetableModuleTile),
+        );
+        if (!tester.widget<TimetableModuleTile>(tile).selected) {
+          await tester.tap(added);
+          await tester.pump(const Duration(milliseconds: 8));
+        }
+        checks['round_${round}_additional_module_selected'] = tester
+            .widget<TimetableModuleTile>(tile)
+            .selected;
+        await tester.tap(find.byKey(const ValueKey('timetable_save_changes')));
+        await tester.pump(const Duration(milliseconds: 8));
+        await _pumpUntil(
+          tester,
+          condition: () => page.evaluate().isEmpty,
+          description: 'stress customization save',
+        );
+        // Saving recreates production source adapters. Keep subsequent fixture
+        // refreshes deterministic, as at the single app startup.
+        KiwiContainer()
+            .resolve<ScheduleSourceProvider>()
+            .usePerformanceFixtureSource(PerformanceFixtureScheduleSource());
+        final saved = await KiwiContainer()
+            .resolve<TimetableRepository>()
+            .load();
+        checks['round_${round}_saved_source_choices'] =
+            saved.length == 2 &&
+            saved.last.includes(ColdNavigationFixture.customizationModule(1));
+      }
+
+      unawaited(app.main());
+      // Only content readiness is required. Start gestures as soon as the first
+      // populated screen exists, while deferred startup work can still be active.
+      await _waitForLoadedSchedule(tester);
+      for (var round = 0; round < 3; round++) {
+        await navigate('schedule', find.byType(WeeklySchedulePage));
+        await burst(
+          find.byKey(const ValueKey<String>('weekly_schedule_page_view')),
+          Axis.horizontal,
+          16,
+          'round_${round}_schedule',
+        );
+        await customize(round);
+        await navigate('canteen', find.byType(CanteenPage));
+        await burst(
+          find.byType(CanteenPage),
+          Axis.horizontal,
+          16,
+          'round_${round}_canteen',
+        );
+        await navigate('date_management', find.byType(DateManagementPage));
+        await burst(
+          find.byType(DateManagementPage),
+          Axis.vertical,
+          20,
+          'round_${round}_dates',
+        );
+        await navigate('dualis', find.byType(DualisPage));
+        await burst(
+          find.byType(DualisPage),
+          Axis.vertical,
+          16,
+          'round_${round}_dualis',
+        );
+        final tabs = find.descendant(
+          of: find.byType(DualisPage),
+          matching: find.byType(BottomNavigationBar),
+        );
+        await _waitFor(tester, tabs, description: 'stress Dualis tabs');
+        for (final icon in [Icons.book, Icons.dashboard]) {
+          await tester.tap(
+            find.descendant(of: tabs, matching: find.byIcon(icon)).first,
+          );
+          await tester.pump(const Duration(milliseconds: 8));
+        }
+      }
+      recorder.stressWorkload = {
+        'rounds': 3,
+        'real_gesture_count': gestures,
+        'first_gesture_after_app_start_us': firstGestureUs,
+        'inter_gesture_pump_us': 8000,
+        'wait_policy': 'control/content readiness only; no settle or per-section timing drains',
+        'phases': phases,
+      };
+      return _ScenarioEvidence(
+        finalStateReached: checks.values.every((passed) => passed),
+        intermediateFramesRendered: checks.values.every((passed) => passed),
+        finalStateDescription:
+            '$gestures real flings across Schedule, customization, Canteen, Dates and Dualis in three continuous rounds from one cold launch',
+        animationChecks: checks,
+      );
+    },
+  );
+}
+
 Future<void> _runCombinedJourney(
   WidgetTester tester,
   _ScenarioRecorder recorder,
@@ -653,13 +1140,17 @@ Future<void> _runCombinedJourney(
             scheduleForwardAgain.intermediateFramesRendered,
         'schedule_third_forward_progression':
             scheduleForwardThird.intermediateFramesRendered,
-        'canteen_drawer_progression': canteenDrawer.intermediateFramesRendered,
+        if (!_usesPersistentNavigation(tester))
+          'canteen_drawer_progression':
+              canteenDrawer.intermediateFramesRendered,
         'canteen_forward_progression':
             canteenForward.intermediateFramesRendered,
         'canteen_backward_progression': canteenBack.intermediateFramesRendered,
-        'dates_drawer_progression': datesDrawer.intermediateFramesRendered,
+        if (!_usesPersistentNavigation(tester))
+          'dates_drawer_progression': datesDrawer.intermediateFramesRendered,
         'dates_scroll_progression': datesScroll.intermediateFramesRendered,
-        'dualis_drawer_progression': dualisDrawer.intermediateFramesRendered,
+        if (!_usesPersistentNavigation(tester))
+          'dualis_drawer_progression': dualisDrawer.intermediateFramesRendered,
         'dualis_scroll_progression': dualisScroll.intermediateFramesRendered,
       };
 
@@ -1374,7 +1865,15 @@ _ScenarioEvidence _combineEvidence(
 // Drawer helpers
 // ---------------------------------------------------------------------------
 
+bool _usesPersistentNavigation(WidgetTester tester) => find
+    .byWidgetPredicate(
+      (widget) => widget is MyNavigationDrawer && !widget.isInDrawer,
+    )
+    .evaluate()
+    .isNotEmpty;
+
 Future<void> _openDrawerForSetup(WidgetTester tester) async {
+  if (_usesPersistentNavigation(tester)) return;
   if (find.byType(Drawer).evaluate().isNotEmpty) return;
   final menu = find.byTooltip('Open navigation menu');
   await _waitFor(tester, menu, description: 'setup drawer menu button');
@@ -1400,6 +1899,23 @@ Future<_ScenarioEvidence> _selectDrawerDestination(
     item,
     description: '$destinationDescription drawer item',
   );
+
+  if (_usesPersistentNavigation(tester)) {
+    await tester.tap(item);
+    await tester.pump(_pollStep);
+    await _waitFor(
+      tester,
+      destination,
+      description: '$destinationDescription persistent navigation',
+    );
+    return _ScenarioEvidence(
+      finalStateReached: destination.evaluate().isNotEmpty,
+      intermediateFramesRendered: false,
+      finalStateDescription:
+          '$destinationDescription selected from the permanent tablet navigation panel; no drawer animation applies',
+      animationChecks: const {'persistent_destination_visible': true},
+    );
+  }
 
   final drawerLeftSamples = <double>[];
   _sampleDrawerLeft(tester, drawerLeftSamples);
@@ -1659,7 +2175,9 @@ class _ScenarioRecorder {
   final bool collectTimeline;
   final Map<String, Map<String, dynamic>> _scenarios =
       <String, Map<String, dynamic>>{};
+  final Map<String, String> _inapplicableScenarios = {};
   bool _timingsPrimed = false;
+  Map<String, dynamic>? stressWorkload;
 
   _ScenarioRecorder({
     required this.binding,
@@ -1673,16 +2191,29 @@ class _ScenarioRecorder {
     required Future<_ScenarioEvidence> Function() action,
     bool animated = true,
   }) async {
+    if (_usesPersistentNavigation(tester) &&
+        scenarioId.startsWith('drawer_') &&
+        scenarioId.endsWith('_over_populated_schedule')) {
+      _inapplicableScenarios[scenarioId] = 'Permanent tablet navigation has no drawer opening/closing animation.';
+      return;
+    }
     // The engine may deliver old FrameTiming batches up to roughly one second
     // late. Flush them before the first scenario, then fully drain every
     // scenario before registering the next callback.
-    if (!_timingsPrimed) {
+    if (!_timingsPrimed && scenarioId != 'stress_full_cold_journey') {
       await Future<void>.delayed(_initialTimingFlush);
       _timingsPrimed = true;
     }
 
     final frameTimings = <FrameTiming>[];
-    final timingCallback = frameTimings.addAll;
+    final startedMicros = developer.Timeline.now;
+    void timingCallback(List<FrameTiming> frames) => frameTimings.addAll(
+      frames.where(
+        (frame) =>
+            frame.timestampInMicroseconds(FramePhase.buildStart) >=
+            startedMicros,
+      ),
+    );
     binding.addTimingsCallback(timingCallback);
 
     late _ScenarioEvidence evidence;
@@ -1775,6 +2306,8 @@ class _ScenarioRecorder {
           'only guarantees the Flutter frame scheduler was idle, '
           'not that background services or timers have finished',
       'scenarios': _scenarios,
+      'inapplicable_scenarios': _inapplicableScenarios,
+      if (stressWorkload != null) 'stress_workload': stressWorkload,
     };
   }
 

@@ -55,6 +55,11 @@ class RaplaImportantEventsProvider {
   }
 
   Future<bool> _ensureRaplaSource() async {
+    if (_scheduleSourceProvider.timetableRepository != null) {
+      if (!_scheduleSourceProvider.didSetupCorrectly())
+        await _scheduleSourceProvider.setupScheduleSource();
+      return _scheduleSourceProvider.didSetupCorrectly();
+    }
     var raplaUrl = await _preferencesProvider.getRaplaUrl();
     if (!RaplaScheduleSource.isValidUrl(raplaUrl)) {
       return false;
@@ -85,7 +90,7 @@ class RaplaImportantEventsProvider {
 
     for (var entry in entries) {
       var key =
-          '${entry.title}-${entry.type}-${entry.start.toIso8601String()}-${entry.end.toIso8601String()}-${entry.professor}';
+          '${entry.sourceIdentity}-${entry.title}-${entry.type}-${entry.start.toIso8601String()}-${entry.end.toIso8601String()}-${entry.professor}';
       if (seenKeys.add(key)) {
         result.add(entry);
       }
@@ -101,7 +106,7 @@ class RaplaImportantEventsProvider {
 
     var grouped = <String, List<ScheduleEntry>>{};
     for (var entry in entries) {
-      var key = '${entry.title}-${entry.type}';
+      var key = '${entry.sourceIdentity}-${entry.title}-${entry.type}';
       grouped.putIfAbsent(key, () => []).add(entry);
     }
 

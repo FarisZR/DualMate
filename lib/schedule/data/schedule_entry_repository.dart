@@ -13,22 +13,19 @@ class ScheduleEntryRepository {
   }
 
   Future<Schedule> queryScheduleBetweenDates(
-      DateTime start, DateTime end) async {
+    DateTime start,
+    DateTime end,
+  ) async {
     var rows = await _database.queryRows(
       ScheduleEntryEntity.tableName(),
       where: "end>? AND start<?",
-      whereArgs: [
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ],
+      whereArgs: [start.millisecondsSinceEpoch, end.millisecondsSinceEpoch],
     );
 
     var schedule = Schedule();
 
     for (var row in rows) {
-      schedule.addEntry(
-        ScheduleEntryEntity.fromMap(row).asScheduleEntry(),
-      );
+      schedule.addEntry(ScheduleEntryEntity.fromMap(row).asScheduleEntry());
     }
 
     return schedule;
@@ -37,13 +34,14 @@ class ScheduleEntryRepository {
   Future<ScheduleEntry?> queryExistingScheduleEntry(ScheduleEntry entry) async {
     var rows = await _database.queryRows(
       ScheduleEntryEntity.tableName(),
-      where: "start=? AND end=? AND title=? AND details=? AND professor=?",
+      where: "start=? AND end=? AND title=? AND details=? AND professor=? AND sourceIdentity=?",
       whereArgs: [
         entry.start.millisecondsSinceEpoch,
         entry.end.millisecondsSinceEpoch,
         entry.title,
         entry.details,
         entry.professor,
+        entry.sourceIdentity,
       ],
     );
 
@@ -104,14 +102,13 @@ class ScheduleEntryRepository {
   }
 
   Future<void> deleteScheduleEntriesBetween(
-      DateTime start, DateTime end) async {
+    DateTime start,
+    DateTime end,
+  ) async {
     await _database.deleteWhere(
       ScheduleEntryEntity.tableName(),
       where: "start>=? AND end<=?",
-      whereArgs: [
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ],
+      whereArgs: [start.millisecondsSinceEpoch, end.millisecondsSinceEpoch],
     );
   }
 

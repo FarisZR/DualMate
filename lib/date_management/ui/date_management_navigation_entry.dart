@@ -9,6 +9,7 @@ import 'package:dualmate/ui/navigation/navigator_key.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:property_change_notifier/property_change_notifier.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 
 class DateManagementNavigationEntry
     extends NavigationEntry<DateManagementViewModel> {
@@ -28,6 +29,8 @@ class DateManagementNavigationEntry
       KiwiContainer().resolve(),
       KiwiContainer().resolve(),
       KiwiContainer().resolve(),
+      timetableSourceProvider: KiwiContainer()
+          .resolve<ScheduleSourceProvider>(),
     );
   }
 

@@ -105,5 +105,24 @@ CREATE INDEX IF NOT EXISTS idx_scheduled_class_notifications_window
 ON ScheduledClassNotifications(sourceIdentity, classStart);
 ''',
     ],
+    // Version 6 - Source-scoped timetable configuration and module choices.
+    [
+      "ALTER TABLE ScheduleEntries ADD COLUMN sourceIdentity TEXT NOT NULL DEFAULT ''",
+      'CREATE INDEX idx_schedule_source_title ON ScheduleEntries(sourceIdentity, title)',
+      '''CREATE TABLE TimetableSources (id TEXT PRIMARY KEY, label TEXT NOT NULL,
+        type INTEGER NOT NULL, value TEXT NOT NULL, includeAll INTEGER NOT NULL,
+        position INTEGER NOT NULL)''',
+      '''CREATE TABLE TimetableModuleSelections (sourceIdentity TEXT NOT NULL,
+        title TEXT NOT NULL, selected INTEGER NOT NULL, PRIMARY KEY(sourceIdentity, title))''',
+      'CREATE TABLE TimetableConfigurationState (id INTEGER PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 0)',
+    ],
+    // Version 7 - Remove unsupported source configurations and their cache.
+    [
+      'UPDATE TimetableConfigurationState SET revision=revision+1 WHERE EXISTS (SELECT 1 FROM TimetableSources WHERE type NOT IN (1,2,3))',
+      'DELETE FROM ScheduleQueryInformation WHERE EXISTS (SELECT 1 FROM TimetableSources WHERE type NOT IN (1,2,3))',
+      'DELETE FROM ScheduleEntries WHERE sourceIdentity IN (SELECT id FROM TimetableSources WHERE type NOT IN (1,2,3))',
+      'DELETE FROM TimetableModuleSelections WHERE sourceIdentity IN (SELECT id FROM TimetableSources WHERE type NOT IN (1,2,3))',
+      'DELETE FROM TimetableSources WHERE type NOT IN (1,2,3)',
+    ],
   ];
 }

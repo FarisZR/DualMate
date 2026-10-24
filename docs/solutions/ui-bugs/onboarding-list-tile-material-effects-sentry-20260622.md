@@ -31,19 +31,17 @@ can hide those effects unless each tile has its own local material surface.
   `Material`.
 - Wrapped onboarding canteen location `RadioListTile` entries in transparent
   `Material`.
-- Wrapped Mannheim course `ListTile` entries in transparent `Material`.
 - Added a widget regression that pumps onboarding radio pages below a
   `ColoredBox` and asserts no Flutter framework exception is emitted.
 
 ## Test Coverage
 - `schedule source radios keep visible material effects under color`
 - `canteen location radios keep visible material effects under color`
-- `Mannheim course tiles keep visible material effects under color`
 
 ## Commands run
 ```bash
 sentry issue view 129632365 --json --fields shortId,title,culprit,metadata,tags,firstSeen,lastSeen,count,userCount,permalink
 flutter test test/ui/onboarding/onboarding_list_tile_material_test.dart
 flutter test test/ui/onboarding/onboarding_list_tile_material_test.dart test/ui/onboarding/onboarding_required_canteen_step_test.dart
-flutter analyze lib/ui/onboarding/widgets/select_source_page.dart lib/ui/onboarding/widgets/select_canteen_location_page.dart lib/ui/onboarding/widgets/mannheim_page.dart test/ui/onboarding/onboarding_list_tile_material_test.dart test/ui/onboarding/onboarding_required_canteen_step_test.dart
+flutter analyze lib/ui/onboarding/widgets/select_source_page.dart lib/ui/onboarding/widgets/select_canteen_location_page.dart test/ui/onboarding/onboarding_list_tile_material_test.dart test/ui/onboarding/onboarding_required_canteen_step_test.dart
 ```

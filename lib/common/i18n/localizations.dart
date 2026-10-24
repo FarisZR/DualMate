@@ -5,6 +5,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
 class L {
+  String get timetableCustomize => _getValue('timetableCustomize');
+  String get timetableDescription => _getValue('timetableDescription');
+  String get timetableMyClass => _getValue('timetableMyClass');
+  String get timetableAdditional => _getValue('timetableAdditional');
+  String get timetableSelectedCount => _getValue('timetableSelectedCount');
+  String get timetableAdd => _getValue('timetableAdd');
+  String get timetableAddDescription => _getValue('timetableAddDescription');
+  String get timetableSave => _getValue('timetableSave');
+  String get timetableEdit => _getValue('timetableEdit');
+  String get timetableRemove => _getValue('timetableRemove');
+  String get timetableRemoveTitle => _getValue('timetableRemoveTitle');
+  String get timetableRemoveMessage => _getValue('timetableRemoveMessage');
+  String get timetableOptions => _getValue('timetableOptions');
+  String get timetableRefresh => _getValue('timetableRefresh');
+  String get timetableNoModules => _getValue('timetableNoModules');
+  String get timetableLoadError => _getValue('timetableLoadError');
+  String get timetableSaveError => _getValue('timetableSaveError');
+  String get timetableDuplicate => _getValue('timetableDuplicate');
+  String get timetableRetry => _getValue('timetableRetry');
+  String get timetableDiscardTitle => _getValue('timetableDiscardTitle');
+  String get timetableDiscardMessage => _getValue('timetableDiscardMessage');
+  String get timetableDiscard => _getValue('timetableDiscard');
+  String get timetableClassName => _getValue('timetableClassName');
+  String get timetableSource => _getValue('timetableSource');
+  String get timetableUrl => _getValue('timetableUrl');
+  String get timetableRequired => _getValue('timetableRequired');
+  String get timetableInvalidUrl => _getValue('timetableInvalidUrl');
   final Locale locale;
   late String _language;
 
@@ -365,28 +392,6 @@ class L {
   String get onboardingIcalUrlHint => _getValue("onboardingIcalUrlHint");
 
   String get scheduleSourceTypeIcal => _getValue("scheduleSourceTypeIcal");
-
-  String get scheduleSourceTypeMannheim =>
-      _getValue("scheduleSourceTypeMannheim");
-
-  String get onboardingMannheimLoadCoursesFailed =>
-      _getValue("onboardingMannheimLoadCoursesFailed");
-
-  String get onboardingMannheimDescription =>
-      _getValue("onboardingMannheimDescription");
-
-  String get onboardingMannheimSearchHint =>
-      _getValue("onboardingMannheimSearchHint");
-
-  String get onboardingMannheimNoCourses =>
-      _getValue("onboardingMannheimNoCourses");
-
-  String get onboardingMannheimNoSearchResults =>
-      _getValue("onboardingMannheimNoSearchResults");
-
-  String get onboardingMannheimRetry => _getValue("onboardingMannheimRetry");
-
-  String get onboardingMannheimTitle => _getValue("onboardingMannheimTitle");
 
   String get settingsPrettifySchedule => _getValue("settingsPrettifySchedule");
 

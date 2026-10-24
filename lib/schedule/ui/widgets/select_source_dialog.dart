@@ -5,7 +5,6 @@ import 'package:dualmate/schedule/model/schedule_source_type.dart';
 import 'package:dualmate/schedule/ui/widgets/enter_dualis_credentials_dialog.dart';
 import 'package:dualmate/schedule/ui/widgets/enter_ical_url.dart';
 import 'package:dualmate/schedule/ui/widgets/enter_rapla_url_dialog.dart';
-import 'package:dualmate/schedule/ui/widgets/select_mannheim_course_dialog.dart';
 import 'package:dualmate/schedule/ui/widgets/schedule_source_change_confirmation.dart';
 import 'package:flutter/material.dart';
 import 'package:kiwi/kiwi.dart';
@@ -53,10 +52,6 @@ class SelectSourceDialog {
           RadioListTile<ScheduleSourceType>(
             value: ScheduleSourceType.Dualis,
             title: Text(L.of(context).scheduleSourceTypeDualis),
-          ),
-          RadioListTile<ScheduleSourceType>(
-            value: ScheduleSourceType.Mannheim,
-            title: Text(L.of(context).scheduleSourceTypeMannheim),
           ),
           RadioListTile<ScheduleSourceType>(
             value: ScheduleSourceType.Ical,
@@ -123,11 +118,6 @@ class SelectSourceDialog {
       case ScheduleSourceType.Ical:
         await EnterIcalDialog(
           _preferencesProvider,
-          KiwiContainer().resolve(),
-        ).show(context);
-        break;
-      case ScheduleSourceType.Mannheim:
-        await SelectMannheimCourseDialog(
           KiwiContainer().resolve(),
         ).show(context);
         break;

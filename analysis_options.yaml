@@ -1,6 +1,9 @@
 analyzer:
   exclude:
     - third_party/**
+    - build/**
+    - android/**
+    - ios/**
 
 # Keep individual functions simple enough to reason about and review.
 dart_code_linter:

@@ -4,7 +4,7 @@ set -euo pipefail
 # Fresh-process, profile-mode measurements. Android animation scales are
 # validated, never changed: a non-normal scale invalidates the comparison.
 #
-# Issue 5: Each major screen gets its own fresh-process cold-start target.
+# The default is a continuous cold-start stress journey across every screen.
 # The fixture APK is installed under com.fariszr.dualmate.perf. Flutter drive
 # is kept from performing its source-manifest-based cleanup, which otherwise
 # targets the production package despite the Gradle applicationId suffix.
@@ -30,23 +30,40 @@ if [[ -z "$serial" ]]; then
   exit 2
 fi
 
+original_stay_on="$(adb -s "$serial" shell settings get global stay_on_while_plugged_in | tr -d '\r')"
 cleanup() {
   adb -s "$serial" shell am force-stop "$perf_app_id" >/dev/null 2>&1 || true
+  if [[ "$original_stay_on" == 'null' ]]; then
+    adb -s "$serial" shell settings delete global stay_on_while_plugged_in >/dev/null 2>&1 || true
+  elif [[ "$original_stay_on" =~ ^[0-9]+$ ]]; then
+    adb -s "$serial" shell settings put global stay_on_while_plugged_in "$original_stay_on" >/dev/null 2>&1 || true
+  fi
 }
 trap cleanup EXIT
 
 for setting in window_animation_scale transition_animation_scale animator_duration_scale; do
   value="$(adb -s "$serial" shell settings get global "$setting" | tr -d '\r')"
+  # Unset Settings.Global animation scales use Android's normal 1.0 default.
+  # In particular Huawei devices can omit animator_duration_scale entirely.
+  if [[ "$value" == 'null' ]]; then
+    value='1.0'
+  fi
   if [[ "$value" != '1' && "$value" != '1.0' ]]; then
     echo "$setting=$value; set it to normal (1.0), then retry." >&2
     exit 2
   fi
 done
 
-# Issue 5: Cold-start targets.  Each target launches a fresh process to
-# measure genuine first-use.  The combined journey remains as a secondary
-# stress test.
-targets="${PERF_TARGETS:-schedule canteen dates dualis diagnostic combined}"
+# Long sequences of Flutter-generated gestures do not reset Android's native
+# inactivity timer. Keep a plugged-in device awake for this run and restore its
+# exact previous charging policy on exit, including an unset default.
+adb -s "$serial" shell svc power stayon true
+adb -s "$serial" shell input keyevent KEYCODE_WAKEUP
+adb -s "$serial" shell wm dismiss-keyguard
+
+# Each repetition cold-launches the entire journey once. Individual screen
+# targets remain opt-in diagnostics; they are not the full stress run.
+targets="${PERF_TARGETS:-stress}"
 
 rm -rf "$output_root/runs"
 mkdir -p "$output_root/runs"
@@ -62,8 +79,8 @@ for target in $targets; do
       if PERF_OUTPUT_DIR="$run_directory" PERF_RUN_ID="$run_id" \
         flutter drive --profile --flavor localrelease --no-dds --no-pub --keep-app-running \
           --device-id "$serial" \
-          --driver test_driver/aggressive_perf_driver.dart \
-          --target integration_test/aggressive_cold_navigation_performance_test.dart \
+          --driver test_driver/cold_navigation_perf_driver.dart \
+          --target integration_test/cold_navigation_performance_test.dart \
           --dart-define=PERF_TEST_OFFLINE_FIXTURES=true \
           --dart-define=PERF_TARGET="$target" \
           --dart-define=PERF_PROFILE_MODE="${PERF_PROFILE_MODE:-ranking}" \

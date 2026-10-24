@@ -6,6 +6,33 @@ import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('cancels a worker even when the source does not cooperate', () async {
+    final source = IsolateScheduleSourceDecorator(_WaitingSource());
+    final token = CancellationToken();
+    final pending = source.querySchedule(DateTime(2026), DateTime(2027), token);
+    final expectation = expectLater(
+      pending,
+      throwsA(isA<OperationCancelledException>()),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    token.cancel();
+    await expectation;
+  });
+
+  test('concurrent queries have independent worker lifetimes', () async {
+    final source = IsolateScheduleSourceDecorator(
+      _ThrowingScheduleSource(ServiceRequestFailed('offline')),
+    );
+    await Future.wait(
+      List.generate(
+        3,
+        (_) => expectLater(
+          source.querySchedule(DateTime(2026), DateTime(2027)),
+          throwsA(isA<ScheduleQueryFailedException>()),
+        ),
+      ),
+    );
+  });
   test(
     'preserves suppressible request failures across isolate boundary',
     () async {
@@ -28,6 +55,20 @@ void main() {
       expect(shouldSuppressDiagnosticsException(caught!), isTrue);
     },
   );
+}
+
+class _WaitingSource extends ScheduleSource {
+  @override
+  bool canQuery() => true;
+  @override
+  Future<ScheduleQueryResult> querySchedule(
+    DateTime from,
+    DateTime to, [
+    CancellationToken? token,
+  ]) async {
+    await Future<void>.delayed(const Duration(days: 1));
+    throw StateError('Should have cancelled the worker');
+  }
 }
 
 class _ThrowingScheduleSource extends ScheduleSource {

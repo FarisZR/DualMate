@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
 import 'package:dualmate/common/appstart/performance_fixture_mode.dart';
 import 'package:dualmate/common/logging/app_diagnostics.dart';
@@ -20,8 +22,10 @@ import 'package:dualmate/schedule/ui/viewmodels/schedule_freshness_gate.dart';
 import 'package:dualmate/schedule/service/rapla/rapla_schedule_source.dart';
 import 'package:dualmate/schedule/service/schedule_source.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
+import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 
 class DateManagementViewModel extends BaseViewModel {
+  final ScheduleSourceProvider? timetableSourceProvider;
   final DateEntryProvider _dateEntryProvider;
   final PreferencesProvider _preferencesProvider;
   final RaplaImportantEventsProvider _raplaImportantEventsProvider;
@@ -118,6 +122,8 @@ class DateManagementViewModel extends BaseViewModel {
 
   Future<void>? _preparationFuture;
   Future<void>? _pageInitializationFuture;
+  int? _timetableRevision;
+  Set<String> _timetableIdentities = {};
 
   bool _isReloadingPreferences = false;
 
@@ -165,11 +171,52 @@ class DateManagementViewModel extends BaseViewModel {
   DateManagementViewModel(
     this._dateEntryProvider,
     this._preferencesProvider,
-    this._raplaImportantEventsProvider,
-  ) {
+    this._raplaImportantEventsProvider, {
+    this.timetableSourceProvider,
+  }) {
     _buildYearsArray();
     _currentSelectedYear = DateTime.now().year.toString();
     _currentDateDatabase = _allDateDatabases.first;
+    timetableSourceProvider?.addDidChangeScheduleSourceCallback(
+      _timetableChanged,
+    );
+  }
+
+  void _timetableChanged(ScheduleSource _, bool __) {
+    if (_isDisposed) return;
+    final provider = timetableSourceProvider!;
+    final identities = provider.activeSourceIdentities.toSet();
+    final previousRevision = _timetableRevision;
+    final unchanged =
+        previousRevision == provider.configurationRevision &&
+        setEquals(_timetableIdentities, identities);
+    _timetableRevision = provider.configurationRevision;
+    _timetableIdentities = identities;
+    // Initial source setup can happen inside this page's own refresh.
+    if (previousRevision == null || unchanged) return;
+    _pageInitializationFuture = null;
+    if (!_useDhMineForDates) {
+      _updateMutex.cancel();
+      _setImportantEvents([]);
+      unawaited(updateDates());
+    }
+  }
+
+  Future<bool> _hasTimetable() async {
+    final repository = timetableSourceProvider?.timetableRepository;
+    if (repository == null) {
+      return RaplaScheduleSource.isValidUrl(
+        await _preferencesProvider.getRaplaUrl(),
+      );
+    }
+    final snapshot = await repository.loadSnapshot();
+    if (_timetableRevision == null) {
+      _timetableRevision = snapshot.revision;
+      _timetableIdentities = snapshot.sources
+          .map((source) => source.id)
+          .toSet();
+    }
+    return snapshot.sources.isNotEmpty;
   }
 
   void initialize() {
@@ -182,13 +229,11 @@ class DateManagementViewModel extends BaseViewModel {
       return existingPreparation;
     }
 
-    final preparation = _loadDefaultSelection(loadData: false).catchError((
-      error,
-      trace,
-    ) {
-      print("Failed to load default selection: $error");
-      print(trace);
-    });
+    final preparation = _loadDefaultSelection(loadData: false)
+        .catchError((error, trace) {
+          print("Failed to load default selection: $error");
+          print(trace);
+        });
     _preparationFuture = preparation;
     return preparation;
   }
@@ -314,9 +359,9 @@ class DateManagementViewModel extends BaseViewModel {
   }
 
   Future<List<ImportantEvent>?> _readRaplaImportantEventsPage() async {
-    var raplaUrl = await _preferencesProvider.getRaplaUrl();
+    final configured = await _hasTimetable();
     if (_isDisposed) return null;
-    _raplaUrlValid = RaplaScheduleSource.isValidUrl(raplaUrl);
+    _raplaUrlValid = configured;
     _notifySafely("raplaUrlValid");
     _notifySafely("bothSourcesUnconfigured");
 
@@ -346,9 +391,9 @@ class DateManagementViewModel extends BaseViewModel {
         return;
       }
 
-      var raplaUrl = await _preferencesProvider.getRaplaUrl();
+      final configured = await _hasTimetable();
       if (_isDisposed) return;
-      if (!RaplaScheduleSource.isValidUrl(raplaUrl)) {
+      if (!configured) {
         return;
       }
 
@@ -938,6 +983,9 @@ class DateManagementViewModel extends BaseViewModel {
 
   @override
   void dispose() {
+    timetableSourceProvider?.removeDidChangeScheduleSourceCallback(
+      _timetableChanged,
+    );
     _isDisposed = true;
     _updateMutex.cancel();
     _errorResetTimer?.cancel();

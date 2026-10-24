@@ -28,10 +28,9 @@ Supported defines (debug builds only):
 | Define | Example | Effect |
 | --- | --- | --- |
 | `SKIP_ONBOARDING` | `true` | Marks first start as completed. |
-| `SCHEDULE_SOURCE` | `rapla` | Sets source type (`rapla`/`dualis`/`ical`/`mannheim`/`none`). |
+| `SCHEDULE_SOURCE` | `rapla` | Sets source type (`rapla`/`dualis`/`ical`/`none`). |
 | `RAPLA_URL` | `https://rapla...` | Persists Rapla URL; infers source `rapla` unless `SCHEDULE_SOURCE` is set. |
-| `ICAL_URL` | `https://...ics` | Persists iCal URL; infers source `ical` (or `mannheim` when `MANNHEIM_ID` is also set). |
-| `MANNHEIM_ID` | `course-id` | Persists Mannheim schedule id. Alone this does **not** select a source (Mannheim is built on the iCal source, so pair with `ICAL_URL` to select `mannheim`). |
+| `ICAL_URL` | `https://...ics` | Persists iCal URL; infers source `ical`. |
 | `CANTEEN_LOCATION_ID` | `karlsruhe_erzbergerstrasse` | Persists canteen location (must be a supported id). |
 
 Example:

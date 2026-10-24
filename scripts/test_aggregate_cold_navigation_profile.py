@@ -85,6 +85,9 @@ class AggregationTest(unittest.TestCase):
                 "combined_cold_start_journey": scenario(
                     missed_pct=80, p99=100, worst=200, frame_count=195,
                 ),
+                "stress_full_cold_journey": scenario(
+                    missed_pct=85, p99=110, worst=220, frame_count=1500,
+                ),
             }}}
             summary = MODULE.aggregate([(path, payload)])
 
@@ -94,7 +97,7 @@ class AggregationTest(unittest.TestCase):
                             for r in summary["ranking_compound_worst_to_best"]]
 
             self.assertEqual(individual_ids, ["drawer_open"])
-            self.assertEqual(compound_ids, ["combined_cold_start_journey"])
+            self.assertCountEqual(compound_ids, ["combined_cold_start_journey", "stress_full_cold_journey"])
             self.assertEqual(
                 summary["scenarios"]["combined_cold_start_journey"]["category"],
                 "compound",

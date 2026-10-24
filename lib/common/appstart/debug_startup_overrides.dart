@@ -9,16 +9,9 @@ import 'package:flutter/foundation.dart';
 /// Supported defines (all optional, only honored in debug builds):
 ///
 /// * `SKIP_ONBOARDING` (`true`)  - marks the first start as completed.
-/// * `SCHEDULE_SOURCE`           - one of `rapla`, `dualis`, `ical`,
-///                                  `mannheim`, `none`.
+/// * `SCHEDULE_SOURCE`           - one of `rapla`, `dualis`, `ical`, `none`.
 /// * `RAPLA_URL`                 - Rapla schedule endpoint.
-/// * `ICAL_URL`                  - iCal schedule endpoint. Also required when
-///                                  using `MANNHEIM_ID`, since the Mannheim
-///                                  source is built on the iCal source.
-/// * `MANNHEIM_ID`               - DHBW Mannheim schedule id. Alone this only
-///                                  stores the id; pair it with `ICAL_URL`
-///                                  (and optionally `SCHEDULE_SOURCE=mannheim`)
-///                                  to select the Mannheim source.
+/// * `ICAL_URL`                  - iCal schedule endpoint.
 /// * `CANTEEN_LOCATION_ID`       - one of [CanteenLocations.supported] ids.
 ///
 /// Example:
@@ -35,7 +28,6 @@ class DebugStartupOverrides {
   final ScheduleSourceType? scheduleSource;
   final String? raplaUrl;
   final String? icalUrl;
-  final String? mannheimId;
   final String? canteenLocationId;
 
   const DebugStartupOverrides({
@@ -43,7 +35,6 @@ class DebugStartupOverrides {
     this.scheduleSource,
     this.raplaUrl,
     this.icalUrl,
-    this.mannheimId,
     this.canteenLocationId,
   });
 
@@ -51,7 +42,6 @@ class DebugStartupOverrides {
   static const String _kScheduleSource = 'SCHEDULE_SOURCE';
   static const String _kRaplaUrl = 'RAPLA_URL';
   static const String _kIcalUrl = 'ICAL_URL';
-  static const String _kMannheimId = 'MANNHEIM_ID';
   static const String _kCanteenLocationId = 'CANTEEN_LOCATION_ID';
 
   /// Reads the compile-time `--dart-define` values. The result is always
@@ -65,7 +55,6 @@ class DebugStartupOverrides {
       ),
       raplaUrl: _nonEmpty(const String.fromEnvironment(_kRaplaUrl)),
       icalUrl: _nonEmpty(const String.fromEnvironment(_kIcalUrl)),
-      mannheimId: _nonEmpty(const String.fromEnvironment(_kMannheimId)),
       canteenLocationId: _nonEmpty(
         const String.fromEnvironment(_kCanteenLocationId),
       ),
@@ -78,22 +67,14 @@ class DebugStartupOverrides {
       scheduleSource != null ||
       raplaUrl != null ||
       icalUrl != null ||
-      mannheimId != null ||
       canteenLocationId != null;
 
   /// Resolves the effective schedule source type, preferring an explicit
   /// `SCHEDULE_SOURCE` define and otherwise inferring it from a URL define.
-  ///
-  /// Mannheim is built on the iCal source (`ScheduleSourceProvider` initializes
-  /// it through `_icalScheduleSource()`, which reads `getIcalUrl()`), so a bare
-  /// `MANNHEIM_ID` without an `ICAL_URL` cannot produce a valid source and is
-  /// therefore not inferred. When both `ICAL_URL` and `MANNHEIM_ID` are
-  /// provided, Mannheim is preferred over Ical.
   ScheduleSourceType? get effectiveScheduleSource {
     if (scheduleSource != null) return scheduleSource;
     if (raplaUrl != null) return ScheduleSourceType.Rapla;
     if (icalUrl != null) {
-      if (mannheimId != null) return ScheduleSourceType.Mannheim;
       return ScheduleSourceType.Ical;
     }
     return null;
@@ -112,9 +93,6 @@ class DebugStartupOverrides {
     if (icalUrl != null) {
       await preferencesProvider.setIcalUrl(icalUrl!);
     }
-    if (mannheimId != null) {
-      await preferencesProvider.setMannheimScheduleId(mannheimId!);
-    }
 
     final source = effectiveScheduleSource;
     if (source != null) {
@@ -129,8 +107,7 @@ class DebugStartupOverrides {
     }
   }
 
-  static String? _nonEmpty(String value) =>
-      value.isEmpty ? null : value;
+  static String? _nonEmpty(String value) => value.isEmpty ? null : value;
 
   static ScheduleSourceType? _parseScheduleSource(String value) {
     switch (value.toLowerCase()) {
@@ -140,8 +117,6 @@ class DebugStartupOverrides {
         return ScheduleSourceType.Dualis;
       case 'ical':
         return ScheduleSourceType.Ical;
-      case 'mannheim':
-        return ScheduleSourceType.Mannheim;
       case 'none':
         return ScheduleSourceType.None;
       default:

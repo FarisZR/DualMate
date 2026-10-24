@@ -1377,8 +1377,6 @@ class WeeklyScheduleViewModel extends BaseViewModel {
           return 'rapla';
         case ScheduleSourceType.Ical:
           return 'ical';
-        case ScheduleSourceType.Mannheim:
-          return 'mannheim';
         case ScheduleSourceType.Dualis:
         case ScheduleSourceType.None:
           return 'unknown';

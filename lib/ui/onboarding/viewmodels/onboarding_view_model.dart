@@ -14,7 +14,6 @@ class OnboardingViewModel extends BaseViewModel {
   final List<String> steps = [
     "selectSource",
     "rapla",
-    "mannheim",
     "ical",
     "dualis",
     "canteenLocation",
@@ -25,7 +24,6 @@ class OnboardingViewModel extends BaseViewModel {
     "rapla": RaplaOnboardingStep(),
     "ical": IcalOnboardingStep(),
     "dualis": DualisCredentialsOnboardingStep(),
-    "mannheim": MannheimOnboardingStep(),
     "canteenLocation": SelectCanteenLocationOnboardingStep(),
   };
 
@@ -36,8 +34,7 @@ class OnboardingViewModel extends BaseViewModel {
 
   String get currentStep => steps[_stepIndex];
 
-  bool get currentPageValid =>
-      pages[currentStep]?.viewModel().isValid ?? false;
+  bool get currentPageValid => pages[currentStep]?.viewModel().isValid ?? false;
   bool get isLastStep => _stepIndex >= steps.length - 1;
 
   get onboardingSteps => steps.length;
@@ -77,7 +74,8 @@ class OnboardingViewModel extends BaseViewModel {
   }
 
   Future<void> nextPage() async {
-    if (!currentPageValid && !(pages[currentStep]?.viewModel().canSkip ?? true)) {
+    if (!currentPageValid &&
+        !(pages[currentStep]?.viewModel().canSkip ?? true)) {
       return;
     }
 

@@ -9,6 +9,9 @@ import 'package:dualmate/schedule/business/schedule_source_provider.dart';
 import 'package:dualmate/schedule/data/schedule_entry_repository.dart';
 import 'package:dualmate/schedule/data/schedule_filter_repository.dart';
 import 'package:dualmate/schedule/data/schedule_query_information_repository.dart';
+import 'package:dualmate/schedule/data/timetable_repository.dart';
+import 'package:dualmate/schedule/model/timetable_configuration.dart';
+import 'package:dualmate/schedule/model/schedule_source_type.dart';
 import 'package:dualmate/schedule/model/schedule.dart';
 import 'package:dualmate/schedule/model/schedule_entry.dart';
 import 'package:dualmate/schedule/reminders/class_reminder.dart';
@@ -20,6 +23,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+    'cold startup retains persisted timetable rules before source setup',
+    () async {
+      final repository = _ColdReminderRepository();
+      final source = ScheduleSourceProvider(
+        _FakePreferencesProvider(),
+        false,
+        _FakeScheduleEntryRepository(),
+        _FakeScheduleQueryInformationRepository(),
+        timetableRepository: _SavedTimetables(),
+      );
+      expect(source.activeSourceIdentities, isEmpty);
+      final controller = ClassReminderController(
+        repository: repository,
+        scheduleProvider: _FakeScheduleProvider(source),
+        sourceProvider: source,
+        scheduler: _NoopScheduler(),
+        notificationApi: () => null,
+        now: () => DateTime(2026, 7, 20, 8),
+      );
+      addTearDown(controller.dispose);
+      await controller.initialize();
+      expect(repository.cleared, ['obsolete']);
+      expect(repository.loaded, containsAll(['rapla:a', 'ical:b']));
+      expect(controller.hasReminders, isTrue);
+      await controller.onAppResumed();
+      expect(controller.hasReminders, isTrue);
+    },
+  );
   testWidgets(
     'startup never renders paused while granted permissions are loading',
     (tester) async {
@@ -255,47 +287,44 @@ void main() {
     },
   );
 
-  test(
-    'permission check throws after granted: state becomes denied and pause path cancels alarms',
-    () async {
-      final scheduler = _RecordingScheduler();
-      final repository = _ManifestReminderRepository();
-      final source = _FakeScheduleSourceProvider();
-      // Start with granted; switch to throwing after initialization.
-      var throwOnCheck = false;
-      NotificationApi? apiFactory() {
-        if (throwOnCheck) return _ThrowingNotificationApi();
-        return _GrantedNotificationApi();
-      }
+  test('permission check throws after granted: state becomes denied and pause path cancels alarms', () async {
+    final scheduler = _RecordingScheduler();
+    final repository = _ManifestReminderRepository();
+    final source = _FakeScheduleSourceProvider();
+    // Start with granted; switch to throwing after initialization.
+    var throwOnCheck = false;
+    NotificationApi? apiFactory() {
+      if (throwOnCheck) return _ThrowingNotificationApi();
+      return _GrantedNotificationApi();
+    }
 
-      final controller = ClassReminderController(
-        repository: repository,
-        scheduleProvider: _FakeScheduleProvider(source),
-        sourceProvider: source,
-        scheduler: scheduler,
-        notificationApi: apiFactory,
-        now: () => DateTime(2026, 7, 20, 8),
-      );
-      addTearDown(controller.dispose);
+    final controller = ClassReminderController(
+      repository: repository,
+      scheduleProvider: _FakeScheduleProvider(source),
+      sourceProvider: source,
+      scheduler: scheduler,
+      notificationApi: apiFactory,
+      now: () => DateTime(2026, 7, 20, 8),
+    );
+    addTearDown(controller.dispose);
 
-      // Initialize with granted permissions.
-      await controller.initialize();
-      expect(controller.permissionsGranted, isTrue);
-      expect(controller.permissionStateKnown, isTrue);
+    // Initialize with granted permissions.
+    await controller.initialize();
+    expect(controller.permissionsGranted, isTrue);
+    expect(controller.permissionStateKnown, isTrue);
 
-      // Second check throws: state must flip to known/denied and pause path runs.
-      throwOnCheck = true;
-      await controller.refreshPermissionState();
+    // Second check throws: state must flip to known/denied and pause path runs.
+    throwOnCheck = true;
+    await controller.refreshPermissionState();
 
-      expect(controller.permissionStateKnown, isTrue);
-      expect(controller.permissionsGranted, isFalse);
-      expect(controller.remindersPaused, isTrue);
-      expect(
-        scheduler.cancelledIds,
-        contains(_ManifestReminderRepository.manifestNotificationId),
-      );
-    },
-  );
+    expect(controller.permissionStateKnown, isTrue);
+    expect(controller.permissionsGranted, isFalse);
+    expect(controller.remindersPaused, isTrue);
+    expect(
+      scheduler.cancelledIds,
+      contains(_ManifestReminderRepository.manifestNotificationId),
+    );
+  });
 
   test(
     'initialization detects an overdue pending alarm before expired cleanup',
@@ -524,6 +553,48 @@ void main() {
     expect(controller.isInitialized, isTrue);
     expect(repository.loadAttempts, greaterThanOrEqualTo(2));
   });
+}
+
+class _SavedTimetables implements TimetableRepository {
+  @override
+  Future<List<TimetableConfiguration>> load() async => [
+    for (final id in ['rapla:a', 'ical:b'])
+      TimetableConfiguration(
+        id: id,
+        label: id,
+        type: ScheduleSourceType.Ical,
+        value: 'https://example.com/$id.ics',
+      ),
+  ];
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _ColdReminderRepository extends _MemoryReminderRepository {
+  final List<String> cleared = [];
+  final List<String> loaded = [];
+  @override
+  Future<Set<String>> loadSourceIdentities() async => {
+    'rapla:a',
+    'ical:b',
+    'obsolete',
+  };
+  @override
+  Future<void> clearSource(String sourceIdentity) async {
+    cleared.add(sourceIdentity);
+    rules.removeWhere((rule) => rule.sourceIdentity == sourceIdentity);
+  }
+
+  @override
+  Future<List<ClassReminderRule>> loadRelevantRules({
+    required String sourceIdentity,
+    required DateTime now,
+  }) async {
+    loaded.add(sourceIdentity);
+    return rules
+        .where((rule) => rule.sourceIdentity == sourceIdentity)
+        .toList();
+  }
 }
 
 class _DelayedNotificationApi extends VoidNotificationApi {
@@ -760,10 +831,7 @@ class _FakeScheduleProvider extends ScheduleProvider {
       );
 
   @override
-  Future<Schedule> getUnfilteredCachedSchedule(
-    DateTime start,
-    DateTime end,
-  ) async {
+  Future<Schedule> getCachedSchedule(DateTime start, DateTime end) async {
     return Schedule();
   }
 }
@@ -774,10 +842,7 @@ class _TrackingScheduleProvider extends _FakeScheduleProvider {
   _TrackingScheduleProvider(super.source);
 
   @override
-  Future<Schedule> getUnfilteredCachedSchedule(
-    DateTime start,
-    DateTime end,
-  ) async {
+  Future<Schedule> getCachedSchedule(DateTime start, DateTime end) async {
     cacheReads++;
     return Schedule();
   }

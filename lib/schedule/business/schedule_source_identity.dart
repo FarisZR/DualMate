@@ -14,8 +14,7 @@ abstract final class ScheduleSourceIdentity {
     final normalized = switch (type) {
       ScheduleSourceType.Rapla => normalizeRaplaUrl(configuredValue),
       ScheduleSourceType.Dualis => configuredValue.trim().toLowerCase(),
-      ScheduleSourceType.Ical ||
-      ScheduleSourceType.Mannheim => configuredValue.trim(),
+      ScheduleSourceType.Ical => configuredValue.trim(),
       ScheduleSourceType.None => '',
     };
     return '${type.name.toLowerCase()}:${_stableHash(normalized)}';

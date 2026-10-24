@@ -129,7 +129,8 @@ def isLocalreleaseReleaseBuild = isLocalreleaseVariantRequested &&
 
 android {
     namespace "com.fariszr.dualmate"
-    compileSdkVersion 36
+    compileSdkVersion "android-37.2"
+    buildToolsVersion "37.0.0"
 
     ndkVersion flutter.ndkVersion
 
@@ -144,8 +145,8 @@ android {
 
     defaultConfig {
         applicationId "com.fariszr.dualmate"
-        minSdkVersion flutter.minSdkVersion
-        targetSdkVersion 36
+        minSdkVersion 26
+        targetSdkVersion 37
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -222,12 +223,12 @@ tasks.configureEach { task ->
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'androidx.core:core:1.17.0'
-    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"
-    testImplementation 'junit:junit:4.13.1'
+    implementation 'androidx.core:core:1.19.1'
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.5"
+    testImplementation 'junit:junit:4.13.2'
 
-    androidTestImplementation 'androidx.test:runner:1.3.0'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+    androidTestImplementation 'androidx.test:runner:1.7.0'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
 
-    implementation 'com.jakewharton.threetenabp:threetenabp:1.3.0'
+    implementation 'com.jakewharton.threetenabp:threetenabp:1.4.9'
 }

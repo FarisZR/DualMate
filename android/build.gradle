@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '2.3.21'
+    ext.kotlin_version = '2.4.21'
     repositories {
         google()
         mavenCentral()
@@ -7,7 +7,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:9.2.0'
+        classpath 'com.android.tools.build:gradle:9.4.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
 
     }
@@ -30,16 +30,16 @@ subprojects {
     configurations.configureEach {
         resolutionStrategy.eachDependency { details ->
             if (details.requested.group == "org.robolectric" && details.requested.name == "robolectric") {
-                details.useVersion("4.12.2")
+                details.useVersion("4.17")
             }
             if (details.requested.group == "org.ow2.asm") {
-                details.useVersion("9.6")
+                details.useVersion("9.11.1")
             }
             if (details.requested.group == "net.bytebuddy" && details.requested.name == "byte-buddy") {
-                details.useVersion("1.15.11")
+                details.useVersion("1.18.16")
             }
             if (details.requested.group == "net.bytebuddy" && details.requested.name == "byte-buddy-agent") {
-                details.useVersion("1.15.11")
+                details.useVersion("1.18.16")
             }
         }
     }

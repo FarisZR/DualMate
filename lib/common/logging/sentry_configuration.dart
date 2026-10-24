@@ -40,7 +40,7 @@ Future<void> configureSentryOptions(SentryFlutterOptions options) async {
     options.release = trimmedRelease;
   }
   options.sendDefaultPii = false;
-  options.enableLogs = false;
+  options.beforeSendLog = (_, __) => null;
   options.enableAutoPerformanceTracing = true;
   options.enableFramesTracking = true;
   options.enableAutoSessionTracking = true;
