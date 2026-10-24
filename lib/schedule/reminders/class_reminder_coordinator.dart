@@ -38,6 +38,7 @@ class ClassReminderCoordinator {
        _scheduler = scheduler,
        _now = now ?? DateTime.now;
 
+  // ignore: cyclomatic-complexity
   Future<ReminderReconciliationResult> reconcile({
     required Schedule schedule,
     required DateTime start,

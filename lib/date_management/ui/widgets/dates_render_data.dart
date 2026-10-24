@@ -27,6 +27,7 @@ class DatesRenderData {
     required this.nextPastStateChange,
   });
 
+  // ignore: cyclomatic-complexity
   factory DatesRenderData.prepare({
     required List<ImportantEventSection> sections,
     required List<DateEntry> entries,

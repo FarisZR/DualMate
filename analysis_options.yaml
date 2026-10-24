@@ -4,3 +4,11 @@ analyzer:
     - build/**
     - android/**
     - ios/**
+
+# Keep individual functions simple enough to reason about and review.
+dart_code_linter:
+  metrics:
+    cyclomatic-complexity: 20
+  metrics-exclude:
+    - test/**
+    - third_party/**

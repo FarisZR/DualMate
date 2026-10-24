@@ -117,6 +117,7 @@ class WidgetCanteenDayPayload {
   }
 }
 
+// ignore: cyclomatic-complexity
 ScheduleEntry? resolveScheduleEntry(
   List<ScheduleEntry> entries,
   WidgetScheduleEntryPayload payload,
