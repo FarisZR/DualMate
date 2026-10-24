@@ -1,7 +1,8 @@
 final en = {
   "timetableCustomize": "Customize timetable",
+  "timetableLoadingLessons": "Loading lessons…",
   "timetableDescription": "Choose the modules that appear in your schedule.",
-  "timetableMyClass": "My class",
+  "timetableMainCourse": "Main course",
   "timetableAdditional": "Additional timetable",
   "timetableSelectedCount": "{selected} of {total} selected",
   "timetableAdd": "Add timetable",

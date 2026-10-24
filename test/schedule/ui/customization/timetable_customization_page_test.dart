@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dualmate/common/data/preferences/app_theme_enum.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/colors.dart';
@@ -15,6 +17,84 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final fails in [false, true]) {
+    testWidgets(
+      'adding a source shows pinned feedback until it ${fails ? 'fails' : 'loads'}',
+      (tester) async {
+        final pending = Completer<void>();
+        final model = _Model(sourceLoad: pending);
+        await _open(tester, model);
+        await tester.scrollUntilVisible(
+          find.text('Add timetable'),
+          250,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.tap(find.text('Add timetable'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextFormField).first, 'B7');
+        await tester.enterText(
+          find.byType(TextFormField).last,
+          'https://example.com/rapla?key=b7',
+        );
+        await tester.tap(find.widgetWithText(FilledButton, 'Ok'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        final status = find.byKey(const ValueKey('timetable_loading_source'));
+        expect(status, findsOneWidget);
+        expect(
+          tester.getSemantics(status),
+          matchesSemantics(
+            label: 'Loading lessons…\nB7',
+            isLiveRegion: true,
+            textDirection: TextDirection.ltr,
+          ),
+        );
+        expect(tester.getRect(status).bottom, lessThan(1200));
+        expect(tester.getRect(status).top, greaterThan(0));
+        expect(
+          find.descendant(of: status, matching: find.text('Loading lessons…')),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: status, matching: find.text('B7')),
+          findsOneWidget,
+        );
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.byKey(const ValueKey('timetable_save_changes')),
+              )
+              .onPressed,
+          isNull,
+        );
+        if (fails) {
+          pending.completeError(StateError('offline'));
+        } else {
+          pending.complete();
+        }
+        await tester.pumpAndSettle();
+        expect(status, findsNothing);
+        expect(model.sources, hasLength(fails ? 2 : 3));
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.byKey(const ValueKey('timetable_save_changes')),
+              )
+              .onPressed,
+          isNotNull,
+        );
+        if (fails)
+          expect(
+            find.text(
+              'Could not load the timetable. Check the source or try again when online.',
+            ),
+            findsOneWidget,
+          );
+        await tester.pumpWidget(const SizedBox());
+        model.dispose();
+      },
+    );
+  }
   for (final empty in [false, true]) {
     testWidgets('Dualis can configure the primary timetable (empty: $empty)', (
       tester,
@@ -107,6 +187,29 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
+          final title = language == 'en'
+              ? 'Customize timetable'
+              : 'Stundenplan anpassen';
+          expect(
+            find.descendant(
+              of: find.byType(AppBar),
+              matching: find.text(title),
+            ),
+            findsOneWidget,
+          );
+          expect(find.text(title), findsOneWidget);
+          expect(
+            find.textContaining(
+              language == 'en' ? 'Main course ·' : 'Hauptkurs ·',
+            ),
+            findsOneWidget,
+          );
+          final appBar = tester.widget<AppBar>(find.byType(AppBar));
+          final background = ColorPalettes.buildTheme(theme)
+              .scaffoldBackgroundColor;
+          expect(appBar.backgroundColor, background);
+          expect(appBar.scrolledUnderElevation, 0);
+          expect(tester.getTopLeft(find.text('TINF25B4')).dy, lessThan(160));
           expect(
             find.byKey(const ValueKey('timetable_save_changes')),
             findsOneWidget,
@@ -122,6 +225,21 @@ void main() {
           );
           expect(model.sources.first.includes('Software Engineering'), isFalse);
           expect(model.sources.last.includes('Software Engineering'), isTrue);
+          model.loadingTimetable = model.sources.last;
+          model.notifyListeners();
+          await tester.pump(const Duration(milliseconds: 300));
+          expect(
+            find.byKey(const ValueKey('timetable_loading_source')),
+            findsOneWidget,
+          );
+          expect(
+            find.text(
+              language == 'en'
+                  ? 'Loading lessons…'
+                  : 'Lehrveranstaltungen werden geladen…',
+            ),
+            findsOneWidget,
+          );
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox());
           model.dispose();
@@ -133,10 +251,11 @@ void main() {
 
 class _Model extends TimetableCustomizationViewModel {
   final bool empty;
+  final Completer<void>? sourceLoad;
   TimetableConfiguration? configured;
   Credentials? credentials;
   String? replacingId;
-  _Model({this.empty = false})
+  _Model({this.empty = false, this.sourceLoad})
     : super(
         repository: _Repository(),
         sourceProvider: _Sources(),
@@ -152,6 +271,22 @@ class _Model extends TimetableCustomizationViewModel {
     configured = source;
     credentials = dualisCredentials;
     this.replacingId = replacingId;
+    if (sourceLoad != null) {
+      await super.put(
+        source,
+        replacingId: replacingId,
+        dualisCredentials: dualisCredentials,
+      );
+    }
+  }
+
+  @override
+  Future<void> refreshModules(
+    TimetableConfiguration source, {
+    Credentials? credentials,
+  }) async {
+    await sourceLoad!.future;
+    modules[source.id] = ['Formal Languages'];
   }
 
   @override

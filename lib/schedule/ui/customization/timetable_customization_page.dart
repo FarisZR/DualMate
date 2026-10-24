@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dualmate/common/ui/expressive_loading_indicator.dart';
 import 'package:kiwi/kiwi.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/ui/notification_api.dart';
@@ -166,6 +167,10 @@ class _TimetableCustomizationPageState
         },
         child: Scaffold(
           appBar: AppBar(
+            title: Text(l.timetableCustomize),
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            surfaceTintColor: Colors.transparent,
+            scrolledUnderElevation: 0,
             leading: IconButton(
               onPressed: _close,
               icon: const Icon(Icons.arrow_back),
@@ -195,35 +200,7 @@ class _TimetableCustomizationPageState
                       constraints: const BoxConstraints(maxWidth: 760),
                       child: CustomScrollView(
                         slivers: [
-                          SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-                            sliver: SliverToBoxAdapter(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    l.timetableCustomize,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineMedium
-                                        ?.copyWith(fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    l.timetableDescription,
-                                    style: Theme.of(context).textTheme.bodyLarge
-                                        ?.copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurfaceVariant,
-                                        ),
-                                  ),
-                                  if (model.loadingSource)
-                                    const LinearProgressIndicator(),
-                                ],
-                              ),
-                            ),
-                          ),
+                          const SliverToBoxAdapter(child: SizedBox(height: 8)),
                           for (var i = 0; i < model.sources.length; i++) ...[
                             SliverPadding(
                               padding: const EdgeInsets.symmetric(
@@ -332,28 +309,64 @@ class _TimetableCustomizationPageState
               heightFactor: 1,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 760),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    key: const ValueKey('timetable_save_changes'),
-                    onPressed:
-                        model.loading ||
-                            model.loadFailed ||
-                            model.saving ||
-                            model.loadingSource
-                        ? null
-                        : _save,
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(56),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (model.loadingTimetable case final source?)
+                      Semantics(
+                        key: const ValueKey('timetable_loading_source'),
+                        liveRegion: true,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Row(
+                            children: [
+                              const ExpressiveLoadingIndicator(),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l.timetableLoadingLessons,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall,
+                                    ),
+                                    Text(
+                                      source.label,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    FilledButton(
+                      key: const ValueKey('timetable_save_changes'),
+                      onPressed:
+                          model.loading ||
+                              model.loadFailed ||
+                              model.saving ||
+                              model.loadingSource
+                          ? null
+                          : _save,
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(56),
+                      ),
+                      child: model.saving
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(l.timetableSave),
                     ),
-                    child: model.saving
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(l.timetableSave),
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -424,7 +437,7 @@ class _TimetableGroupHeaderState extends State<_TimetableGroupHeader> {
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
             subtitle: Text(
-              '${widget.primary ? l.timetableMyClass : l.timetableAdditional} · ${_sourceName(l, widget.source.type)}\n${l.timetableSelectedCount.replaceAll('{selected}', '$selected').replaceAll('{total}', '${widget.modules.length}')}',
+              '${widget.primary ? l.timetableMainCourse : l.timetableAdditional} · ${_sourceName(l, widget.source.type)}\n${l.timetableSelectedCount.replaceAll('{selected}', '$selected').replaceAll('{total}', '${widget.modules.length}')}',
             ),
             onTap: widget.onExpansionChanged,
             trailing: Row(

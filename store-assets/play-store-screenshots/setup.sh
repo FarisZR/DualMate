@@ -21,6 +21,7 @@ ln -s ../app-store-screenshots.json "$EDITOR_DIR/app-store-screenshots.json"
 
 mkdir -p \
   "$EDITOR_DIR/public/screenshots/android/phone/de" \
+  "$EDITOR_DIR/public/screenshots/android/phone/en" \
   "$EDITOR_DIR/public/screenshots/android/tablet/de" \
   "$EDITOR_DIR/public/screenshots/android/tablet/en" \
   "$EDITOR_DIR/public/widgets"
@@ -30,6 +31,8 @@ cp "$REPO_ROOT/screenshots/phone-light-reminder-setup.png" "$EDITOR_DIR/public/s
 cp "$REPO_ROOT/screenshots/phone-light-dualis.png" "$EDITOR_DIR/public/screenshots/android/phone/de/03.png"
 cp "$REPO_ROOT/screenshots/phone-light-canteen.png" "$EDITOR_DIR/public/screenshots/android/phone/de/04.png"
 cp "$REPO_ROOT/screenshots/phone-light-dates.png" "$EDITOR_DIR/public/screenshots/android/phone/de/05.png"
+cp "$REPO_ROOT/screenshots/phone-light-timetable-customization.png" "$EDITOR_DIR/public/screenshots/android/phone/de/06.png"
+cp "$REPO_ROOT/screenshots/timetable-loading-feedback/timetable-phone-light.png" "$EDITOR_DIR/public/screenshots/android/phone/en/06.png"
 
 TABLET_SOURCES=(
   "tablet-light-schedule.jpg"
@@ -44,6 +47,9 @@ for locale in de en; do
     cp "$REPO_ROOT/screenshots/${TABLET_SOURCES[$i]}" "$EDITOR_DIR/public/screenshots/android/tablet/$locale/$n.jpg"
   done
 done
+
+cp "$REPO_ROOT/screenshots/tablet-light-timetable-customization.png" "$EDITOR_DIR/public/screenshots/android/tablet/de/06.png"
+cp "$REPO_ROOT/screenshots/timetable-loading-feedback/tablet/timetable-tablet-light.png" "$EDITOR_DIR/public/screenshots/android/tablet/en/06.png"
 
 cp "$REPO_ROOT/icons/dualmate_icon_v1_refined_playstore_512.png" "$EDITOR_DIR/public/app-icon.png"
 cp "$PROJECT_DIR/assets/widgets/schedule_now.png" "$EDITOR_DIR/public/widgets/schedule_now.png"

@@ -72,6 +72,37 @@
         }
       },
       {
+        "id": "dualmate-customization",
+        "layout": "hero",
+        "label": {
+          "de": "KURSE FLEXIBEL KOMBINIEREN",
+          "en": "MIX CLASSES YOUR WAY"
+        },
+        "headline": {
+          "de": "Deine Kurse.\nDein Stundenplan.",
+          "en": "Your courses.\nOne timetable."
+        },
+        "screenshot": "/screenshots/android/phone/{locale}/06.png",
+        "transforms": {
+          "caption": {
+            "x": 86,
+            "y": 112,
+            "width": 908,
+            "height": 390,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "device": {
+            "x": 226,
+            "y": 510,
+            "width": 628,
+            "height": 1360,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
         "id": "dualmate-reminders",
         "layout": "device-bottom",
         "label": {
@@ -373,6 +404,37 @@
             "y": 430,
             "width": 1800,
             "height": 1125,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "tablet-customization",
+        "layout": "device-bottom",
+        "label": {
+          "de": "KURSE FLEXIBEL KOMBINIEREN",
+          "en": "MIX CLASSES YOUR WAY"
+        },
+        "headline": {
+          "de": "Deine Kurse.\nDein Stundenplan.",
+          "en": "Your courses.\nOne timetable."
+        },
+        "screenshot": "/screenshots/android/tablet/{locale}/06.png",
+        "transforms": {
+          "caption": {
+            "x": 180,
+            "y": 70,
+            "width": 2200,
+            "height": 350,
+            "rotation": 0,
+            "zIndex": 5
+          },
+          "device": {
+            "x": 503,
+            "y": 500,
+            "width": 1554,
+            "height": 1050,
             "rotation": 0,
             "zIndex": 4
           }
