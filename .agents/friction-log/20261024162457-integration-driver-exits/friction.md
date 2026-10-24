@@ -1,6 +1,7 @@
 ---
 title: 'Integration driver exits before finally cleanup'
 severity: 'minor'
+issue: 'FarisZR/DualMate#144'
 ---
 
 ## Expected Behavior
