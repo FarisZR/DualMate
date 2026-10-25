@@ -20,17 +20,67 @@ import 'package:provider/provider.dart';
 
 import '../test_canteen_location_service.dart';
 
+final _testToday = DateTime(2026, 10, 20);
+
+CanteenViewModel _createViewModel(
+  _FakeCanteenProvider provider, {
+  DateTime? today,
+}) => CanteenViewModel(
+  provider,
+  TestCanteenLocationService(),
+  now: () => today ?? _testToday,
+);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  for (final (anchor, first, next) in [
+    (DateTime(2026, 3, 27), DateTime(2026, 3, 27), DateTime(2026, 3, 30)),
+    (DateTime(2026, 3, 28), DateTime(2026, 3, 30), DateTime(2026, 3, 31)),
+    (DateTime(2026, 3, 29), DateTime(2026, 3, 30), DateTime(2026, 3, 31)),
+    (DateTime(2026, 10, 23), DateTime(2026, 10, 23), DateTime(2026, 10, 26)),
+    (DateTime(2026, 10, 24), DateTime(2026, 10, 26), DateTime(2026, 10, 27)),
+    (DateTime(2026, 10, 25), DateTime(2026, 10, 26), DateTime(2026, 10, 27)),
+  ]) {
+    testWidgets('opens and pages through weekday menus from $anchor', (
+      tester,
+    ) async {
+      final firstWeek = toStartOfDay(toMonday(first));
+      final nextWeek = toStartOfDay(toMonday(next));
+      final provider = _FakeCanteenProvider({
+        firstWeek: _buildWeekMenusWithMealDays(firstWeek, {first, next}),
+        if (nextWeek != firstWeek)
+          nextWeek: _buildWeekMenusWithSingleDayMeal(nextWeek, next),
+      });
+      final model = _createViewModel(provider, today: anchor);
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox());
+        model.dispose();
+      });
+      await model.loadWeek(firstWeek, allowNetworkRefresh: false);
+      if (nextWeek != firstWeek) {
+        await model.loadWeek(nextWeek, allowNetworkRefresh: false);
+      }
+      await tester.pumpWidget(_wrapWithApp(model));
+      await _pumpFor(tester, const Duration(milliseconds: 900));
+      final viewport = tester.getRect(find.byType(PageView));
+      expect(_hasVisibleText(tester, _mealNameFor(first), viewport), isTrue);
+      await tester.fling(find.byType(PageView), const Offset(-600, 0), 1400);
+      await _pumpFor(tester, const Duration(milliseconds: 600));
+      expect(_hasVisibleText(tester, _mealNameFor(next), viewport), isTrue);
+      expect(_hasVisibleText(tester, _mealNameFor(first), viewport), isFalse);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('hides go back with no menus or only the earliest menu', (
     tester,
   ) async {
-    final today = _normalizeToWeekday(DateTime.now());
+    final today = _testToday;
     final nextWeek = toStartOfDay(toMonday(addDays(today, 7)));
     final menusByWeek = <DateTime, List<DailyMenu>>{};
     final provider = _FakeCanteenProvider(menusByWeek);
-    final viewModel = CanteenViewModel(provider, TestCanteenLocationService());
+    final viewModel = _createViewModel(provider);
     addTearDown(() async {
       await tester.pumpWidget(const SizedBox());
       viewModel.dispose();
@@ -63,7 +113,7 @@ void main() {
     testWidgets(
       'go back targets the earliest menu and tracks menu updates ($locale)',
       (tester) async {
-        final today = _normalizeToWeekday(DateTime.now());
+        final today = _testToday;
         final weekStart = toStartOfDay(toMonday(today));
         final earlierWeek = toStartOfDay(toMonday(addDays(today, -7)));
         final menusByWeek = <DateTime, List<DailyMenu>>{
@@ -74,10 +124,7 @@ void main() {
           ),
         };
         final provider = _FakeCanteenProvider(menusByWeek);
-        final viewModel = CanteenViewModel(
-          provider,
-          TestCanteenLocationService(),
-        );
+        final viewModel = _createViewModel(provider);
         addTearDown(() async {
           await tester.pumpWidget(const SizedBox());
           viewModel.dispose();
@@ -134,13 +181,12 @@ void main() {
   }
 
   testWidgets('limits page count to only days with content', (tester) async {
-    final now = DateTime.now();
-    final today = _normalizeToWeekday(now);
+    final today = _testToday;
     final weekStart = toStartOfDay(toMonday(today));
     final menus = _buildWeekMenusWithSingleDayMeal(weekStart, today);
 
     final provider = _FakeCanteenProvider({weekStart: menus});
-    final viewModel = CanteenViewModel(provider, TestCanteenLocationService());
+    final viewModel = _createViewModel(provider);
     addTearDown(viewModel.dispose);
     await viewModel.loadWeek(weekStart);
 
@@ -155,13 +201,12 @@ void main() {
   testWidgets('shows horizontal stretching overscroll indicator', (
     tester,
   ) async {
-    final now = DateTime.now();
-    final today = _normalizeToWeekday(now);
+    final today = _testToday;
     final weekStart = toStartOfDay(toMonday(today));
     final menus = _buildWeekMenusWithSingleDayMeal(weekStart, today);
 
     final provider = _FakeCanteenProvider({weekStart: menus});
-    final viewModel = CanteenViewModel(provider, TestCanteenLocationService());
+    final viewModel = _createViewModel(provider);
     addTearDown(viewModel.dispose);
     await viewModel.loadWeek(weekStart);
 
@@ -181,13 +226,12 @@ void main() {
   testWidgets('prebuilds adjacent canteen pages before first swipe', (
     tester,
   ) async {
-    final now = DateTime.now();
-    final today = _normalizeToWeekday(now);
+    final today = _testToday;
     final weekStart = toStartOfDay(toMonday(today));
     final menus = _buildWeekMenusWithSingleDayMeal(weekStart, today);
 
     final provider = _FakeCanteenProvider({weekStart: menus});
-    final viewModel = CanteenViewModel(provider, TestCanteenLocationService());
+    final viewModel = _createViewModel(provider);
     addTearDown(viewModel.dispose);
     await viewModel.loadWeek(weekStart);
 
@@ -201,13 +245,12 @@ void main() {
   testWidgets('does not allow paging to empty days before/after content', (
     tester,
   ) async {
-    final now = DateTime.now();
-    final today = _normalizeToWeekday(now);
+    final today = _testToday;
     final weekStart = toStartOfDay(toMonday(today));
     final menus = _buildWeekMenusWithSingleDayMeal(weekStart, today);
 
     final provider = _FakeCanteenProvider({weekStart: menus});
-    final viewModel = CanteenViewModel(provider, TestCanteenLocationService());
+    final viewModel = _createViewModel(provider);
     addTearDown(viewModel.dispose);
     await viewModel.loadWeek(weekStart);
 
@@ -226,10 +269,9 @@ void main() {
   });
 
   testWidgets('preloads next week before the first swipe', (tester) async {
-    final now = DateTime.now();
-    final today = _normalizeToWeekday(now);
+    final today = _testToday;
     final weekStart = toStartOfDay(toMonday(today));
-    final nextWeekStart = toStartOfDay(weekStart.add(const Duration(days: 7)));
+    final nextWeekStart = addDays(weekStart, 7);
     final menusByWeek = <DateTime, List<DailyMenu>>{
       weekStart: _buildWeekMenusWithSingleDayMeal(weekStart, today),
       nextWeekStart: _buildWeekMenusWithSingleDayMeal(
@@ -242,7 +284,7 @@ void main() {
       menusByWeek,
       cacheOnlyKnownWeeks: true,
     );
-    final viewModel = CanteenViewModel(provider, TestCanteenLocationService());
+    final viewModel = _createViewModel(provider);
     addTearDown(viewModel.dispose);
     await viewModel.loadWeek(weekStart);
 
@@ -257,14 +299,13 @@ void main() {
   testWidgets('keeps the pager mounted while loading becomes content', (
     tester,
   ) async {
-    final now = DateTime.now();
-    final today = _normalizeToWeekday(now);
+    final today = _testToday;
     final weekStart = toStartOfDay(toMonday(today));
     final cacheGate = Completer<void>();
     final provider = _FakeCanteenProvider({
       weekStart: _buildWeekMenusWithSingleDayMeal(weekStart, today),
     }, cacheGate: cacheGate);
-    final viewModel = CanteenViewModel(provider, TestCanteenLocationService());
+    final viewModel = _createViewModel(provider);
     addTearDown(viewModel.dispose);
 
     await tester.pumpWidget(_wrapWithApp(viewModel));
@@ -326,14 +367,13 @@ void main() {
   testWidgets('does not keep the previous day content after a pager swipe', (
     tester,
   ) async {
-    final now = DateTime.now();
-    final today = _normalizeToWeekday(now);
-    final tomorrow = today.add(const Duration(days: 1));
+    final today = _testToday;
+    final tomorrow = addDays(today, 1);
     final weekStart = toStartOfDay(toMonday(today));
     final provider = _FakeCanteenProvider({
       weekStart: _buildWeekMenusWithMealDays(weekStart, {today, tomorrow}),
     });
-    final viewModel = CanteenViewModel(provider, TestCanteenLocationService());
+    final viewModel = _createViewModel(provider);
     addTearDown(viewModel.dispose);
     await viewModel.loadWeek(weekStart, allowNetworkRefresh: false);
 
@@ -553,7 +593,7 @@ List<DailyMenu> _buildWeekMenusWithMealDays(
   final dailyMenus = <DailyMenu>[];
 
   for (var i = 0; i < 5; i++) {
-    final day = toStartOfDay(weekStart.add(Duration(days: i)));
+    final day = addDays(weekStart, i);
     dailyMenus.add(
       DailyMenu(
         date: day,
@@ -578,17 +618,6 @@ Meal _mealForDay(DateTime day) {
 
 String _mealNameFor(DateTime day) {
   return 'Meal_${day.year}_${day.month}_${day.day}';
-}
-
-DateTime _normalizeToWeekday(DateTime date) {
-  final normalized = DateTime(date.year, date.month, date.day);
-  if (normalized.weekday == DateTime.saturday) {
-    return normalized.add(const Duration(days: 2));
-  }
-  if (normalized.weekday == DateTime.sunday) {
-    return normalized.add(const Duration(days: 1));
-  }
-  return normalized;
 }
 
 class _FakeCanteenProvider extends CanteenProvider {
@@ -640,7 +669,7 @@ class _FakeCanteenProvider extends CanteenProvider {
     CancellationToken? cancellationToken,
   ]) async {
     final weekStart = toStartOfDay(toMonday(date));
-    final weekEnd = weekStart.add(const Duration(days: 5));
+    final weekEnd = addDays(weekStart, 5);
     final menus = _menusForWeek(date);
     _cachedWeeks.add(weekStart);
 
@@ -668,7 +697,7 @@ class _FakeCanteenProvider extends CanteenProvider {
 
   List<DailyMenu> _emptyWeek(DateTime weekStart) {
     return List.generate(5, (index) {
-      final date = toStartOfDay(weekStart.add(Duration(days: index)));
+      final date = addDays(weekStart, index);
       return DailyMenu(date: date, meals: <Meal>[]);
     });
   }

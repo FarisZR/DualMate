@@ -49,6 +49,7 @@ class _SchedulePageState extends State<SchedulePage> {
   ValueNotifier<int>? _currentEntryIndex;
   bool _scheduleSourceInitialized = false;
   bool _weeklyInitializationStarted = false;
+  bool _deferredWorkSyncScheduled = false;
 
   @override
   void initState() {
@@ -57,10 +58,7 @@ class _SchedulePageState extends State<SchedulePage> {
       if (!mounted) return;
       PerformanceTelemetry.instance.markNavEvent(name: "schedule.entry");
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _syncDeferredWorkWithVisibility();
-    });
+    _scheduleDeferredWorkSync();
   }
 
   @override
@@ -134,11 +132,22 @@ class _SchedulePageState extends State<SchedulePage> {
     _currentEntryIndex?.removeListener(_handleNavigationIndexChanged);
     _currentEntryIndex = nextEntryIndex;
     _currentEntryIndex?.addListener(_handleNavigationIndexChanged);
-    _syncDeferredWorkWithVisibility();
+    _scheduleDeferredWorkSync();
   }
 
   void _handleNavigationIndexChanged() {
-    _syncDeferredWorkWithVisibility();
+    _scheduleDeferredWorkSync();
+  }
+
+  void _scheduleDeferredWorkSync() {
+    if (_deferredWorkSyncScheduled) return;
+    _deferredWorkSyncScheduled = true;
+    // Fixture setup can notify provider listeners synchronously. Dependency
+    // changes also run during construction, so start only after this frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _deferredWorkSyncScheduled = false;
+      if (mounted) _syncDeferredWorkWithVisibility();
+    });
   }
 
   void _syncDeferredWorkWithVisibility() {

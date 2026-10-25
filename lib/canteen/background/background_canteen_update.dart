@@ -19,10 +19,7 @@ class BackgroundCanteenUpdate extends TaskCallback {
 
     try {
       await _canteenProvider.refreshWeek(today, token);
-      await _canteenProvider.refreshWeek(
-        today.add(const Duration(days: 7)),
-        token,
-      );
+      await _canteenProvider.refreshWeek(addDays(today, 7), token);
     } catch (exception, trace) {
       print("Background canteen update failed");
       print(exception);
@@ -44,7 +41,8 @@ class BackgroundCanteenUpdate extends TaskCallback {
       }
       print("Background canteen update status: failure");
       print(
-          "Background canteen update next: retry in ${_retryInterval.inHours}h");
+        "Background canteen update next: retry in ${_retryInterval.inHours}h",
+      );
       return;
     }
 
@@ -64,11 +62,7 @@ class BackgroundCanteenUpdate extends TaskCallback {
 
   @override
   Future<void> schedule() async {
-    await _scheduler.schedulePeriodic(
-      _retryInterval,
-      getName(),
-      true,
-    );
+    await _scheduler.schedulePeriodic(_retryInterval, getName(), true);
   }
 
   @override

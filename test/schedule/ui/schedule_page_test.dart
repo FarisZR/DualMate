@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:dualmate/common/data/preferences/app_theme_enum.dart';
+import 'package:dualmate/common/appstart/performance_fixture_mode.dart';
 import 'package:dualmate/common/ui/colors.dart';
 import 'package:dualmate/common/i18n/localizations.dart';
 import 'package:dualmate/common/data/preferences/preferences_provider.dart';
@@ -55,6 +56,33 @@ void main() {
     SchedulePage.resetSharedState();
     FilterViewModel.resetCachedStateForTesting();
     KiwiContainer().clear();
+  });
+
+  testWidgets('visible startup does not notify providers during construction', (
+    tester,
+  ) async {
+    final sourceProvider = _FakeScheduleSourceProvider();
+    _registerScheduleDependencies(
+      scheduleProvider: _FakeScheduleProvider([
+        _entry(DateTime.now(), 'CACHED_STARTUP'),
+      ]),
+      sourceProvider: sourceProvider,
+    );
+    final model = ScheduleViewModel(sourceProvider);
+    final currentEntryIndex = ValueNotifier<int>(0);
+    addTearDown(currentEntryIndex.dispose);
+
+    await tester.pumpWidget(
+      _wrapSchedulePage(model, currentEntryIndex: currentEntryIndex),
+    );
+    expect(tester.takeException(), isNull);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    if (isPerformanceFixtureMode) {
+      expect(model.didAttemptSetup, isTrue);
+      expect(model.isInitializingScheduleSource, isFalse);
+    }
+    await _disposeHarness(tester, model);
   });
 
   for (final language in ['en', 'de']) {

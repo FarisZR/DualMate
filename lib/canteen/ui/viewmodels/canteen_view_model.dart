@@ -9,6 +9,7 @@ import 'package:dualmate/common/appstart/performance_fixture_mode.dart';
 import 'package:dualmate/common/ui/viewmodels/base_view_model.dart';
 import 'package:dualmate/common/util/date_utils.dart';
 import 'package:dualmate/canteen/ui/viewmodels/canteen_render_state.dart';
+
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
@@ -22,6 +23,7 @@ class CanteenViewModel extends BaseViewModel {
 
   final CanteenProvider _provider;
   final CanteenLocationService _locationService;
+  final DateTime Function() _now;
 
   final DateTime todayWeekStart;
   CanteenFilter filter = CanteenFilter.all;
@@ -43,8 +45,14 @@ class CanteenViewModel extends BaseViewModel {
   CanteenLocation get selectedLocation => _selectedLocation;
   CanteenLocationService get locationService => _locationService;
 
-  CanteenViewModel(this._provider, this._locationService)
-    : todayWeekStart = toStartOfDay(toMonday(DateTime.now()));
+  CanteenViewModel(
+    this._provider,
+    this._locationService, {
+    DateTime Function() now = DateTime.now,
+  }) : _now = now,
+       todayWeekStart = toStartOfDay(toMonday(now()));
+
+  DateTime get today => toStartOfDay(_now());
 
   Future<void> prepareForNavigation() async {
     if (isPerformanceFixtureMode) {
@@ -93,7 +101,7 @@ class CanteenViewModel extends BaseViewModel {
   Future<void> _loadFixtureWeeks() async {
     await Future.wait(<Future<void>>[
       loadWeek(
-        todayWeekStart.subtract(const Duration(days: 7)),
+        addDays(todayWeekStart, -7),
         allowNetworkRefresh: false,
         prefetchNextWeek: false,
       ),
@@ -103,7 +111,7 @@ class CanteenViewModel extends BaseViewModel {
         prefetchNextWeek: false,
       ),
       loadWeek(
-        todayWeekStart.add(const Duration(days: 7)),
+        addDays(todayWeekStart, 7),
         allowNetworkRefresh: false,
         prefetchNextWeek: false,
       ),
@@ -389,8 +397,8 @@ class CanteenViewModel extends BaseViewModel {
   }
 
   void _prefetchAdjacentWeeks(DateTime centerWeekStart) {
-    final previousWeekStart = centerWeekStart.subtract(const Duration(days: 7));
-    final nextWeekStart = centerWeekStart.add(const Duration(days: 7));
+    final previousWeekStart = addDays(centerWeekStart, -7);
+    final nextWeekStart = addDays(centerWeekStart, 7);
     ensureWeekLoaded(
       previousWeekStart,
       allowNetworkRefresh: false,

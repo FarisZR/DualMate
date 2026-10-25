@@ -9,8 +9,10 @@ import 'package:dualmate/common/util/date_utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http_client_helper/http_client_helper.dart' as http;
 
-typedef DhbwAppSitePayloadResponseLoader =
-    Future<String?> Function(Uri uri, http.CancellationToken cancellationToken);
+typedef DhbwAppSitePayloadResponseLoader = Future<String?> Function(
+  Uri uri,
+  http.CancellationToken cancellationToken,
+);
 
 class DhbwAppCanteenSource {
   static const Duration defaultSitePayloadCacheDuration = Duration(minutes: 5);
@@ -45,7 +47,7 @@ class DhbwAppCanteenSource {
       _DhbwAppWeekParseRequest(
         sitePayload: sitePayload,
         mensaId: mensaId,
-        weekStart: weekStart,
+        weekStart: toStartOfDay(weekStart),
       ),
       debugLabel: 'dhbwAppCanteenParseWeek',
     );
@@ -191,7 +193,7 @@ List<DailyMenu> _menusFromEntry(
   Map<String, dynamic> entry,
   DateTime weekStart,
 ) {
-  final weekEnd = weekStart.add(const Duration(days: 5));
+  final weekEnd = addDays(weekStart, 5);
   final menusByDay = <DateTime, List<Meal>>{};
   final menus = entry['menus'];
   if (menus is List) {
@@ -211,7 +213,7 @@ List<DailyMenu> _menusFromEntry(
   }
 
   return List<DailyMenu>.generate(5, (index) {
-    final date = toStartOfDay(weekStart.add(Duration(days: index)));
+    final date = addDays(weekStart, index);
     return DailyMenu(date: date, meals: menusByDay[date] ?? <Meal>[]);
   });
 }
@@ -291,7 +293,7 @@ DateTime? _parseMenuDate(dynamic value) {
 
 List<DailyMenu> _emptyWeek(DateTime weekStart) {
   return List<DailyMenu>.generate(5, (index) {
-    final date = toStartOfDay(weekStart.add(Duration(days: index)));
+    final date = addDays(weekStart, index);
     return DailyMenu(date: date, meals: const <Meal>[]);
   });
 }

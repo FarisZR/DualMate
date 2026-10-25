@@ -11,61 +11,48 @@ DateTime tomorrow(DateTime dateTime) {
 }
 
 DateTime addDays(DateTime dateTime, int days) {
-  return DateTime(
-          dateTime.year,
-          dateTime.month,
-          dateTime.day + days,
-          dateTime.hour,
-          dateTime.minute,
-          dateTime.second,
-        );
+  return dateTime.copyWith(day: dateTime.day + days);
 }
 
 DateTime toMonday(DateTime dateTime) {
-  return dateTime.subtract(Duration(days: dateTime.weekday - 1));
+  return addDays(dateTime, 1 - dateTime.weekday);
 }
 
 DateTime toPreviousWeek(DateTime dateTime) {
   return DateTime(
-          dateTime.year,
-          dateTime.month,
-          dateTime.day - 7,
-          dateTime.hour,
-          dateTime.minute,
-          dateTime.second,
-        );
+    dateTime.year,
+    dateTime.month,
+    dateTime.day - 7,
+    dateTime.hour,
+    dateTime.minute,
+    dateTime.second,
+  );
 }
 
 DateTime toNextWeek(DateTime dateTime) {
   return DateTime(
-          dateTime.year,
-          dateTime.month,
-          dateTime.day + 7,
-          dateTime.hour,
-          dateTime.minute,
-          dateTime.second,
-        );
+    dateTime.year,
+    dateTime.month,
+    dateTime.day + 7,
+    dateTime.hour,
+    dateTime.minute,
+    dateTime.second,
+  );
 }
 
 DateTime toNextMonth(DateTime dateTime) {
   return DateTime(
-          dateTime.year,
-          dateTime.month + 1,
-          dateTime.day,
-          dateTime.hour,
-          dateTime.minute,
-          dateTime.second,
-        );
+    dateTime.year,
+    dateTime.month + 1,
+    dateTime.day,
+    dateTime.hour,
+    dateTime.minute,
+    dateTime.second,
+  );
 }
 
 DateTime toTimeOfDay(DateTime dateTime, int hour, int minute) {
-  return DateTime(
-    dateTime.year,
-    dateTime.month,
-    dateTime.day,
-    hour,
-    minute,
-  );
+  return DateTime(dateTime.year, dateTime.month, dateTime.day, hour, minute);
 }
 
 DateTime toTimeOfDayInFuture(DateTime dateTime, int hour, int minute) {
