@@ -19,12 +19,12 @@ if (flutterRoot == null) {
 
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
 if (flutterVersionCode == null) {
-    flutterVersionCode = '20201'
+    flutterVersionCode = '20300'
 }
 
 def flutterVersionName = localProperties.getProperty('flutter.versionName')
 if (flutterVersionName == null) {
-    flutterVersionName = '2.2.1'
+    flutterVersionName = '2.3.0'
 }
 
 def getGitCommitHash() {
